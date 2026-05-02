@@ -245,7 +245,7 @@ The root `.env.example` includes flags such as `GOOGLE_REAL_API_ENABLED`, `GMAIL
 |------|------|
 | `Dockerfile.api` | Railway API image |
 | `Dockerfile.workers` | Railway workers image |
-| `railway.json` | API Dockerfile + `/health/ready` |
+| `railway.json` | API Dockerfile + `/health` |
 | `railway.workers.json` | Reference for workers Dockerfile |
 | `apps/web/vercel.json` | Monorepo pnpm install/build |
 | `.env.example` | Root env template |
