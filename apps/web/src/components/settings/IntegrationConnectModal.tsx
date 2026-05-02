@@ -1,6 +1,6 @@
 "use client";
 
-import { AI_MODEL_OPTIONS } from "@jobflow/shared";
+import { AI_MODEL_OPTIONS } from "@/constants/aiModels";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export function IntegrationConnectModal({
 }: Props) {
   const [connectedEmail, setConnectedEmail] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [model, setModel] = useState("gpt-4.1-mini");
+  const [model, setModel] = useState("gpt-4o-mini");
   const [apiKey, setApiKey] = useState("");
   const [host, setHost] = useState("");
   const [port, setPort] = useState("587");
@@ -46,8 +46,7 @@ export function IntegrationConnectModal({
 
   const aiModelChoices = useMemo(() => {
     if (!providerSlug || (providerSlug !== "openai" && providerSlug !== "claude")) return [];
-    const p = providerSlug === "claude" ? "Claude" : "OpenAI";
-    return AI_MODEL_OPTIONS.filter((m) => m.provider === p);
+    return AI_MODEL_OPTIONS.filter((m) => m.provider === providerSlug);
   }, [providerSlug]);
 
   useEffect(() => {
@@ -56,8 +55,10 @@ export function IntegrationConnectModal({
     setAccountName(initialAccountName ?? "");
     const defaultModel =
       providerSlug === "claude"
-        ? AI_MODEL_OPTIONS.find((m) => m.provider === "Claude")?.model ?? "claude-3-5-haiku-latest"
-        : AI_MODEL_OPTIONS.find((m) => m.provider === "OpenAI")?.model ?? "gpt-4o-mini";
+        ? AI_MODEL_OPTIONS.find((m) => m.provider === "claude")?.model ?? "claude-3-5-haiku-latest"
+        : AI_MODEL_OPTIONS.find((m) => m.provider === "openai" && m.model === "gpt-4o-mini")?.model ??
+          AI_MODEL_OPTIONS.find((m) => m.provider === "openai")?.model ??
+          "gpt-4o-mini";
     setModel(defaultModel);
     setFallbackToStub(true);
     setApiKey("");
@@ -189,7 +190,7 @@ export function IntegrationConnectModal({
                 >
                   {aiModelChoices.map((m) => (
                     <option key={m.model} value={m.model}>
-                      {m.displayName} ({m.model})
+                      {m.label} ({m.model})
                     </option>
                   ))}
                 </select>
