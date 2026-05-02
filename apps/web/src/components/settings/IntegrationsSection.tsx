@@ -1,6 +1,6 @@
 "use client";
 
-import type { IntegrationHealthSummary, IntegrationListItem, IntegrationTestResult } from "@jobflow/shared";
+import type { IntegrationHealthSummary, IntegrationListItem, IntegrationTestResult } from "@/types/integrations";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";

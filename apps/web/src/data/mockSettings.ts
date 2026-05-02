@@ -1,4 +1,4 @@
-import type { IntegrationHealthSummary, IntegrationListItem } from "@jobflow/shared";
+import type { IntegrationHealthSummary, IntegrationListItem } from "@/types/integrations";
 import type {
   AutomationRules,
   BillingSettings,

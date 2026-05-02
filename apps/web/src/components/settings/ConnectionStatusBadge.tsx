@@ -1,4 +1,4 @@
-import type { IntegrationStatus } from "@jobflow/shared";
+import type { IntegrationStatus } from "@/types/integrations";
 import { Badge } from "@/components/ui/badge";
 
 const styles: Record<IntegrationStatus, string> = {

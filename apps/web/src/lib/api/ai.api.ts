@@ -1,4 +1,4 @@
-import type { AiModelOption, AiProviderConfig } from "@jobflow/shared";
+import type { AiModelOption, AiProviderConfig } from "@/types/ai";
 import { apiFetch } from "./client";
 
 export type AiConfigResponse = {

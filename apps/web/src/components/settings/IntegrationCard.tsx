@@ -1,6 +1,6 @@
 "use client";
 
-import type { IntegrationListItem } from "@jobflow/shared";
+import type { IntegrationListItem } from "@/types/integrations";
 import {
   BotIcon,
   CalendarDaysIcon,
