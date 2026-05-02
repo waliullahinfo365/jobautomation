@@ -53,7 +53,8 @@ git push -u origin main
 
 - **Source:** connect the GitHub repo.
 - **Dockerfile:** use repository root **`Dockerfile.api`** (see `railway.json` at repo root).
-- **Health check path:** `/health/ready` (checks DB connection; returns 503 until Mongo is connected).
+- **Health check path (Railway):** **`/health`** — use this for **first production deployment**. It succeeds once the HTTP server is up and returns JSON; it does **not** require MongoDB to be connected yet (avoid startup failures while Atlas/network settles).
+- **Later:** After MongoDB is stable, you can switch Railway’s health check to **`/health/ready`** so deployments wait until the DB connection is established (that endpoint returns **503** until Mongo is connected).
 - **Start:** container runs `node dist/apps/api/src/server.js` with `NODE_ENV=production`. **Railway sets `PORT`** — the API reads `process.env.PORT`.
 
 ### API environment variables (copy names from root `.env.example`)
@@ -75,8 +76,8 @@ Set at minimum:
 
 ### After deploy
 
-- `curl https://YOUR-API/health` — should return JSON without auth.
-- `curl https://YOUR-API/health/ready` — should return 200 when DB is connected.
+- `curl https://YOUR-API/health` — should return JSON without auth (matches default Railway check in `railway.json`).
+- `curl https://YOUR-API/health/ready` — optional; returns **200** when DB is connected, **503** until then (use as Railway health check only after Mongo is reliable).
 
 ---
 
@@ -86,6 +87,7 @@ Create a **second** Railway service from the **same** repo.
 
 - **Dockerfile:** **`Dockerfile.workers`** (see `railway.workers.json` in the repo for reference; Railway UI may ask you to select this file explicitly).
 - **No public URL required** — workers are background processes.
+- **No HTTP health check** — `railway.workers.json` does not set `healthcheckPath` (workers are not an HTTP server).
 - **Environment:** same `MONGODB_URI` (and shared secrets/redis as your workers code expects). Align `QUEUE_MODE`, `REDIS_URL`, `SCHEDULER_*` with production design.
 
 > **Note:** Root `railway.json` is tuned for the **API** image only. The **workers** service must be configured separately in Railway to use `Dockerfile.workers`.
@@ -179,7 +181,7 @@ If a flag is `true` but credentials are missing, the API should return a **clear
 ## K. Go-live sequence (summary)
 
 1. Atlas + `MONGODB_URI` on Railway API & workers.
-2. Deploy API → verify `/health` and `/health/ready`.
+2. Deploy API → verify **`/health`** first (Railway uses this by default). Optionally verify **`/health/ready`** once MongoDB is connected.
 3. Deploy workers → check logs for DB + queue startup.
 4. Point Vercel `NEXT_PUBLIC_API_URL` at Railway API; deploy web.
 5. Set `APP_URL` / `API_PUBLIC_URL` / `GOOGLE_REDIRECT_URI` on Railway.
@@ -235,7 +237,7 @@ The root `.env.example` includes flags such as `GOOGLE_REAL_API_ENABLED`, `GMAIL
 |-----------------|--------|----------------------------------|
 | `GET /health`   | Public | Summary (includes DB state name) |
 | `GET /health/live` | Public | Liveness (not shutting down)  |
-| `GET /health/ready` | Public | Readiness (DB connected) — **use for Railway** |
+| `GET /health/ready` | Public | Readiness (DB connected); **optional on Railway** after MongoDB is stable — **first deploy uses `/health`** (see `railway.json`) |
 
 ---
 
@@ -245,7 +247,7 @@ The root `.env.example` includes flags such as `GOOGLE_REAL_API_ENABLED`, `GMAIL
 |------|------|
 | `Dockerfile.api` | Railway API image |
 | `Dockerfile.workers` | Railway workers image |
-| `railway.json` | API Dockerfile + `/health` |
+| `railway.json` | API Dockerfile + Railway health check **`/health`** |
 | `railway.workers.json` | Reference for workers Dockerfile |
 | `apps/web/vercel.json` | Monorepo pnpm install/build |
 | `.env.example` | Root env template |
