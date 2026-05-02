@@ -1,6 +1,6 @@
-import { JobModel } from "@database/models";
-import { createJobFingerprint, normalizeText, normalizeUrl } from "@shared/utils/fingerprint";
-import type { DuplicateCheckResult, JobExtractionResult } from "@shared/types/job";
+import { JobModel } from "@jobflow/database/models";
+import { createJobFingerprint, normalizeText, normalizeUrl } from "@jobflow/shared/utils/fingerprint";
+import type { DuplicateCheckResult, JobExtractionResult } from "@jobflow/shared/types/job";
 
 type PotentialDuplicate = {
   _id: string;

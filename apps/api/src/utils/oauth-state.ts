@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import type { IntegrationProvider } from "@shared/types/integration";
+import type { IntegrationProvider } from "@jobflow/shared/types/integration";
 import { env } from "../config/env";
 import { ApiError } from "./errors";
 

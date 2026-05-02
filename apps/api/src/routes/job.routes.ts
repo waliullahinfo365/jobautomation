@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { jobCreateSchema, jobUpdateSchema } from "@shared/schemas";
+import { jobCreateSchema, jobUpdateSchema } from "@jobflow/shared/schemas";
 import {
   aiProcessingStatus,
   archiveJob,

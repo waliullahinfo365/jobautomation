@@ -1,5 +1,5 @@
-import { TenantModel } from "@database/models";
-import type { EnqueueAutomationJobInput } from "@shared/types/queue";
+import { TenantModel } from "@jobflow/database/models";
+import type { EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
 import { enqueueManyAutomationJobs } from "../queues/automation.queue";
 
 function todayKey() {

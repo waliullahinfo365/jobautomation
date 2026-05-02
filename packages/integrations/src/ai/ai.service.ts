@@ -1,6 +1,6 @@
-import type { JobExtractionResult, JobIntakeEmailPayload } from "@shared/types/job";
-import type { AiProvider, AiRuntimeConfig, AiServiceResult } from "@shared/types/ai";
-import { DEFAULT_AI_MODEL } from "@shared/constants/ai";
+import type { JobExtractionResult, JobIntakeEmailPayload } from "@jobflow/shared/types/job";
+import type { AiProvider, AiRuntimeConfig, AiServiceResult } from "@jobflow/shared/types/ai";
+import { DEFAULT_AI_MODEL } from "@jobflow/shared/constants/ai";
 
 const LOCATION_KEYWORDS = ["remote", "toronto", "vancouver", "new york", "london", "berlin"];
 

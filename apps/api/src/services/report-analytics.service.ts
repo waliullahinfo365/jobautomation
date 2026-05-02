@@ -1,5 +1,5 @@
-import { ApplicationModel, AutomationLogModel, InterviewModel, JobModel, ReportModel } from "@database/models";
-import type { DailyDigestMetrics, WeeklyPerformanceMetrics } from "@shared/types/report";
+import { ApplicationModel, AutomationLogModel, InterviewModel, JobModel, ReportModel } from "@jobflow/database/models";
+import type { DailyDigestMetrics, WeeklyPerformanceMetrics } from "@jobflow/shared/types/report";
 import { assertTenantId } from "./baseTenant.service";
 
 function startOfDay(date: Date): Date {

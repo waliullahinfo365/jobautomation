@@ -1,4 +1,4 @@
-import { normalizeGmailReply, verifyGmailWebhookStub } from "@integrations/gmail/gmail.service";
+import { normalizeGmailReply, verifyGmailWebhookStub } from "@jobflow/integrations/gmail/gmail.service";
 import type { Request } from "express";
 import * as integrationService from "../services/integration.service";
 import { processEmailReply } from "../services/email-reply-detection.service";

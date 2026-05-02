@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { InterviewModel } from "@database/models";
-import { createCalendarEventStub } from "@integrations/google-calendar/calendar.service";
-import type { CalendarEventResult } from "@shared/types/interview";
+import { InterviewModel } from "@jobflow/database/models";
+import { createCalendarEventStub } from "@jobflow/integrations/google-calendar/calendar.service";
+import type { CalendarEventResult } from "@jobflow/shared/types/interview";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";

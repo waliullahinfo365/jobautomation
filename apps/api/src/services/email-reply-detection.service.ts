@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { ApplicationModel, JobModel } from "@database/models";
-import { classifyReplyRuleBased } from "@integrations/gmail/gmail.service";
-import type { EmailReplyDetectionResult, EmailReplyPayload } from "@shared/types/application";
+import { ApplicationModel, JobModel } from "@jobflow/database/models";
+import { classifyReplyRuleBased } from "@jobflow/integrations/gmail/gmail.service";
+import type { EmailReplyDetectionResult, EmailReplyPayload } from "@jobflow/shared/types/application";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId } from "./baseTenant.service";
 

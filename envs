@@ -1,0 +1,52 @@
+# App
+NODE_ENV=development
+APP_URL=http://localhost:3000
+API_URL=http://localhost:4000
+
+# Database
+MONGODB_URI=mongodb://localhost:27017/jobflow
+
+# Auth
+JWT_SECRET=dev-jwt-secret-change-in-production
+NEXTAUTH_SECRET=dev-nextauth-secret-change-in-production
+NEXTAUTH_URL=http://localhost:3000
+
+# Billing (stubbed — no real Stripe in dev)
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
+# Gmail / Google OAuth (stubbed — not required for local dev)
+GOOGLE_CLIENT_ID=1066010912807-nromolb48uh993r4mdv80v27405vmqu1.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=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
+GOOGLE_REDIRECT_URI=http://localhost:4000/integrations/google/callback
+
+GOOGLE_REAL_API_ENABLED=true
+API_PUBLIC_URL=http://localhost:4000
+APP_URL=http://localhost:3000
+
+# AI (stubbed — not required for local dev)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+
+# SMTP (stubbed)
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+
+# Queue
+REDIS_URL=
+QUEUE_MODE=memory
+QUEUE_INLINE_EXECUTION=false
+
+# Scheduler
+SCHEDULER_ENABLED=false
+SCHEDULER_TIMEZONE=America/Toronto
+
+# Frontend API
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_DEMO_TENANT_ID=demo-tenant-id
+NEXT_PUBLIC_DEMO_USER_ID=demo-user-id
+NEXT_PUBLIC_USE_MOCK_FALLBACK=true

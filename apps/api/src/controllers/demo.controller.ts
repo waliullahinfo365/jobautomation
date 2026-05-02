@@ -6,7 +6,7 @@ import {
   InterviewModel,
   JobModel,
   ReportModel,
-} from "@database/models";
+} from "@jobflow/database/models";
 import { runDemoDataForTenant } from "@jobflow/database";
 import type { Request } from "express";
 import { env } from "../config/env";

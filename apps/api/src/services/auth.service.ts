@@ -1,7 +1,7 @@
-import { seedAutomationModules } from "@database/seed/seedAutomationModules";
-import { TenantModel, UserModel } from "@database/models";
-import type { Tenant } from "@shared/types/tenant";
-import type { User, UserStatus } from "@shared/types/user";
+import { seedAutomationModules } from "@jobflow/database/seed/seedAutomationModules";
+import { TenantModel, UserModel } from "@jobflow/database/models";
+import type { Tenant } from "@jobflow/shared/types/tenant";
+import type { User, UserStatus } from "@jobflow/shared/types/user";
 import mongoose from "mongoose";
 import { env } from "../config/env";
 import { signAccessToken } from "../utils/jwt";

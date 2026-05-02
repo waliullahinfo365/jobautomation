@@ -17,15 +17,6 @@
       ],
       "@web/*": [
         "./src/*"
-      ],
-      "@shared/*": [
-        "../../packages/shared/src/*"
-      ],
-      "@database/*": [
-        "../../packages/database/src/*"
-      ],
-      "@integrations/*": [
-        "../../packages/integrations/src/*"
       ]
     },
     "isolatedModules": true

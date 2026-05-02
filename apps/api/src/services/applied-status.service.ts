@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ApplicationModel, JobModel } from "@database/models";
+import { ApplicationModel, JobModel } from "@jobflow/database/models";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";

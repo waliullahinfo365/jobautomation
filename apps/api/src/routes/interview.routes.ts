@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { interviewCreateSchema, interviewUpdateSchema } from "@shared/schemas";
+import { interviewCreateSchema, interviewUpdateSchema } from "@jobflow/shared/schemas";
 import {
   createCalendarEvent,
   createInterview,

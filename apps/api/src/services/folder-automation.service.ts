@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { DocumentModel, JobModel } from "@database/models";
-import { createJobFolderTreeStub } from "@integrations/google-drive/drive.service";
-import type { FolderProvisionResult } from "@shared/types/job";
+import { DocumentModel, JobModel } from "@jobflow/database/models";
+import { createJobFolderTreeStub } from "@jobflow/integrations/google-drive/drive.service";
+import type { FolderProvisionResult } from "@jobflow/shared/types/job";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";

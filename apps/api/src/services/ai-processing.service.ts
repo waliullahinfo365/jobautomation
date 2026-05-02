@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { DocumentModel, JobModel } from "@database/models";
+import { DocumentModel, JobModel } from "@jobflow/database/models";
 import {
   estimateAiUsage,
   runCoverLetterGeneration as integrationRunCoverLetter,
   runResearchGeneration as integrationRunResearch,
-} from "@integrations/ai/ai.service";
-import type { AiProcessingResult, DraftGenerationResult, ResearchGenerationResult } from "@shared/types/job";
+} from "@jobflow/integrations/ai/ai.service";
+import type { AiProcessingResult, DraftGenerationResult, ResearchGenerationResult } from "@jobflow/shared/types/job";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";

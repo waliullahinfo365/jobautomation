@@ -1,6 +1,6 @@
-import { IntegrationConnectionModel } from "@database/models";
-import { getGoogleScopesForProvider } from "@shared/constants/googleScopes";
-import type { IntegrationListItem, IntegrationProvider, IntegrationStatus } from "@shared/types/integration";
+import { IntegrationConnectionModel } from "@jobflow/database/models";
+import { getGoogleScopesForProvider } from "@jobflow/shared/constants/googleScopes";
+import type { IntegrationListItem, IntegrationProvider, IntegrationStatus } from "@jobflow/shared/types/integration";
 import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED, GOOGLE_REDIRECT_URI, getApiPublicBaseUrl } from "../config/google-oauth";
 import { assertTenantId } from "./baseTenant.service";
 import { createAuditLog } from "./audit-log.service";

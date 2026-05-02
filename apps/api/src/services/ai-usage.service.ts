@@ -1,5 +1,5 @@
-import { AiUsageLogModel } from "@database/models";
-import type { AiProvider } from "@shared/types/ai";
+import { AiUsageLogModel } from "@jobflow/database/models";
+import type { AiProvider } from "@jobflow/shared/types/ai";
 import { assertTenantId } from "./baseTenant.service";
 import { incrementUsage } from "./usage.service";
 

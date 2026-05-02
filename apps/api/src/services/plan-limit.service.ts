@@ -1,4 +1,4 @@
-import type { PlanLimitName } from "@shared/types/billing";
+import type { PlanLimitName } from "@jobflow/shared/types/billing";
 import { createAutomationLog } from "./automation-log.service";
 import { checkPlanLimit } from "./billing.service";
 import { ApiError } from "../utils/errors";

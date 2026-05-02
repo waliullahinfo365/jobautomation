@@ -5,7 +5,7 @@ import {
   ReportModel,
   TenantModel,
   UserModel,
-} from "@database/models";
+} from "@jobflow/database/models";
 import { assertTenantId } from "./baseTenant.service";
 
 export type UsageMetric =

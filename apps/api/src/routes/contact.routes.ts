@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { contactCreateSchema, contactUpdateSchema } from "@shared/schemas";
+import { contactCreateSchema, contactUpdateSchema } from "@jobflow/shared/schemas";
 import { createContact, getContactById, listContacts, markFollowedUp, updateContact } from "../controllers/contact.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";

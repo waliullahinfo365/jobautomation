@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { getDatabaseStatus } from "@database/index";
+import { getDatabaseStatus } from "@jobflow/database";
 import { env } from "../config/env";
 import { getApiQueueReport } from "../config/queue";
 import { isShuttingDown } from "../shutdown";

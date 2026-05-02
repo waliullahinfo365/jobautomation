@@ -1,4 +1,4 @@
-import { TenantModel } from "@database/models";
+import { TenantModel } from "@jobflow/database/models";
 import type { Request } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";

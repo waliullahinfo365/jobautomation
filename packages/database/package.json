@@ -2,8 +2,35 @@
   "name": "@jobflow/database",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "models": ["dist/models/index.d.ts"],
+      "models/*": ["dist/models/*"],
+      "seed/*": ["dist/seed/*"]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./models": {
+      "types": "./dist/models/index.d.ts",
+      "require": "./dist/models/index.js",
+      "import": "./dist/models/index.js",
+      "default": "./dist/models/index.js"
+    },
+    "./seed/seedAutomationModules": {
+      "types": "./dist/seed/seedAutomationModules.d.ts",
+      "require": "./dist/seed/seedAutomationModules.js",
+      "import": "./dist/seed/seedAutomationModules.js",
+      "default": "./dist/seed/seedAutomationModules.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "type-check": "tsc --noEmit",

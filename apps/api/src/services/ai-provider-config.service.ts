@@ -1,6 +1,6 @@
-import { IntegrationConnectionModel } from "@database/models";
-import { AI_MODEL_OPTIONS, DEFAULT_AI_MODEL } from "@shared/constants/ai";
-import type { AiProvider, AiProviderConfig, AiRuntimeConfig } from "@shared/types/ai";
+import { IntegrationConnectionModel } from "@jobflow/database/models";
+import { AI_MODEL_OPTIONS, DEFAULT_AI_MODEL } from "@jobflow/shared/constants/ai";
+import type { AiProvider, AiProviderConfig, AiRuntimeConfig } from "@jobflow/shared/types/ai";
 import { decryptSecret } from "../utils/encryption";
 import { assertTenantId } from "./baseTenant.service";
 

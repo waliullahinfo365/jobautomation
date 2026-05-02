@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
-import type { Permission } from "@shared/constants/permissions";
-import { ROLE_PERMISSIONS, roleHasPermission } from "@shared/constants/permissions";
-import type { TenantRole } from "@shared/types/user";
+import type { Permission } from "@jobflow/shared/constants/permissions";
+import { ROLE_PERMISSIONS, roleHasPermission } from "@jobflow/shared/constants/permissions";
+import type { TenantRole } from "@jobflow/shared/types/user";
 import { errorResponse } from "../utils/apiResponse";
 
 export function requirePermission(permission: Permission) {

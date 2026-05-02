@@ -1,4 +1,4 @@
-import type { IntegrationProvider } from "@shared/types/integration";
+import type { IntegrationProvider } from "@jobflow/shared/types/integration";
 
 /** URL / API slug → persisted `IntegrationConnection.provider` enum value. */
 export const SLUG_TO_PROVIDER: Record<string, IntegrationProvider> = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { AI_MODEL_OPTIONS } from "@shared/constants/ai";
+import { AI_MODEL_OPTIONS } from "@jobflow/shared/constants/ai";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

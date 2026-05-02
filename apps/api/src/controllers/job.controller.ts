@@ -1,4 +1,4 @@
-import { JobModel } from "@database/models";
+import { JobModel } from "@jobflow/database/models";
 import type { Request } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { paginatedResponse, successResponse } from "../utils/apiResponse";

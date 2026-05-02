@@ -1,4 +1,4 @@
-import { TenantModel } from "@database/models";
+import { TenantModel } from "@jobflow/database/models";
 export async function list(){ return TenantModel.find().limit(20); }
 export async function getById(id:string){ return TenantModel.findById(id); }
 export async function create(payload:Record<string,unknown>){ return TenantModel.create(payload); }

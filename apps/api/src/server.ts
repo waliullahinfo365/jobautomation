@@ -1,5 +1,5 @@
 import http from "node:http";
-import { connectDatabase, disconnectDatabase } from "@database/index";
+import { connectDatabase, disconnectDatabase } from "@jobflow/database";
 import { createApp } from "./app";
 import { validateApiEnv } from "./config/validate-env";
 import { env, requireJwtSecretInProduction } from "./config/env";

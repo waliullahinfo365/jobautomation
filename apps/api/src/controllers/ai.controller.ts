@@ -1,6 +1,6 @@
-import type { AiProvider } from "@shared/types/ai";
+import type { AiProvider } from "@jobflow/shared/types/ai";
 import type { Request } from "express";
-import { runResearchGeneration as integrationRunResearch } from "@integrations/ai/ai.service";
+import { runResearchGeneration as integrationRunResearch } from "@jobflow/integrations/ai/ai.service";
 import { getAiUsageSummary } from "../services/ai-usage.service";
 import { getTenantAiConfig, resolveAiProviderForTenant } from "../services/ai-provider-config.service";
 import { assertTenantId } from "../services/baseTenant.service";

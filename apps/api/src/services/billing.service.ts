@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { AuditLogModel, TenantModel } from "@database/models";
-import { PLAN_DEFINITIONS, displayPlanToPlanKey } from "@shared/constants/plans";
+import { AuditLogModel, TenantModel } from "@jobflow/database/models";
+import { PLAN_DEFINITIONS, displayPlanToPlanKey } from "@jobflow/shared/constants/plans";
 import type {
   BillingStatus,
   CheckoutResult,
@@ -9,7 +9,7 @@ import type {
   PlanUsage,
   SubscriptionPlanKey,
   TenantBillingSnapshot,
-} from "@shared/types/billing";
+} from "@jobflow/shared/types/billing";
 import { assertTenantId } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
 

@@ -1,4 +1,4 @@
-import type { JobIntakeEmailPayload } from "@shared/types/job";
+import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import { processJobIntakeProcessor } from "../processors/job-intake.processor";
 
 export async function processJobIntakeJob(input: {

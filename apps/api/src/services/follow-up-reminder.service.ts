@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { ApplicationModel } from "@database/models";
-import { sendFollowUpReminderStub } from "@integrations/smtp/smtp.service";
-import type { FollowUpReminderResult } from "@shared/types/application";
+import { ApplicationModel } from "@jobflow/database/models";
+import { sendFollowUpReminderStub } from "@jobflow/integrations/smtp/smtp.service";
+import type { FollowUpReminderResult } from "@jobflow/shared/types/application";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";

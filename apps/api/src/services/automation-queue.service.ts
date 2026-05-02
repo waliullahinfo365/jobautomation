@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { enqueueAutomationJob as enqueueWorkerJob } from "@jobflow/workers/queue";
-import type { AutomationJobName, AutomationJobPayload, AutomationQueueResult, BaseAutomationJobPayload } from "@shared/types/queue";
+import type { AutomationJobName, AutomationJobPayload, AutomationQueueResult, BaseAutomationJobPayload } from "@jobflow/shared/types/queue";
 import { ApiError } from "../utils/errors";
 import { logApiAction } from "./automation-log.service";
 import { assertCanRunAutomation } from "./plan-limit.service";

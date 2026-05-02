@@ -4,13 +4,10 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "baseUrl": ".",
+    "rootDir": "src",
     "outDir": "dist",
-    "types": ["node"],
-    "paths": {
-      "@shared/*": ["../../packages/shared/src/*"],
-      "@database/*": ["../../packages/database/src/*"],
-      "@integrations/*": ["../../packages/integrations/src/*"]
-    }
+    "declaration": true,
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }

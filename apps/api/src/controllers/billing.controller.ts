@@ -1,4 +1,4 @@
-import { PLAN_DEFINITIONS } from "@shared/constants/plans";
+import { PLAN_DEFINITIONS } from "@jobflow/shared/constants/plans";
 import type { Request } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";

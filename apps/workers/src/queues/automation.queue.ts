@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { AutomationLogModel } from "@database/models";
-import type { AutomationJobName, AutomationJobPayload, AutomationQueueResult, EnqueueAutomationJobInput } from "@shared/types/queue";
+import { AutomationLogModel } from "@jobflow/database/models";
+import type { AutomationJobName, AutomationJobPayload, AutomationQueueResult, EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
 import { dispatchAutomationJob } from "../processors/automation.dispatcher";
 
 type QueueMode = "memory" | "bullmq" | "disabled";

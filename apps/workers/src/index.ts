@@ -1,4 +1,4 @@
-import { connectDatabase, disconnectDatabase } from "@database/index";
+import { connectDatabase, disconnectDatabase } from "@jobflow/database";
 import { validateWorkerEnv } from "./config/validate-env";
 import { getWorkerHealth, setWorkersStarted } from "./health";
 import { registerSchedulers } from "./schedulers";

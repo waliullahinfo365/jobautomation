@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { applicationCreateSchema, applicationUpdateSchema } from "@shared/schemas";
+import { applicationCreateSchema, applicationUpdateSchema } from "@jobflow/shared/schemas";
 import {
   createApplication,
   getApplicationById,

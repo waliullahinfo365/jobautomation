@@ -1,5 +1,5 @@
-import type { JobIntakeEmailPayload } from "@shared/types/job";
-import type { EmailReplyPayload } from "@shared/types/application";
+import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
+import type { EmailReplyPayload } from "@jobflow/shared/types/application";
 
 export function normalizeGmailMessage(input: Partial<JobIntakeEmailPayload>): JobIntakeEmailPayload {
   return {

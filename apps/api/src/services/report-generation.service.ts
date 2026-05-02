@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { ReportModel } from "@database/models";
-import { sendReportEmailStub } from "@integrations/smtp/smtp.service";
-import type { DailyDigestMetrics, ReportDeliveryResult, ReportGenerationResult, WeeklyPerformanceMetrics } from "@shared/types/report";
+import { ReportModel } from "@jobflow/database/models";
+import { sendReportEmailStub } from "@jobflow/integrations/smtp/smtp.service";
+import type { DailyDigestMetrics, ReportDeliveryResult, ReportGenerationResult, WeeklyPerformanceMetrics } from "@jobflow/shared/types/report";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { getDailyDigestMetrics, getWeeklyPerformanceMetrics } from "./report-analytics.service";

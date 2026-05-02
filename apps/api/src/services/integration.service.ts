@@ -1,4 +1,4 @@
-import { IntegrationConnectionModel } from "@database/models";
+import { IntegrationConnectionModel } from "@jobflow/database/models";
 import type {
   IntegrationCatalogEntry,
   IntegrationHealthSummary,
@@ -6,8 +6,8 @@ import type {
   IntegrationProvider,
   IntegrationStatus,
   IntegrationTestResult,
-} from "@shared/types/integration";
-import type { IntegrationTestStatus } from "@shared/constants/statuses";
+} from "@jobflow/shared/types/integration";
+import type { IntegrationTestStatus } from "@jobflow/shared/constants/statuses";
 import { createAuditLog } from "./audit-log.service";
 import { assertCanAddIntegration } from "./plan-limit.service";
 import { assertTenantId } from "./baseTenant.service";

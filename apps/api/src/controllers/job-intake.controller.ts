@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { JobIntakeEmailPayload } from "@shared/types/job";
+import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import type { Request } from "express";
 import { processJobIntakeEmail } from "../services/job-intake.service";
 import { asyncHandler } from "../utils/asyncHandler";

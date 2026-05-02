@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { DocumentModel } from "@database/models";
-import { exportDocumentToPdfStub } from "@integrations/google-drive/drive.service";
-import type { PdfExportResult } from "@shared/types/document";
+import { DocumentModel } from "@jobflow/database/models";
+import { exportDocumentToPdfStub } from "@jobflow/integrations/google-drive/drive.service";
+import type { PdfExportResult } from "@jobflow/shared/types/document";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";

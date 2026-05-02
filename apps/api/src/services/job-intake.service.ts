@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { JobModel } from "@database/models";
-import { runAiExtraction } from "@integrations/ai/ai.service";
-import { createJobFingerprint } from "@shared/utils/fingerprint";
-import type { JobIntakeEmailPayload, JobIntakeResult } from "@shared/types/job";
+import { JobModel } from "@jobflow/database/models";
+import { runAiExtraction } from "@jobflow/integrations/ai/ai.service";
+import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
+import type { JobIntakeEmailPayload, JobIntakeResult } from "@jobflow/shared/types/job";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId } from "./baseTenant.service";
 import { checkDuplicateJob } from "./duplicate-protection.service";

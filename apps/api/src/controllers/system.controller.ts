@@ -1,5 +1,5 @@
-import { getDatabaseStatus } from "@database/index";
-import { AutomationLogModel, AutomationModuleModel } from "@database/models";
+import { getDatabaseStatus } from "@jobflow/database";
+import { AutomationLogModel, AutomationModuleModel } from "@jobflow/database/models";
 import type { Request } from "express";
 import { getCurrentPlan } from "../services/billing.service";
 import { getIntegrationHealth } from "../services/integration.service";

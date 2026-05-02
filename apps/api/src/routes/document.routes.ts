@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { documentCreateSchema, documentUpdateSchema } from "@shared/schemas";
+import { documentCreateSchema, documentUpdateSchema } from "@jobflow/shared/schemas";
 import { createDocument, exportPdf, getDocumentById, listDocuments, routeCv, updateDocument } from "../controllers/document.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";

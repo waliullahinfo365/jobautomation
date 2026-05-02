@@ -1,4 +1,4 @@
-import { AuditLogModel } from "@database/models";
+import { AuditLogModel } from "@jobflow/database/models";
 import type { Request } from "express";
 import { assertTenantId } from "./baseTenant.service";
 

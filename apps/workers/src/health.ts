@@ -1,4 +1,4 @@
-import { getDatabaseStatus } from "@database/index";
+import { getDatabaseStatus } from "@jobflow/database";
 import { getQueueMode } from "./queues/automation.queue";
 
 let workersStarted = false;

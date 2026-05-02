@@ -1,4 +1,4 @@
-import type { JobIntakeEmailPayload } from "@shared/types/job";
+import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 
 export type JobIntakeProcessorPayload = {
   tenantId: string;

@@ -1,4 +1,4 @@
-import type { AutomationJobName, AutomationJobPayload } from "@shared/types/queue";
+import type { AutomationJobName, AutomationJobPayload } from "@jobflow/shared/types/queue";
 import { processAiProcessingJob } from "./ai-processing.processor";
 import { processAppliedStatusJob } from "./applied-status.processor";
 import { processCvRoutingJob } from "./cv-routing.processor";

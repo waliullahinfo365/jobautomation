@@ -2,8 +2,69 @@
   "name": "@jobflow/integrations",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "ai/*": ["dist/ai/*"],
+      "gmail/*": ["dist/gmail/*"],
+      "google-drive/*": ["dist/google-drive/*"],
+      "google-calendar/*": ["dist/google-calendar/*"],
+      "smtp/*": ["dist/smtp/*"],
+      "notifications/*": ["dist/notifications/*"],
+      "notion-legacy/*": ["dist/notion-legacy/*"]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ai/*": {
+      "types": "./dist/ai/*.d.ts",
+      "require": "./dist/ai/*.js",
+      "import": "./dist/ai/*.js",
+      "default": "./dist/ai/*.js"
+    },
+    "./gmail/*": {
+      "types": "./dist/gmail/*.d.ts",
+      "require": "./dist/gmail/*.js",
+      "import": "./dist/gmail/*.js",
+      "default": "./dist/gmail/*.js"
+    },
+    "./google-drive/*": {
+      "types": "./dist/google-drive/*.d.ts",
+      "require": "./dist/google-drive/*.js",
+      "import": "./dist/google-drive/*.js",
+      "default": "./dist/google-drive/*.js"
+    },
+    "./google-calendar/*": {
+      "types": "./dist/google-calendar/*.d.ts",
+      "require": "./dist/google-calendar/*.js",
+      "import": "./dist/google-calendar/*.js",
+      "default": "./dist/google-calendar/*.js"
+    },
+    "./smtp/*": {
+      "types": "./dist/smtp/*.d.ts",
+      "require": "./dist/smtp/*.js",
+      "import": "./dist/smtp/*.js",
+      "default": "./dist/smtp/*.js"
+    },
+    "./notifications/*": {
+      "types": "./dist/notifications/*.d.ts",
+      "require": "./dist/notifications/*.js",
+      "import": "./dist/notifications/*.js",
+      "default": "./dist/notifications/*.js"
+    },
+    "./notion-legacy/*": {
+      "types": "./dist/notion-legacy/*.d.ts",
+      "require": "./dist/notion-legacy/*.js",
+      "import": "./dist/notion-legacy/*.js",
+      "default": "./dist/notion-legacy/*.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "type-check": "tsc --noEmit",
