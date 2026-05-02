@@ -18,5 +18,4 @@ export * from "./types/report";
 export * from "./types/queue";
 export * from "./types/audit-log";
 export * from "./types/billing";
-export * from "./utils/fingerprint";
 export * from "./schemas";

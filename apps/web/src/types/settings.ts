@@ -1,4 +1,4 @@
-import type { IntegrationStatus } from "@jobflow/shared/types/integration";
+import type { IntegrationStatus } from "@jobflow/shared";
 
 export type { IntegrationStatus };
 

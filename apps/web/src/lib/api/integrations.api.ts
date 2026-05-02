@@ -1,4 +1,4 @@
-import type { IntegrationHealthSummary, IntegrationListItem, IntegrationTestResult } from "@jobflow/shared/types/integration";
+import type { IntegrationHealthSummary, IntegrationListItem, IntegrationTestResult } from "@jobflow/shared";
 import { apiFetch } from "./client";
 
 export function listIntegrations(): Promise<IntegrationListItem[]> {
