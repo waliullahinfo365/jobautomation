@@ -1,0 +1,18 @@
+# Workers — Node 20, pnpm monorepo build
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY turbo.json tsconfig.base.json ./
+COPY packages ./packages
+COPY apps/workers ./apps/workers
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @jobflow/shared build \
+  && pnpm --filter @jobflow/database build \
+  && pnpm --filter @jobflow/workers build
+
+ENV NODE_ENV=production
+WORKDIR /app/apps/workers
+CMD ["node", "dist/apps/workers/src/index.js"]

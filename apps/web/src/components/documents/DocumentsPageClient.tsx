@@ -1,0 +1,385 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { DocumentsIcon } from "@/components/icons";
+import { PageHeader } from "@/components/shared/PageHeader";
+import type {
+  CoverLetterRecord,
+  CVVersion,
+  DocumentRecord,
+  DocumentTab,
+  FolderActivityRecord,
+  FolderAutomationSettings,
+  PDFExportRecord,
+  ResearchDocumentRecord,
+} from "@/types/document";
+import {
+  mockFolderActivity,
+  mockFolderAutomationSettings,
+} from "@/data/mockDocuments";
+import { DocumentStatsCards } from "./DocumentStatsCards";
+import { DocumentTabs } from "./DocumentTabs";
+import { DocumentFilters, type DocumentFilterState } from "./DocumentFilters";
+import { AllDocumentsTable } from "./AllDocumentsTable";
+import { CVLibrarySection } from "./CVLibrarySection";
+import { CoverLettersSection } from "./CoverLettersSection";
+import { ResearchDocsSection } from "./ResearchDocsSection";
+import { PDFExportsSection } from "./PDFExportsSection";
+import { FolderAutomationSection } from "./FolderAutomationSection";
+import { useDocumentsApi } from "@/hooks/api/useDocumentsApi";
+import { useJobsApi } from "@/hooks/api/useJobsApi";
+import { normalizeListResponse } from "@/lib/api/normalizeResource";
+import { getResourceId, normalizeDocumentRecordsForUi, normalizeJobForUi } from "@/lib/utils/resource";
+import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
+import { LoadingState } from "@/components/shared/LoadingState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
+import type { Job } from "@/types/job";
+
+const initialFilters: DocumentFilterState = {
+  query: "",
+  type: "All",
+  status: "All",
+  relatedJob: "All Jobs",
+};
+
+function toCoverLetterRecord(d: DocumentRecord): CoverLetterRecord {
+  return {
+    id: d.id,
+    fileName: d.fileName,
+    company: d.company,
+    position: d.position,
+    relatedJob: d.relatedJob,
+    status: d.status,
+    aiGenerated: false,
+    pdfExportStatus: d.pdfExportStatus ?? "Pending",
+    lastUpdated: d.lastUpdated,
+  };
+}
+
+function toResearchRecord(d: DocumentRecord): ResearchDocumentRecord {
+  return {
+    id: d.id,
+    documentName: d.fileName,
+    company: d.company,
+    position: d.position,
+    researchStatus: d.status,
+    aiSummarySnippet: "—",
+    createdAt: d.lastUpdated,
+  };
+}
+
+function toPdfExportRecord(d: DocumentRecord): PDFExportRecord {
+  return {
+    id: d.id,
+    documentName: d.fileName,
+    sourceType: d.type,
+    relatedJob: d.relatedJob,
+    exportStatus: d.pdfExportStatus ?? "Pending",
+    createdAt: d.lastUpdated,
+    pdfUrl: d.pdfUrl ?? "",
+  };
+}
+
+function toCVVersion(d: DocumentRecord, index: number, defaultId: string | null): CVVersion {
+  return {
+    id: d.id,
+    cvName: d.fileName,
+    targetRole: d.position || "Role",
+    industry: "General",
+    version: "v1",
+    status: d.status,
+    usedInApplicationsCount: 0,
+    isDefault: defaultId ? d.id === defaultId : index === 0,
+    lastUpdated: d.lastUpdated,
+  };
+}
+
+function toastQueuedPayload(label: string, result: unknown) {
+  const r = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
+  const parts = [
+    r.operationId != null && `operationId: ${String(r.operationId)}`,
+    r.jobId != null && `jobId: ${String(r.jobId)}`,
+    r.status != null && `status: ${String(r.status)}`,
+  ].filter(Boolean);
+  showSuccess(parts.length ? `${label}: ${parts.join(" · ")}` : `${label} queued.`);
+}
+
+export function DocumentsPageClient() {
+  const documentsApi = useDocumentsApi({ fallbackToMock: true });
+  const jobsApi = useJobsApi({ fallbackToMock: true });
+
+  const [tab, setTab] = useState<DocumentTab>("All Documents");
+  const [filters, setFilters] = useState<DocumentFilterState>(initialFilters);
+  const [folderSettings, setFolderSettings] = useState<FolderAutomationSettings>(mockFolderAutomationSettings);
+  const [folderActivity, setFolderActivity] = useState<FolderActivityRecord[]>(mockFolderActivity);
+  const [fallbackEdits, setFallbackEdits] = useState<Record<string, Partial<DocumentRecord>>>({});
+  const [cvDefaultId, setCvDefaultId] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  const baseDocuments = useMemo(() => {
+    const raw = normalizeListResponse<unknown>(documentsApi.data);
+    return normalizeDocumentRecordsForUi(raw);
+  }, [documentsApi.data]);
+
+  const jobs = useMemo((): Job[] => {
+    const raw = normalizeListResponse<unknown>(jobsApi.data);
+    return raw.map(normalizeJobForUi);
+  }, [jobsApi.data]);
+
+  useEffect(() => {
+    if (!documentsApi.isUsingFallback) setFallbackEdits({});
+  }, [documentsApi.isUsingFallback]);
+
+  const documents = useMemo(() => {
+    if (!documentsApi.isUsingFallback || Object.keys(fallbackEdits).length === 0) return baseDocuments;
+    return baseDocuments.map((doc) => {
+      const id = getResourceId(doc);
+      const ed = fallbackEdits[id];
+      return ed ? ({ ...doc, ...ed } as DocumentRecord) : doc;
+    });
+  }, [baseDocuments, documentsApi.isUsingFallback, fallbackEdits]);
+
+  const firstJobId = useMemo(() => (jobs[0] ? getResourceId(jobs[0]) : undefined), [jobs]);
+
+  const stats = useMemo(
+    () => ({
+      totalDocuments: documents.length,
+      cvVersions: documents.filter((d) => d.type === "CV").length,
+      coverLetters: documents.filter((d) => d.type === "Cover Letter").length,
+      researchDocs: documents.filter((d) => d.type === "Research Document").length,
+      pdfExports: documents.filter((d) => d.type === "PDF Export").length,
+      failedExports: documents.filter((d) => d.pdfExportStatus === "Failed" || d.status === "Failed").length,
+    }),
+    [documents]
+  );
+
+  const filteredAllDocuments = useMemo(() => {
+    return documents.filter((record) => {
+      const searchString = `${record.fileName} ${record.company} ${record.position} ${record.type}`.toLowerCase();
+      const matchesQuery = !filters.query || searchString.includes(filters.query.toLowerCase());
+      const matchesType = filters.type === "All" ? true : record.type === filters.type;
+      const matchesStatus = filters.status === "All" ? true : record.status === filters.status;
+      return matchesQuery && matchesType && matchesStatus;
+    });
+  }, [documents, filters]);
+
+  const cvRows = useMemo(() => {
+    const cvs = documents.filter((d) => d.type === "CV");
+    return cvs.map((d, i) => toCVVersion(d, i, cvDefaultId));
+  }, [documents, cvDefaultId]);
+
+  const coverRows = useMemo(
+    () => documents.filter((d) => d.type === "Cover Letter").map(toCoverLetterRecord),
+    [documents]
+  );
+  const researchRows = useMemo(
+    () => documents.filter((d) => d.type === "Research Document").map(toResearchRecord),
+    [documents]
+  );
+  const pdfRows = useMemo(
+    () => documents.filter((d) => d.type === "PDF Export").map(toPdfExportRecord),
+    [documents]
+  );
+
+  const patchFallback = useCallback((id: string, patch: Partial<DocumentRecord>) => {
+    setFallbackEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }, []);
+
+  const resolveJobIdForDoc = useCallback(
+    (record: DocumentRecord): string | undefined => {
+      return record.jobId || firstJobId;
+    },
+    [firstJobId]
+  );
+
+  const handleExportPdf = async (record: DocumentRecord) => {
+    const id = getResourceId(record);
+    setPendingAction(`pdf-${id}`);
+    try {
+      if (documentsApi.isUsingFallback) {
+        patchFallback(id, {
+          pdfExportStatus: "Exported",
+          pdfUrl: `/docs/exports/demo-${id}.pdf`,
+          status: "Exported",
+          lastUpdated: new Date().toISOString(),
+        });
+        showInfo("API offline, updated demo data locally.");
+        showSuccess("PDF export recorded (demo).");
+        return;
+      }
+      try {
+        const result = await documentsApi.exportPdf({ id, execute: false });
+        toastQueuedPayload("PDF export", result);
+        await documentsApi.refetch();
+      } catch {
+        showError("PDF export failed.");
+      }
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleRouteCv = async (record: DocumentRecord) => {
+    const id = getResourceId(record);
+    const jobId = resolveJobIdForDoc(record);
+    if (!jobId) {
+      showError("Select a related job first.");
+      return;
+    }
+    setPendingAction(`route-${id}`);
+    try {
+      if (documentsApi.isUsingFallback) {
+        patchFallback(id, {
+          routingStatus: "Completed",
+          storageLocation: `${record.storageLocation} → routed`,
+          lastUpdated: new Date().toISOString(),
+        });
+        showInfo("API offline, updated demo data locally.");
+        showSuccess("CV routed (demo).");
+        return;
+      }
+      try {
+        const result = await documentsApi.routeCv({ id, payload: { jobId } });
+        toastQueuedPayload("CV routing", result);
+        await documentsApi.refetch();
+      } catch {
+        showError("CV routing failed.");
+      }
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleOpenFolder = (record: DocumentRecord) => {
+    if (record.storageUrl) {
+      window.open(record.storageUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+    showInfo("Open folder will be available after Google Drive storage is connected.");
+  };
+
+  const handleProvisionFolder = async () => {
+    const jobId = firstJobId;
+    if (!jobId) {
+      showError("No job available to provision a folder.");
+      return;
+    }
+    setPendingAction("provision");
+    try {
+      if (jobsApi.isUsingFallback) {
+        showInfo("API offline, updated demo data locally.");
+        showSuccess("Folder provision queued (demo).");
+        setFolderActivity((prev) => [
+          {
+            id: `fa_local_${Date.now()}`,
+            time: new Date().toISOString(),
+            job: jobs[0] ? `${jobs[0].company} / ${jobs[0].position}` : "Job",
+            action: "Provision folder (demo)",
+            folderPath: "Job Applications/…",
+            status: "Success",
+          },
+          ...prev,
+        ]);
+        return;
+      }
+      try {
+        const result = await jobsApi.provisionFolders({ id: jobId, execute: false });
+        toastQueuedPayload("Folder provision", result);
+      } catch {
+        showError("Folder provision failed.");
+      }
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const isInitialLoading = documentsApi.loading && documentsApi.data === undefined;
+
+  if (isInitialLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={DocumentsIcon}
+          eyebrow="Document Vault"
+          title="Documents"
+          description="Manage CVs, cover letters, research documents, folders, and PDF exports."
+          actions={<Button type="button">Upload Document</Button>}
+        />
+        <LoadingState title="Loading documents..." description="Fetching document library from the backend." />
+      </div>
+    );
+  }
+
+  const emptyAll = documents.length === 0;
+  const emptyFiltered = !emptyAll && filteredAllDocuments.length === 0 && tab === "All Documents";
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        icon={DocumentsIcon}
+        eyebrow="Document Vault"
+        title="Documents"
+        description="Manage CVs, cover letters, research documents, folders, and PDF exports."
+        actions={
+          <Button type="button" onClick={() => showInfo("Upload will be available after file storage is connected.")}>
+            Upload Document
+          </Button>
+        }
+      />
+
+      <DocumentStatsCards stats={stats} />
+      <DocumentTabs value={tab} onChange={setTab} />
+
+      {tab === "All Documents" ? (
+        <div className="space-y-4">
+          <DocumentFilters
+            filters={filters}
+            onChange={setFilters}
+            onClear={() => setFilters(initialFilters)}
+            aside={documentsApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
+          />
+          {emptyAll ? (
+            <EmptyState title="No documents" description="Documents from the API will appear here." />
+          ) : emptyFiltered ? (
+            <EmptyState
+              title="No matching documents"
+              description="Try another filter."
+              actionLabel="Clear filters"
+              onAction={() => setFilters(initialFilters)}
+            />
+          ) : (
+            <AllDocumentsTable
+              records={filteredAllDocuments}
+              onExportPdf={(r) => void handleExportPdf(r)}
+              onRouteCv={(r) => void handleRouteCv(r)}
+              onOpenFolder={(r) => handleOpenFolder(r)}
+            />
+          )}
+        </div>
+      ) : null}
+
+      {tab === "CV Library" ? (
+        <CVLibrarySection
+          records={cvRows}
+          onSetDefault={(id) => {
+            setCvDefaultId(id);
+          }}
+        />
+      ) : null}
+      {tab === "Cover Letters" ? <CoverLettersSection records={coverRows} /> : null}
+      {tab === "Research Docs" ? <ResearchDocsSection records={researchRows} /> : null}
+      {tab === "PDF Exports" ? <PDFExportsSection records={pdfRows} /> : null}
+      {tab === "Folder Automation" ? (
+        <FolderAutomationSection
+          activity={folderActivity}
+          settings={folderSettings}
+          onChange={setFolderSettings}
+          onProvisionJobFolder={() => void handleProvisionFolder()}
+          provisionDisabled={!!pendingAction || !firstJobId}
+        />
+      ) : null}
+    </div>
+  );
+}

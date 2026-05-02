@@ -1,0 +1,29 @@
+import { PageTransition } from "@/components/shared/PageTransition";
+import { MobileNav } from "./MobileNav";
+import { Sidebar } from "./Sidebar";
+import { Topbar } from "./Topbar";
+
+interface DashboardShellProps {
+  children: React.ReactNode;
+}
+
+export function DashboardShell({ children }: DashboardShellProps) {
+  return (
+    <div className="dashboard-bg">
+      <div className="jf-app-bg" aria-hidden />
+      <div className="jf-app-grain" aria-hidden />
+      <div className="jf-shell">
+        <Sidebar />
+        <div className="flex min-w-0 flex-col bg-[var(--bg-0)]">
+          <MobileNav />
+          <Topbar />
+          <main className="flex-1 overflow-y-auto">
+            <PageTransition>
+              <div className="mx-auto w-full min-w-0 max-w-[1480px] px-3 py-5 sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">{children}</div>
+            </PageTransition>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}

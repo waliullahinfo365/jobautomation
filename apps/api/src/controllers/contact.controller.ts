@@ -1,0 +1,12 @@
+import { ContactModel } from "@database/models";
+import type { Request } from "express";
+import { asyncHandler } from "../utils/asyncHandler";
+import { paginatedResponse, successResponse } from "../utils/apiResponse";
+import { ApiError } from "../utils/errors";
+import { assertTenantId, buildTenantFilter, createTenantScopedRecord, findTenantScopedById, updateTenantScopedById } from "../services/baseTenant.service";
+import { getPagination } from "../utils/pagination";
+export const listContacts = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const {page,limit,skip}=getPagination(req.query); const search=typeof req.query.search==='string'?req.query.search:undefined; const status=typeof req.query.status==='string'?req.query.status:undefined; const filter:Record<string,unknown>=buildTenantFilter(tenantId); if(status) filter.followUpStatus=status; if(search) filter.$or=[{name:{$regex:search,$options:'i'}},{company:{$regex:search,$options:'i'}},{role:{$regex:search,$options:'i'}},{email:{$regex:search,$options:'i'}}]; const [rows,total]=await Promise.all([ContactModel.find(filter).sort({updatedAt:-1}).skip(skip).limit(limit),ContactModel.countDocuments(filter)]); return paginatedResponse(res,rows,{page,limit,total,totalPages:Math.ceil(total/limit)}); });
+export const createContact = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await createTenantScopedRecord(ContactModel,tenantId,req.user?.id??'system',req.body); return successResponse(res,row,'Created',201); });
+export const getContactById = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await findTenantScopedById(ContactModel,tenantId,req.params.id); if(!row) throw new ApiError('Not found',404,'NOT_FOUND'); return successResponse(res,row); });
+export const updateContact = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await updateTenantScopedById(ContactModel,tenantId,req.params.id,req.body); if(!row) throw new ApiError('Not found',404,'NOT_FOUND'); return successResponse(res,row,'Updated'); });
+export const markFollowedUp = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await updateTenantScopedById(ContactModel,tenantId,req.params.id,{followUpStatus:'Completed',lastContacted:new Date()} as never); if(!row) throw new ApiError('Not found',404,'NOT_FOUND'); return successResponse(res,row,'Contact marked followed up'); });

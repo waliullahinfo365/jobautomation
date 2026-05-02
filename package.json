@@ -1,0 +1,28 @@
+{
+  "name": "jobflow-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "turbo run dev --filter=@jobflow/web",
+    "dev:web": "turbo run dev --filter=@jobflow/web",
+    "dev:next": "pnpm --dir apps/web dev",
+    "dev:api": "turbo run dev --filter=@jobflow/api",
+    "dev:workers": "turbo run dev --filter=@jobflow/workers",
+    "build": "turbo run build",
+    "build:web": "pnpm --filter @jobflow/web build",
+    "build:api": "pnpm --filter @jobflow/api build",
+    "build:workers": "pnpm --filter @jobflow/workers build",
+    "start:api": "pnpm --filter @jobflow/api start",
+    "start:workers": "pnpm --filter @jobflow/workers start",
+    "type-check": "turbo run type-check",
+    "lint": "turbo run lint",
+    "seed:demo": "pnpm --filter @jobflow/database seed:demo",
+    "smoke:api": "dotenv -e .env -- tsx scripts/smoke-api.ts"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0",
+    "tsx": "^4.19.2",
+    "turbo": "^2.1.1",
+    "typescript": "^5.6.3"
+  }
+}

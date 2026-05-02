@@ -1,0 +1,18 @@
+{
+  "name": "@jobflow/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'integrations lint placeholder'"
+  },
+  "dependencies": {
+    "@jobflow/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

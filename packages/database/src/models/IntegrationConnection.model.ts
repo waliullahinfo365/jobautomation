@@ -1,0 +1,5 @@
+import { model, models, Schema } from "mongoose";
+import { applyBaseIndexes, withBaseFields } from "../schemas/base.schema";
+const IntegrationConnectionSchema = new Schema(withBaseFields({ provider: { type: String, enum: ["Gmail", "Google Drive", "Google Calendar", "OpenAI", "Claude", "SMTP", "Notion Legacy", "Slack"], required: true }, status: { type: String, enum: ["Connected", "Not Connected", "Needs Attention", "Expired", "Disabled"], required: true }, connectedEmail: String, accountName: String, scopes: { type: [String], default: [] }, accessTokenEncrypted: String, refreshTokenEncrypted: String, expiresAt: Date, lastSyncAt: Date, syncStatus: String, errorMessage: String, metadata: { type: Schema.Types.Mixed, default: {} } }), { timestamps: true });
+applyBaseIndexes(IntegrationConnectionSchema, true); IntegrationConnectionSchema.index({ tenantId: 1, provider: 1 }, { unique: true });
+export const IntegrationConnectionModel = models.IntegrationConnection || model("IntegrationConnection", IntegrationConnectionSchema);

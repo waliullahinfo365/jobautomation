@@ -1,0 +1,1567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JobFlow AI — Application Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   JOBFLOW AI · Premium Dashboard
+   ---------------------------------------------------------
+   Design system tokens
+   ========================================================= */
+:root{
+  /* Surfaces — deep cool charcoal, slight blue undertone */
+  --bg-0:        #07080B;
+  --bg-1:        #0B0D12;
+  --surface-1:   #0F1218;        /* sidebar, panels behind cards */
+  --surface-2:   #13171F;        /* cards */
+  --surface-3:   #181D26;        /* hover, raised */
+  --surface-4:   #1E242F;        /* pressed, deepest layer */
+
+  /* Borders — quiet, hairline */
+  --border-subtle:   rgba(255,255,255,0.045);
+  --border-default:  rgba(255,255,255,0.07);
+  --border-strong:   rgba(255,255,255,0.11);
+  --border-focus:    rgba(99,124,255,0.45);
+
+  /* Text — deliberate ramp, no pure white */
+  --text-1:   #ECEEF2;            /* primary */
+  --text-2:   #B5BAC4;            /* secondary */
+  --text-3:   #7C828F;            /* tertiary */
+  --text-4:   #565B66;            /* muted */
+  --text-5:   #3C404A;            /* disabled */
+
+  /* Accent — refined indigo, not neon */
+  --accent:        #637CFF;       /* primary brand accent */
+  --accent-hi:     #8499FF;
+  --accent-lo:     #4D63E0;
+  --accent-bg:     rgba(99,124,255,0.10);
+  --accent-bg-hi:  rgba(99,124,255,0.16);
+  --accent-ring:   rgba(99,124,255,0.28);
+
+  /* Semantic accents — muted, premium */
+  --emerald:       #38C793;
+  --emerald-bg:    rgba(56,199,147,0.10);
+  --amber:         #E5A23B;
+  --amber-bg:      rgba(229,162,59,0.10);
+  --rose:          #E5586D;
+  --rose-bg:       rgba(229,88,109,0.10);
+  --violet:        #A47CFF;
+  --violet-bg:     rgba(164,124,255,0.10);
+  --teal:          #4FC2D8;
+  --teal-bg:       rgba(79,194,216,0.10);
+
+  /* Type scale */
+  --font-ui:    'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Manrope', sans-serif;
+  --font-serif: 'Instrument Serif', serif;
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 22px;
+  --r-pill: 999px;
+
+  /* Shadows — restrained */
+  --shadow-card:    0 1px 0 0 rgba(255,255,255,0.025) inset, 0 1px 2px rgba(0,0,0,0.35);
+  --shadow-pop:     0 1px 0 0 rgba(255,255,255,0.04) inset, 0 6px 20px -6px rgba(0,0,0,0.5);
+  --shadow-glow:    0 0 0 1px var(--accent-ring), 0 8px 24px -10px rgba(99,124,255,0.45);
+
+  /* Layout */
+  --side-w: 244px;
+  --topbar-h: 60px;
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --dur-fast: 140ms;
+  --dur:      220ms;
+  --dur-slow: 420ms;
+}
+
+/* =========================================================
+   Reset + base
+   ========================================================= */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;}
+body{
+  font-family:var(--font-ui);
+  font-size:14px;
+  line-height:1.5;
+  color:var(--text-1);
+  background:var(--bg-0);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  letter-spacing:-0.005em;
+  font-feature-settings: "ss01", "cv11";
+  overflow-x:hidden;
+}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+a{color:inherit;text-decoration:none;}
+::selection{background:var(--accent-bg-hi);color:var(--text-1);}
+
+/* App background — atmospheric, very subtle */
+.app-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(800px 500px at 18% -10%, rgba(99,124,255,0.06), transparent 60%),
+    radial-gradient(600px 500px at 100% 0%, rgba(164,124,255,0.035), transparent 60%);
+}
+.app-grain{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  opacity:.35;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* =========================================================
+   App shell
+   ========================================================= */
+.shell{
+  position:relative;z-index:2;
+  display:grid;
+  grid-template-columns:var(--side-w) 1fr;
+  min-height:100vh;
+}
+
+/* =========================================================
+   Sidebar
+   ========================================================= */
+.sidebar{
+  position:sticky;top:0;
+  height:100vh;
+  display:flex;flex-direction:column;
+  background:var(--surface-1);
+  border-right:1px solid var(--border-subtle);
+  padding:14px 12px 14px 12px;
+}
+
+/* Brand */
+.brand{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 8px 14px 8px;
+  border-bottom:1px solid var(--border-subtle);
+  margin-bottom:10px;
+}
+.brand-mark{
+  width:30px;height:30px;flex:none;
+  border-radius:8px;
+  background:
+    linear-gradient(135deg, #6E83FF 0%, #4D63E0 100%);
+  display:grid;place-items:center;
+  position:relative;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.18),
+    inset 0 -8px 16px rgba(0,0,0,0.25),
+    0 4px 14px -4px rgba(99,124,255,0.45);
+}
+.brand-mark::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;
+  background:radial-gradient(circle at 30% 25%, rgba(255,255,255,0.35), transparent 60%);
+  pointer-events:none;
+}
+.brand-mark svg{width:16px;height:16px;color:#fff;position:relative;z-index:1;}
+.brand-text{display:flex;flex-direction:column;line-height:1.05;min-width:0;}
+.brand-name{
+  font-weight:700;font-size:13.5px;color:var(--text-1);
+  display:flex;align-items:center;gap:7px;
+  letter-spacing:-0.012em;
+}
+.brand-tag{
+  font-size:10.5px;color:var(--text-4);
+  letter-spacing:0.04em;text-transform:uppercase;
+  margin-top:3px;font-weight:500;
+}
+.beta{
+  display:inline-flex;align-items:center;
+  font-size:9.5px;font-weight:600;
+  padding:2px 6px;border-radius:var(--r-pill);
+  background:var(--accent-bg);
+  color:var(--accent-hi);
+  letter-spacing:0.04em;text-transform:uppercase;
+  border:1px solid var(--accent-ring);
+}
+
+/* Nav sections */
+.nav{display:flex;flex-direction:column;gap:14px;flex:1;overflow-y:auto;padding:4px 0;}
+.nav::-webkit-scrollbar{width:0;}
+.nav-section-title{
+  font-size:10px;font-weight:600;
+  color:var(--text-4);
+  text-transform:uppercase;
+  letter-spacing:0.09em;
+  padding:0 10px;margin-bottom:4px;
+}
+
+.nav-list{display:flex;flex-direction:column;gap:1px;}
+.nav-item{
+  position:relative;
+  display:flex;align-items:center;gap:11px;
+  padding:8px 10px;
+  border-radius:var(--r-sm);
+  color:var(--text-2);
+  font-weight:500;font-size:13.5px;
+  cursor:pointer;
+  transition:background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-item svg{width:16px;height:16px;flex:none;color:var(--text-3);transition:color var(--dur-fast) var(--ease);}
+.nav-item:hover{background:rgba(255,255,255,0.025);color:var(--text-1);}
+.nav-item:hover svg{color:var(--text-2);}
+.nav-item .badge{
+  margin-left:auto;
+  font-size:10.5px;font-weight:600;
+  padding:1px 6px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,0.05);
+  color:var(--text-3);
+  border:1px solid var(--border-subtle);
+}
+.nav-item.is-active{
+  background:linear-gradient(180deg, rgba(99,124,255,0.10) 0%, rgba(99,124,255,0.06) 100%);
+  color:var(--text-1);
+  box-shadow:
+    inset 0 0 0 1px rgba(99,124,255,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.nav-item.is-active svg{color:var(--accent-hi);}
+.nav-item.is-active::before{
+  content:"";position:absolute;left:-12px;top:50%;transform:translateY(-50%);
+  width:3px;height:18px;border-radius:0 3px 3px 0;
+  background:linear-gradient(180deg, var(--accent-hi), var(--accent));
+  box-shadow:0 0 12px rgba(99,124,255,0.6);
+}
+
+/* System status bottom card */
+.sys-card{
+  margin-top:10px;
+  padding:12px;
+  border-radius:var(--r-md);
+  background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+  border:1px solid var(--border-subtle);
+  position:relative;overflow:hidden;
+}
+.sys-card::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg, transparent, rgba(56,199,147,0.45), transparent);
+}
+.sys-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.sys-icon{
+  width:26px;height:26px;flex:none;
+  border-radius:7px;display:grid;place-items:center;
+  background:var(--emerald-bg);
+  color:var(--emerald);
+  border:1px solid rgba(56,199,147,0.18);
+}
+.sys-icon svg{width:13px;height:13px;}
+.sys-title{font-size:12.5px;font-weight:600;color:var(--text-1);line-height:1;}
+.sys-meta{font-size:11px;color:var(--text-3);margin-top:3px;letter-spacing:0.005em;}
+.live-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 7px;
+  font-size:9.5px;font-weight:700;
+  background:var(--emerald-bg);
+  color:var(--emerald);
+  border-radius:var(--r-pill);
+  letter-spacing:0.06em;text-transform:uppercase;
+  border:1px solid rgba(56,199,147,0.22);
+  margin-left:auto;
+}
+.live-dot{
+  width:5px;height:5px;border-radius:50%;background:var(--emerald);
+  box-shadow:0 0 0 0 var(--emerald);
+  animation:pulse 1.8s ease-out infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(56,199,147,0.55);}
+  70%{box-shadow:0 0 0 6px rgba(56,199,147,0);}
+  100%{box-shadow:0 0 0 0 rgba(56,199,147,0);}
+}
+.progress{
+  height:4px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,0.05);
+  overflow:hidden;position:relative;
+  margin-top:2px;
+}
+.progress-fill{
+  height:100%;width:94%;
+  background:linear-gradient(90deg, #38C793, #4FC2D8);
+  border-radius:inherit;
+  position:relative;
+}
+.progress-fill::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation:shimmer 2.4s linear infinite;
+}
+@keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+.sys-stats{
+  display:flex;justify-content:space-between;
+  margin-top:8px;font-size:10.5px;
+  color:var(--text-3);
+  font-family:var(--font-mono);
+  letter-spacing:0;
+}
+.sys-stats b{color:var(--text-1);font-weight:600;}
+
+/* =========================================================
+   Topbar
+   ========================================================= */
+.main{display:flex;flex-direction:column;min-width:0;}
+
+.topbar{
+  position:sticky;top:0;z-index:10;
+  height:var(--topbar-h);
+  display:flex;align-items:center;gap:14px;
+  padding:0 28px;
+  background:rgba(11,13,18,0.78);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom:1px solid var(--border-subtle);
+}
+.crumb{
+  display:flex;align-items:center;gap:8px;
+  color:var(--text-3);font-size:13px;font-weight:500;
+}
+.crumb b{color:var(--text-1);font-weight:600;}
+.crumb-sep{color:var(--text-5);}
+
+.topbar-spacer{flex:1;}
+
+.search{
+  display:flex;align-items:center;gap:9px;
+  width:340px;max-width:35vw;
+  height:34px;
+  padding:0 12px;
+  background:var(--surface-2);
+  border:1px solid var(--border-default);
+  border-radius:var(--r-sm);
+  color:var(--text-3);
+  font-size:13px;
+  transition:border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.search:hover{background:var(--surface-3);border-color:var(--border-strong);}
+.search:focus-within{border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(99,124,255,0.12);}
+.search svg{width:14px;height:14px;color:var(--text-4);flex:none;}
+.search input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text-1);font-family:inherit;font-size:13px;
+  letter-spacing:-0.005em;
+}
+.search input::placeholder{color:var(--text-4);}
+.kbd{
+  display:inline-flex;align-items:center;gap:1px;
+  padding:1px 5px;border-radius:5px;
+  background:rgba(255,255,255,0.04);
+  color:var(--text-3);
+  font-family:var(--font-mono);font-size:10.5px;font-weight:500;
+  border:1px solid var(--border-subtle);
+  border-bottom-width:2px;
+  height:18px;
+}
+
+.icon-btn{
+  width:34px;height:34px;
+  display:grid;place-items:center;
+  background:var(--surface-2);
+  border:1px solid var(--border-default);
+  border-radius:var(--r-sm);
+  color:var(--text-2);
+  position:relative;
+  transition:all var(--dur-fast) var(--ease);
+}
+.icon-btn:hover{background:var(--surface-3);color:var(--text-1);border-color:var(--border-strong);}
+.icon-btn svg{width:15px;height:15px;}
+.notif-dot{
+  position:absolute;top:6px;right:6px;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--rose);
+  box-shadow:0 0 0 2px var(--surface-2);
+}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  height:34px;padding:0 13px;
+  border-radius:var(--r-sm);
+  font-size:13px;font-weight:600;
+  letter-spacing:-0.005em;
+  transition:all var(--dur-fast) var(--ease);
+  border:1px solid transparent;
+}
+.btn svg{width:14px;height:14px;}
+.btn-primary{
+  background:linear-gradient(180deg, #7488FF 0%, #4D63E0 100%);
+  color:#fff;
+  border-color:rgba(99,124,255,0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    0 1px 2px rgba(0,0,0,0.4),
+    0 4px 12px -4px rgba(99,124,255,0.45);
+}
+.btn-primary:hover{
+  background:linear-gradient(180deg, #8499FF 0%, #5970F0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    0 1px 2px rgba(0,0,0,0.4),
+    0 6px 18px -4px rgba(99,124,255,0.55);
+  transform:translateY(-0.5px);
+}
+.btn-secondary{
+  background:var(--surface-2);
+  color:var(--text-1);
+  border-color:var(--border-default);
+}
+.btn-secondary:hover{background:var(--surface-3);border-color:var(--border-strong);}
+.btn-ghost{
+  background:transparent;color:var(--text-2);
+}
+.btn-ghost:hover{background:var(--surface-2);color:var(--text-1);}
+.btn-lg{height:38px;padding:0 16px;font-size:13.5px;}
+
+/* Avatar menu */
+.avatar-btn{
+  display:flex;align-items:center;gap:8px;
+  height:34px;padding:0 4px 0 4px;
+  border-radius:var(--r-pill);
+  border:1px solid var(--border-default);
+  background:var(--surface-2);
+  transition:all var(--dur-fast) var(--ease);
+}
+.avatar-btn:hover{background:var(--surface-3);}
+.avatar{
+  width:26px;height:26px;border-radius:50%;
+  background:linear-gradient(135deg, #4FC2D8 0%, #637CFF 100%);
+  display:grid;place-items:center;
+  font-size:10.5px;font-weight:700;color:#fff;
+  letter-spacing:0.02em;
+  position:relative;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.2);
+}
+.avatar::after{
+  content:"";position:absolute;bottom:-1px;right:-1px;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--emerald);
+  border:2px solid var(--surface-2);
+}
+.avatar-name{
+  font-size:12.5px;font-weight:600;color:var(--text-1);
+  letter-spacing:-0.005em;
+  margin-right:2px;
+}
+.avatar-btn .chev{width:12px;height:12px;color:var(--text-3);margin-right:4px;}
+
+/* =========================================================
+   Main content
+   ========================================================= */
+.content{
+  padding:28px 28px 56px 28px;
+  max-width:1480px;
+  width:100%;
+  display:flex;flex-direction:column;gap:20px;
+  animation:fadeUp 600ms var(--ease) both;
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(8px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* Hero */
+.hero{
+  position:relative;
+  border-radius:var(--r-xl);
+  background:
+    radial-gradient(900px 300px at 0% 0%, rgba(99,124,255,0.10), transparent 65%),
+    radial-gradient(600px 300px at 100% 100%, rgba(164,124,255,0.06), transparent 65%),
+    linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%);
+  border:1px solid var(--border-default);
+  padding:26px 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:24px;
+  overflow:hidden;
+}
+.hero::before{ /* mesh dot grid */
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size:18px 18px;
+  mask-image:radial-gradient(700px 220px at 100% 0%, #000, transparent 70%);
+  -webkit-mask-image:radial-gradient(700px 220px at 100% 0%, #000, transparent 70%);
+  opacity:.7;
+}
+.hero-left{position:relative;z-index:1;max-width:760px;}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 10px 4px 8px;
+  background:var(--accent-bg);
+  border:1px solid var(--accent-ring);
+  border-radius:var(--r-pill);
+  font-size:11.5px;font-weight:600;
+  color:var(--accent-hi);
+  letter-spacing:0.005em;
+  margin-bottom:16px;
+}
+.chip svg{width:11px;height:11px;}
+.chip-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--accent-hi);
+  box-shadow:0 0 8px var(--accent-hi);
+}
+.h-title{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:30px;
+  line-height:1.1;
+  letter-spacing:-0.022em;
+  color:var(--text-1);
+}
+.h-title em{
+  font-family:var(--font-serif);
+  font-weight:400;
+  font-style:italic;
+  color:var(--accent-hi);
+  letter-spacing:-0.01em;
+}
+.h-sub{
+  margin-top:9px;
+  color:var(--text-3);
+  font-size:14px;line-height:1.55;
+  max-width:580px;
+}
+.hero-actions{display:flex;align-items:center;gap:8px;position:relative;z-index:1;flex:none;}
+
+/* =========================================================
+   KPI cards grid
+   ========================================================= */
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0,1fr));
+  gap:14px;
+}
+
+.kpi{
+  position:relative;
+  padding:18px;
+  border-radius:var(--r-lg);
+  background:var(--surface-2);
+  border:1px solid var(--border-default);
+  transition:transform var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  overflow:hidden;
+}
+.kpi:hover{
+  transform:translateY(-1px);
+  border-color:var(--border-strong);
+  background:linear-gradient(180deg, var(--surface-3) 0%, var(--surface-2) 100%);
+}
+.kpi::after{ /* corner gradient */
+  content:"";position:absolute;top:0;right:0;
+  width:140px;height:140px;
+  background:radial-gradient(circle at top right, var(--accent-bg), transparent 70%);
+  opacity:0;transition:opacity var(--dur) var(--ease);
+  pointer-events:none;
+}
+.kpi:hover::after{opacity:1;}
+.kpi-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  margin-bottom:14px;
+}
+.kpi-label{
+  font-size:12.5px;font-weight:500;
+  color:var(--text-2);
+  letter-spacing:-0.005em;
+}
+.kpi-icon{
+  width:30px;height:30px;flex:none;
+  border-radius:8px;
+  display:grid;place-items:center;
+  background:var(--accent-bg);
+  color:var(--accent-hi);
+  border:1px solid var(--accent-ring);
+}
+.kpi-icon svg{width:14px;height:14px;}
+.kpi-icon.is-emerald{background:var(--emerald-bg);color:var(--emerald);border-color:rgba(56,199,147,0.22);}
+.kpi-icon.is-violet{background:var(--violet-bg);color:var(--violet);border-color:rgba(164,124,255,0.22);}
+.kpi-icon.is-amber{background:var(--amber-bg);color:var(--amber);border-color:rgba(229,162,59,0.22);}
+.kpi-icon.is-teal{background:var(--teal-bg);color:var(--teal);border-color:rgba(79,194,216,0.22);}
+.kpi-icon.is-rose{background:var(--rose-bg);color:var(--rose);border-color:rgba(229,88,109,0.22);}
+
+.kpi-row{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:14px;}
+.kpi-value{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:32px;
+  line-height:1;
+  letter-spacing:-0.025em;
+  color:var(--text-1);
+  font-feature-settings: "tnum", "ss01";
+}
+.kpi-value .unit{font-size:14px;color:var(--text-3);font-weight:500;margin-left:3px;}
+
+/* sparkline / mini-bars area */
+.kpi-spark{
+  height:28px;width:80px;flex:none;display:flex;align-items:flex-end;
+}
+.kpi-mini-bars{
+  display:flex;align-items:flex-end;gap:2.5px;height:100%;width:100%;
+}
+.kpi-mini-bars i{
+  flex:1;background:var(--text-5);border-radius:1.5px;display:block;
+  transition:background var(--dur) var(--ease);
+}
+.kpi:hover .kpi-mini-bars i{background:var(--accent-lo);}
+.kpi:hover .kpi-mini-bars i:last-child{background:var(--accent-hi);}
+
+.kpi-foot{
+  display:flex;align-items:center;gap:8px;
+  padding-top:13px;
+  border-top:1px solid var(--border-subtle);
+}
+.delta{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 7px 2px 6px;
+  font-size:11px;font-weight:600;
+  border-radius:var(--r-pill);
+  font-family:var(--font-mono);
+  letter-spacing:0.005em;
+}
+.delta svg{width:10px;height:10px;}
+.delta.up{background:var(--emerald-bg);color:var(--emerald);border:1px solid rgba(56,199,147,0.18);}
+.delta.down{background:var(--rose-bg);color:var(--rose);border:1px solid rgba(229,88,109,0.18);}
+.delta.neutral{background:rgba(255,255,255,0.04);color:var(--text-3);border:1px solid var(--border-subtle);}
+.kpi-meta{font-size:11.5px;color:var(--text-3);}
+
+/* =========================================================
+   Two-up content row (Pipeline + Deadlines)
+   ========================================================= */
+.row-2{
+  display:grid;
+  grid-template-columns: minmax(0,1.6fr) minmax(0,1fr);
+  gap:14px;
+}
+
+.panel{
+  border-radius:var(--r-lg);
+  background:var(--surface-2);
+  border:1px solid var(--border-default);
+  padding:20px 22px;
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+  margin-bottom:18px;
+}
+.panel-title-wrap{display:flex;align-items:center;gap:10px;}
+.panel-title-icon{
+  width:28px;height:28px;border-radius:8px;
+  background:var(--surface-3);
+  border:1px solid var(--border-default);
+  display:grid;place-items:center;
+  color:var(--text-2);
+}
+.panel-title-icon svg{width:14px;height:14px;}
+.panel-title{
+  font-size:15px;font-weight:600;color:var(--text-1);
+  letter-spacing:-0.012em;line-height:1.2;
+}
+.panel-sub{font-size:12px;color:var(--text-3);margin-top:2px;}
+.panel-actions{display:flex;align-items:center;gap:6px;}
+
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 8px;
+  border-radius:var(--r-pill);
+  font-size:11px;font-weight:500;
+  background:rgba(255,255,255,0.035);
+  color:var(--text-2);
+  border:1px solid var(--border-subtle);
+}
+.tag .num{color:var(--text-1);font-weight:600;font-family:var(--font-mono);}
+.tag.accent{background:var(--accent-bg);color:var(--accent-hi);border-color:var(--accent-ring);}
+.tag.tagrow{margin-right:6px;}
+
+/* Chart */
+.chart-wrap{
+  position:relative;
+  padding-top:8px;
+}
+.chart-meta{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+
+.chart{
+  height:240px;width:100%;
+  position:relative;
+  display:flex;flex-direction:column;
+}
+.chart-svg{width:100%;height:100%;display:block;}
+.chart-grid line{stroke:var(--border-subtle);stroke-width:1;stroke-dasharray:3 3;}
+.chart-axis text{fill:var(--text-4);font-size:10.5px;font-family:var(--font-mono);}
+.chart-bar{transform-origin:bottom;animation:barGrow 800ms var(--ease) both;}
+@keyframes barGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+.chart-bar:hover rect.bar-fill{fill:var(--accent-hi);}
+.chart-bar:hover rect.bar-shadow{opacity:1;}
+.chart-stage-label{
+  fill:var(--text-2);font-size:11px;font-weight:500;font-family:var(--font-ui);
+}
+.chart-stage-count{
+  fill:var(--text-1);font-size:11.5px;font-weight:700;font-family:var(--font-mono);
+}
+
+/* Pipeline summary footer */
+.pipe-foot{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
+  margin-top:18px;padding-top:16px;
+  border-top:1px solid var(--border-subtle);
+}
+.pipe-stat-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.07em;font-weight:600;}
+.pipe-stat-val{
+  margin-top:5px;
+  font-family:var(--font-display);
+  font-weight:700;font-size:18px;letter-spacing:-0.015em;
+  color:var(--text-1);
+}
+.pipe-stat-val .small{color:var(--text-3);font-size:12px;font-weight:500;margin-left:4px;}
+
+/* Deadlines */
+.deadlines{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+.dl-row{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 12px;
+  border-radius:var(--r-md);
+  background:var(--surface-1);
+  border:1px solid var(--border-subtle);
+  transition:all var(--dur-fast) var(--ease);
+}
+.dl-row:hover{background:var(--surface-3);border-color:var(--border-default);}
+.dl-date{
+  flex:none;width:42px;text-align:center;
+  background:var(--surface-3);
+  border:1px solid var(--border-default);
+  border-radius:var(--r-sm);
+  padding:5px 0 6px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.dl-date .m{
+  font-size:9px;font-weight:700;color:var(--accent-hi);
+  text-transform:uppercase;letter-spacing:0.08em;
+  line-height:1;
+}
+.dl-date .d{
+  font-family:var(--font-display);
+  font-size:16px;font-weight:700;color:var(--text-1);
+  line-height:1.05;letter-spacing:-0.02em;
+}
+.dl-body{flex:1;min-width:0;}
+.dl-title{
+  font-size:13px;font-weight:600;color:var(--text-1);
+  letter-spacing:-0.005em;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.dl-meta{font-size:11.5px;color:var(--text-3);margin-top:2px;}
+.dl-tag{
+  flex:none;
+  font-size:10.5px;font-weight:600;
+  padding:2px 8px;
+  border-radius:var(--r-pill);
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+.dl-tag.urgent{background:var(--rose-bg);color:var(--rose);border:1px solid rgba(229,88,109,0.18);}
+.dl-tag.soon{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(229,162,59,0.18);}
+.dl-tag.ok{background:var(--emerald-bg);color:var(--emerald);border:1px solid rgba(56,199,147,0.18);}
+
+/* Empty state */
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  padding:38px 18px 14px;
+  border-radius:var(--r-md);
+  border:1px dashed var(--border-default);
+  background:
+    radial-gradient(220px 120px at 50% 0%, rgba(99,124,255,0.06), transparent 70%),
+    var(--surface-1);
+  flex:1;
+}
+.empty-icon{
+  width:46px;height:46px;border-radius:12px;
+  display:grid;place-items:center;
+  background:var(--surface-3);
+  border:1px solid var(--border-default);
+  color:var(--accent-hi);
+  margin-bottom:14px;
+  position:relative;
+}
+.empty-icon::before{
+  content:"";position:absolute;inset:-6px;border-radius:18px;
+  border:1px solid var(--border-subtle);
+  opacity:.7;
+}
+.empty-icon::after{
+  content:"";position:absolute;inset:-12px;border-radius:24px;
+  border:1px solid var(--border-subtle);
+  opacity:.35;
+}
+.empty-icon svg{width:20px;height:20px;}
+.empty-title{font-size:14px;font-weight:600;color:var(--text-1);letter-spacing:-0.005em;}
+.empty-sub{font-size:12.5px;color:var(--text-3);margin-top:5px;max-width:280px;line-height:1.5;}
+.empty-cta{
+  margin-top:14px;
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:600;color:var(--accent-hi);
+  padding:6px 12px;border-radius:var(--r-pill);
+  background:var(--accent-bg);border:1px solid var(--accent-ring);
+  transition:all var(--dur-fast) var(--ease);
+}
+.empty-cta:hover{background:var(--accent-bg-hi);}
+.empty-cta svg{width:11px;height:11px;}
+
+/* =========================================================
+   Stagger reveal for cards
+   ========================================================= */
+.kpi:nth-child(1){animation:fadeUp 500ms var(--ease) both 80ms;}
+.kpi:nth-child(2){animation:fadeUp 500ms var(--ease) both 140ms;}
+.kpi:nth-child(3){animation:fadeUp 500ms var(--ease) both 200ms;}
+.kpi:nth-child(4){animation:fadeUp 500ms var(--ease) both 260ms;}
+.kpi:nth-child(5){animation:fadeUp 500ms var(--ease) both 320ms;}
+.kpi:nth-child(6){animation:fadeUp 500ms var(--ease) both 380ms;}
+.row-2 > .panel:nth-child(1){animation:fadeUp 600ms var(--ease) both 440ms;}
+.row-2 > .panel:nth-child(2){animation:fadeUp 600ms var(--ease) both 500ms;}
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width:1180px){
+  .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .row-2{grid-template-columns:1fr;}
+}
+@media (max-width:860px){
+  :root{--side-w:64px;}
+  .sidebar{padding:14px 8px;}
+  .brand-text,.nav-section-title,.nav-item span,.sys-card{display:none;}
+  .nav-item{justify-content:center;padding:9px;}
+  .nav-item.is-active::before{display:none;}
+  .topbar{padding:0 16px;gap:8px;}
+  .search{width:auto;flex:1;}
+  .crumb{display:none;}
+  .content{padding:18px 16px 40px;}
+  .h-title{font-size:24px;}
+  .hero{flex-direction:column;align-items:flex-start;}
+  .kpi-grid{grid-template-columns:1fr;}
+  .avatar-name{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- Background atmosphere -->
+<div class="app-bg"></div>
+<div class="app-grain"></div>
+
+<!-- ============================================================
+     SVG ICON SYMBOL DEFINITIONS — custom geometric icon system
+     - 1.5 stroke, rounded joins, 24x24 viewBox
+     - Unified visual language: simple geometry, premium feel
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Brand mark -->
+    <symbol id="ic-brand" viewBox="0 0 24 24">
+      <path d="M5 8.5 12 4l7 4.5v7L12 20l-7-4.5v-7Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M9.5 11.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M9.5 14.5h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- ===== SIDEBAR / FEATURE ICONS ===== -->
+    <!-- Dashboard: 4 modular tiles, asymmetric for personality -->
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="3.5" width="7.5" height="9" rx="1.6"/>
+      <rect x="13" y="3.5" width="7.5" height="5.5" rx="1.6"/>
+      <rect x="3.5" y="14" width="7.5" height="6.5" rx="1.6"/>
+      <rect x="13" y="10.5" width="7.5" height="10" rx="1.6"/>
+    </symbol>
+
+    <!-- Jobs: refined briefcase with hinge -->
+    <symbol id="ic-jobs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="7" width="18" height="13" rx="2.2"/>
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/>
+      <path d="M3 12.5h18"/>
+      <path d="M11 11.5v2" />
+      <path d="M13 11.5v2"/>
+    </symbol>
+
+    <!-- Applications: stacked papers with pulse line -->
+    <symbol id="ic-applications" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 4h7l4 4v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
+      <path d="M14 4v4h4"/>
+      <path d="M8.5 13.5h2l1.5-3 2 5 1.5-2h1.5"/>
+    </symbol>
+
+    <!-- Contacts: people with overlapping silhouette -->
+    <symbol id="ic-contacts" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9.5" cy="9" r="3.2"/>
+      <path d="M3.5 19.5c.7-3.1 3.1-5 6-5s5.3 1.9 6 5"/>
+      <path d="M16 5.2a3 3 0 0 1 0 6"/>
+      <path d="M16.5 14.7c2.4.4 4.2 2.1 4.7 4.8"/>
+    </symbol>
+
+    <!-- Interviews: calendar with check mark -->
+    <symbol id="ic-interviews" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/>
+      <path d="M3.5 10h17"/>
+      <path d="M8 3.5v3M16 3.5v3"/>
+      <path d="m9 14.5 2 2 4-4"/>
+    </symbol>
+
+    <!-- Documents: folder with subtle tab -->
+    <symbol id="ic-documents" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-10.5Z"/>
+      <path d="M3.5 11.5h17"/>
+    </symbol>
+
+    <!-- Reports: bar chart with axis dot -->
+    <symbol id="ic-reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 20.5h17"/>
+      <rect x="6" y="12" width="3" height="6" rx="0.6"/>
+      <rect x="11" y="8" width="3" height="10" rx="0.6"/>
+      <rect x="16" y="4.5" width="3" height="13.5" rx="0.6"/>
+    </symbol>
+
+    <!-- Automation: bolt inside circuit node -->
+    <symbol id="ic-automation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M13 3 5.5 13.2a.6.6 0 0 0 .5 1H11l-1 6.8 7.5-10.2a.6.6 0 0 0-.5-1H13l0-6.8Z"/>
+      <circle cx="20" cy="6" r="1.2"/>
+      <circle cx="20" cy="18" r="1.2"/>
+    </symbol>
+
+    <!-- Settings: refined gear with center -->
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z"/>
+      <path d="M19.4 14.5a1.6 1.6 0 0 0 .3 1.7l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.7-.3 1.6 1.6 0 0 0-1 1.5V20a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.7.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.7 1.6 1.6 0 0 0-1.5-1H4a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.7.3h.1a1.6 1.6 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.7-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.7v.1a1.6 1.6 0 0 0 1.5 1H20a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"/>
+    </symbol>
+
+    <!-- Demo: play in compass ring -->
+    <symbol id="ic-demo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/>
+      <path d="m10.5 9 5 3-5 3v-6Z"/>
+    </symbol>
+
+    <!-- System status: pulse heartbeat -->
+    <symbol id="ic-status" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12h3l2.5-5 4 10 2.5-5h6"/>
+    </symbol>
+
+    <!-- ===== TOPBAR / ACTION ICONS ===== -->
+    <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="6.5"/>
+      <path d="m20 20-4-4"/>
+    </symbol>
+    <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Z"/>
+      <path d="M10 19.5a2 2 0 0 0 4 0"/>
+    </symbol>
+    <symbol id="ic-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 14a8 8 0 0 1-10-10 8 8 0 1 0 10 10Z"/>
+    </symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M5 12h14"/>
+    </symbol>
+    <symbol id="ic-chev-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m6 9 6 6 6-6"/>
+    </symbol>
+    <symbol id="ic-chev-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m9 6 6 6-6 6"/>
+    </symbol>
+    <symbol id="ic-health" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 21s-7.5-4.7-7.5-10.5A4.5 4.5 0 0 1 12 6.5a4.5 4.5 0 0 1 7.5 4c0 5.8-7.5 10.5-7.5 10.5Z"/>
+      <path d="M8.5 11.5h2l1.5-3 2 5 1-2"/>
+    </symbol>
+    <symbol id="ic-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.5 5.5l2 2M16.5 16.5l2 2M5.5 18.5l2-2M16.5 7.5l2-2"/>
+    </symbol>
+
+    <!-- ===== KPI / CONTENT ICONS ===== -->
+    <!-- Tracked jobs: layered briefcase -->
+    <symbol id="ic-tracked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9.5h16"/>
+      <rect x="4" y="6" width="16" height="14" rx="2.2"/>
+      <path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6"/>
+      <circle cx="12" cy="13.5" r="1.2"/>
+    </symbol>
+    <!-- Sent: paper plane with motion line -->
+    <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m4 12 16-7-7 16-2.5-6L4 12Z"/>
+      <path d="m10.5 13.5 2.5-2.5"/>
+    </symbol>
+    <!-- Calendar check (interviews scheduled) -->
+    <symbol id="ic-cal-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/>
+      <path d="M3.5 10h17"/>
+      <path d="M8 3.5v3M16 3.5v3"/>
+      <path d="m9 14.5 2 2 4-4"/>
+    </symbol>
+    <!-- Trophy / offer -->
+    <symbol id="ic-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/>
+      <path d="M7 6H4.5v2A2.5 2.5 0 0 0 7 10.5"/>
+      <path d="M17 6h2.5v2A2.5 2.5 0 0 1 17 10.5"/>
+      <path d="M9.5 14h5l-.5 3.5h-4L9.5 14Z"/>
+      <path d="M8 20.5h8"/>
+    </symbol>
+    <!-- Bell-clock follow-up -->
+    <symbol id="ic-followup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5.5 17h11"/>
+      <path d="M7 17v-5a5 5 0 0 1 10 0v5"/>
+      <circle cx="17.5" cy="17.5" r="3.5"/>
+      <path d="M17.5 16v1.5l1 1"/>
+      <path d="M10 19.5a2 2 0 0 0 4 0"/>
+    </symbol>
+    <!-- Bot / automations active -->
+    <symbol id="ic-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="8" width="16" height="11" rx="2.5"/>
+      <circle cx="9" cy="13.5" r="1.1"/>
+      <circle cx="15" cy="13.5" r="1.1"/>
+      <path d="M12 4.5v3.5"/>
+      <circle cx="12" cy="3.5" r="1.2"/>
+      <path d="M2 13v3M22 13v3"/>
+    </symbol>
+    <!-- Pipeline (stages) -->
+    <symbol id="ic-pipeline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="6" width="6" height="12" rx="1.2"/>
+      <rect x="11" y="9" width="6" height="9" rx="1.2"/>
+      <rect x="19" y="12" width="2" height="6" rx="0.8" opacity=".7"/>
+    </symbol>
+    <!-- Deadline (clock with marker) -->
+    <symbol id="ic-deadline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12.5" r="7.5"/>
+      <path d="M12 8v4.5l3 1.8"/>
+      <path d="M9 3.5h6"/>
+    </symbol>
+    <!-- Live signal (waves) -->
+    <symbol id="ic-live" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="2"/>
+      <path d="M8.5 8.5a5 5 0 0 0 0 7"/>
+      <path d="M15.5 8.5a5 5 0 0 1 0 7"/>
+      <path d="M5.5 5.5a9 9 0 0 0 0 13"/>
+      <path d="M18.5 5.5a9 9 0 0 1 0 13"/>
+    </symbol>
+
+    <!-- Trend arrow -->
+    <symbol id="ic-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 17 11 11l3 3 6-6"/>
+      <path d="M14 8h6v6"/>
+    </symbol>
+    <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14M13 6l6 6-6 6"/>
+    </symbol>
+  </defs>
+</svg>
+
+
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div class="shell">
+
+  <!-- ───────── SIDEBAR ───────── -->
+  <aside class="sidebar">
+
+    <div class="brand">
+      <div class="brand-mark">
+        <svg><use href="#ic-brand"/></svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">JobFlow AI <span class="beta">Beta</span></div>
+        <div class="brand-tag">Application Automation</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+
+      <div>
+        <div class="nav-section-title">Workspace</div>
+        <ul class="nav-list">
+          <li class="nav-item is-active">
+            <svg><use href="#ic-dashboard"/></svg><span>Dashboard</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-jobs"/></svg><span>Jobs</span>
+            <span class="badge">12</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-applications"/></svg><span>Applications</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-contacts"/></svg><span>Contacts</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-interviews"/></svg><span>Interviews</span>
+            <span class="badge">2</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-documents"/></svg><span>Documents</span>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">Insights</div>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <svg><use href="#ic-reports"/></svg><span>Reports</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-automation"/></svg><span>Automation</span>
+          </li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">Account</div>
+        <ul class="nav-list">
+          <li class="nav-item">
+            <svg><use href="#ic-settings"/></svg><span>Settings</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-demo"/></svg><span>Demo Walkthrough</span>
+          </li>
+          <li class="nav-item">
+            <svg><use href="#ic-status"/></svg><span>System Status</span>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="sys-card">
+      <div class="sys-row">
+        <div class="sys-icon"><svg><use href="#ic-status"/></svg></div>
+        <div>
+          <div class="sys-title">System Online</div>
+          <div class="sys-meta">All services operational</div>
+        </div>
+        <span class="live-pill"><span class="live-dot"></span>Live</span>
+      </div>
+      <div class="progress"><div class="progress-fill"></div></div>
+      <div class="sys-stats">
+        <span><b>17</b> automations</span>
+        <span><b>94%</b> healthy</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ───────── MAIN ───────── -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="crumb">
+        <span>Workspace</span>
+        <svg class="crumb-sep" width="12" height="12"><use href="#ic-chev-right"/></svg>
+        <b>Dashboard</b>
+      </div>
+
+      <div class="topbar-spacer"></div>
+
+      <label class="search">
+        <svg><use href="#ic-search"/></svg>
+        <input type="text" placeholder="Search jobs, contacts, reports…" />
+        <span class="kbd">⌘K</span>
+      </label>
+
+      <button class="icon-btn" aria-label="Notifications">
+        <svg><use href="#ic-bell"/></svg>
+        <span class="notif-dot"></span>
+      </button>
+      <button class="icon-btn" aria-label="Toggle theme">
+        <svg><use href="#ic-theme"/></svg>
+      </button>
+
+      <button class="btn btn-primary">
+        <svg><use href="#ic-plus"/></svg>
+        New Job
+      </button>
+
+      <button class="avatar-btn" aria-label="Account menu">
+        <span class="avatar">WU</span>
+        <span class="avatar-name">Wahab</span>
+        <svg class="chev"><use href="#ic-chev-down"/></svg>
+      </button>
+    </header>
+
+    <!-- CONTENT -->
+    <main class="content">
+
+      <!-- HERO -->
+      <section class="hero">
+        <div class="hero-left">
+          <span class="chip">
+            <span class="chip-dot"></span>
+            Live Automation Dashboard
+          </span>
+          <h1 class="h-title">Your application <em>control center</em>.</h1>
+          <p class="h-sub">Monitor opportunities in flight, track pipeline health, and orchestrate every outreach automation — all in one place.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-secondary btn-lg">
+            <svg><use href="#ic-health"/></svg>
+            Run Health Check
+          </button>
+          <button class="btn btn-primary btn-lg">
+            <svg><use href="#ic-plus"/></svg>
+            Add Job
+          </button>
+        </div>
+      </section>
+
+      <!-- KPI GRID -->
+      <section class="kpi-grid">
+
+        <!-- 1. Total Jobs Tracked -->
+        <article class="kpi">
+          <div class="kpi-head">
+            <div>
+              <div class="kpi-label">Total Jobs Tracked</div>
+            </div>
+            <div class="kpi-icon"><svg><use href="#ic-tracked"/></svg></div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-value">12</div>
+            <div class="kpi-spark">
+              <div class="kpi-mini-bars">
+                <i style="height:30%"></i><i style="height:50%"></i><i style="height:42%"></i>
+                <i style="height:65%"></i><i style="height:55%"></i><i style="height:78%"></i>
+                <i style="height:85%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-foot">
+            <span class="delta up"><svg><use href="#ic-trend-up"/></svg>+6.4%</span>
+            <span class="kpi-meta">vs. last week</span>
+          </div>
+        </article>
+
+        <!-- 2. Applications Sent -->
+        <article class="kpi">
+          <div class="kpi-head">
+            <div class="kpi-label">Applications Sent</div>
+            <div class="kpi-icon is-violet"><svg><use href="#ic-send"/></svg></div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-value">2</div>
+            <div class="kpi-spark">
+              <div class="kpi-mini-bars">
+                <i style="height:20%"></i><i style="height:35%"></i><i style="height:28%"></i>
+                <i style="height:48%"></i><i style="height:62%"></i><i style="height:72%"></i>
+                <i style="height:60%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-foot">
+            <span class="delta up"><svg><use href="#ic-trend-up"/></svg>+3</span>
+            <span class="kpi-meta">submitted this week</span>
+          </div>
+        </article>
+
+        <!-- 3. Interviews Scheduled -->
+        <article class="kpi">
+          <div class="kpi-head">
+            <div class="kpi-label">Interviews Scheduled</div>
+            <div class="kpi-icon is-teal"><svg><use href="#ic-cal-check"/></svg></div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-value">1</div>
+            <div class="kpi-spark">
+              <div class="kpi-mini-bars">
+                <i style="height:20%"></i><i style="height:20%"></i><i style="height:35%"></i>
+                <i style="height:30%"></i><i style="height:50%"></i><i style="height:45%"></i>
+                <i style="height:55%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-foot">
+            <span class="delta neutral">2 this week</span>
+            <span class="kpi-meta">upcoming sessions</span>
+          </div>
+        </article>
+
+        <!-- 4. Offers Received -->
+        <article class="kpi">
+          <div class="kpi-head">
+            <div class="kpi-label">Offers Received</div>
+            <div class="kpi-icon is-emerald"><svg><use href="#ic-trophy"/></svg></div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-value">0</div>
+            <div class="kpi-spark">
+              <div class="kpi-mini-bars">
+                <i style="height:15%"></i><i style="height:15%"></i><i style="height:15%"></i>
+                <i style="height:20%"></i><i style="height:25%"></i><i style="height:30%"></i>
+                <i style="height:40%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-foot">
+            <span class="delta neutral">1 in review</span>
+            <span class="kpi-meta">awaiting decision</span>
+          </div>
+        </article>
+
+        <!-- 5. Follow-ups Due -->
+        <article class="kpi">
+          <div class="kpi-head">
+            <div class="kpi-label">Follow-ups Due</div>
+            <div class="kpi-icon is-amber"><svg><use href="#ic-followup"/></svg></div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-value">0</div>
+            <div class="kpi-spark">
+              <div class="kpi-mini-bars">
+                <i style="height:60%"></i><i style="height:70%"></i><i style="height:50%"></i>
+                <i style="height:35%"></i><i style="height:30%"></i><i style="height:20%"></i>
+                <i style="height:15%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-foot">
+            <span class="delta down" style="background:var(--emerald-bg);color:var(--emerald);border-color:rgba(56,199,147,0.18);">Inbox clear</span>
+            <span class="kpi-meta">all caught up</span>
+          </div>
+        </article>
+
+        <!-- 6. Automations Active -->
+        <article class="kpi">
+          <div class="kpi-head">
+            <div class="kpi-label">Automations Active</div>
+            <div class="kpi-icon"><svg><use href="#ic-bot"/></svg></div>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi-value">17</div>
+            <div class="kpi-spark">
+              <div class="kpi-mini-bars">
+                <i style="height:55%"></i><i style="height:62%"></i><i style="height:60%"></i>
+                <i style="height:75%"></i><i style="height:80%"></i><i style="height:85%"></i>
+                <i style="height:92%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-foot">
+            <span class="delta up"><svg><use href="#ic-trend-up"/></svg>92%</span>
+            <span class="kpi-meta">avg. success rate</span>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- TWO-UP: Pipeline + Deadlines -->
+      <section class="row-2">
+
+        <!-- Pipeline -->
+        <article class="panel">
+          <div class="panel-head">
+            <div class="panel-title-wrap">
+              <div class="panel-title-icon"><svg><use href="#ic-pipeline"/></svg></div>
+              <div>
+                <h3 class="panel-title">Application Pipeline</h3>
+                <div class="panel-sub">Distribution of jobs across each stage</div>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <span class="tag accent"><span class="num">11</span> tracked</span>
+              <span class="tag"><span class="live-dot" style="background:var(--accent-hi);box-shadow:0 0 8px var(--accent-hi);"></span>Live</span>
+            </div>
+          </div>
+
+          <div class="chart-wrap">
+            <div class="chart">
+              <svg viewBox="0 0 700 240" preserveAspectRatio="none" class="chart-svg">
+
+                <!-- Gradient fill for bars -->
+                <defs>
+                  <linearGradient id="bg-bar" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%"  stop-color="#7C8FFF"/>
+                    <stop offset="100%" stop-color="#4D63E0" stop-opacity="0.85"/>
+                  </linearGradient>
+                  <linearGradient id="bg-bar-soft" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%"  stop-color="rgba(124,143,255,0.15)"/>
+                    <stop offset="100%" stop-color="rgba(124,143,255,0)"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Grid -->
+                <g class="chart-grid">
+                  <line x1="50" y1="30"  x2="690" y2="30"/>
+                  <line x1="50" y1="80"  x2="690" y2="80"/>
+                  <line x1="50" y1="130" x2="690" y2="130"/>
+                  <line x1="50" y1="180" x2="690" y2="180"/>
+                </g>
+                <!-- Y axis labels -->
+                <g class="chart-axis">
+                  <text x="40" y="34"  text-anchor="end">4</text>
+                  <text x="40" y="84"  text-anchor="end">3</text>
+                  <text x="40" y="134" text-anchor="end">2</text>
+                  <text x="40" y="184" text-anchor="end">1</text>
+                  <text x="40" y="216" text-anchor="end">0</text>
+                </g>
+
+                <!-- Baseline -->
+                <line x1="50" y1="200" x2="690" y2="200" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+
+                <!-- Bars: Wishlist 2, Applied 4, Interview 1, Offer 1, Rejected 2, Archived 1 -->
+                <!-- bar geometry: base y=200, each unit = 42.5px height -->
+
+                <!-- 1. Wishlist (2) -->
+                <g class="chart-bar" style="animation-delay:80ms;">
+                  <rect class="bar-shadow" x="78"  y="200" width="60" height="0" fill="url(#bg-bar-soft)" rx="3" opacity="0"/>
+                  <rect class="bar-fill"   x="78"  y="115" width="60" height="85" fill="url(#bg-bar)" rx="4"/>
+                  <rect x="78" y="115" width="60" height="2.5" fill="rgba(255,255,255,0.35)" rx="2"/>
+                  <text class="chart-stage-count" x="108" y="105" text-anchor="middle">2</text>
+                </g>
+
+                <!-- 2. Applied (4) — accent bar -->
+                <g class="chart-bar" style="animation-delay:160ms;">
+                  <rect class="bar-fill"   x="186" y="30"  width="60" height="170" fill="url(#bg-bar)" rx="4"/>
+                  <rect x="186" y="30" width="60" height="2.5" fill="rgba(255,255,255,0.45)" rx="2"/>
+                  <text class="chart-stage-count" x="216" y="22" text-anchor="middle">4</text>
+                </g>
+
+                <!-- 3. Interview (1) -->
+                <g class="chart-bar" style="animation-delay:240ms;">
+                  <rect class="bar-fill"   x="294" y="157" width="60" height="43" fill="url(#bg-bar)" opacity="0.65" rx="4"/>
+                  <rect x="294" y="157" width="60" height="2.5" fill="rgba(255,255,255,0.3)" rx="2"/>
+                  <text class="chart-stage-count" x="324" y="148" text-anchor="middle">1</text>
+                </g>
+
+                <!-- 4. Offer (1) -->
+                <g class="chart-bar" style="animation-delay:320ms;">
+                  <rect class="bar-fill"   x="402" y="157" width="60" height="43" fill="#38C793" opacity="0.85" rx="4"/>
+                  <rect x="402" y="157" width="60" height="2.5" fill="rgba(255,255,255,0.4)" rx="2"/>
+                  <text class="chart-stage-count" x="432" y="148" text-anchor="middle">1</text>
+                </g>
+
+                <!-- 5. Rejected (2) -->
+                <g class="chart-bar" style="animation-delay:400ms;">
+                  <rect class="bar-fill"   x="510" y="115" width="60" height="85" fill="url(#bg-bar)" opacity="0.45" rx="4"/>
+                  <rect x="510" y="115" width="60" height="2.5" fill="rgba(255,255,255,0.25)" rx="2"/>
+                  <text class="chart-stage-count" x="540" y="105" text-anchor="middle">2</text>
+                </g>
+
+                <!-- 6. Archived (1) -->
+                <g class="chart-bar" style="animation-delay:480ms;">
+                  <rect class="bar-fill"   x="618" y="157" width="60" height="43" fill="url(#bg-bar)" opacity="0.30" rx="4"/>
+                  <rect x="618" y="157" width="60" height="2.5" fill="rgba(255,255,255,0.18)" rx="2"/>
+                  <text class="chart-stage-count" x="648" y="148" text-anchor="middle">1</text>
+                </g>
+
+                <!-- X labels -->
+                <g class="chart-stage-label">
+                  <text x="108" y="222" text-anchor="middle">Wishlist</text>
+                  <text x="216" y="222" text-anchor="middle">Applied</text>
+                  <text x="324" y="222" text-anchor="middle">Interview</text>
+                  <text x="432" y="222" text-anchor="middle">Offer</text>
+                  <text x="540" y="222" text-anchor="middle">Rejected</text>
+                  <text x="648" y="222" text-anchor="middle">Archived</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+
+          <div class="pipe-foot">
+            <div>
+              <div class="pipe-stat-label">Conversion</div>
+              <div class="pipe-stat-val">25% <span class="small">applied → interview</span></div>
+            </div>
+            <div>
+              <div class="pipe-stat-label">Avg. velocity</div>
+              <div class="pipe-stat-val">3.2d <span class="small">stage to stage</span></div>
+            </div>
+            <div>
+              <div class="pipe-stat-label">Synced</div>
+              <div class="pipe-stat-val">2m <span class="small">from mock pipeline</span></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Deadlines panel -->
+        <article class="panel">
+          <div class="panel-head">
+            <div class="panel-title-wrap">
+              <div class="panel-title-icon"><svg><use href="#ic-deadline"/></svg></div>
+              <div>
+                <h3 class="panel-title">Upcoming Deadlines</h3>
+                <div class="panel-sub">Time-sensitive applications and interviews</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Premium empty state — toggleable -->
+          <div class="empty">
+            <div class="empty-icon"><svg><use href="#ic-deadline"/></svg></div>
+            <div class="empty-title">You're all clear</div>
+            <div class="empty-sub">No deadlines on the horizon. We'll surface them here the moment something needs your attention.</div>
+            <a class="empty-cta">
+              Configure reminders
+              <svg><use href="#ic-arrow-right"/></svg>
+            </a>
+          </div>
+
+          <!-- Hidden example deadlines list (would appear when data exists) -->
+          <!--
+          <div class="deadlines">
+            <div class="dl-row">
+              <div class="dl-date"><span class="m">May</span><span class="d">04</span></div>
+              <div class="dl-body">
+                <div class="dl-title">Senior PM application — Linear</div>
+                <div class="dl-meta">Due in 2 days · Application portal</div>
+              </div>
+              <span class="dl-tag urgent">Urgent</span>
+            </div>
+            <div class="dl-row">
+              <div class="dl-date"><span class="m">May</span><span class="d">07</span></div>
+              <div class="dl-body">
+                <div class="dl-title">Phone screen with Vercel</div>
+                <div class="dl-meta">In 5 days · Recruiter call</div>
+              </div>
+              <span class="dl-tag soon">Soon</span>
+            </div>
+            <div class="dl-row">
+              <div class="dl-date"><span class="m">May</span><span class="d">12</span></div>
+              <div class="dl-body">
+                <div class="dl-title">Take-home for Stripe</div>
+                <div class="dl-meta">In 10 days · Submission</div>
+              </div>
+              <span class="dl-tag ok">On track</span>
+            </div>
+          </div>
+          -->
+        </article>
+
+      </section>
+
+    </main>
+
+  </div>
+</div>
+
+<script>
+  // Subtle interactivity — keeps shell feeling alive without being noisy
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('is-active'));
+      item.classList.add('is-active');
+    });
+  });
+
+  // Cmd/Ctrl+K focuses search
+  const searchInput = document.querySelector('.search input');
+  document.addEventListener('keydown', (e) => {
+    if((e.metaKey || e.ctrlKey) && e.key === 'k'){
+      e.preventDefault();
+      searchInput.focus();
+    }
+  });
+</script>
+
+</body>
+</html>

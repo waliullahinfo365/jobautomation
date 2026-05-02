@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build / cache
+dist
+.next
+.turbo
+coverage
+*.tsbuildinfo
+
+# Environment — never commit secrets (examples stay tracked)
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+.env.backup
+.env.old
+apps/web/.env.local
+apps/web/.env.production
+apps/api/.env
+apps/workers/.env
+
+# Keep tracked: .env.example, apps/web/.env.example
+
+# OS / IDE
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

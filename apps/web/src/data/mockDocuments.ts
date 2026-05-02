@@ -1,0 +1,93 @@
+import type {
+  CoverLetterRecord,
+  CVVersion,
+  DocumentRecord,
+  FolderActivityRecord,
+  FolderAutomationSettings,
+  PDFExportRecord,
+  ResearchDocumentRecord,
+} from "@/types/document";
+
+export const mockDocumentRecords: DocumentRecord[] = [
+  { id: "doc_001", _id: "doc_001", fileName: "CV_Acme_Frontend_v4.docx", type: "CV", relatedJob: "Senior Frontend Engineer", company: "Acme Corp", position: "Senior Frontend Engineer", status: "Ready", storageLocation: "Job Applications/Acme/Senior Frontend/CV", lastUpdated: "2026-05-01T09:12:00.000Z" },
+  { id: "doc_002", _id: "doc_002", fileName: "CoverLetter_Acme_v2.docx", type: "Cover Letter", relatedJob: "Senior Frontend Engineer", company: "Acme Corp", position: "Senior Frontend Engineer", status: "Exported", storageLocation: "Job Applications/Acme/Senior Frontend/Cover Letter", lastUpdated: "2026-05-01T09:22:00.000Z" },
+  { id: "doc_003", _id: "doc_003", fileName: "Research_StartupXYZ.md", type: "Research Document", relatedJob: "Full-Stack Developer", company: "StartupXYZ", position: "Full-Stack Developer", status: "Needs Review", storageLocation: "Job Applications/StartupXYZ/Full-Stack/Research", lastUpdated: "2026-05-01T08:40:00.000Z" },
+  { id: "doc_004", _id: "doc_004", fileName: "CV_StartupXYZ_v3.docx", type: "CV", relatedJob: "Full-Stack Developer", company: "StartupXYZ", position: "Full-Stack Developer", status: "Ready", storageLocation: "Job Applications/StartupXYZ/Full-Stack/CV", lastUpdated: "2026-04-30T17:30:00.000Z" },
+  { id: "doc_005", _id: "doc_005", fileName: "CoverLetter_CloudBase_v1.docx", type: "Cover Letter", relatedJob: "Backend Engineer", company: "CloudBase", position: "Backend Engineer", status: "Draft", storageLocation: "Job Applications/CloudBase/Backend/Cover Letter", lastUpdated: "2026-04-29T14:05:00.000Z" },
+  { id: "doc_006", _id: "doc_006", fileName: "WeeklyReport_W17.pdf", type: "PDF Export", relatedJob: "Workspace", company: "Internal", position: "Reporting", status: "Exported", storageLocation: "Job Applications/Exports/Weekly", lastUpdated: "2026-04-28T09:20:00.000Z" },
+  { id: "doc_007", _id: "doc_007", fileName: "Research_PioneerHealth.md", type: "Research Document", relatedJob: "Frontend Architect", company: "Pioneer Health", position: "Frontend Architect", status: "Ready", storageLocation: "Job Applications/Pioneer Health/Frontend Architect/Research", lastUpdated: "2026-05-01T06:45:00.000Z" },
+  { id: "doc_008", _id: "doc_008", fileName: "CV_Pioneer_Architect_v2.docx", type: "CV", relatedJob: "Frontend Architect", company: "Pioneer Health", position: "Frontend Architect", status: "Ready", storageLocation: "Job Applications/Pioneer Health/Frontend Architect/CV", lastUpdated: "2026-05-01T06:40:00.000Z" },
+  { id: "doc_009", _id: "doc_009", fileName: "CoverLetter_Pioneer_v2.docx", type: "Cover Letter", relatedJob: "Frontend Architect", company: "Pioneer Health", position: "Frontend Architect", status: "Ready", storageLocation: "Job Applications/Pioneer Health/Frontend Architect/Cover Letter", lastUpdated: "2026-05-01T06:42:00.000Z" },
+  { id: "doc_010", _id: "doc_010", fileName: "DailyDigest_2026-05-01.pdf", type: "PDF Export", relatedJob: "Workspace", company: "Internal", position: "Reporting", status: "Exported", storageLocation: "Job Applications/Exports/Daily", lastUpdated: "2026-05-01T08:04:00.000Z" },
+  { id: "doc_011", _id: "doc_011", fileName: "Research_QuantNest.md", type: "Research Document", relatedJob: "Backend Engineer", company: "QuantNest", position: "Backend Engineer", status: "Failed", storageLocation: "Job Applications/QuantNest/Backend/Research", lastUpdated: "2026-05-01T07:29:00.000Z" },
+  { id: "doc_012", _id: "doc_012", fileName: "CV_BlueOcean_DataPlatform_v1.docx", type: "CV", relatedJob: "Data Platform Engineer", company: "BlueOcean Data", position: "Data Platform Engineer", status: "Exported", storageLocation: "Job Applications/BlueOcean/Data Platform/CV", lastUpdated: "2026-04-30T18:00:00.000Z" },
+  { id: "doc_013", _id: "doc_013", fileName: "CoverLetter_BlueOcean_v1.docx", type: "Cover Letter", relatedJob: "Data Platform Engineer", company: "BlueOcean Data", position: "Data Platform Engineer", status: "Exported", storageLocation: "Job Applications/BlueOcean/Data Platform/Cover Letter", lastUpdated: "2026-04-30T18:02:00.000Z" },
+  { id: "doc_014", _id: "doc_014", fileName: "JobFolder_Acme", type: "Job Folder", relatedJob: "Senior Frontend Engineer", company: "Acme Corp", position: "Senior Frontend Engineer", status: "Ready", storageLocation: "Job Applications/Acme/Senior Frontend", lastUpdated: "2026-04-20T10:10:00.000Z" },
+  { id: "doc_015", _id: "doc_015", fileName: "JobFolder_StartupXYZ", type: "Job Folder", relatedJob: "Full-Stack Developer", company: "StartupXYZ", position: "Full-Stack Developer", status: "Ready", storageLocation: "Job Applications/StartupXYZ/Full-Stack", lastUpdated: "2026-04-18T09:06:00.000Z" },
+  { id: "doc_016", _id: "doc_016", fileName: "FollowUp_Email_Template_Acme.md", type: "Email Template", relatedJob: "Senior Frontend Engineer", company: "Acme Corp", position: "Senior Frontend Engineer", status: "Draft", storageLocation: "Job Applications/Acme/Senior Frontend/Email", lastUpdated: "2026-05-01T11:00:00.000Z" },
+  { id: "doc_017", _id: "doc_017", fileName: "Research_CloudBase.md", type: "Research Document", relatedJob: "Backend Engineer", company: "CloudBase", position: "Backend Engineer", status: "Ready", storageLocation: "Job Applications/CloudBase/Backend/Research", lastUpdated: "2026-04-24T12:00:00.000Z" },
+  { id: "doc_018", _id: "doc_018", fileName: "CV_CloudBase_Backend_v3.docx", type: "CV", relatedJob: "Backend Engineer", company: "CloudBase", position: "Backend Engineer", status: "Archived", storageLocation: "Job Applications/CloudBase/Backend/CV", lastUpdated: "2026-04-13T09:40:00.000Z" },
+  { id: "doc_019", _id: "doc_019", fileName: "CoverLetter_QuantNest_v1.docx", type: "Cover Letter", relatedJob: "Backend Engineer", company: "QuantNest", position: "Backend Engineer", status: "Needs Review", storageLocation: "Job Applications/QuantNest/Backend/Cover Letter", lastUpdated: "2026-05-01T07:10:00.000Z" },
+  { id: "doc_020", _id: "doc_020", fileName: "ExportBatch_May01.zip", type: "PDF Export", relatedJob: "Workspace", company: "Internal", position: "Reporting", status: "Failed", storageLocation: "Job Applications/Exports/Batches", lastUpdated: "2026-05-01T08:20:00.000Z" },
+];
+
+export const mockCVLibrary: CVVersion[] = [
+  { id: "cv_001", cvName: "General Software Engineer CV", targetRole: "Software Engineer", industry: "General Tech", version: "v5", status: "Ready", usedInApplicationsCount: 14, isDefault: true, lastUpdated: "2026-05-01T09:00:00.000Z" },
+  { id: "cv_002", cvName: "Frontend Specialist CV", targetRole: "Frontend Engineer", industry: "SaaS", version: "v4", status: "Ready", usedInApplicationsCount: 8, isDefault: false, lastUpdated: "2026-04-30T18:00:00.000Z" },
+  { id: "cv_003", cvName: "Backend Platform CV", targetRole: "Backend Engineer", industry: "Cloud", version: "v3", status: "Ready", usedInApplicationsCount: 6, isDefault: false, lastUpdated: "2026-04-28T15:00:00.000Z" },
+  { id: "cv_004", cvName: "Data Platform CV", targetRole: "Data Engineer", industry: "Analytics", version: "v2", status: "Needs Review", usedInApplicationsCount: 3, isDefault: false, lastUpdated: "2026-04-27T17:30:00.000Z" },
+  { id: "cv_005", cvName: "Platform Architect CV", targetRole: "Platform Engineer", industry: "Infrastructure", version: "v1", status: "Draft", usedInApplicationsCount: 1, isDefault: false, lastUpdated: "2026-04-26T10:20:00.000Z" },
+];
+
+export const mockCoverLetters: CoverLetterRecord[] = [
+  { id: "cl_001", fileName: "CoverLetter_Acme_v2.docx", company: "Acme Corp", position: "Senior Frontend Engineer", relatedJob: "Acme / Senior Frontend Engineer", status: "Exported", aiGenerated: true, pdfExportStatus: "Exported", lastUpdated: "2026-05-01T09:22:00.000Z" },
+  { id: "cl_002", fileName: "CoverLetter_StartupXYZ_v1.docx", company: "StartupXYZ", position: "Full-Stack Developer", relatedJob: "StartupXYZ / Full-Stack Developer", status: "Ready", aiGenerated: true, pdfExportStatus: "Pending", lastUpdated: "2026-04-30T17:34:00.000Z" },
+  { id: "cl_003", fileName: "CoverLetter_CloudBase_v1.docx", company: "CloudBase", position: "Backend Engineer", relatedJob: "CloudBase / Backend Engineer", status: "Draft", aiGenerated: false, pdfExportStatus: "Pending", lastUpdated: "2026-04-29T14:05:00.000Z" },
+  { id: "cl_004", fileName: "CoverLetter_Pioneer_v2.docx", company: "Pioneer Health", position: "Frontend Architect", relatedJob: "Pioneer / Frontend Architect", status: "Ready", aiGenerated: true, pdfExportStatus: "Exported", lastUpdated: "2026-05-01T06:42:00.000Z" },
+  { id: "cl_005", fileName: "CoverLetter_QuantNest_v1.docx", company: "QuantNest", position: "Backend Engineer", relatedJob: "QuantNest / Backend Engineer", status: "Needs Review", aiGenerated: true, pdfExportStatus: "Needs Review", lastUpdated: "2026-05-01T07:10:00.000Z" },
+  { id: "cl_006", fileName: "CoverLetter_BlueOcean_v1.docx", company: "BlueOcean Data", position: "Data Platform Engineer", relatedJob: "BlueOcean / Data Platform", status: "Exported", aiGenerated: false, pdfExportStatus: "Exported", lastUpdated: "2026-04-30T18:02:00.000Z" },
+  { id: "cl_007", fileName: "CoverLetter_Nova_v1.docx", company: "Nova Systems", position: "Platform Engineer", relatedJob: "Nova / Platform Engineer", status: "Ready", aiGenerated: true, pdfExportStatus: "Pending", lastUpdated: "2026-05-01T11:12:00.000Z" },
+  { id: "cl_008", fileName: "CoverLetter_ScaleGrid_v1.docx", company: "ScaleGrid", position: "SRE", relatedJob: "ScaleGrid / SRE", status: "Draft", aiGenerated: true, pdfExportStatus: "Failed", lastUpdated: "2026-05-01T08:15:00.000Z" },
+];
+
+export const mockResearchDocs: ResearchDocumentRecord[] = [
+  { id: "rd_001", documentName: "Research_StartupXYZ.md", company: "StartupXYZ", position: "Full-Stack Developer", researchStatus: "Needs Review", aiSummarySnippet: "Strong backend ownership culture, lean team, high impact role.", createdAt: "2026-05-01T08:40:00.000Z" },
+  { id: "rd_002", documentName: "Research_PioneerHealth.md", company: "Pioneer Health", position: "Frontend Architect", researchStatus: "Ready", aiSummarySnippet: "Healthcare SaaS scaling frontend architecture across multiple products.", createdAt: "2026-05-01T06:45:00.000Z" },
+  { id: "rd_003", documentName: "Research_CloudBase.md", company: "CloudBase", position: "Backend Engineer", researchStatus: "Ready", aiSummarySnippet: "Cloud-native stack with focus on distributed systems reliability.", createdAt: "2026-04-24T12:00:00.000Z" },
+  { id: "rd_004", documentName: "Research_QuantNest.md", company: "QuantNest", position: "Backend Engineer", researchStatus: "Failed", aiSummarySnippet: "Collection failed due to source timeout; retry suggested.", createdAt: "2026-05-01T07:29:00.000Z" },
+  { id: "rd_005", documentName: "Research_Acme.md", company: "Acme Corp", position: "Senior Frontend Engineer", researchStatus: "Ready", aiSummarySnippet: "Product-led growth company with mature frontend platform team.", createdAt: "2026-04-22T10:00:00.000Z" },
+  { id: "rd_006", documentName: "Research_BlueOcean.md", company: "BlueOcean Data", position: "Data Platform Engineer", researchStatus: "Draft", aiSummarySnippet: "Data infra role with strong Spark/Kafka emphasis.", createdAt: "2026-04-29T15:00:00.000Z" },
+];
+
+export const mockDocumentPDFExports: PDFExportRecord[] = [
+  { id: "pe_001", documentName: "Acme Cover Letter v2", sourceType: "Cover Letter", relatedJob: "Acme / Senior Frontend", exportStatus: "Exported", createdAt: "2026-05-01T09:23:00.000Z", pdfUrl: "/docs/exports/acme-cover-letter-v2.pdf" },
+  { id: "pe_002", documentName: "StartupXYZ CV v3", sourceType: "CV", relatedJob: "StartupXYZ / Full-Stack", exportStatus: "Exported", createdAt: "2026-04-30T17:35:00.000Z", pdfUrl: "/docs/exports/startupxyz-cv-v3.pdf" },
+  { id: "pe_003", documentName: "Pioneer Cover Letter v2", sourceType: "Cover Letter", relatedJob: "Pioneer / Frontend Architect", exportStatus: "Exported", createdAt: "2026-05-01T06:43:00.000Z", pdfUrl: "/docs/exports/pioneer-cl-v2.pdf" },
+  { id: "pe_004", documentName: "Weekly Report W17", sourceType: "PDF Export", relatedJob: "Workspace", exportStatus: "Exported", createdAt: "2026-04-28T09:20:00.000Z", pdfUrl: "/docs/exports/weekly-w17.pdf" },
+  { id: "pe_005", documentName: "Daily Digest 2026-05-01", sourceType: "PDF Export", relatedJob: "Workspace", exportStatus: "Exported", createdAt: "2026-05-01T08:04:00.000Z", pdfUrl: "/docs/exports/digest-2026-05-01.pdf" },
+  { id: "pe_006", documentName: "QuantNest Research", sourceType: "Research Document", relatedJob: "QuantNest / Backend", exportStatus: "Failed", createdAt: "2026-05-01T07:30:00.000Z", pdfUrl: "/docs/exports/quantnest-research.pdf" },
+  { id: "pe_007", documentName: "ScaleGrid Cover Letter", sourceType: "Cover Letter", relatedJob: "ScaleGrid / SRE", exportStatus: "Needs Review", createdAt: "2026-05-01T08:16:00.000Z", pdfUrl: "/docs/exports/scalegrid-cl.pdf" },
+  { id: "pe_008", documentName: "BlueOcean CV", sourceType: "CV", relatedJob: "BlueOcean / Data Platform", exportStatus: "Exported", createdAt: "2026-04-30T18:01:00.000Z", pdfUrl: "/docs/exports/blueocean-cv.pdf" },
+  { id: "pe_009", documentName: "Nova Cover Letter", sourceType: "Cover Letter", relatedJob: "Nova / Platform Engineer", exportStatus: "Pending", createdAt: "2026-05-01T11:13:00.000Z", pdfUrl: "/docs/exports/nova-cl.pdf" },
+  { id: "pe_010", documentName: "Export Batch May 01", sourceType: "PDF Export", relatedJob: "Workspace", exportStatus: "Failed", createdAt: "2026-05-01T08:20:00.000Z", pdfUrl: "/docs/exports/batch-may01.zip" },
+];
+
+export const mockFolderActivity: FolderActivityRecord[] = [
+  { id: "fa_001", time: "2026-05-01T11:10:00.000Z", job: "Nova / Platform Engineer", action: "Created folder structure", folderPath: "Job Applications/Nova Systems/Platform Engineer", status: "Success" },
+  { id: "fa_002", time: "2026-05-01T09:20:00.000Z", job: "Acme / Senior Frontend", action: "Moved CV to Ready folder", folderPath: "Job Applications/Acme/Senior Frontend/CV", status: "Success" },
+  { id: "fa_003", time: "2026-05-01T08:20:00.000Z", job: "Workspace", action: "Export batch failed", folderPath: "Job Applications/Exports/Batches", status: "Failed" },
+  { id: "fa_004", time: "2026-05-01T08:04:00.000Z", job: "Workspace", action: "Daily digest exported", folderPath: "Job Applications/Exports/Daily", status: "Success" },
+  { id: "fa_005", time: "2026-05-01T07:30:00.000Z", job: "QuantNest / Backend", action: "Research doc export flagged", folderPath: "Job Applications/QuantNest/Backend/Research", status: "Warning" },
+  { id: "fa_006", time: "2026-04-30T18:01:00.000Z", job: "BlueOcean / Data Platform", action: "CV export completed", folderPath: "Job Applications/BlueOcean/Data Platform/CV", status: "Success" },
+  { id: "fa_007", time: "2026-04-30T17:35:00.000Z", job: "StartupXYZ / Full-Stack", action: "CV routed", folderPath: "Job Applications/StartupXYZ/Full-Stack/CV", status: "Success" },
+  { id: "fa_008", time: "2026-04-29T14:05:00.000Z", job: "CloudBase / Backend", action: "Cover letter draft saved", folderPath: "Job Applications/CloudBase/Backend/Cover Letter", status: "Success" },
+  { id: "fa_009", time: "2026-04-28T09:20:00.000Z", job: "Workspace", action: "Weekly report exported", folderPath: "Job Applications/Exports/Weekly", status: "Success" },
+  { id: "fa_010", time: "2026-04-27T10:00:00.000Z", job: "Pioneer / Frontend Architect", action: "Folder created", folderPath: "Job Applications/Pioneer Health/Frontend Architect", status: "Success" },
+];
+
+export const mockFolderAutomationSettings: FolderAutomationSettings = {
+  autoCreateFolderOnNewJob: true,
+  moveCVOnReadyToApply: true,
+  exportFinalDocumentsAsPDF: true,
+  namingConvention: "Company_Position_Date",
+};

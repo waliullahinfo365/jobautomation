@@ -1,0 +1,23 @@
+/* Maps shadcn hsl(var(--*)) tokens to JobFlow premium surfaces inside the dashboard shell */
+
+.dashboard-bg {
+  --background: 228 23% 4%;
+  --foreground: 220 14% 93%;
+  --card: 218 22% 10%;
+  --card-foreground: 220 14% 93%;
+  --popover: 218 22% 10%;
+  --popover-foreground: 220 14% 93%;
+  --primary: 230 100% 68%;
+  --primary-foreground: 228 28% 8%;
+  --secondary: 218 18% 14%;
+  --secondary-foreground: 220 14% 93%;
+  --muted: 218 18% 12%;
+  --muted-foreground: 218 10% 52%;
+  --accent: 230 45% 18%;
+  --accent-foreground: 220 14% 93%;
+  --destructive: 350 65% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 12% 18%;
+  --input: 220 12% 18%;
+  --ring: 230 85% 68%;
+}

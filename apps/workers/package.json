@@ -1,0 +1,32 @@
+{
+  "name": "@jobflow/workers",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./queue": {
+      "types": "./src/queues/automation.queue.ts",
+      "import": "./dist/apps/workers/src/queues/automation.queue.js",
+      "default": "./dist/apps/workers/src/queues/automation.queue.js"
+    }
+  },
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "start": "node dist/apps/workers/src/index.js",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'workers lint placeholder'"
+  },
+  "dependencies": {
+    "@jobflow/database": "workspace:*",
+    "@jobflow/shared": "workspace:*",
+    "mongoose": "^8.19.2",
+    "pino": "^9.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsc-alias": "^1.8.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}

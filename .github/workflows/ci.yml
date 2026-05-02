@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build web
+        env:
+          NEXT_PUBLIC_API_URL: https://ci-placeholder.invalid
+        run: pnpm --filter @jobflow/web build
+
+      - name: Build API
+        run: pnpm --filter @jobflow/api build
+
+      - name: Build workers
+        run: pnpm --filter @jobflow/workers build

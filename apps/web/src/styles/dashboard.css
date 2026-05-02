@@ -1,0 +1,19 @@
+/* Dashboard-specific utility styles */
+
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.pipeline-kanban {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.pipeline-column {
+  min-width: 200px;
+  flex-shrink: 0;
+}

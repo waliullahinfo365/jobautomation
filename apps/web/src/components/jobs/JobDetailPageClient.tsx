@@ -1,0 +1,225 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LoaderIcon, SparklesIcon } from "@/components/icons";
+import { JobDetailHeader } from "@/components/jobs/JobDetailHeader";
+import { JobOverviewCard } from "@/components/jobs/JobOverviewCard";
+import { JobTimeline } from "@/components/jobs/JobTimeline";
+import { JobDocumentsCard } from "@/components/jobs/JobDocumentsCard";
+import { JobAutomationActivity } from "@/components/jobs/JobAutomationActivity";
+import { LoadingState } from "@/components/shared/LoadingState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { SectionCard } from "@/components/shared/SectionCard";
+import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
+import { Button } from "@/components/ui/button";
+import { useJobDetail, useJobsApi } from "@/hooks/api/useJobsApi";
+import { normalizeJobForUi } from "@/lib/utils/resource";
+import { showSuccess, showError } from "@/lib/ui/toast";
+import { mockJobs } from "@/data/mockJobs";
+import type { Job } from "@/types/job";
+
+interface JobDetailPageClientProps {
+  id: string;
+}
+
+export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
+  const router = useRouter();
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const mockFallbackJob = mockJobs.find((j) => j.id === id || j._id === id);
+
+  const { data: rawJob, loading, isUsingFallback } = useJobDetail(id, {
+    fallbackToMock: true,
+    mockFallbackJob,
+  });
+
+  const jobsApi = useJobsApi();
+
+  const job: Job | undefined = rawJob ? normalizeJobForUi(rawJob) : undefined;
+
+  const withLoading = useCallback(async (key: string, fn: () => Promise<unknown>) => {
+    setActionLoading(key);
+    try {
+      const result = await fn();
+      return result;
+    } finally {
+      setActionLoading(null);
+    }
+  }, []);
+
+  const handleCheckDuplicate = useCallback(async () => {
+    try {
+      await withLoading("duplicate", () => jobsApi.checkDuplicate(id));
+      showSuccess("Duplicate check queued.");
+    } catch {
+      showError("Duplicate check failed.");
+    }
+  }, [id, jobsApi, withLoading]);
+
+  const handleGenerateResearch = useCallback(async () => {
+    try {
+      await withLoading("research", () => jobsApi.generateResearch({ id, execute: false }));
+      showSuccess("Research generation queued.");
+    } catch {
+      showError("Failed to queue research generation.");
+    }
+  }, [id, jobsApi, withLoading]);
+
+  const handleGenerateDraft = useCallback(async () => {
+    try {
+      await withLoading("draft", () => jobsApi.generateDraft({ id, execute: false }));
+      showSuccess("Draft generation queued.");
+    } catch {
+      showError("Failed to queue draft generation.");
+    }
+  }, [id, jobsApi, withLoading]);
+
+  const handleRunAiProcessing = useCallback(async () => {
+    try {
+      await withLoading("ai", () => jobsApi.runAiProcessing({ id, options: { mode: "full" } }));
+      showSuccess("AI processing queued.");
+    } catch {
+      showError("Failed to queue AI processing.");
+    }
+  }, [id, jobsApi, withLoading]);
+
+  const handleProvisionFolders = useCallback(async () => {
+    try {
+      await withLoading("folders", () => jobsApi.provisionFolders({ id, execute: false }));
+      showSuccess("Folder provisioning queued.");
+    } catch {
+      showError("Failed to queue folder provisioning.");
+    }
+  }, [id, jobsApi, withLoading]);
+
+  const handleArchive = useCallback(async () => {
+    try {
+      await withLoading("archive", () => jobsApi.archive(id));
+      showSuccess("Job archived.");
+      router.push("/jobs");
+    } catch {
+      showError("Failed to archive job.");
+    }
+  }, [id, jobsApi, router, withLoading]);
+
+  if (loading && !job) {
+    return <LoadingState title="Loading job..." description="Fetching job details from the backend." />;
+  }
+
+  if (!job) {
+    return (
+      <EmptyState
+        title="Job not found"
+        description="This job does not exist or could not be loaded."
+        actionLabel="Back to Jobs"
+        onAction={() => router.push("/jobs")}
+      />
+    );
+  }
+
+  const actionDisabled = actionLoading !== null;
+
+  const actionBar = (
+    <>
+      {isUsingFallback && <ApiStatusIndicator usingMock />}
+      <ActionButton
+        label="Check Duplicate"
+        loading={actionLoading === "duplicate"}
+        disabled={actionDisabled}
+        onClick={handleCheckDuplicate}
+        variant="outline"
+      />
+      <ActionButton
+        label="Generate Research"
+        loading={actionLoading === "research"}
+        disabled={actionDisabled}
+        onClick={handleGenerateResearch}
+        variant="outline"
+      />
+      <ActionButton
+        label="Generate Draft"
+        loading={actionLoading === "draft"}
+        disabled={actionDisabled}
+        onClick={handleGenerateDraft}
+        variant="secondary"
+      />
+      <ActionButton
+        label="Run AI Processing"
+        loading={actionLoading === "ai"}
+        disabled={actionDisabled}
+        onClick={handleRunAiProcessing}
+      />
+      <ActionButton
+        label="Provision Folders"
+        loading={actionLoading === "folders"}
+        disabled={actionDisabled}
+        onClick={handleProvisionFolders}
+        variant="outline"
+      />
+      <ActionButton
+        label="Archive"
+        loading={actionLoading === "archive"}
+        disabled={actionDisabled}
+        onClick={handleArchive}
+        variant="outline"
+        className="text-rose-600 hover:text-rose-700"
+      />
+    </>
+  );
+
+  return (
+    <div className="space-y-6">
+      <JobDetailHeader job={job} renderActions={actionBar} />
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="space-y-6 xl:col-span-2">
+          <JobOverviewCard job={job} />
+
+          <SectionCard title="Job Description">
+            <p className="text-sm leading-6 text-[var(--text-2)]">{job.description}</p>
+            {job.aiSummary && (
+              <div className="mt-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <SparklesIcon size={16} className="text-[var(--violet)]" />
+                  <p className="text-sm font-medium text-purple-800">AI Summary</p>
+                </div>
+                <p className="text-sm text-purple-700">{job.aiSummary}</p>
+              </div>
+            )}
+          </SectionCard>
+
+          <JobTimeline timeline={job.timeline} />
+        </div>
+
+        <div className="space-y-6">
+          <JobDocumentsCard documents={job.documents} />
+          <JobAutomationActivity logs={job.automationLogs} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ActionButtonProps {
+  label: string;
+  loading: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  variant?: "default" | "outline" | "secondary" | "ghost";
+  className?: string;
+}
+
+function ActionButton({ label, loading, disabled, onClick, variant = "default", className }: ActionButtonProps) {
+  return (
+    <Button
+      variant={variant}
+      disabled={disabled}
+      onClick={onClick}
+      className={className}
+    >
+      {loading && <LoaderIcon size={14} className="mr-2" />}
+      {label}
+    </Button>
+  );
+}

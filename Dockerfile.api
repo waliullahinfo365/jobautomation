@@ -1,0 +1,24 @@
+# API — Node 20, pnpm monorepo build (run from repository root: `docker build -f Dockerfile.api .`)
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY turbo.json tsconfig.base.json ./
+COPY packages ./packages
+COPY apps/api ./apps/api
+COPY apps/workers ./apps/workers
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @jobflow/shared build \
+  && pnpm --filter @jobflow/database build \
+  && pnpm --filter @jobflow/integrations build \
+  && pnpm --filter @jobflow/workers build \
+  && pnpm --filter @jobflow/api build
+
+ENV NODE_ENV=production
+# Railway sets PORT; app reads process.env.PORT (default 4000)
+ENV PORT=4000
+WORKDIR /app/apps/api
+EXPOSE 4000
+CMD ["node", "dist/apps/api/src/server.js"]

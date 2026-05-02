@@ -1,0 +1,234 @@
+import type {
+  ChartDataPoint,
+  DailyDigestData,
+  DailyDigestReport,
+  PDFExportRecord,
+  ReportHistoryRecord,
+  ReportStats,
+  WeeklyPerformanceReport,
+  WeeklyReportData,
+} from "@/types/report";
+
+export const mockDailyDigest: DailyDigestReport = {
+  _id:                "report_daily_001",
+  date:               "2026-05-01T00:00:00.000Z",
+  totalJobs:          5,
+  activeJobs:         4,
+  newToday:           1,
+  appliedToday:       0,
+  interviewsThisWeek: 1,
+  pendingFollowUps:   2,
+  overdueDeadlines:   0,
+  automationErrors:   0,
+  highlights: [
+    "Technical interview scheduled with StartupXYZ for May 5",
+    "CloudBase offer received — deadline May 8",
+    "2 follow-up reminders due today",
+  ],
+  createdAt: "2026-05-01T08:00:00.000Z",
+};
+
+export const mockWeeklyReport: WeeklyPerformanceReport = {
+  _id:                     "report_weekly_001",
+  weekStart:               "2026-04-25T00:00:00.000Z",
+  weekEnd:                 "2026-05-01T00:00:00.000Z",
+  jobsAdded:               3,
+  applicationsSubmitted:   2,
+  interviewsScheduled:     1,
+  offersReceived:          1,
+  rejections:              0,
+  responseRate:            40,
+  averageTimeToApply:      2.5,
+  topSources: [
+    { source: "LinkedIn", count: 2 },
+    { source: "Referral", count: 1 },
+    { source: "Indeed",   count: 1 },
+  ],
+  statusBreakdown: [
+    { status: "Applied",   count: 1 },
+    { status: "Interview", count: 1 },
+    { status: "Research",  count: 1 },
+    { status: "Drafting",  count: 1 },
+    { status: "Offer",     count: 1 },
+  ],
+  createdAt: "2026-04-28T09:00:00.000Z",
+};
+
+export const mockReportStats: ReportStats = {
+  reportsGenerated: 48,
+  dailyDigestsSent: 29,
+  weeklyReportsSent: 7,
+  pdfExports: 12,
+  successRate: 94,
+  lastReport: "May 1, 2026 08:00",
+};
+
+export const mockDailyDigestPreview: DailyDigestData = {
+  date: "May 1, 2026",
+  newJobsDetected: 3,
+  applicationsSent: 2,
+  followUpsDue: 4,
+  repliesReceived: 2,
+  deadlinesApproaching: 1,
+  failedAutomations: 1,
+  recommendedActions: [
+    "Send follow-up for QuantNest Backend Engineer.",
+    "Review Needs Review reply from Vertex AI.",
+    "Resolve lifecycle monitoring error before next run.",
+  ],
+  deliveryStatus: "Sent",
+  recipientEmail: "wali.ullah@gmail.com",
+  lastSentTime: "May 1, 2026 08:00",
+  nextScheduledTime: "May 2, 2026 08:00",
+};
+
+export const mockWeeklyReportPreview: WeeklyReportData = {
+  weekRange: "Apr 25, 2026 - May 1, 2026",
+  totalJobsFound: 14,
+  applicationsSubmitted: 9,
+  responseRate: 44,
+  interviewConversionRate: 22,
+  offersReceived: 1,
+  topSources: [
+    { source: "LinkedIn", count: 5 },
+    { source: "Referral", count: 3 },
+    { source: "Company Website", count: 3 },
+    { source: "Indeed", count: 2 },
+    { source: "Manual", count: 1 },
+  ],
+  bestPerformingCategories: ["Frontend", "Platform", "Data Engineering"],
+  bottlenecks: ["High no-response rate after day 5", "Follow-up completion lag on weekends"],
+  nextWeekFocus: ["Increase referral outreach", "Reduce draft-to-apply cycle to < 48h"],
+  applicationsBySource: [
+    { source: "LinkedIn", count: 4 },
+    { source: "Referral", count: 2 },
+    { source: "Company Website", count: 1 },
+    { source: "Indeed", count: 1 },
+    { source: "Manual", count: 1 },
+  ],
+  responseRateTrend: [
+    { day: "Mon", rate: 28 },
+    { day: "Tue", rate: 33 },
+    { day: "Wed", rate: 41 },
+    { day: "Thu", rate: 45 },
+    { day: "Fri", rate: 44 },
+  ],
+  pipelineConversion: [
+    { stage: "Detected -> Applied", conversion: 64 },
+    { stage: "Applied -> Replied", conversion: 44 },
+    { stage: "Replied -> Interview", conversion: 22 },
+    { stage: "Interview -> Offer", conversion: 11 },
+    { stage: "Offer -> Accepted", conversion: 50 },
+  ],
+};
+
+export const mockWeeklyTrendData: { day: string; applications: number }[] = [
+  { day: "Mon", applications: 1 },
+  { day: "Tue", applications: 2 },
+  { day: "Wed", applications: 1 },
+  { day: "Thu", applications: 3 },
+  { day: "Fri", applications: 2 },
+  { day: "Sat", applications: 0 },
+  { day: "Sun", applications: 1 },
+];
+
+export const mockStatusBreakdownData: ChartDataPoint[] = [
+  { label: "Applied", value: 9 },
+  { label: "Interview", value: 3 },
+  { label: "Offer", value: 1 },
+  { label: "Rejected", value: 2 },
+  { label: "Awaiting Response", value: 7 },
+];
+
+export const mockPDFExportRecords: PDFExportRecord[] = [
+  { id: "pdf_001", documentName: "Acme Cover Letter v2", relatedJob: "Acme Corp / Senior Frontend Engineer", type: "Cover Letter", exportStatus: "Exported", createdAt: "2026-05-01T09:40:00.000Z", pdfLink: "/exports/acme-cover-letter-v2.pdf" },
+  { id: "pdf_002", documentName: "StartupXYZ CV - Tailored", relatedJob: "StartupXYZ / Full-Stack Developer", type: "CV", exportStatus: "Exported", createdAt: "2026-05-01T09:10:00.000Z", pdfLink: "/exports/startupxyz-cv.pdf" },
+  { id: "pdf_003", documentName: "CloudBase Research Brief", relatedJob: "CloudBase / Backend Engineer", type: "Research Document", exportStatus: "Needs Review", createdAt: "2026-04-30T16:15:00.000Z", pdfLink: "/exports/cloudbase-research.pdf" },
+  { id: "pdf_004", documentName: "Weekly Performance - W17", relatedJob: "Workspace", type: "Weekly Report", exportStatus: "Exported", createdAt: "2026-04-28T09:20:00.000Z", pdfLink: "/exports/weekly-w17.pdf" },
+  { id: "pdf_005", documentName: "Daily Digest - May 01", relatedJob: "Workspace", type: "Daily Digest", exportStatus: "Exported", createdAt: "2026-05-01T08:04:00.000Z", pdfLink: "/exports/digest-2026-05-01.pdf" },
+  { id: "pdf_006", documentName: "Pioneer Cover Letter", relatedJob: "Pioneer Health / Frontend Architect", type: "Cover Letter", exportStatus: "Pending", createdAt: "2026-05-01T07:55:00.000Z", pdfLink: "/exports/pioneer-cover-letter.pdf" },
+  { id: "pdf_007", documentName: "QuantNest Follow-up Summary", relatedJob: "QuantNest / Backend Engineer", type: "Research Document", exportStatus: "Failed", createdAt: "2026-05-01T07:30:00.000Z", pdfLink: "/exports/quantnest-summary.pdf" },
+  { id: "pdf_008", documentName: "BlueOcean Interview Prep CV", relatedJob: "BlueOcean Data / Data Platform Engineer", type: "CV", exportStatus: "Exported", createdAt: "2026-04-30T18:00:00.000Z", pdfLink: "/exports/blueocean-cv.pdf" },
+  { id: "pdf_009", documentName: "Daily Digest - Apr 30", relatedJob: "Workspace", type: "Daily Digest", exportStatus: "Exported", createdAt: "2026-04-30T08:03:00.000Z", pdfLink: "/exports/digest-2026-04-30.pdf" },
+  { id: "pdf_010", documentName: "Weekly Performance - W16", relatedJob: "Workspace", type: "Weekly Report", exportStatus: "Exported", createdAt: "2026-04-21T09:15:00.000Z", pdfLink: "/exports/weekly-w16.pdf" },
+];
+
+export const mockReportHistory: ReportHistoryRecord[] = [
+  { id: "rh_001", reportName: "Daily Digest - May 01", type: "Daily Digest", status: "Sent", generatedAt: "2026-05-01T08:00:00.000Z", sentTo: "wali.ullah@gmail.com", deliveryMethod: "Email" },
+  { id: "rh_002", reportName: "Weekly Performance - Week 17", type: "Weekly Performance", status: "Sent", generatedAt: "2026-04-28T09:00:00.000Z", sentTo: "wali.ullah@gmail.com", deliveryMethod: "Email" },
+  { id: "rh_003", reportName: "PDF Export Batch - Apr 30", type: "PDF Export", status: "Generated", generatedAt: "2026-04-30T16:00:00.000Z", sentTo: "Drive Folder", deliveryMethod: "Storage" },
+  { id: "rh_004", reportName: "Manual Weekly Snapshot", type: "Manual Report", status: "Generated", generatedAt: "2026-04-27T20:00:00.000Z", sentTo: "Internal", deliveryMethod: "Dashboard" },
+  { id: "rh_005", reportName: "Daily Digest - Apr 30", type: "Daily Digest", status: "Sent", generatedAt: "2026-04-30T08:00:00.000Z", sentTo: "wali.ullah@gmail.com", deliveryMethod: "Email" },
+  { id: "rh_006", reportName: "Daily Digest - Apr 29", type: "Daily Digest", status: "Failed", generatedAt: "2026-04-29T08:00:00.000Z", sentTo: "wali.ullah@gmail.com", deliveryMethod: "Email" },
+  { id: "rh_007", reportName: "Weekly Performance - Week 16", type: "Weekly Performance", status: "Sent", generatedAt: "2026-04-21T09:00:00.000Z", sentTo: "wali.ullah@gmail.com", deliveryMethod: "Email" },
+  { id: "rh_008", reportName: "PDF Export - Offer Package", type: "PDF Export", status: "Generated", generatedAt: "2026-04-20T14:22:00.000Z", sentTo: "Drive Folder", deliveryMethod: "Storage" },
+  { id: "rh_009", reportName: "Daily Digest - Apr 28", type: "Daily Digest", status: "Scheduled", generatedAt: "2026-04-28T08:00:00.000Z", sentTo: "wali.ullah@gmail.com", deliveryMethod: "Email" },
+  { id: "rh_010", reportName: "Manual Funnel Review", type: "Manual Report", status: "Generated", generatedAt: "2026-04-27T13:00:00.000Z", sentTo: "Internal", deliveryMethod: "Dashboard" },
+];
+
+export interface ActivityFeedItem {
+  id: string;
+  event: string;
+  detail: string;
+  timestamp: string;
+  severity: "info" | "success" | "warning";
+}
+
+export const mockActivityFeed: ActivityFeedItem[] = [
+  {
+    id: "act_001",
+    event: "New job detected from Gmail",
+    detail: "Nova Systems — Platform Engineer imported by Job Intake Engine.",
+    timestamp: "2026-05-01T11:10:00.000Z",
+    severity: "info",
+  },
+  {
+    id: "act_002",
+    event: "Duplicate job skipped",
+    detail: "Duplicate Protection Engine skipped a repeated LinkedIn listing.",
+    timestamp: "2026-05-01T11:09:00.000Z",
+    severity: "warning",
+  },
+  {
+    id: "act_003",
+    event: "Cover letter generated",
+    detail: "AI Processing Engine drafted a role-specific cover letter for Acme Corp.",
+    timestamp: "2026-05-01T10:58:00.000Z",
+    severity: "success",
+  },
+  {
+    id: "act_004",
+    event: "Follow-up reminder created",
+    detail: "Reminder scheduled for Acme Corp application.",
+    timestamp: "2026-05-01T10:32:00.000Z",
+    severity: "info",
+  },
+  {
+    id: "act_005",
+    event: "Interview added to calendar",
+    detail: "StartupXYZ technical interview synced to Google Calendar.",
+    timestamp: "2026-05-01T10:15:00.000Z",
+    severity: "success",
+  },
+  {
+    id: "act_006",
+    event: "Weekly report sent",
+    detail: "Weekly Performance Report delivered to primary email inbox.",
+    timestamp: "2026-04-28T09:00:00.000Z",
+    severity: "info",
+  },
+  {
+    id: "act_007",
+    event: "CV file routed",
+    detail: "CV File Routing stored the latest CV in the StartupXYZ folder.",
+    timestamp: "2026-05-01T09:48:00.000Z",
+    severity: "success",
+  },
+  {
+    id: "act_008",
+    event: "Deadline alert triggered",
+    detail: "Deadline Alert System flagged Acme Corp application for tomorrow.",
+    timestamp: "2026-05-01T07:05:00.000Z",
+    severity: "warning",
+  },
+];
