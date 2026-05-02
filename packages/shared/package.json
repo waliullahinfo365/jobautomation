@@ -6,12 +6,12 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "types/*": ["dist/types/*"],
       "constants/*": ["dist/constants/*"],
+      "types/*": ["dist/types/*"],
       "utils/*": ["dist/utils/*"],
-      "schemas": ["dist/schemas/index.d.ts"],
       "schemas/*": ["dist/schemas/*"],
-      "env/*": ["dist/env/*"]
+      "env/*": ["dist/env/*"],
+      "*": ["dist/*"]
     }
   },
   "exports": {
@@ -27,11 +27,15 @@
       "import": "./dist/types/*.js",
       "default": "./dist/types/*.js"
     },
+    "./constants/ai": {
+      "types": "./dist/constants/ai.d.ts",
+      "require": "./dist/constants/ai.js",
+      "import": "./dist/constants/ai.js"
+    },
     "./constants/*": {
       "types": "./dist/constants/*.d.ts",
       "require": "./dist/constants/*.js",
-      "import": "./dist/constants/*.js",
-      "default": "./dist/constants/*.js"
+      "import": "./dist/constants/*.js"
     },
     "./utils/*": {
       "types": "./dist/utils/*.d.ts",
