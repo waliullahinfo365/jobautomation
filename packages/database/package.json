@@ -10,6 +10,12 @@
     "seed:demo": "tsx src/seed/runDemoSeed.ts",
     "lint": "echo 'database lint placeholder'"
   },
-  "dependencies": {"mongoose": "^8.19.2"},
-  "devDependencies": {"tsx": "^4.19.2","typescript": "^5"}
+  "dependencies": {
+    "mongoose": "^8.19.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
 }
