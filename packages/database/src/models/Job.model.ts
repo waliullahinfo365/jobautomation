@@ -21,7 +21,7 @@ const JobSchema = new Schema(
     duplicateStatus: { type: String, enum: ["Unique", "Duplicate", "Possible Duplicate", "Skipped"], default: "Unique" },
     duplicateOfJobId: String,
     duplicateScore: Number,
-    fingerprintHash: { type: String, index: true },
+    fingerprintHash: { type: String },
     intakeSource: String,
     providerMessageId: String,
     providerThreadId: String,

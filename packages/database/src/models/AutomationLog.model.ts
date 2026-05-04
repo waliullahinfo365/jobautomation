@@ -18,9 +18,8 @@ const AutomationLogSchema = new Schema(
   { timestamps: true }
 );
 
-applyBaseIndexes(AutomationLogSchema, true);
+applyBaseIndexes(AutomationLogSchema, true); // adds tenantId, createdAt:-1, tenantId+status
 AutomationLogSchema.index({ tenantId: 1, moduleKey: 1 });
-AutomationLogSchema.index({ tenantId: 1, status: 1 });
 AutomationLogSchema.index({ tenantId: 1, idempotencyKey: 1 });
-AutomationLogSchema.index({ createdAt: -1 });
+// tenantId+status and createdAt:-1 are already added by applyBaseIndexes
 export const AutomationLogModel = models.AutomationLog || model("AutomationLog", AutomationLogSchema);

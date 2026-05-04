@@ -28,11 +28,11 @@ const ReportSchema = new Schema(
   { timestamps: true }
 );
 
-applyBaseIndexes(ReportSchema, true);
+applyBaseIndexes(ReportSchema, true); // adds tenantId, createdAt:-1, tenantId+status
 ReportSchema.index({ tenantId: 1, type: 1 });
-ReportSchema.index({ tenantId: 1, status: 1 });
 ReportSchema.index({ tenantId: 1, periodKey: 1 });
 ReportSchema.index({ tenantId: 1, type: 1, periodKey: 1 }, { unique: true, sparse: true });
 ReportSchema.index({ generatedAt: -1 });
+// tenantId+status index is already added by applyBaseIndexes
 
 export const ReportModel = models.Report || model("Report", ReportSchema);

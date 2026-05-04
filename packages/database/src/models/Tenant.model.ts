@@ -4,10 +4,10 @@ const TenantSchema = new Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
-    ownerId: { type: String, required: true, index: true },
+    ownerId: { type: String, required: true },
     /** Legacy display plan; kept in sync with billing.planKey where possible */
     plan: { type: String, enum: ["Free Trial", "Starter", "Pro", "Agency", "Enterprise"], required: true },
-    status: { type: String, enum: ["Active", "Trialing", "Past Due", "Suspended", "Cancelled"], required: true, index: true },
+    status: { type: String, enum: ["Active", "Trialing", "Past Due", "Suspended", "Cancelled"], required: true },
     /** Legacy top-level billing status; prefer billing.billingStatus when present */
     billingStatus: {
       type: String,
@@ -58,8 +58,7 @@ const TenantSchema = new Schema(
   { timestamps: true }
 );
 
-TenantSchema.index({ slug: 1 }, { unique: true });
-TenantSchema.index({ ownerId: 1 });
-TenantSchema.index({ status: 1 });
+// slug unique index is created by `unique: true` on the field definition
+// ownerId and status indexes are applied via applyBaseIndexes or field options
 
 export const TenantModel = models.Tenant || model("Tenant", TenantSchema);

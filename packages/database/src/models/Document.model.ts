@@ -47,10 +47,10 @@ const DocumentSchema = new Schema(
   { timestamps: true }
 );
 
-applyBaseIndexes(DocumentSchema, true);
+applyBaseIndexes(DocumentSchema, true); // adds tenantId, createdAt:-1, tenantId+status
 DocumentSchema.index({ tenantId: 1, type: 1 });
-DocumentSchema.index({ tenantId: 1, status: 1 });
 DocumentSchema.index({ jobId: 1 });
 DocumentSchema.index({ applicationId: 1 });
+// tenantId+status index is already added by applyBaseIndexes
 
 export const DocumentModel = models.Document || model("Document", DocumentSchema);
