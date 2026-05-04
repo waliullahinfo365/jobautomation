@@ -78,7 +78,7 @@ export function Sidebar() {
             Live
           </span>
         </div>
-        <div className="relative mt-0.5 h-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.05)]">
+        <div className="relative mt-0.5 h-1 overflow-hidden rounded-full bg-[var(--surface-4)]">
           <div className="jf-progress-fill relative h-full w-[94%] rounded-full bg-gradient-to-r from-[#38C793] to-[#4FC2D8]" />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[10.5px] text-[var(--text-3)]">

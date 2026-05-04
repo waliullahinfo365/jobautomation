@@ -15,7 +15,7 @@ export function MobileNav() {
 
   return (
     <>
-      <header className="flex min-h-[52px] items-center justify-between border-b border-[var(--border-subtle)] bg-[rgba(11,13,18,0.85)] px-3 py-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:min-h-[56px] sm:px-4 md:hidden">
+      <header className="jf-mobile-topbar flex min-h-[52px] items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-1)] px-3 py-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:min-h-[56px] sm:px-4 md:hidden">
         <div className="flex items-center gap-2">
           <div className="jf-brand-mark text-white">
             <BrandMark size={14} className="relative z-[1]" />

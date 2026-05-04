@@ -51,7 +51,7 @@ export function Topbar() {
           className="h-full min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none"
           aria-label="Search"
         />
-        <span className="inline-flex h-[18px] items-center gap-0.5 rounded border border-[var(--border-subtle)] border-b-2 bg-[rgba(255,255,255,0.04)] px-1.5 font-mono text-[10.5px] font-medium text-[var(--text-3)]">
+        <span className="inline-flex h-[18px] items-center gap-0.5 rounded border border-[var(--border-subtle)] border-b-2 bg-[var(--surface-4)] px-1.5 font-mono text-[10.5px] font-medium text-[var(--text-3)]">
           ⌘K
         </span>
       </div>

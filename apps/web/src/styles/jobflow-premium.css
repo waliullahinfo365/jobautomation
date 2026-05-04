@@ -7,7 +7,27 @@
   --dur-slow: 420ms;
 }
 
+/* Structural tokens + font — theme-agnostic */
 .dashboard-bg {
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 22px;
+  --r-pill: 999px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 140ms;
+  --dur: 220ms;
+  --dur-slow: 420ms;
+  --side-w: 244px;
+  --topbar-h: 60px;
+  font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Dark theme — premium shell */
+.dashboard-bg.dark,
+.dashboard-bg[data-theme="dark"] {
   --bg-0: #07080b;
   --bg-1: #0b0d12;
   --surface-1: #0f1218;
@@ -39,25 +59,105 @@
   --violet-bg: rgba(164, 124, 255, 0.1);
   --teal: #4fc2d8;
   --teal-bg: rgba(79, 194, 216, 0.1);
-  --r-xs: 6px;
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 18px;
-  --r-2xl: 22px;
-  --r-pill: 999px;
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --dur-fast: 140ms;
-  --dur: 220ms;
-  --dur-slow: 420ms;
-  --side-w: 244px;
-  --topbar-h: 60px;
   --shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.025) inset, 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-pop: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 6px 20px -6px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 0 1px var(--accent-ring), 0 8px 24px -10px rgba(99, 124, 255, 0.45);
   color: var(--text-1);
   background: var(--bg-0);
-  font-family: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Light theme — warm canvas, white cards, stronger edges */
+.dashboard-bg.light,
+.dashboard-bg[data-theme="light"] {
+  /* Canvas — soft warm off-white, NOT pure white */
+  --bg-0: #eef0f4;
+  --bg-1: rgba(238, 240, 244, 0.78);
+
+  /* Sidebar — slightly darker than canvas to recede */
+  --surface-1: #e6e9ef;
+
+  /* Cards — pure white, clearly elevated above canvas */
+  --surface-2: #ffffff;
+  --surface-3: #f7f8fa;
+  --surface-4: #eef0f4;
+
+  /* Borders — stronger than dark theme so cards have visible edges */
+  --border-subtle: rgba(15, 18, 24, 0.06);
+  --border-default: rgba(15, 18, 24, 0.1);
+  --border-strong: rgba(15, 18, 24, 0.16);
+  --border-focus: rgba(77, 99, 224, 0.45);
+
+  /* Text — proper contrast hierarchy on white */
+  --text-1: #0e1116;
+  --text-2: #3c414b;
+  --text-3: #6b7280;
+  --text-4: #9aa0ab;
+  --text-5: #c4c8d0;
+
+  /* Accent — slightly darker indigo for AA contrast on white */
+  --accent: #4d63e0;
+  --accent-hi: #637cff;
+  --accent-lo: #3e50c7;
+  --accent-bg: rgba(99, 124, 255, 0.1);
+  --accent-bg-hi: rgba(99, 124, 255, 0.18);
+  --accent-ring: rgba(99, 124, 255, 0.32);
+
+  /* Semantic colors — darker for contrast on white */
+  --emerald: #1f8f66;
+  --emerald-bg: rgba(56, 199, 147, 0.12);
+  --amber: #b07320;
+  --amber-bg: rgba(229, 162, 59, 0.14);
+  --rose: #b83344;
+  --rose-bg: rgba(229, 88, 109, 0.1);
+  --violet: #6f4fe0;
+  --violet-bg: rgba(164, 124, 255, 0.12);
+  --teal: #2a8fa3;
+  --teal-bg: rgba(79, 194, 216, 0.14);
+
+  /* Shadows — stronger so cards lift visibly off the warm canvas */
+  --shadow-card:
+    0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 2px rgba(15, 18, 24, 0.04),
+    0 2px 6px -2px rgba(15, 18, 24, 0.06);
+  --shadow-pop:
+    0 1px 0 0 rgba(255, 255, 255, 0.8) inset,
+    0 4px 12px -2px rgba(15, 18, 24, 0.08),
+    0 12px 32px -8px rgba(15, 18, 24, 0.12);
+  --shadow-glow:
+    0 0 0 1px var(--accent-ring),
+    0 8px 24px -10px rgba(77, 99, 224, 0.3);
+
+  color: var(--text-1);
+  background: var(--bg-0);
+}
+
+/* Light canvas: soften ambient gradients + grain */
+.dashboard-bg.light .jf-app-bg {
+  background:
+    radial-gradient(800px 500px at 18% -10%, rgba(99, 124, 255, 0.045), transparent 60%),
+    radial-gradient(600px 500px at 100% 0%, rgba(164, 124, 255, 0.028), transparent 60%);
+}
+
+.dashboard-bg.light .jf-app-grain {
+  opacity: 0.16;
+}
+
+.dashboard-bg.light .jf-nav-item:hover,
+.dashboard-bg[data-theme="light"] .jf-nav-item:hover {
+  background: rgba(15, 18, 24, 0.045);
+}
+
+.dashboard-bg.light .jf-nav-item.is-active,
+.dashboard-bg[data-theme="light"] .jf-nav-item.is-active {
+  background: linear-gradient(180deg, var(--accent-bg-hi) 0%, var(--accent-bg) 100%);
+  box-shadow:
+    inset 0 0 0 1px var(--accent-ring),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.dashboard-bg.light .jf-nav-badge,
+.dashboard-bg[data-theme="light"] .jf-nav-badge {
+  background: rgba(15, 18, 24, 0.06);
 }
 
 .jf-app-bg {
@@ -280,9 +380,20 @@
   align-items: center;
   gap: 14px;
   padding: 0 28px;
-  background: rgba(11, 13, 18, 0.78);
+  background: var(--bg-1);
   backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Dark topbar: keep translucent bar (do not change --bg-1 token used elsewhere) */
+.dashboard-bg.dark .jf-topbar,
+.dashboard-bg[data-theme="dark"] .jf-topbar {
+  background: rgba(11, 13, 18, 0.78);
+}
+
+.dashboard-bg.dark .jf-mobile-topbar,
+.dashboard-bg[data-theme="dark"] .jf-mobile-topbar {
+  background: rgba(11, 13, 18, 0.85);
 }
 
 .jf-hero {
@@ -334,6 +445,7 @@
   border-radius: var(--r-lg);
   background: var(--surface-2);
   border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-card);
   transition:
     transform var(--dur) var(--ease),
     border-color var(--dur) var(--ease),
@@ -844,6 +956,7 @@
   border-radius: var(--r-lg);
   background: var(--surface-2);
   border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-card);
   padding: 20px 22px;
 }
 

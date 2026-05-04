@@ -1,4 +1,8 @@
+"use client";
+
+import { useTheme } from "next-themes";
 import { PageTransition } from "@/components/shared/PageTransition";
+import { cn } from "@/lib/utils";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -8,8 +12,11 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  const { resolvedTheme } = useTheme();
+  const themeClass = resolvedTheme === "light" ? "light" : "dark";
+
   return (
-    <div className="dashboard-bg">
+    <div className={cn("dashboard-bg", themeClass)} suppressHydrationWarning>
       <div className="jf-app-bg" aria-hidden />
       <div className="jf-app-grain" aria-hidden />
       <div className="jf-shell">
