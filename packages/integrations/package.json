@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
+      "ai/anthropic-messages": ["dist/ai/anthropic-messages.d.ts"],
       "ai/*": ["dist/ai/*"],
       "gmail/*": ["dist/gmail/*"],
       "google-drive/*": ["dist/google-drive/*"],
@@ -21,6 +22,10 @@
       "require": "./dist/index.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./ai/anthropic-messages": {
+      "types": "./dist/ai/anthropic-messages.d.ts",
+      "default": "./dist/ai/anthropic-messages.js"
     },
     "./ai/*": {
       "types": "./dist/ai/*.d.ts",
@@ -74,6 +79,7 @@
     "@jobflow/shared": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "typescript": "^5"
   }
 }
