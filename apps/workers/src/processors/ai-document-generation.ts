@@ -1,4 +1,9 @@
 import { AutomationLogModel, DocumentModel, JobModel, TenantModel, UserModel } from "@jobflow/database/models";
+import {
+  buildAnthropicModelCandidates,
+  callAnthropicMessages,
+  resolveAnthropicApiKey,
+} from "@jobflow/integrations/ai/anthropic-messages";
 import { formatProfileContextBlock, loadWorkspaceProfileForPrompt } from "../lib/workspace-profile-docs";
 import { logger } from "../utils/logger";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
@@ -113,14 +118,10 @@ async function writeAutomationLog(input: {
   }
 }
 
-function extractClaudeText(responseJson: unknown): string | null {
-  const content = (responseJson as { content?: Array<{ type?: string; text?: string }> })?.content;
-  if (!Array.isArray(content)) return null;
-  const textParts = content
-    .filter((c) => c?.type === "text" && typeof c?.text === "string")
-    .map((c) => c.text?.trim())
-    .filter(Boolean) as string[];
-  return textParts.length > 0 ? textParts.join("\n\n") : null;
+function fallbackLogMessage(summary: string): string {
+  const safe = redactForLog(summary, 400);
+  const short = safe.length > 180 ? `${safe.slice(0, 177)}…` : safe;
+  return `Claude generation failed; fallback draft created: ${short}`;
 }
 
 async function generateWithClaude(input: {
@@ -128,61 +129,61 @@ async function generateWithClaude(input: {
   fallbackText: string;
   modelHint?: string;
 }): Promise<ClaudeResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  const model = process.env.ANTHROPIC_MODEL?.trim() || input.modelHint || "claude-3-5-sonnet-latest";
+  const apiKey = resolveAnthropicApiKey();
+  const modelCandidates = buildAnthropicModelCandidates(input.modelHint);
 
   if (!apiKey) {
     return { text: input.fallbackText, model: "stub", usedFallback: true, fallbackReason: "no-api-key" };
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1200,
-        temperature: 0.2,
-        messages: [{ role: "user", content: input.prompt }],
-      }),
+    const result = await callAnthropicMessages({
+      prompt: input.prompt,
+      apiKey,
+      modelCandidates,
+      maxTokens: 1200,
+      temperature: 0.2,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "unknown anthropic error");
-      const summary = redactForLog(`HTTP ${response.status}: ${errorText.slice(0, 400)}`);
-      return {
-        text: input.fallbackText,
-        model: "stub",
-        usedFallback: true,
-        fallbackReason: "claude-error",
-        claudeFailureSummary: summary,
-      };
+    if (result.ok) {
+      logger.info(
+        { model: result.model, modelCandidatesTried: modelCandidates.length },
+        "anthropic messages success"
+      );
+      return { text: result.text, model: result.model, usedFallback: false, fallbackReason: "none" };
     }
 
-    const json = (await response.json()) as unknown;
-    const text = extractClaudeText(json);
-    if (!text) {
-      return {
-        text: input.fallbackText,
-        model: "stub",
-        usedFallback: true,
-        fallbackReason: "claude-error",
-        claudeFailureSummary: "Claude response had no text content",
-      };
-    }
-    return { text, model, usedFallback: false, fallbackReason: "none" };
-  } catch (error) {
-    const ser = serializeWorkerError(error);
+    const summary = `[${result.errorType}] ${result.message}${result.status != null ? ` (status ${result.status})` : ""} model=${result.modelAttempted}`;
+    logger.warn(
+      {
+        errorType: result.errorType,
+        status: result.status,
+        message: redactForLog(result.message, 500),
+        modelAttempted: result.modelAttempted,
+      },
+      "anthropic messages failed"
+    );
+
     return {
       text: input.fallbackText,
       model: "stub",
       usedFallback: true,
       fallbackReason: "claude-error",
-      claudeFailureSummary: redactForLog(ser.message),
+      claudeFailureSummary: redactForLog(summary),
+    };
+  } catch (error) {
+    const ser = serializeWorkerError(error);
+    const summary = redactForLog(`[network] ${ser.name ?? "Error"}: ${ser.message}`);
+    logger.warn(
+      { errorType: ser.name, message: summary, code: ser.code },
+      "anthropic messages fetch threw"
+    );
+    return {
+      text: input.fallbackText,
+      model: "stub",
+      usedFallback: true,
+      fallbackReason: "claude-error",
+      claudeFailureSummary: summary,
     };
   }
 }
@@ -345,7 +346,7 @@ export async function createResearchDocument(input: {
       tenantId: ctx.tenantId,
       moduleKey: "research-document",
       status: "Warning",
-      message: "Claude generation failed; fallback draft created.",
+      message: fallbackLogMessage(generated.claudeFailureSummary || "Unknown Claude error"),
       operationId: ctx.operationId,
       relatedRecordType: "Document",
       relatedRecordId: toId(doc._id),
@@ -487,7 +488,7 @@ export async function createCoverLetterDocument(input: {
       tenantId: ctx.tenantId,
       moduleKey: logModule,
       status: "Warning",
-      message: "Claude generation failed; fallback draft created.",
+      message: fallbackLogMessage(generated.claudeFailureSummary || "Unknown Claude error"),
       operationId: ctx.operationId,
       relatedRecordType: "Document",
       relatedRecordId: toId(doc._id),
@@ -632,7 +633,7 @@ export async function createAiAnalysisDocument(input: {
       tenantId: ctx.tenantId,
       moduleKey: "ai-processing",
       status: "Warning",
-      message: "Claude generation failed; fallback draft created.",
+      message: fallbackLogMessage(generated.claudeFailureSummary || "Unknown Claude error"),
       operationId: ctx.operationId,
       relatedRecordType: "Document",
       relatedRecordId: toId(doc._id),

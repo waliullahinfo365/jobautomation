@@ -205,6 +205,9 @@ importers:
       '@jobflow/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@jobflow/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@jobflow/shared':
         specifier: workspace:*
         version: link:../../packages/shared
