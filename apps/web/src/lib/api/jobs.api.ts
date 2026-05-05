@@ -19,7 +19,8 @@ export type JobDuplicateCheckResponse = {
   reasons: string[];
 };
 
-function tenantIdsForJobCreate(): { tenantId: string; createdBy: string } {
+/** tenantId + user id for API bodies (jobs, documents, etc.). */
+export function getTenantUserIdsForApi(): { tenantId: string; createdBy: string } {
   if (typeof window === "undefined") {
     return { tenantId: DEMO_TENANT_ID, createdBy: DEMO_USER_ID };
   }
@@ -48,7 +49,7 @@ export type CreateJobFormPayload = {
 
 /** Body for POST /jobs (includes tenantId/createdBy required by API validation). */
 export function buildCreateJobPayload(input: CreateJobFormPayload): Record<string, unknown> {
-  const ids = tenantIdsForJobCreate();
+  const ids = getTenantUserIdsForApi();
   const payload: Record<string, unknown> = {
     ...ids,
     company: input.company.trim(),

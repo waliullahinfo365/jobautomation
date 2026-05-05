@@ -32,6 +32,16 @@ interface JobDetailPageClientProps {
 const POLL_INTERVAL_MS = 2500;
 const POLL_MAX_TICKS = 12;
 
+function profileAiContextCopy(job: Job): string | null {
+  const ctx = job.profileDocumentContext;
+  if (!ctx) return null;
+  const { hasCvContent, hasCoverLetterContent } = ctx;
+  if (hasCvContent && hasCoverLetterContent) return "Using uploaded CV and cover letter context";
+  if (hasCvContent) return "Using uploaded CV context (add a workspace cover letter in Documents for style matching)";
+  if (hasCoverLetterContent) return "Using uploaded cover letter as a style reference (add a CV in Documents for factual grounding)";
+  return null;
+}
+
 export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -271,6 +281,8 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
     </>
   );
 
+  const profileContextLine = profileAiContextCopy(job);
+
   return (
     <div className="space-y-6">
       <JobDetailHeader job={job} renderActions={actionBar} />
@@ -284,6 +296,23 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
           >
             Open matching job
           </Link>
+        </div>
+      ) : null}
+
+      {job.profileDocumentContext ? (
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-3)] px-4 py-2.5 text-xs text-[var(--text-3)]">
+          <SparklesIcon size={14} className="shrink-0 text-[var(--violet)]" />
+          {profileContextLine ? (
+            <span className="text-[var(--text-2)]">{profileContextLine}</span>
+          ) : (
+            <span>
+              Upload a CV in{" "}
+              <Link href="/documents" className="font-medium text-[var(--violet)] underline underline-offset-2">
+                Documents
+              </Link>{" "}
+              to improve AI drafts.
+            </span>
+          )}
         </div>
       ) : null}
 

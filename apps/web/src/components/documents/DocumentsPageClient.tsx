@@ -27,7 +27,7 @@ import { CoverLettersSection } from "./CoverLettersSection";
 import { ResearchDocsSection } from "./ResearchDocsSection";
 import { PDFExportsSection } from "./PDFExportsSection";
 import { FolderAutomationSection } from "./FolderAutomationSection";
-import { UploadDocumentModal } from "./UploadDocumentModal";
+import { UploadDocumentModal, type UploadPayload } from "./UploadDocumentModal";
 import { useDocumentsApi } from "@/hooks/api/useDocumentsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
@@ -37,7 +37,7 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import type { Job } from "@/types/job";
-import { DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
+import { getTenantUserIdsForApi } from "@/lib/api/jobs.api";
 
 const initialFilters: DocumentFilterState = {
   query: "",
@@ -303,17 +303,12 @@ export function DocumentsPageClient() {
     }
   };
 
-  async function handleCreateDocumentRecord(payload: {
-    fileName: string;
-    type: "CV" | "Cover Letter" | "Research" | "PDF Export" | "Other";
-    jobId?: string;
-    notes?: string;
-  }) {
+  async function handleCreateDocumentRecord(payload: UploadPayload) {
     const docTypeMap: Record<string, string> = {
       CV: "CV",
       "Cover Letter": "Cover Letter",
       Research: "Research",
-      "PDF Export": "Other",
+      Portfolio: "Portfolio",
       Other: "Other",
     };
     if (documentsApi.isUsingFallback) {
@@ -341,14 +336,18 @@ export function DocumentsPageClient() {
       return;
     }
     try {
+      const ids = getTenantUserIdsForApi();
+      const apiType = docTypeMap[payload.type] ?? "Other";
       await documentsApi.createDocument({
-        tenantId: DEMO_TENANT_ID,
-        createdBy: DEMO_USER_ID,
+        ...ids,
         fileName: payload.fileName,
-        type: docTypeMap[payload.type] ?? "Other",
+        type: apiType,
+        documentKind: apiType === "CV" ? "CV" : apiType === "Cover Letter" ? "Cover Letter" : "Other",
         status: "Draft",
         jobId: payload.jobId,
+        contentText: payload.contentText,
         notes: payload.notes,
+        metadata: !payload.jobId ? { workspaceLibrary: true } : undefined,
       });
       showSuccess("Document record created. File storage upload will be connected next.");
       setUploadOpen(false);

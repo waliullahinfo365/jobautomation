@@ -41,7 +41,15 @@ export interface JobAutomationLog {
   timestamp: Date | string;
   status: "success" | "warning" | "error";
   moduleKey?: string;
+  /** Backend automation log `error` field when status is Failed */
+  error?: string;
   raw?: Record<string, unknown>;
+}
+
+/** Workspace CV / cover letter text available for AI job automation (from GET /jobs/:id). */
+export interface ProfileDocumentContext {
+  hasCvContent: boolean;
+  hasCoverLetterContent: boolean;
 }
 
 export interface Job {
@@ -78,6 +86,9 @@ export interface Job {
   documents: JobDocument[];
   timeline: JobTimelineEvent[];
   automationLogs: JobAutomationLog[];
+
+  /** Present when API attaches profile workspace document flags. */
+  profileDocumentContext?: ProfileDocumentContext;
 
   tags: string[];
   notes?: string;

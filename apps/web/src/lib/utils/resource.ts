@@ -173,6 +173,7 @@ export function normalizeJobAutomationLogRow(raw: unknown): JobAutomationLog {
         ? r.createdAt.toISOString()
         : new Date().toISOString();
 
+  const err = r.error;
   return {
     id,
     event: formatAutomationModuleLabel(moduleKey),
@@ -180,6 +181,7 @@ export function normalizeJobAutomationLogRow(raw: unknown): JobAutomationLog {
     timestamp: created,
     status: mapAutomationLogBackendToJobActivityStatus(String(r.status ?? "Success")),
     moduleKey,
+    error: typeof err === "string" && err.length > 0 ? err : undefined,
     raw: { ...r },
   };
 }
@@ -233,6 +235,7 @@ export function normalizeJobForUi(raw: unknown): Job {
     tags: ((j.tags ?? []) as string[]),
     notes: (j.notes as string | undefined),
     contactIds: ((j.contactIds ?? []) as string[]),
+    profileDocumentContext: (j.profileDocumentContext as Job["profileDocumentContext"]) ?? undefined,
   };
 }
 
@@ -749,6 +752,10 @@ export function normalizeAutomationLogForUi(raw: unknown): AutomationLog {
     typeof durMs === "number" && Number.isFinite(durMs) ? `${durMs}ms` : String(r.duration ?? "—");
   const created = r.createdAt ?? new Date().toISOString();
   const meta = r.metadata && typeof r.metadata === "object" ? (r.metadata as Record<string, unknown>) : undefined;
+  const relatedType = r.relatedRecordType != null ? String(r.relatedRecordType) : "";
+  const relatedId = r.relatedRecordId != null ? String(r.relatedRecordId) : "";
+  const jobIdFromRecord = relatedType === "Job" && relatedId ? relatedId : undefined;
+
   return {
     id,
     _id: id,
@@ -760,9 +767,10 @@ export function normalizeAutomationLogForUi(raw: unknown): AutomationLog {
     duration,
     createdAt: typeof created === "string" ? created : new Date(created as Date).toISOString(),
     operationId: r.operationId ? String(r.operationId) : meta?.operationId ? String(meta.operationId) : undefined,
-    jobId: meta?.jobId ? String(meta.jobId) : undefined,
+    jobId: meta?.jobId != null ? String(meta.jobId) : jobIdFromRecord,
     metadata: meta,
     technicalMessage: String(r.message ?? ""),
+    error: typeof r.error === "string" && r.error.length > 0 ? r.error : undefined,
   };
 }
 

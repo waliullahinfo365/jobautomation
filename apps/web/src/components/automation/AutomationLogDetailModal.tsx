@@ -45,6 +45,22 @@ export function AutomationLogDetailModal({ log, open, onClose }: Props) {
             <dt className="text-xs font-medium text-[var(--text-3)]">Message</dt>
             <dd className="text-[var(--text-2)]">{friendly}</dd>
           </div>
+          {log.error ? (
+            <div>
+              <dt className="text-xs font-medium text-[var(--text-3)]">Error</dt>
+              <dd className="whitespace-pre-wrap break-words text-[var(--rose)]">{log.error}</dd>
+            </div>
+          ) : null}
+          {log.metadata && typeof log.metadata.errorDetails === "object" && log.metadata.errorDetails !== null ? (
+            <div>
+              <dt className="text-xs font-medium text-[var(--text-3)]">Error details</dt>
+              <dd className="mt-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-3)] p-2 font-mono text-xs text-[var(--text-2)]">
+                <pre className="whitespace-pre-wrap break-words">
+                  {JSON.stringify(log.metadata.errorDetails, null, 2)}
+                </pre>
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-xs font-medium text-[var(--text-3)]">Related record</dt>
             <dd className="text-[var(--text-2)]">{log.relatedRecord}</dd>

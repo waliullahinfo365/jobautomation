@@ -35,6 +35,7 @@ function toDetailModalLog(row: JobAutomationLog): AutomationLog | null {
     duration: "—",
     createdAt: row.timestamp,
     technicalMessage: row.detail,
+    error: row.error,
   };
 }
 
@@ -58,6 +59,11 @@ export function JobAutomationActivity({ logs }: JobAutomationActivityProps) {
                   <Badge variant={toneMap[log.status]}>{log.status}</Badge>
                 </div>
                 <p className="line-clamp-2 text-xs text-[var(--text-3)]">{log.detail}</p>
+                {log.error ? (
+                  <p className="mt-1 line-clamp-2 text-xs text-[var(--rose)]" title={log.error}>
+                    {log.error}
+                  </p>
+                ) : null}
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <p className="text-xs text-[var(--text-4)]">{formatDate(log.timestamp, "MMM d, yyyy HH:mm")}</p>
                   <Button

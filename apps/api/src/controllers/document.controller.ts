@@ -9,8 +9,52 @@ import { getPagination } from "../utils/pagination";
 import { routeCvToJobFolder } from "../services/cv-routing.service";
 import { exportDocumentPdf } from "../services/pdf-export.service";
 import { enqueueAutomationModule } from "../services/automation-queue.service";
-export const listDocuments = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const {page,limit,skip}=getPagination(req.query); const search=typeof req.query.search==='string'?req.query.search:undefined; const status=typeof req.query.status==='string'?req.query.status:undefined; const jobId=typeof req.query.jobId==='string'?req.query.jobId:undefined; const filter:Record<string,unknown>=buildTenantFilter(tenantId); if(status) filter.status=status; if(jobId) filter.jobId=jobId; if(search) filter.$or=[{fileName:{$regex:search,$options:'i'}},{type:{$regex:search,$options:'i'}},{storagePath:{$regex:search,$options:'i'}}]; const [rows,total]=await Promise.all([DocumentModel.find(filter).sort({updatedAt:-1}).skip(skip).limit(limit),DocumentModel.countDocuments(filter)]); return paginatedResponse(res,rows,{page,limit,total,totalPages:Math.ceil(total/limit)}); });
-export const createDocument = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await createTenantScopedRecord(DocumentModel,tenantId,req.user?.id??'system',req.body); return successResponse(res,row,'Created',201); });
+export const listDocuments = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const { page, limit, skip } = getPagination(req.query);
+  const search = typeof req.query.search === "string" ? req.query.search : undefined;
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  const jobId = typeof req.query.jobId === "string" ? req.query.jobId : undefined;
+  const workspaceProfile = typeof req.query.workspaceProfile === "string" && req.query.workspaceProfile === "true";
+  const filter: Record<string, unknown> = buildTenantFilter(tenantId);
+  if (status) filter.status = status;
+  if (jobId) filter.jobId = jobId;
+
+  const andClauses: Record<string, unknown>[] = [];
+  if (workspaceProfile) {
+    andClauses.push({ $or: [{ jobId: { $exists: false } }, { jobId: null }, { jobId: "" }] });
+  }
+  if (search) {
+    andClauses.push({
+      $or: [
+        { fileName: { $regex: search, $options: "i" } },
+        { type: { $regex: search, $options: "i" } },
+        { storagePath: { $regex: search, $options: "i" } },
+      ],
+    });
+  }
+  if (andClauses.length > 0) {
+    filter.$and = andClauses;
+  }
+
+  const [rows, total] = await Promise.all([
+    DocumentModel.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit),
+    DocumentModel.countDocuments(filter),
+  ]);
+  return paginatedResponse(res, rows, { page, limit, total, totalPages: Math.ceil(total / limit) });
+});
+export const createDocument = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const body = { ...req.body } as Record<string, unknown>;
+  const notes = body.notes;
+  if (typeof notes === "string" && notes.trim()) {
+    const meta = typeof body.metadata === "object" && body.metadata !== null ? { ...(body.metadata as object) } : {};
+    body.metadata = { ...meta, notes: notes.trim() };
+  }
+  delete body.notes;
+  const row = await createTenantScopedRecord(DocumentModel, tenantId, req.user?.id ?? "system", body as never);
+  return successResponse(res, row, "Created", 201);
+});
 export const getDocumentById = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await findTenantScopedById(DocumentModel,tenantId,req.params.id); if(!row) throw new ApiError('Not found',404,'NOT_FOUND'); return successResponse(res,row); });
 export const updateDocument = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await updateTenantScopedById(DocumentModel,tenantId,req.params.id,req.body); if(!row) throw new ApiError('Not found',404,'NOT_FOUND'); return successResponse(res,row,'Updated'); });
 export const routeCv = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const documentId=req.params.id; const jobId=req.body.jobId as string; const userId=req.user?.id ?? "system"; const execute=req.query.execute==="true"; if(execute){ if(process.env.NODE_ENV==="production") throw new ApiError("Direct execute=true is disabled in production",403,"FORBIDDEN"); const result=await routeCvToJobFolder({ tenantId, documentId, jobId, userId }); return successResponse(res,result,'CV routed'); } const queued=await enqueueAutomationModule({ tenantId, userId, moduleKey:"cv-routing", payload:{ documentId, jobId }, source:"api" }); return successResponse(res,{operationId:queued.operationId,jobId:queued.jobId,moduleKey:"cv-routing",status:queued.status,message:queued.message},'CV routing queued'); });

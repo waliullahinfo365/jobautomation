@@ -2,6 +2,7 @@ import type { AutomationJobName, AutomationJobPayload } from "@jobflow/shared/ty
 import { AutomationLogModel } from "@jobflow/database/models";
 import { dispatchAutomationJob } from "../processors/automation.dispatcher";
 import { logger } from "../utils/logger";
+import { redactForLog, relatedRecordIdFromPayload, serializeWorkerError } from "../utils/worker-error";
 
 export async function createWorkerLog(input: {
   tenantId: string;
@@ -33,12 +34,18 @@ export async function createWorkerLog(input: {
   }
 }
 
-export async function processAutomationJob(name: AutomationJobName, payload: AutomationJobPayload) {
+export async function processAutomationJob(
+  name: AutomationJobName,
+  payload: AutomationJobPayload,
+  opts?: { queueJobId?: string | number }
+) {
   const startTime = Date.now();
   const { tenantId, operationId, idempotencyKey, source } = payload;
+  const relatedRecordId = relatedRecordIdFromPayload(payload);
+  const queueJobId = opts?.queueJobId;
 
   logger.info(
-    { jobName: name, tenantId, operationId, source },
+    { jobName: name, jobId: queueJobId, tenantId, operationId, relatedRecordId, source },
     "processing automation job"
   );
 
@@ -81,12 +88,30 @@ export async function processAutomationJob(name: AutomationJobName, payload: Aut
     return result;
   } catch (error) {
     const durationMs = Date.now() - startTime;
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const parts = serializeWorkerError(error);
+    const errorMessage = redactForLog(parts.message);
 
     logger.error(
-      { jobName: name, tenantId, operationId, error: errorMessage },
+      {
+        err: error,
+        name: parts.name,
+        message: errorMessage,
+        stack: parts.stack ? redactForLog(parts.stack, 4000) : undefined,
+        code: parts.code,
+        cause: parts.cause ? redactForLog(parts.cause) : undefined,
+        jobName: name,
+        jobId: queueJobId,
+        tenantId,
+        relatedRecordId,
+        operationId,
+      },
       "automation job failed"
     );
+
+    const failedMessage =
+      name === "ai-processing" || name === "research-document" || (name as string) === "cover-letter"
+        ? `AI processing failed: ${errorMessage}`
+        : `${name} failed: ${errorMessage}`;
 
     await createWorkerLog({
       tenantId,
@@ -94,10 +119,19 @@ export async function processAutomationJob(name: AutomationJobName, payload: Aut
       operationId,
       idempotencyKey,
       status: "Failed",
-      message: `${name} job failed during execution`,
+      message: failedMessage,
       durationMs,
       error: errorMessage,
-      metadata: { source },
+      metadata: {
+        source,
+        relatedRecordId,
+        errorDetails: {
+          name: parts.name,
+          message: errorMessage,
+          code: parts.code,
+          cause: parts.cause ? redactForLog(parts.cause) : undefined,
+        },
+      },
     });
 
     throw error;

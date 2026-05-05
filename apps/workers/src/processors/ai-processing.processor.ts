@@ -9,8 +9,9 @@ export type AiProcessingProcessorPayload = {
   correlationId?: string;
 };
 
-import { AutomationLogModel } from "@jobflow/database/models";
+import { AutomationLogModel, JobModel } from "@jobflow/database/models";
 import { createAiAnalysisDocument, createCoverLetterDocument, createResearchDocument } from "./ai-document-generation";
+import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
 export async function processAiProcessingJob(payload: AiProcessingProcessorPayload) {
   const operationId = payload.operationId ?? payload.correlationId ?? `ai-processing-${Date.now()}`;
@@ -66,19 +67,43 @@ export async function processAiProcessingJob(payload: AiProcessingProcessorPaylo
       summary: "Research, cover letter, and AI analysis documents generated.",
     };
   } catch (error) {
-    await AutomationLogModel.create({
-      tenantId: payload.tenantId,
-      createdBy: "system",
-      moduleKey: "ai-processing",
-      moduleName: "ai-processing",
-      status: "Failed",
-      message: `AI processing failed (${payload.mode}).`,
-      operationId,
-      relatedRecordType: "Job",
-      relatedRecordId: payload.jobId,
-      error: error instanceof Error ? error.message : String(error),
-      metadata: { source: "worker:ai-processing", mode: payload.mode },
-    });
+    const ser = serializeWorkerError(error);
+    const msg = redactForLog(ser.message);
+    try {
+      await JobModel.findByIdAndUpdate(payload.jobId, {
+        aiProcessingStatus: "Failed",
+        aiProcessingError: msg,
+        aiProcessingCompletedAt: new Date(),
+      });
+    } catch {
+      /* ignore secondary failure */
+    }
+    try {
+      await AutomationLogModel.create({
+        tenantId: payload.tenantId,
+        createdBy: "system",
+        moduleKey: "ai-processing",
+        moduleName: "ai-processing",
+        status: "Failed",
+        message: `AI processing failed: ${msg}`,
+        operationId,
+        relatedRecordType: "Job",
+        relatedRecordId: payload.jobId,
+        error: msg,
+        metadata: {
+          source: "worker:ai-processing",
+          mode: payload.mode,
+          errorDetails: {
+            name: ser.name,
+            message: msg,
+            code: ser.code,
+            cause: ser.cause ? redactForLog(ser.cause) : undefined,
+          },
+        },
+      });
+    } catch {
+      /* ignore log persistence failure */
+    }
     throw error;
   }
 }

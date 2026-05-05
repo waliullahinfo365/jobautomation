@@ -39,6 +39,8 @@ export interface AutomationLog {
   metadata?: Record<string, unknown>;
   /** Original API message before friendly display mapping */
   technicalMessage?: string;
+  /** Backend `error` string when automation failed */
+  error?: string;
 }
 
 export interface AutomationModule {

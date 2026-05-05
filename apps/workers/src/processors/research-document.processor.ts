@@ -9,6 +9,7 @@ export type ResearchDocumentProcessorPayload = {
 
 import { AutomationLogModel } from "@jobflow/database/models";
 import { createResearchDocument } from "./ai-document-generation";
+import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
 export async function processResearchGenerationJob(payload: ResearchDocumentProcessorPayload) {
   const operationId = payload.operationId ?? payload.correlationId ?? `research-document-${Date.now()}`;
@@ -20,19 +21,33 @@ export async function processResearchGenerationJob(payload: ResearchDocumentProc
       operationId,
     });
   } catch (error) {
-    await AutomationLogModel.create({
-      tenantId: payload.tenantId,
-      createdBy: "system",
-      moduleKey: "research-document",
-      moduleName: "research-document",
-      status: "Failed",
-      message: "Research document generation failed.",
-      operationId,
-      relatedRecordType: "Job",
-      relatedRecordId: payload.jobId,
-      error: error instanceof Error ? error.message : String(error),
-      metadata: { source: "worker:research-document" },
-    });
+    const ser = serializeWorkerError(error);
+    const msg = redactForLog(ser.message);
+    try {
+      await AutomationLogModel.create({
+        tenantId: payload.tenantId,
+        createdBy: "system",
+        moduleKey: "research-document",
+        moduleName: "research-document",
+        status: "Failed",
+        message: `AI processing failed: ${msg}`,
+        operationId,
+        relatedRecordType: "Job",
+        relatedRecordId: payload.jobId,
+        error: msg,
+        metadata: {
+          source: "worker:research-document",
+          errorDetails: {
+            name: ser.name,
+            message: msg,
+            code: ser.code,
+            cause: ser.cause ? redactForLog(ser.cause) : undefined,
+          },
+        },
+      });
+    } catch {
+      /* ignore */
+    }
     throw error;
   }
 }

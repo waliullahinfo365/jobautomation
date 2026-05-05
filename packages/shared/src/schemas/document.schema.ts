@@ -1,4 +1,22 @@
 import { z } from "zod";
 import { documentStatuses, documentTypes } from "../constants/statuses";
-export const documentCreateSchema = z.object({ tenantId: z.string().min(1), createdBy: z.string().min(1), fileName: z.string().min(1), type: z.enum(documentTypes), status: z.enum(documentStatuses).default("Draft") });
+
+const optionalJobId = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.trim().length > 0 ? v.trim() : undefined));
+
+export const documentCreateSchema = z.object({
+  tenantId: z.string().min(1),
+  createdBy: z.string().min(1),
+  fileName: z.string().min(1),
+  type: z.enum(documentTypes),
+  status: z.enum(documentStatuses).default("Draft"),
+  jobId: optionalJobId,
+  applicationId: optionalJobId,
+  contentText: z.string().max(600_000).optional(),
+  documentKind: z.enum(["Research", "Cover Letter", "CV", "PDF Export", "Other"]).optional(),
+  notes: z.string().max(5000).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
 export const documentUpdateSchema = documentCreateSchema.partial();

@@ -2,6 +2,7 @@ import type { AutomationJobName, AutomationJobPayload } from "@jobflow/shared/ty
 import { processAutomationJob } from "./bullmq-worker";
 import { logger } from "../utils/logger";
 import { AUTOMATION_QUEUE_NAME } from "../queues/constants";
+import { getErrorCode, redactForLog, relatedRecordIdFromPayload, serializeWorkerError } from "../utils/worker-error";
 
 let bullmqWorker: { add: (pattern: string | symbol, fn: (job: unknown) => Promise<unknown>) => void } | null = null;
 
@@ -44,14 +45,6 @@ function getRedisUrlDiagnostics(): {
   }
 }
 
-function getErrorCode(error: unknown): string | undefined {
-  if (error && typeof error === "object" && "code" in error) {
-    const c = (error as { code?: unknown }).code;
-    return typeof c === "string" || typeof c === "number" ? String(c) : undefined;
-  }
-  return undefined;
-}
-
 async function initializeBullMQWorker() {
   const queueMode = process.env.QUEUE_MODE;
 
@@ -80,12 +73,29 @@ async function initializeBullMQWorker() {
 
         logger.debug({ jobName: name, jobId: job.id, tenantId: payload.tenantId }, "BullMQ worker processing job");
 
+        const relatedRecordId = relatedRecordIdFromPayload(payload);
         try {
-          const result = await processAutomationJob(name, payload);
+          const result = await processAutomationJob(name, payload, { queueJobId: job.id });
           logger.debug({ jobName: name, jobId: job.id, status: "success" }, "BullMQ job completed");
           return result;
         } catch (error) {
-          logger.error({ jobName: name, jobId: job.id, error }, "BullMQ job failed");
+          const ser = serializeWorkerError(error);
+          logger.error(
+            {
+              err: error,
+              name: ser.name,
+              message: redactForLog(ser.message),
+              stack: ser.stack ? redactForLog(ser.stack, 4000) : undefined,
+              code: ser.code,
+              cause: ser.cause ? redactForLog(ser.cause) : undefined,
+              jobName: name,
+              jobId: job.id,
+              tenantId: payload.tenantId,
+              relatedRecordId,
+              operationId: payload.operationId,
+            },
+            "BullMQ job failed"
+          );
           throw error;
         }
       },
@@ -97,7 +107,24 @@ async function initializeBullMQWorker() {
     });
 
     worker.on("failed", (job: any, err: Error) => {
-      logger.error({ jobName: job?.name, jobId: job?.id, error: err.message }, "BullMQ job failed");
+      const payload = job?.data as AutomationJobPayload | undefined;
+      const ser = serializeWorkerError(err);
+      logger.error(
+        {
+          err,
+          name: ser.name,
+          message: redactForLog(ser.message),
+          stack: ser.stack ? redactForLog(ser.stack, 4000) : undefined,
+          code: ser.code,
+          cause: ser.cause ? redactForLog(ser.cause) : undefined,
+          jobName: job?.name,
+          jobId: job?.id,
+          tenantId: payload?.tenantId,
+          relatedRecordId: payload ? relatedRecordIdFromPayload(payload) : undefined,
+          operationId: payload?.operationId,
+        },
+        "BullMQ job failed (worker event)"
+      );
     });
 
     logger.info({ queueName: AUTOMATION_QUEUE_NAME }, "BullMQ worker initialized");
