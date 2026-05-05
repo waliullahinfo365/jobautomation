@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { clearAuthToken } from "@/lib/api/client";
-import { showInfo, showSuccess } from "@/lib/ui/toast";
+import { showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -108,13 +108,11 @@ export function Topbar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => showInfo("Profile management is coming soon.")}>
+            <DropdownMenuItem onClick={() => router.push("/profile")}>
               Account / Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Link href="/settings" className="w-full">
-                Settings
-              </Link>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
+              Settings
             </DropdownMenuItem>
             <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleLogout}>
               Logout
