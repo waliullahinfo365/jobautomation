@@ -312,9 +312,20 @@ export function IntegrationsSection() {
     try {
       setGoogleConnectLoadingSlug(modalSlug);
       const res = await getGoogleAuthUrl(modalSlug as "gmail" | "google-drive" | "google-calendar");
-      window.location.href = res.authorizationUrl;
+      const isDemoRedirect =
+        !res.oauthEnabled ||
+        res.authUrl.includes("/integrations/google/demo-callback") ||
+        res.authUrl.includes("demo-callback");
+      if (isDemoRedirect) {
+        showInfo("Google OAuth env is missing on API; using demo connection.");
+      }
+      window.location.href = res.authUrl;
     } catch (e) {
-      showError(e instanceof Error ? e.message : "Could not start Google OAuth");
+      if (process.env.NODE_ENV !== "production") {
+        const msg = e instanceof Error ? e.message : "failed";
+        console.warn("[Google OAuth]", msg);
+      }
+      showError("Could not start Google OAuth. Check API env and Google redirect URI.");
       setGoogleConnectLoadingSlug(null);
     }
   }
@@ -372,6 +383,7 @@ export function IntegrationsSection() {
         initialAccountName={modalItem?.accountName}
         onGoogleConnect={modalSlug && isGoogleSlug(modalSlug) ? () => void handleGoogleConnect() : undefined}
         googleConnectLoading={modalSlug !== null && googleConnectLoadingSlug === modalSlug}
+        showLiveGoogleOAuthCopy={!isUsingFallback}
       />
 
       <ConfirmDialog

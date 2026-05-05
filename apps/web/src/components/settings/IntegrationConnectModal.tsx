@@ -16,6 +16,8 @@ type Props = {
   /** Gmail / Drive / Calendar: optional OAuth redirect (stub or real Google URL). */
   onGoogleConnect?: () => void | Promise<void>;
   googleConnectLoading?: boolean;
+  /** When the integrations API is reachable (not mock fallback), show live OAuth copy instead of demo-only text. */
+  showLiveGoogleOAuthCopy?: boolean;
 };
 
 export function IntegrationConnectModal({
@@ -28,6 +30,7 @@ export function IntegrationConnectModal({
   initialAccountName,
   onGoogleConnect,
   googleConnectLoading,
+  showLiveGoogleOAuthCopy,
 }: Props) {
   const [connectedEmail, setConnectedEmail] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -152,7 +155,9 @@ export function IntegrationConnectModal({
           {googleBlock ? (
             <>
               <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                OAuth will be connected in production. This demo stores a stub connection only—no Google API calls are made.
+                {showLiveGoogleOAuthCopy
+                  ? "Connect your Google account securely using OAuth. You will be redirected to Google to approve access."
+                  : "OAuth will be connected in production. This demo stores a stub connection only—no Google API calls are made."}
               </p>
               {onGoogleConnect ? (
                 <Button
