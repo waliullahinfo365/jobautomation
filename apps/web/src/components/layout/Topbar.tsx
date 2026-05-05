@@ -108,7 +108,14 @@ export function Topbar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => router.push("/profile")}>
+            <DropdownMenuItem
+              onSelect={() => {
+                if (process.env.NODE_ENV !== "production") {
+                  console.info("Navigating to /profile");
+                }
+                router.push("/profile");
+              }}
+            >
               Account / Profile
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/settings")}>
