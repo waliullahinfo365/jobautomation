@@ -9,11 +9,14 @@ export type AiProcessingProcessorPayload = {
 };
 
 export async function processAiProcessingJob(payload: AiProcessingProcessorPayload) {
-  // TODO: Replace with BullMQ/Redis processor and call API service endpoint.
+  // Stub implementation: AI processing (research, draft, full) is queued but not yet processed by workers
+  // This will be implemented with actual LLM service calls in a future release
   return {
     queued: true,
     moduleKey: "ai-processing",
-    operationId: `ai-processing-${Date.now()}`,
+    status: "not-implemented",
+    operationId: payload.correlationId || `ai-processing-${Date.now()}`,
+    message: `AI processing (${payload.mode}) queued. Worker implementation pending.`,
     payload,
   };
 }

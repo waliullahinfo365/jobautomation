@@ -5,11 +5,14 @@ export type DuplicateProtectionProcessorPayload = {
 };
 
 export async function processDuplicateProtectionProcessor(payload: DuplicateProtectionProcessorPayload) {
-  // TODO: Replace with BullMQ/Redis queue processor and API transport.
+  // Stub implementation: duplicate detection is queued but not yet processed by workers
+  // This will be implemented with actual duplicate detection logic in a future release
   return {
     queued: true,
     moduleKey: "duplicate-protection",
+    status: "not-implemented",
     operationId: `duplicate-protection-${Date.now()}`,
+    message: "Duplicate protection check queued. Worker implementation pending.",
     payload,
   };
 }

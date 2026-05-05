@@ -8,11 +8,14 @@ export type DailyDigestPayload = {
 };
 
 export async function processDailyDigestJob(payload: DailyDigestPayload) {
-  // TODO: Replace with BullMQ/Redis queue processor and API transport.
+  // Stub implementation: daily digest generation is queued but not yet processed by workers
+  // This will be implemented with report generation and email delivery in a future release
   return {
     queued: true,
     moduleKey: "daily-digest",
+    status: "not-implemented",
     operationId: payload.operationId ?? `daily-digest-${Date.now()}`,
+    message: "Daily digest generation queued. Worker implementation pending.",
     payload,
   };
 }

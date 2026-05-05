@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { AutomationLogModel } from "@jobflow/database/models";
 import type { AutomationJobName, AutomationJobPayload, AutomationQueueResult, EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
 import { dispatchAutomationJob } from "../processors/automation.dispatcher";
+import { AUTOMATION_QUEUE_NAME } from "./constants";
 
 type QueueMode = "memory" | "bullmq" | "disabled";
 
@@ -19,7 +20,7 @@ async function resolveBullQueue() {
     const bullmq = await dynamicImport("bullmq");
     const ioredis = await dynamicImport("ioredis");
     const connection = new ioredis.default(process.env.REDIS_URL);
-    const queue = new bullmq.Queue("automation-jobs", { connection });
+    const queue = new bullmq.Queue(AUTOMATION_QUEUE_NAME, { connection });
     return queue;
   } catch {
     return null;
@@ -33,15 +34,25 @@ export function getQueueMode(): QueueMode {
 }
 
 async function ensureQueueMode(): Promise<QueueMode> {
+  const requestedMode = process.env.QUEUE_MODE;
   if (process.env.QUEUE_MODE === "disabled") {
     resolvedQueueMode = "disabled";
     return resolvedQueueMode;
   }
   if (bullQueue || resolvedQueueMode === "bullmq") return "bullmq";
+  if (requestedMode === "bullmq" && !process.env.REDIS_URL) {
+    throw new Error("QUEUE_MODE is set to bullmq but REDIS_URL is missing");
+  }
   if (process.env.REDIS_URL) {
     bullQueue = await resolveBullQueue();
+    if (requestedMode === "bullmq" && !bullQueue) {
+      throw new Error("QUEUE_MODE is bullmq but BullMQ queue initialization failed");
+    }
     resolvedQueueMode = bullQueue ? "bullmq" : "memory";
     return resolvedQueueMode;
+  }
+  if (requestedMode === "bullmq") {
+    throw new Error("QUEUE_MODE is bullmq but REDIS_URL is not configured");
   }
   resolvedQueueMode = "memory";
   return resolvedQueueMode;

@@ -14,7 +14,7 @@ import { processDailyDigestJob } from "./daily-digest.processor";
 import { processWeeklyReportJob } from "./weekly-report.processor";
 
 export async function dispatchAutomationJob(name: AutomationJobName, payload: AutomationJobPayload) {
-  switch (name) {
+  switch (name as string) {
     case "job-intake":
       return processJobIntakeProcessor({ tenantId: payload.tenantId, userId: payload.userId ?? "system", payload: {} as never, correlationId: payload.correlationId });
     case "duplicate-protection":
@@ -46,6 +46,14 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
       return processResearchGenerationJob({ tenantId: payload.tenantId, jobId: (payload as { jobId: string }).jobId, userId: payload.userId ?? "system", mode: (payload as { mode?: "research" | "draft" }).mode ?? "research", correlationId: payload.correlationId });
     case "ai-processing":
       return processAiProcessingJob({ tenantId: payload.tenantId, jobId: (payload as { jobId: string }).jobId, userId: payload.userId ?? "system", mode: (payload as { mode?: "research" | "draft" | "full" }).mode ?? "full", correlationId: payload.correlationId });
+    case "cover-letter":
+      return processAiProcessingJob({
+        tenantId: payload.tenantId,
+        jobId: (payload as { jobId: string }).jobId,
+        userId: payload.userId ?? "system",
+        mode: "draft",
+        correlationId: payload.correlationId,
+      });
     case "daily-digest":
       return processDailyDigestJob({ tenantId: payload.tenantId, userId: payload.userId ?? "system", date: (payload as { date?: string }).date, send: (payload as { send?: boolean }).send, force: (payload as { force?: boolean }).force, operationId: payload.operationId });
     case "weekly-report":
