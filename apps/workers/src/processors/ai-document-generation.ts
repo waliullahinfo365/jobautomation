@@ -154,15 +154,17 @@ async function generateWithClaude(input: {
     }
 
     const summary = `[${result.errorType}] ${result.message}${result.status != null ? ` (status ${result.status})` : ""} model=${result.modelAttempted}`;
-    logger.warn(
-      {
-        errorType: result.errorType,
-        status: result.status,
-        message: redactForLog(result.message, 500),
-        modelAttempted: result.modelAttempted,
-      },
-      "anthropic messages failed"
-    );
+    const logBindings = {
+      errorType: result.errorType,
+      status: result.status,
+      message: redactForLog(result.message, 500),
+      modelAttempted: result.modelAttempted,
+    };
+    if (result.errorType === "model_not_found") {
+      logger.warn(logBindings, "Anthropic model not found. Check ANTHROPIC_MODEL.");
+    } else {
+      logger.warn(logBindings, "anthropic messages failed");
+    }
 
     return {
       text: input.fallbackText,
@@ -277,7 +279,7 @@ export async function createResearchDocument(input: {
   const generated = await generateWithClaude({
     prompt,
     fallbackText,
-    modelHint: "claude-3-5-sonnet-latest",
+    modelHint: "claude-3-5-sonnet-20241022",
   });
 
   const doc = await persistDocument({
@@ -419,7 +421,7 @@ export async function createCoverLetterDocument(input: {
   const generated = await generateWithClaude({
     prompt,
     fallbackText,
-    modelHint: "claude-3-5-sonnet-latest",
+    modelHint: "claude-3-5-sonnet-20241022",
   });
 
   const doc = await persistDocument({
@@ -564,7 +566,7 @@ export async function createAiAnalysisDocument(input: {
   const generated = await generateWithClaude({
     prompt,
     fallbackText,
-    modelHint: "claude-3-5-sonnet-latest",
+    modelHint: "claude-3-5-sonnet-20241022",
   });
 
   const doc = await persistDocument({

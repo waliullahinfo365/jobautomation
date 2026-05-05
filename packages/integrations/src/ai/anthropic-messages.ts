@@ -3,11 +3,10 @@
  * @see https://docs.anthropic.com/en/api/messages
  */
 
-export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-latest";
+export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022";
 
 /** Dated / stable IDs tried if the primary model returns 404 or model-related 400. */
 const MODEL_FALLBACK_CHAIN = [
-  "claude-3-5-sonnet-20241022",
   "claude-sonnet-4-20250514",
   "claude-3-5-haiku-20241022",
 ] as const;
@@ -71,6 +70,24 @@ function isRetryableModelError(status: number, bodyText: string): boolean {
     low.includes("invalid_request") ||
     low.includes("does not exist")
   );
+}
+
+/** True when Anthropic indicates the requested model ID is unknown or unavailable. */
+export function isAnthropicModelNotFoundResponse(status: number, bodyText: string): boolean {
+  if (status === 404) return true;
+  if (status !== 400) return false;
+  const low = bodyText.toLowerCase();
+  return (
+    (low.includes("model") && (low.includes("not_found") || low.includes("not found") || low.includes("does not exist"))) ||
+    low.includes("invalid_model") ||
+    (low.includes("model") && low.includes("unknown"))
+  );
+}
+
+function anthropicErrorTypeForResponse(status: number, bodyText: string): "auth" | "model_not_found" | "http_error" {
+  if (status === 401 || status === 403) return "auth";
+  if (isAnthropicModelNotFoundResponse(status, bodyText)) return "model_not_found";
+  return "http_error";
 }
 
 /** Extract user-visible assistant text from Messages API JSON. */
@@ -142,7 +159,7 @@ export async function callAnthropicMessages(input: {
       lastErr = {
         ok: false,
         status: response.status,
-        errorType: response.status === 401 || response.status === 403 ? "auth" : "http_error",
+        errorType: anthropicErrorTypeForResponse(response.status, rawText),
         message,
         modelAttempted: model,
       };
