@@ -27,6 +27,7 @@ import { CoverLettersSection } from "./CoverLettersSection";
 import { ResearchDocsSection } from "./ResearchDocsSection";
 import { PDFExportsSection } from "./PDFExportsSection";
 import { FolderAutomationSection } from "./FolderAutomationSection";
+import { UploadDocumentModal } from "./UploadDocumentModal";
 import { useDocumentsApi } from "@/hooks/api/useDocumentsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
@@ -36,6 +37,7 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import type { Job } from "@/types/job";
+import { DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
 
 const initialFilters: DocumentFilterState = {
   query: "",
@@ -115,8 +117,10 @@ export function DocumentsPageClient() {
   const [folderSettings, setFolderSettings] = useState<FolderAutomationSettings>(mockFolderAutomationSettings);
   const [folderActivity, setFolderActivity] = useState<FolderActivityRecord[]>(mockFolderActivity);
   const [fallbackEdits, setFallbackEdits] = useState<Record<string, Partial<DocumentRecord>>>({});
+  const [localNewDocuments, setLocalNewDocuments] = useState<DocumentRecord[]>([]);
   const [cvDefaultId, setCvDefaultId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const baseDocuments = useMemo(() => {
     const raw = normalizeListResponse<unknown>(documentsApi.data);
@@ -129,17 +133,21 @@ export function DocumentsPageClient() {
   }, [jobsApi.data]);
 
   useEffect(() => {
-    if (!documentsApi.isUsingFallback) setFallbackEdits({});
+    if (!documentsApi.isUsingFallback) {
+      setFallbackEdits({});
+      setLocalNewDocuments([]);
+    }
   }, [documentsApi.isUsingFallback]);
 
   const documents = useMemo(() => {
-    if (!documentsApi.isUsingFallback || Object.keys(fallbackEdits).length === 0) return baseDocuments;
-    return baseDocuments.map((doc) => {
+    const patched = baseDocuments.map((doc) => {
       const id = getResourceId(doc);
       const ed = fallbackEdits[id];
       return ed ? ({ ...doc, ...ed } as DocumentRecord) : doc;
     });
-  }, [baseDocuments, documentsApi.isUsingFallback, fallbackEdits]);
+    if (!documentsApi.isUsingFallback) return patched;
+    return [...localNewDocuments, ...patched];
+  }, [baseDocuments, documentsApi.isUsingFallback, fallbackEdits, localNewDocuments]);
 
   const firstJobId = useMemo(() => (jobs[0] ? getResourceId(jobs[0]) : undefined), [jobs]);
 
@@ -295,6 +303,61 @@ export function DocumentsPageClient() {
     }
   };
 
+  async function handleCreateDocumentRecord(payload: {
+    fileName: string;
+    type: "CV" | "Cover Letter" | "Research" | "PDF Export" | "Other";
+    jobId?: string;
+    notes?: string;
+  }) {
+    const docTypeMap: Record<string, string> = {
+      CV: "CV",
+      "Cover Letter": "Cover Letter",
+      Research: "Research",
+      "PDF Export": "Other",
+      Other: "Other",
+    };
+    if (documentsApi.isUsingFallback) {
+      const id = `local-doc-${Date.now()}`;
+      const job = payload.jobId ? jobs.find((j) => getResourceId(j) === payload.jobId) : undefined;
+      setLocalNewDocuments((prev) => [
+        {
+          id,
+          _id: id,
+          fileName: payload.fileName,
+          type: payload.type === "Research" ? "Research Document" : payload.type === "Other" ? "Email Template" : (payload.type as DocumentRecord["type"]),
+          relatedJob: job ? `${job.company} / ${job.position}` : "—",
+          company: job?.company ?? "",
+          position: job?.position ?? "",
+          status: "Draft",
+          storageLocation: "Local upload record",
+          lastUpdated: new Date().toISOString(),
+          jobId: payload.jobId,
+        },
+        ...prev,
+      ]);
+      showInfo("API offline, updated demo data locally.");
+      showSuccess("Document record created. File storage upload will be connected next.");
+      setUploadOpen(false);
+      return;
+    }
+    try {
+      await documentsApi.createDocument({
+        tenantId: DEMO_TENANT_ID,
+        createdBy: DEMO_USER_ID,
+        fileName: payload.fileName,
+        type: docTypeMap[payload.type] ?? "Other",
+        status: "Draft",
+        jobId: payload.jobId,
+        notes: payload.notes,
+      });
+      showSuccess("Document record created. File storage upload will be connected next.");
+      setUploadOpen(false);
+      await documentsApi.refetch();
+    } catch {
+      showError("Could not create document record.");
+    }
+  }
+
   const isInitialLoading = documentsApi.loading && documentsApi.data === undefined;
 
   if (isInitialLoading) {
@@ -305,7 +368,11 @@ export function DocumentsPageClient() {
           eyebrow="Document Vault"
           title="Documents"
           description="Manage CVs, cover letters, research documents, folders, and PDF exports."
-          actions={<Button type="button">Upload Document</Button>}
+          actions={
+            <Button type="button" onClick={() => setUploadOpen(true)}>
+              Upload Document
+            </Button>
+          }
         />
         <LoadingState title="Loading documents..." description="Fetching document library from the backend." />
       </div>
@@ -322,11 +389,14 @@ export function DocumentsPageClient() {
         eyebrow="Document Vault"
         title="Documents"
         description="Manage CVs, cover letters, research documents, folders, and PDF exports."
-        actions={
-          <Button type="button" onClick={() => showInfo("Upload will be available after file storage is connected.")}>
-            Upload Document
-          </Button>
-        }
+        actions={<Button type="button" onClick={() => setUploadOpen(true)}>Upload Document</Button>}
+      />
+
+      <UploadDocumentModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        onSubmit={handleCreateDocumentRecord}
+        loading={documentsApi.mutations.createLoading}
       />
 
       <DocumentStatsCards stats={stats} />

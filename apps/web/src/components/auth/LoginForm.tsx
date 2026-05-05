@@ -1,16 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthApi } from "@/hooks/api/useAuthApi";
+import { getAuthToken } from "@/lib/api/client";
 
 export function LoginForm() {
   const router = useRouter();
   const { login, loading, error, clearError } = useAuthApi();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [redirecting, setRedirecting] = useState(true);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      router.replace("/dashboard");
+      return;
+    }
+    setRedirecting(false);
+  }, [router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +34,8 @@ export function LoginForm() {
       /* error surfaced via hook */
     }
   }
+
+  if (redirecting) return null;
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">

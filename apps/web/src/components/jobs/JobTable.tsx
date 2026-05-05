@@ -9,6 +9,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { MoreIcon } from "@/components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { showInfo } from "@/lib/ui/toast";
 
 interface JobTableProps {
   jobs: Job[];
@@ -86,8 +87,12 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
                       )}
                       {!onArchive && !onGenerateResearch && !onGenerateDraft && (
                         <>
-                          <DropdownMenuItem>Edit (placeholder)</DropdownMenuItem>
-                          <DropdownMenuItem>Archive (placeholder)</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => showInfo("Edit action is available in job detail.")}>
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => showInfo("Archive action is available in job detail.")}>
+                            Archive
+                          </DropdownMenuItem>
                         </>
                       )}
                     </DropdownMenuContent>

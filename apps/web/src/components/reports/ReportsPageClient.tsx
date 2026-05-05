@@ -45,11 +45,17 @@ const initialFilters: ReportFilterState = {
 
 function toastReportGenerationSuccess(res: unknown) {
   const r = (res && typeof res === "object" ? res : {}) as Record<string, unknown>;
-  const operationId = String(r.operationId ?? r.jobId ?? "—");
+  const status = String(r.status ?? "").toLowerCase();
+  const message = String(r.message ?? "").toLowerCase();
+  if (status.includes("queued") || message.includes("queued")) {
+    showInfo("Report generation queued. It will appear in history after processing.");
+    if (message.includes("worker") || message.includes("memory") || message.includes("facade")) {
+      showInfo("Report was queued. Background worker is not enabled yet.");
+    }
+    return;
+  }
   const reportId = String(r.reportId ?? r.id ?? "—");
-  const status = String(r.status ?? "—");
-  const deliveryStatus = String(r.deliveryStatus ?? r.message ?? "—");
-  showSuccess(`Report queued — operation ${operationId}, report ${reportId}, status ${status}, delivery ${deliveryStatus}`);
+  showSuccess(`Report generated successfully. Report ID: ${reportId}`);
 }
 
 export function ReportsPageClient() {
@@ -122,7 +128,18 @@ export function ReportsPageClient() {
     return row?.id;
   }, [mergedHistory]);
 
-  const refetchAll = () => reportsApi.refetch();
+  const [refreshing, setRefreshing] = useState(false);
+  const refetchAll = async () => {
+    setRefreshing(true);
+    try {
+      await reportsApi.refetch();
+      showSuccess("Reports refreshed.");
+    } catch {
+      showError("Could not refresh reports.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleGenerateReport = async () => {
     const isDaily = tab === "Daily Digest";
@@ -153,7 +170,7 @@ export function ReportsPageClient() {
         const res = await reportsApi.runWeeklyReport({ send: false, force: false });
         toastReportGenerationSuccess(res);
       }
-      await refetchAll();
+      await reportsApi.refetch();
     } catch {
       showError("Could not queue report generation.");
     }
@@ -175,7 +192,7 @@ export function ReportsPageClient() {
     try {
       await reportsApi.sendReportTest({ id: record.id, payload: { to: DEMO_REPORT_EMAIL } });
       showSuccess("Test send queued.");
-      await refetchAll();
+      await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
     }
@@ -212,7 +229,7 @@ export function ReportsPageClient() {
         const res = await reportsApi.runDailyDigest({ send: true, force: false });
         toastReportGenerationSuccess(res);
       }
-      await refetchAll();
+      await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
     }
@@ -248,7 +265,7 @@ export function ReportsPageClient() {
         const res = await reportsApi.runWeeklyReport({ send: true, force: false });
         toastReportGenerationSuccess(res);
       }
-      await refetchAll();
+      await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
     }
@@ -295,11 +312,11 @@ export function ReportsPageClient() {
               type="button"
               variant="outline"
               size="sm"
-              disabled={reportsApi.loading}
+              disabled={reportsApi.loading || refreshing}
               onClick={() => void refetchAll()}
             >
               <RefreshIcon size={16} className="mr-1" />
-              Refresh
+              {refreshing ? "Refreshing..." : "Refresh"}
             </Button>
             <Button type="button" onClick={() => void handleGenerateReport()} disabled={genBusy}>
               Generate Report

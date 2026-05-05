@@ -21,6 +21,7 @@ import { ContactFilters, type ContactFilterState } from "./ContactFilters";
 import { ContactsTable } from "./ContactsTable";
 import { ContactDetailPanel } from "./ContactDetailPanel";
 import { FollowUpsDueSection } from "./FollowUpsDueSection";
+import { ImportContactsModal } from "./ImportContactsModal";
 import { AnimatePresence, motion } from "framer-motion";
 
 const initialFilters: ContactFilterState = {
@@ -82,6 +83,7 @@ export function ContactsPageClient() {
   const [localNewContacts, setLocalNewContacts] = useState<Contact[]>([]);
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
     company: "",
@@ -234,6 +236,51 @@ export function ContactsPageClient() {
     }
   };
 
+  async function handleImportContacts(rows: Array<{ name: string; email?: string; company?: string; role?: string }>) {
+    if (contactsApi.isUsingFallback) {
+      const additions = rows.map((r) =>
+        buildLocalContact({
+          name: r.name,
+          email: r.email ?? "",
+          company: r.company ?? "",
+          role: r.role ?? "",
+          relationship: "Recruiter",
+        })
+      );
+      setLocalNewContacts((prev) => [...prev, ...additions]);
+      showInfo("API offline, updated demo data locally.");
+      showSuccess(`Imported ${additions.length} contacts.`);
+      setImportOpen(false);
+      return;
+    }
+
+    let imported = 0;
+    for (const row of rows) {
+      try {
+        await contactsApi.createContact({
+          tenantId: DEMO_TENANT_ID,
+          createdBy: DEMO_USER_ID,
+          name: row.name,
+          relationship: "Recruiter",
+          email: row.email,
+          company: row.company,
+          role: row.role,
+          followUpStatus: "Not Needed",
+        });
+        imported += 1;
+      } catch {
+        /* skip bad rows, continue import */
+      }
+    }
+    if (imported === 0) {
+      showError("No contacts were imported.");
+      return;
+    }
+    await contactsApi.refetch();
+    showSuccess(`Imported ${imported} contacts.`);
+    setImportOpen(false);
+  }
+
   const isInitialLoading = contactsApi.loading && contactsApi.data === undefined;
 
   if (isInitialLoading) {
@@ -246,7 +293,7 @@ export function ContactsPageClient() {
           description="Manage recruiters, referrals, hiring managers, and networking follow-ups."
           actions={
             <>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" onClick={() => setImportOpen(true)}>
                 <DownloadIcon size={16} className="mr-2" />
                 Import Contacts
               </Button>
@@ -275,7 +322,7 @@ export function ContactsPageClient() {
           description="Manage recruiters, referrals, hiring managers, and networking follow-ups."
           actions={
             <>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" onClick={() => setImportOpen(true)}>
                 <DownloadIcon size={16} className="mr-2" />
                 Import Contacts
               </Button>
@@ -326,6 +373,12 @@ export function ContactsPageClient() {
       </div>
 
       <ContactDetailPanel contact={selectedContact} open={panelOpen} onClose={() => setPanelOpen(false)} />
+      <ImportContactsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImport={handleImportContacts}
+        loading={contactsApi.mutations.createLoading}
+      />
 
       <AnimatePresence>
         {createOpen ? (

@@ -1,4 +1,5 @@
 import { env, AUTH_TOKEN_STORAGE_KEY, DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
+import { showError } from "@/lib/ui/toast";
 
 if (process.env.NODE_ENV !== "production") {
   console.info("[jobflow/api] API base URL:", env.api.url);
@@ -37,6 +38,39 @@ function fromStorage(key: string): string | undefined {
     return localStorage.getItem(key) ?? sessionStorage.getItem(key) ?? undefined;
   } catch {
     return undefined;
+  }
+}
+
+function handleUnauthorized(path: string): void {
+  if (typeof window === "undefined") return;
+  const authPath = path.startsWith("/auth/login") || path.startsWith("/auth/register");
+  clearAuthToken();
+  try {
+    localStorage.removeItem("tenantId");
+    localStorage.removeItem("userId");
+    sessionStorage.removeItem("tenantId");
+    sessionStorage.removeItem("userId");
+  } catch {
+    /* ignore */
+  }
+  if (authPath) return;
+  const protectedPrefixes = [
+    "/dashboard",
+    "/jobs",
+    "/applications",
+    "/contacts",
+    "/interviews",
+    "/documents",
+    "/reports",
+    "/automation",
+    "/settings",
+    "/system-status",
+    "/demo",
+  ];
+  const onProtected = protectedPrefixes.some((p) => window.location.pathname.startsWith(p));
+  if (onProtected) {
+    showError("Session expired. Please login again.");
+    window.location.replace("/login");
   }
 }
 
@@ -219,6 +253,9 @@ async function performFetch<T>(
     const parsed = safelyParseJson(text) as ApiEnvelope<T>;
 
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized(path);
+      }
       const err = parsed?.error;
       throw new ApiError(
         typeof err === "string" ? err : err?.message || `Request failed (${response.status})`,

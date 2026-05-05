@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { ChevronDownIcon, NotificationIcon, PlusIcon, SearchIcon, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { clearAuthToken } from "@/lib/api/client";
+import { showInfo, showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -20,6 +23,7 @@ function crumbForPath(pathname: string): string {
 
 export function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const title = crumbForPath(pathname);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -33,6 +37,20 @@ export function Topbar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  function handleLogout() {
+    clearAuthToken();
+    try {
+      localStorage.removeItem("tenantId");
+      localStorage.removeItem("userId");
+      sessionStorage.removeItem("tenantId");
+      sessionStorage.removeItem("userId");
+    } catch {
+      /* ignore */
+    }
+    showSuccess("Logged out successfully.");
+    router.replace("/login");
+  }
 
   return (
     <header className="jf-topbar hidden md:flex">
@@ -75,17 +93,34 @@ export function Topbar() {
           <PlusIcon size={14} className="mr-1.5" />
           New Job
         </Link>
-        <button
-          type="button"
-          className="jf-avatar-btn flex h-[34px] items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] pl-1 pr-1 transition-colors hover:bg-[var(--surface-3)]"
-          aria-label="Account menu"
-        >
-          <Avatar className="h-[26px] w-[26px] border-0 bg-gradient-to-br from-[#4FC2D8] to-[#637CFF] text-[10.5px] font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]">
-            <AvatarFallback className="bg-transparent text-white">WU</AvatarFallback>
-          </Avatar>
-          <span className="jf-avatar-name text-[12.5px] font-semibold text-[var(--text-1)]">You</span>
-          <ChevronDownIcon size={12} className="mr-1 text-[var(--text-3)]" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <button
+              type="button"
+              className="jf-avatar-btn flex h-[34px] items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] pl-1 pr-1 transition-colors hover:bg-[var(--surface-3)]"
+              aria-label="Account menu"
+            >
+              <Avatar className="h-[26px] w-[26px] border-0 bg-gradient-to-br from-[#4FC2D8] to-[#637CFF] text-[10.5px] font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]">
+                <AvatarFallback className="bg-transparent text-white">WU</AvatarFallback>
+              </Avatar>
+              <span className="jf-avatar-name text-[12.5px] font-semibold text-[var(--text-1)]">You</span>
+              <ChevronDownIcon size={12} className="mr-1 text-[var(--text-3)]" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => showInfo("Profile management is coming soon.")}>
+              Account / Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Link href="/settings" className="w-full">
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleLogout}>
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
