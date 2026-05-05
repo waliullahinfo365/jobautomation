@@ -27,6 +27,7 @@ export function useApplicationsApi(options?: { fallbackToMock?: boolean; params?
     /** Alias for list payload returned by the API / mock fallback */
     list: query.data,
     createApplication: createMutation.mutate,
+    createApplicationLoading: createMutation.loading,
     updateApplication: updateMutation.mutate,
     /** Back-compat aliases */
     create: createMutation.mutate,

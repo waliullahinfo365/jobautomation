@@ -8,6 +8,7 @@ import { AutomationStatusBadge } from "./AutomationStatusBadge";
 import { AutomationCategoryBadge } from "./AutomationCategoryBadge";
 import { AutomationHealthMetrics } from "./AutomationHealthMetrics";
 import { formatDate } from "@/lib/utils";
+import { friendlyAutomationLogMessage } from "@/lib/automationLogMessaging";
 import { Badge } from "@/components/ui/badge";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -88,7 +89,9 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
                       </Badge>
                       <span className="text-xs text-[var(--text-4)]">{formatDate(log.createdAt, "MMM d, HH:mm")}</span>
                     </div>
-                    <p className="text-sm text-[var(--text-2)]">{log.message}</p>
+                    <p className="text-sm text-[var(--text-2)]">
+                      {friendlyAutomationLogMessage(log.technicalMessage ?? log.message)}
+                    </p>
                     <p className="text-xs text-[var(--text-3)]">Related: {log.relatedRecord} • Duration: {log.duration}</p>
                   </div>
                 ))

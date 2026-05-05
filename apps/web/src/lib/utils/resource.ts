@@ -143,6 +143,7 @@ export function normalizeApplicationForUi(raw: unknown): Application {
     aiClassification: (a.aiClassification as string) ?? "",
     createdAt: (a.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (a.updatedAt as string) ?? new Date().toISOString(),
+    dateApplied: (a.dateApplied as string | undefined) ?? (a.appliedAt as string | undefined),
     reminderStatus: (a.reminderStatus as Application["reminderStatus"]) ?? (a.followUpStatus as Application["followUpStatus"]) ?? "Not Needed",
   };
 }
@@ -618,6 +619,7 @@ export function normalizeAutomationLogForUi(raw: unknown): AutomationLog {
   const duration =
     typeof durMs === "number" && Number.isFinite(durMs) ? `${durMs}ms` : String(r.duration ?? "—");
   const created = r.createdAt ?? new Date().toISOString();
+  const meta = r.metadata && typeof r.metadata === "object" ? (r.metadata as Record<string, unknown>) : undefined;
   return {
     id,
     _id: id,
@@ -628,6 +630,10 @@ export function normalizeAutomationLogForUi(raw: unknown): AutomationLog {
     relatedRecord: String(r.relatedRecordId ?? r.relatedRecord ?? r.relatedRecordType ?? "—"),
     duration,
     createdAt: typeof created === "string" ? created : new Date(created as Date).toISOString(),
+    operationId: r.operationId ? String(r.operationId) : meta?.operationId ? String(meta.operationId) : undefined,
+    jobId: meta?.jobId ? String(meta.jobId) : undefined,
+    metadata: meta,
+    technicalMessage: String(r.message ?? ""),
   };
 }
 

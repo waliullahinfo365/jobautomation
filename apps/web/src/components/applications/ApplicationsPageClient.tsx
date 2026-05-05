@@ -9,8 +9,12 @@ import { ApplicationStatsCards } from "./ApplicationStatsCards";
 import { ApplicationFilters, type ApplicationFilterState } from "./ApplicationFilters";
 import { ApplicationsTable } from "./ApplicationsTable";
 import { ApplicationDetailPanel } from "./ApplicationDetailPanel";
+import { LogApplicationModal } from "./LogApplicationModal";
 import type { Application } from "@/types/application";
 import { useApplicationsApi } from "@/hooks/api/useApplicationsApi";
+import { ApiError } from "@/lib/api/client";
+import { buildCreateApplicationPayload, type CreateApplicationFormPayload } from "@/lib/api/applications.api";
+import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { useIntegrationsApi } from "@/hooks/api/useIntegrationsApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { getResourceId, normalizeApplicationsForUi } from "@/lib/utils/resource";
@@ -34,6 +38,43 @@ function addDaysLocalDatetime(days: number): string {
   d.setHours(10, 0, 0, 0);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function buildLocalDemoApplication(input: CreateApplicationFormPayload): Application {
+  const id = `local-app-${Date.now()}`;
+  const now = new Date().toISOString();
+  const appliedIso = input.appliedDate
+    ? /^\d{4}-\d{2}-\d{2}$/.test(input.appliedDate)
+      ? new Date(`${input.appliedDate}T12:00:00.000Z`).toISOString()
+      : input.appliedDate
+    : now;
+  return normalizeApplicationsForUi([
+    {
+      _id: id,
+      id,
+      jobId: input.jobId ?? "",
+      company: input.company,
+      position: input.position,
+      source: input.source,
+      applicationStatus: input.applicationStatus,
+      status: input.applicationStatus,
+      responseStatus: input.responseStatus,
+      followUpStatus: input.followUpStatus,
+      contactEmail: input.contactEmail ?? "",
+      jobUrl: input.jobUrl ?? "",
+      notes: input.notes,
+      dateApplied: appliedIso,
+      dateFound: now,
+      timeline: [],
+      automationLogs: [],
+      automationHealth: "Healthy",
+      responseDetected: false,
+      aiClassification: "",
+      createdAt: now,
+      updatedAt: now,
+      reminderStatus: input.followUpStatus,
+    },
+  ])[0]!;
 }
 
 function filterApplications(applications: Application[], filters: ApplicationFilterState) {
@@ -64,25 +105,37 @@ export function ApplicationsPageClient() {
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleLocal, setScheduleLocal] = useState(addDaysLocalDatetime(5));
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [isLogApplicationOpen, setIsLogApplicationOpen] = useState(false);
+  const [localApplicationsOverlay, setLocalApplicationsOverlay] = useState<Application[]>([]);
 
-  const baseApplications = useMemo(() => {
+  const mergedFromApi = useMemo(() => {
     const raw = normalizeListResponse<unknown>(applicationsApi.data);
     const normalized = normalizeApplicationsForUi(raw);
     return normalized.length > 0 ? normalized : [];
   }, [applicationsApi.data]);
 
   useEffect(() => {
-    if (!applicationsApi.isUsingFallback) setFallbackEdits({});
+    if (!applicationsApi.isUsingFallback) {
+      setFallbackEdits({});
+      setLocalApplicationsOverlay([]);
+    }
   }, [applicationsApi.isUsingFallback]);
 
+  const mergedList = useMemo(() => {
+    if (!localApplicationsOverlay.length) return mergedFromApi;
+    const seen = new Set(mergedFromApi.map(getResourceId));
+    const extra = localApplicationsOverlay.filter((a) => !seen.has(getResourceId(a)));
+    return [...extra, ...mergedFromApi];
+  }, [mergedFromApi, localApplicationsOverlay]);
+
   const applications = useMemo(() => {
-    if (!applicationsApi.isUsingFallback || Object.keys(fallbackEdits).length === 0) return baseApplications;
-    return baseApplications.map((app) => {
+    if (!applicationsApi.isUsingFallback || Object.keys(fallbackEdits).length === 0) return mergedList;
+    return mergedList.map((app) => {
       const id = getResourceId(app);
       const ed = fallbackEdits[id];
       return ed ? ({ ...app, ...ed } as Application) : app;
     });
-  }, [baseApplications, applicationsApi.isUsingFallback, fallbackEdits]);
+  }, [mergedList, applicationsApi.isUsingFallback, fallbackEdits]);
 
   useEffect(() => {
     if (!selectedApplication) return;
@@ -252,6 +305,27 @@ export function ApplicationsPageClient() {
     }
   };
 
+  const handleLogApplication = useCallback(
+    async (form: CreateApplicationFormPayload) => {
+      const payload = buildCreateApplicationPayload(form);
+      try {
+        await applicationsApi.createApplication(payload);
+        showSuccess("Application logged successfully.");
+        setIsLogApplicationOpen(false);
+        await applicationsApi.refetch();
+      } catch (e) {
+        if (shouldUseMockFallback(e)) {
+          setLocalApplicationsOverlay((prev) => [buildLocalDemoApplication(form), ...prev]);
+          showInfo("API offline, added demo application locally.");
+          setIsLogApplicationOpen(false);
+        } else {
+          showError(e instanceof ApiError ? e.message : "Failed to log application.");
+        }
+      }
+    },
+    [applicationsApi]
+  );
+
   const handleSimulateReply = async (app: Application) => {
     const id = getResourceId(app);
     setPendingAction("replyTest");
@@ -297,7 +371,11 @@ export function ApplicationsPageClient() {
           eyebrow="Application Workflow"
           title="Applications"
           description="Monitor submitted applications, replies, follow-ups, and interview progress."
-          actions={<Button type="button">Log Application</Button>}
+          actions={
+            <Button type="button" onClick={() => setIsLogApplicationOpen(true)}>
+              Log Application
+            </Button>
+          }
         />
         <LoadingState title="Loading applications..." description="Fetching application pipeline data." />
       </div>
@@ -326,7 +404,9 @@ export function ApplicationsPageClient() {
               >
                 Process Due Follow-Ups
               </Button>
-              <Button type="button">Log Application</Button>
+              <Button type="button" onClick={() => setIsLogApplicationOpen(true)}>
+                Log Application
+              </Button>
             </div>
           }
         />
@@ -372,6 +452,13 @@ export function ApplicationsPageClient() {
         }
         onSimulateReply={selectedApplication ? () => void handleSimulateReply(selectedApplication) : undefined}
         pendingAction={pendingAction}
+      />
+
+      <LogApplicationModal
+        open={isLogApplicationOpen}
+        onClose={() => setIsLogApplicationOpen(false)}
+        onSubmit={handleLogApplication}
+        loading={applicationsApi.createApplicationLoading}
       />
 
       <AnimatePresence>

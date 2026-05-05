@@ -34,6 +34,11 @@ export interface AutomationLog {
   relatedRecord: string;
   duration: string;
   createdAt: Date | string;
+  operationId?: string;
+  jobId?: string;
+  metadata?: Record<string, unknown>;
+  /** Original API message before friendly display mapping */
+  technicalMessage?: string;
 }
 
 export interface AutomationModule {

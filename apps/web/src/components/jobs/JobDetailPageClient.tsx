@@ -8,14 +8,19 @@ import { JobOverviewCard } from "@/components/jobs/JobOverviewCard";
 import { JobTimeline } from "@/components/jobs/JobTimeline";
 import { JobDocumentsCard } from "@/components/jobs/JobDocumentsCard";
 import { JobAutomationActivity } from "@/components/jobs/JobAutomationActivity";
+import { LogApplicationModal } from "@/components/applications/LogApplicationModal";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { Button } from "@/components/ui/button";
+import { useApplicationsApi } from "@/hooks/api/useApplicationsApi";
 import { useJobDetail, useJobsApi } from "@/hooks/api/useJobsApi";
+import { ApiError } from "@/lib/api/client";
+import { buildCreateApplicationPayload, type CreateApplicationFormPayload } from "@/lib/api/applications.api";
+import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeJobForUi } from "@/lib/utils/resource";
-import { showSuccess, showError } from "@/lib/ui/toast";
+import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import { mockJobs } from "@/data/mockJobs";
 import type { Job } from "@/types/job";
 
@@ -26,15 +31,17 @@ interface JobDetailPageClientProps {
 export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [logAppOpen, setLogAppOpen] = useState(false);
 
   const mockFallbackJob = mockJobs.find((j) => j.id === id || j._id === id);
 
-  const { data: rawJob, loading, isUsingFallback } = useJobDetail(id, {
+  const { data: rawJob, loading, isUsingFallback, refetch: refetchJob } = useJobDetail(id, {
     fallbackToMock: true,
     mockFallbackJob,
   });
 
   const jobsApi = useJobsApi();
+  const applicationsApi = useApplicationsApi({ fallbackToMock: true });
 
   const job: Job | undefined = rawJob ? normalizeJobForUi(rawJob) : undefined;
 
@@ -103,6 +110,32 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
     }
   }, [id, jobsApi, router, withLoading]);
 
+  const handleLogApplicationFromJob = useCallback(
+    async (form: CreateApplicationFormPayload) => {
+      const payload = buildCreateApplicationPayload({ ...form, jobId: form.jobId || id });
+      try {
+        await applicationsApi.createApplication(payload);
+        showSuccess("Application logged successfully.");
+        setLogAppOpen(false);
+        try {
+          await jobsApi.update({ id, payload: { status: "Applied" } });
+        } catch {
+          /* optional: job may already be Applied */
+        }
+        await refetchJob();
+        await applicationsApi.refetch();
+      } catch (e) {
+        if (shouldUseMockFallback(e)) {
+          showInfo("API offline, added demo application locally.");
+          setLogAppOpen(false);
+        } else {
+          showError(e instanceof ApiError ? e.message : "Failed to log application.");
+        }
+      }
+    },
+    [applicationsApi, id, jobsApi, refetchJob]
+  );
+
   if (loading && !job) {
     return <LoadingState title="Loading job..." description="Fetching job details from the backend." />;
   }
@@ -158,6 +191,13 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         variant="outline"
       />
       <ActionButton
+        label="Log Application"
+        loading={applicationsApi.createApplicationLoading}
+        disabled={actionDisabled || applicationsApi.createApplicationLoading}
+        onClick={() => setLogAppOpen(true)}
+        variant="secondary"
+      />
+      <ActionButton
         label="Archive"
         loading={actionLoading === "archive"}
         disabled={actionDisabled}
@@ -171,6 +211,15 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   return (
     <div className="space-y-6">
       <JobDetailHeader job={job} renderActions={actionBar} />
+
+      <LogApplicationModal
+        open={logAppOpen}
+        onClose={() => setLogAppOpen(false)}
+        onSubmit={handleLogApplicationFromJob}
+        loading={applicationsApi.createApplicationLoading}
+        fixedJobId={id}
+        initialJob={job}
+      />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">

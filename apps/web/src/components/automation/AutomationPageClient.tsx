@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AutomationIcon, PlusIcon, RefreshIcon } from "@/components/icons";
+import { AutomationIcon, RefreshIcon, SettingsIcon } from "@/components/icons";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { AutomationStatsCards } from "./AutomationStatsCards";
@@ -10,11 +10,13 @@ import { AutomationFilters, type AutomationFilterState } from "./AutomationFilte
 import { AutomationModulesGrid } from "./AutomationModulesGrid";
 import { AutomationDetailPanel } from "./AutomationDetailPanel";
 import { AutomationLogsTable } from "./AutomationLogsTable";
+import { ConfigureAutomationModal } from "./ConfigureAutomationModal";
 import { useAutomationApi } from "@/hooks/api/useAutomationApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import {
   automationUiStatusToBackend,
   mergeAutomationModuleWithMockCatalog,
+  mapAutomationStatusBackendToUi,
   normalizeAutomationLogsForUi,
   normalizeAutomationModulesForUi,
   resolveAutomationBackendModuleKey,
@@ -40,6 +42,8 @@ export function AutomationPageClient() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<AutomationTab>("All");
   const [filters, setFilters] = useState<AutomationFilterState>(initialFilters);
+  const [configureOpen, setConfigureOpen] = useState(false);
+  const [configureModuleId, setConfigureModuleId] = useState<string | null>(null);
 
   const logRows = useMemo(
     () => normalizeAutomationLogsForUi(normalizeListResponse<unknown>(automationApi.logsQuery.data)),
@@ -102,9 +106,40 @@ export function AutomationPageClient() {
     if (next) setSelectedModule(next);
   }, [modulesWithLogs, panelOpen, selectedModule?.id]);
 
-  const handleConfigure = useCallback((_module?: AutomationModule) => {
-    showInfo("Configuration will be available in the integrations/settings setup.");
+  const openConfigure = useCallback((mod?: AutomationModule) => {
+    setConfigureModuleId(mod?.id ?? null);
+    setConfigureOpen(true);
   }, []);
+
+  const handleSaveConfigure = useCallback(
+    async (moduleKey: string, payload: Record<string, unknown>) => {
+      const key = resolveAutomationBackendModuleKey(moduleKey);
+      if (automationApi.isUsingFallback) {
+        setLocalModuleOverrides((prev) => ({
+          ...prev,
+          [moduleKey]: {
+            ...prev[moduleKey],
+            status: mapAutomationStatusBackendToUi(String(payload.status ?? "Warning")),
+            schedule: typeof payload.schedule === "string" ? payload.schedule : undefined,
+            triggerType: typeof payload.triggerType === "string" ? payload.triggerType : undefined,
+            description: typeof payload.description === "string" ? payload.description : undefined,
+          },
+        }));
+        showInfo("API offline, updated module locally.");
+        setConfigureOpen(false);
+        return;
+      }
+      try {
+        await automationApi.updateAutomationModule({ moduleKey: key, payload });
+        showSuccess("Automation configuration saved.");
+        setConfigureOpen(false);
+        await automationApi.refetch();
+      } catch {
+        showError("Could not save configuration.");
+      }
+    },
+    [automationApi]
+  );
 
   const handleToggleStatus = async (moduleId: string, nextStatus: AutomationStatus) => {
     const mod = modulesWithLogs.find((m) => m.id === moduleId);
@@ -143,9 +178,24 @@ export function AutomationPageClient() {
     try {
       const res = await automationApi.runAutomationModule({ moduleKey, payload, execute: false });
       const r = (res && typeof res === "object" ? res : {}) as Record<string, unknown>;
-      showSuccess(
-        `Queued — operation ${String(r.operationId ?? "—")}, job ${String(r.jobId ?? "—")}, status ${String(r.status ?? "queued")}`
-      );
+      const status = String(r.status ?? "").toLowerCase();
+      const message = String(r.message ?? "").toLowerCase();
+      if (status === "completed" || status === "success") {
+        showSuccess("Automation completed.");
+      } else if (
+        status.includes("queued") ||
+        status.includes("pending") ||
+        message.includes("queue") ||
+        message.includes("facade")
+      ) {
+        showInfo(
+          "Automation queued. In the current demo mode, background execution requires workers or inline execution."
+        );
+      } else if (status === "warning" || message.includes("warn")) {
+        showInfo("Automation queued with a warning — check logs for details.");
+      } else {
+        showSuccess(`Automation queued${r.operationId ? ` (run ${String(r.operationId).slice(0, 12)}…)` : ""}.`);
+      }
       await automationApi.refetch();
     } catch {
       showError("Could not queue automation run.");
@@ -201,9 +251,9 @@ export function AutomationPageClient() {
                 <RefreshIcon size={16} className="mr-1" />
                 Refresh
               </Button>
-              <Button type="button">
-                <PlusIcon size={16} className="mr-2" />
-                Add Automation
+              <Button type="button" onClick={() => openConfigure()}>
+                <SettingsIcon size={16} className="mr-2" />
+                Configure Automation
               </Button>
             </div>
           }
@@ -242,19 +292,30 @@ export function AutomationPageClient() {
             modules={filteredModules}
             onViewDetails={handleViewDetails}
             onToggleStatus={handleToggleStatus}
-            onConfigure={handleConfigure}
+            onConfigure={(m) => openConfigure(m)}
           />
         )}
 
         <AutomationLogsTable logs={logRows} />
       </div>
 
+      <ConfigureAutomationModal
+        open={configureOpen}
+        onClose={() => setConfigureOpen(false)}
+        modules={modulesWithLogs}
+        initialModuleId={configureModuleId}
+        onSave={handleSaveConfigure}
+        loading={automationApi.mutations.updateLoading}
+      />
+
       <AutomationDetailPanel
         module={selectedModule}
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
         onRun={(m) => void handleRunModule(m)}
-        onConfigure={handleConfigure}
+        onConfigure={(m) => {
+          openConfigure(m);
+        }}
       />
     </>
   );
