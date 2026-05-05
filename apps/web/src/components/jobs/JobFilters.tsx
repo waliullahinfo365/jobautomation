@@ -67,6 +67,7 @@ export function JobFilters({ filters, onChange, onClear }: JobFiltersProps) {
               { label: "Company Website", value: "Company Website" },
               { label: "Referral", value: "Referral" },
               { label: "Manual", value: "Manual" },
+              { label: "Other", value: "Other" },
             ]}
             className="flex-1"
           />

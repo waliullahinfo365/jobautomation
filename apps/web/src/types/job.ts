@@ -11,7 +11,7 @@ export type JobStatus =
 
 export type JobPriority = "Low" | "Medium" | "High" | "Urgent";
 
-export type JobSource = "Gmail" | "LinkedIn" | "Indeed" | "Company Website" | "Referral" | "Manual";
+export type JobSource = "Gmail" | "LinkedIn" | "Indeed" | "Company Website" | "Referral" | "Manual" | "Other";
 
 export interface JobDocument {
   id: string;

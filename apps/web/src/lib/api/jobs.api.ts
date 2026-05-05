@@ -1,5 +1,60 @@
 import type { Job } from "@/types/job";
+import { DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
 import { apiFetch, withQuery } from "./client";
+
+function tenantIdsForJobCreate(): { tenantId: string; createdBy: string } {
+  if (typeof window === "undefined") {
+    return { tenantId: DEMO_TENANT_ID, createdBy: DEMO_USER_ID };
+  }
+  try {
+    return {
+      tenantId: localStorage.getItem("tenantId") ?? sessionStorage.getItem("tenantId") ?? DEMO_TENANT_ID,
+      createdBy: localStorage.getItem("userId") ?? sessionStorage.getItem("userId") ?? DEMO_USER_ID,
+    };
+  } catch {
+    return { tenantId: DEMO_TENANT_ID, createdBy: DEMO_USER_ID };
+  }
+}
+
+export type CreateJobFormPayload = {
+  company: string;
+  position: string;
+  source: string;
+  status: string;
+  priority: string;
+  location?: string;
+  jobUrl?: string;
+  salaryRange?: string;
+  deadline?: string;
+  description?: string;
+};
+
+/** Body for POST /jobs (includes tenantId/createdBy required by API validation). */
+export function buildCreateJobPayload(input: CreateJobFormPayload): Record<string, unknown> {
+  const ids = tenantIdsForJobCreate();
+  const payload: Record<string, unknown> = {
+    ...ids,
+    company: input.company.trim(),
+    position: input.position.trim(),
+    title: input.position.trim(),
+    source: input.source,
+    status: input.status,
+    priority: input.priority,
+  };
+  const loc = input.location?.trim();
+  if (loc) payload.location = loc;
+  const url = input.jobUrl?.trim();
+  if (url) payload.jobUrl = url;
+  const salary = input.salaryRange?.trim();
+  if (salary) payload.salaryRange = salary;
+  const desc = input.description?.trim();
+  if (desc) payload.description = desc;
+  const d = input.deadline?.trim();
+  if (d) {
+    payload.deadline = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T12:00:00.000Z`).toISOString() : d;
+  }
+  return payload;
+}
 
 export function listJobs(params?: Record<string, unknown>) {
   return apiFetch<Job[]>(withQuery("/jobs", params as Record<string, string | number | boolean | null | undefined>));

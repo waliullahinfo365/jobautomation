@@ -14,18 +14,35 @@ export function useJobsApi(options?: { fallbackToMock?: boolean; params?: Record
   const provisionMutation = useApiMutation(({ id, execute }: { id: string; execute?: boolean }) =>
     jobsApi.provisionFolders(id, { execute })
   );
+  const createMutation = useApiMutation(jobsApi.createJob);
+  const updateMutation = useApiMutation(({ id, payload }: { id: string; payload: Record<string, unknown> }) =>
+    jobsApi.updateJob(id, payload)
+  );
+  const archiveMutation = useApiMutation((id: string) => jobsApi.archiveJob(id));
+  const generateResearchMutation = useApiMutation(({ id, execute }: { id: string; execute?: boolean }) =>
+    jobsApi.generateResearch(id, { execute })
+  );
+  const generateDraftMutation = useApiMutation(({ id, execute }: { id: string; execute?: boolean }) =>
+    jobsApi.generateDraft(id, { execute })
+  );
+  const runAiProcessingMutation = useApiMutation(({ id, options: runOptions }: { id: string; options?: Record<string, unknown> }) =>
+    jobsApi.runAiProcessing(id, runOptions)
+  );
+  const checkDuplicateMutation = useApiMutation((id: string) => jobsApi.checkDuplicate(id));
 
   return {
     ...query,
     list: query.data,
-    create: useApiMutation(jobsApi.createJob).mutate,
-    update: useApiMutation(({ id, payload }: { id: string; payload: Record<string, unknown> }) => jobsApi.updateJob(id, payload)).mutate,
-    archive: useApiMutation((id: string) => jobsApi.archiveJob(id)).mutate,
-    generateResearch: useApiMutation(({ id, execute }: { id: string; execute?: boolean }) => jobsApi.generateResearch(id, { execute })).mutate,
-    generateDraft: useApiMutation(({ id, execute }: { id: string; execute?: boolean }) => jobsApi.generateDraft(id, { execute })).mutate,
-    runAiProcessing: useApiMutation(({ id, options: runOptions }: { id: string; options?: Record<string, unknown> }) => jobsApi.runAiProcessing(id, runOptions)).mutate,
+    create: createMutation.mutate,
+    createJob: createMutation.mutate,
+    createJobLoading: createMutation.loading,
+    update: updateMutation.mutate,
+    archive: archiveMutation.mutate,
+    generateResearch: generateResearchMutation.mutate,
+    generateDraft: generateDraftMutation.mutate,
+    runAiProcessing: runAiProcessingMutation.mutate,
     provisionFolders: provisionMutation.mutate,
-    checkDuplicate: useApiMutation((id: string) => jobsApi.checkDuplicate(id)).mutate,
+    checkDuplicate: checkDuplicateMutation.mutate,
   };
 }
 
