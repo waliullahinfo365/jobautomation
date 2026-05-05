@@ -3,10 +3,13 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Animated Fibonacci sphere background for the login page.
- * - Pure Canvas 2D, no dependencies
+ * Interactive Fibonacci sphere background.
+ * - Static sphere by default (no auto-rotation)
+ * - Cursor-repulsion: dots within REPULSION_RADIUS of the mouse are
+ *   pushed outward; closer dots are pushed harder
+ * - Smooth easing on both push-out and return-to-rest
  * - Respects prefers-reduced-motion
- * - Pauses when tab is hidden (visibility API)
+ * - Pauses when tab is hidden
  * - DPR-aware for crisp rendering on retina displays
  */
 export function LoginBackground() {
@@ -22,17 +25,28 @@ export function LoginBackground() {
 
     // ─── Config ────────────────────────────────────────
     const NUM_POINTS = 2500;
-    const ROTATION_SPEED_Y = 0.0008; // radians per ms
-    const ROTATION_SPEED_X = 0.00018; // very subtle drift
-    const POINT_RADIUS = 0.9; // base dot size in px
-    const SPHERE_SCALE = 0.42; // sphere fills 42% of min(w,h)
-    const MIN_OPACITY = 0.08; // back-facing points
-    const MAX_OPACITY = 1.0; // front-facing points
+    const POINT_RADIUS = 0.9;
+    const SPHERE_SCALE = 0.42;        // fills 42% of min(w,h)
+    const MIN_OPACITY = 0.08;
+    const MAX_OPACITY = 1.0;
+
+    // Cursor repulsion
+    const REPULSION_RADIUS = 180;     // px around cursor that affects dots
+    const REPULSION_STRENGTH = 90;    // max displacement in px
+    const EASE_IN = 0.18;             // how fast displacement ramps up (0..1)
+    const EASE_OUT = 0.08;            // how fast it returns to rest (0..1)
+    const FALLOFF_POWER = 1.8;        // higher = sharper hole edge
+
     const REDUCE_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // ─── Generate Fibonacci sphere points ──────────────
-    // Even distribution of N points across a unit sphere surface
-    const points: { x: number; y: number; z: number }[] = [];
+    // ─── Generate Fibonacci sphere ─────────────────────
+    type Point = {
+      x: number; y: number; z: number;
+      // current displacement from rest position (eased)
+      dx: number; dy: number;
+    };
+
+    const points: Point[] = [];
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
     const angleIncrement = Math.PI * 2 * goldenRatio;
 
@@ -44,90 +58,119 @@ export function LoginBackground() {
         x: Math.sin(inclination) * Math.cos(azimuth),
         y: Math.sin(inclination) * Math.sin(azimuth),
         z: Math.cos(inclination),
+        dx: 0,
+        dy: 0,
       });
     }
 
-    // ─── Resize handling (DPR-aware) ───────────────────
+    // ─── Resize handling ───────────────────────────────
     let width = 0;
     let height = 0;
     let dpr = 1;
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x for perf
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       width = window.innerWidth;
       height = window.innerHeight;
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
     window.addEventListener("resize", resize);
 
-    // ─── Render loop ───────────────────────────────────
-    let rotY = 0;
-    let rotX = 0;
-    let lastTime = performance.now();
-    let isVisible = !document.hidden;
+    // ─── Pointer tracking ──────────────────────────────
+    // We track on window so events still register over the form card on top.
+    const mouse = {
+      x: -9999,
+      y: -9999,
+      active: false,
+    };
 
+    const onPointerMove = (e: PointerEvent) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    };
+    const onPointerLeave = () => {
+      mouse.active = false;
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerleave", onPointerLeave);
+    // For touch: same listener since pointermove covers touch
+    window.addEventListener("blur", onPointerLeave);
+
+    // ─── Visibility (pause when tab hidden) ────────────
+    let isVisible = !document.hidden;
     const onVisibility = () => {
+      const wasHidden = !isVisible;
       isVisible = !document.hidden;
-      if (isVisible) {
-        lastTime = performance.now();
-        tick();
-      }
+      if (wasHidden && isVisible) tick();
     };
     document.addEventListener("visibilitychange", onVisibility);
 
+    // ─── Render loop ───────────────────────────────────
     const tick = () => {
       if (!isVisible) return;
 
-      const now = performance.now();
-      const dt = now - lastTime;
-      lastTime = now;
-
-      if (!REDUCE_MOTION) {
-        rotY += ROTATION_SPEED_Y * dt;
-        rotX += ROTATION_SPEED_X * dt;
-      }
-
-      // Clear
       ctx.clearRect(0, 0, width, height);
 
-      // Sphere center + radius
       const cx = width / 2;
       const cy = height / 2;
       const sphereRadius = Math.min(width, height) * SPHERE_SCALE;
 
-      // Precompute rotation matrices
-      const sinY = Math.sin(rotY);
-      const cosY = Math.cos(rotY);
-      const sinX = Math.sin(rotX);
-      const cosX = Math.cos(rotX);
+      const repulsionRadiusSq = REPULSION_RADIUS * REPULSION_RADIUS;
 
-      // Project + draw each point
       for (let i = 0; i < points.length; i++) {
         const p = points[i];
 
-        // Rotate Y
-        const x1 = p.x * cosY - p.z * sinY;
-        const z1 = p.x * sinY + p.z * cosY;
+        // Project to 2D (orthographic, no rotation by default)
+        // The sphere is static — it's the depth (z) that gives the 3D look.
+        const baseX = cx + p.x * sphereRadius;
+        const baseY = cy + p.y * sphereRadius;
+        const z = p.z;
 
-        // Rotate X
-        const y2 = p.y * cosX - z1 * sinX;
-        const z2 = p.y * sinX + z1 * cosX;
+        // Compute target displacement based on cursor proximity
+        let targetDx = 0;
+        let targetDy = 0;
 
-        // Project to 2D (orthographic)
-        const sx = cx + x1 * sphereRadius;
-        const sy = cy + y2 * sphereRadius;
+        if (mouse.active) {
+          // Use the dot's current displaced position when checking distance
+          // so dots that are already pushed don't snap back if mouse is right on them
+          const currentX = baseX + p.dx;
+          const currentY = baseY + p.dy;
+          const ddx = currentX - mouse.x;
+          const ddy = currentY - mouse.y;
+          const distSq = ddx * ddx + ddy * ddy;
 
-        // Depth-based opacity (z2 ranges -1 to 1; -1 is back, 1 is front)
-        const depth = (z2 + 1) / 2; // 0..1
+          if (distSq < repulsionRadiusSq && distSq > 0.5) {
+            const dist = Math.sqrt(distSq);
+            // Falloff: 1 at center, 0 at edge of repulsion radius
+            const t = 1 - dist / REPULSION_RADIUS;
+            const force = Math.pow(t, FALLOFF_POWER) * REPULSION_STRENGTH;
+            // Push direction = away from mouse
+            targetDx = (ddx / dist) * force;
+            targetDy = (ddy / dist) * force;
+          }
+        }
+
+        // Ease toward target (faster ramp-up than ramp-down for tactile feel)
+        const ease = (Math.abs(targetDx) + Math.abs(targetDy) >
+                      Math.abs(p.dx) + Math.abs(p.dy)) ? EASE_IN : EASE_OUT;
+
+        p.dx += (targetDx - p.dx) * ease;
+        p.dy += (targetDy - p.dy) * ease;
+
+        // Final draw position
+        const sx = baseX + p.dx;
+        const sy = baseY + p.dy;
+
+        // Depth-based opacity + size
+        const depth = (z + 1) / 2; // 0..1
         const opacity = MIN_OPACITY + (MAX_OPACITY - MIN_OPACITY) * depth;
-
-        // Slight size variation by depth (front points slightly larger)
         const radius = POINT_RADIUS * (0.6 + depth * 0.6);
 
         ctx.beginPath();
@@ -141,21 +184,26 @@ export function LoginBackground() {
       }
     };
 
-    // Initial render (always at least one frame, even with reduce-motion)
+    // Initial render — always at least one frame
     tick();
 
     // ─── Cleanup ───────────────────────────────────────
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerleave", onPointerLeave);
+      window.removeEventListener("blur", onPointerLeave);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black">
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-black"
+    >
       <canvas ref={canvasRef} className="absolute inset-0 block" />
-      {/* Optional: radial vignette so the form has more breathing room */}
       <div
         className="absolute inset-0"
         style={{
