@@ -67,7 +67,10 @@ async function initializeBullMQWorker() {
     const dynamicImport = new Function("p", "return import(p)") as (path: string) => Promise<any>;
     const bullmq = await dynamicImport("bullmq");
     const ioredis = await dynamicImport("ioredis");
-    const connection = new ioredis.default(process.env.REDIS_URL);
+    const connection = new ioredis.default(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    });
 
     const worker = new bullmq.Worker(
       AUTOMATION_QUEUE_NAME,
