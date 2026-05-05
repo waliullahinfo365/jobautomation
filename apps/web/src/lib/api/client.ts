@@ -1,4 +1,8 @@
-import { API_URL, AUTH_TOKEN_STORAGE_KEY, DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
+import { env, AUTH_TOKEN_STORAGE_KEY, DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
+
+if (process.env.NODE_ENV !== "production") {
+  console.info("[jobflow/api] API base URL:", env.api.url);
+}
 
 type QueryValue = string | number | boolean | null | undefined;
 
@@ -200,7 +204,7 @@ async function performFetch<T>(
   const signal = options.signal ?? controller.signal;
 
   try {
-    const response = await fetch(`${API_URL}${path}`, {
+    const response = await fetch(`${env.api.url}${path}`, {
       method: options.method,
       headers: getApiHeaders(options.headers),
       body: options.body === undefined ? undefined : JSON.stringify(options.body),

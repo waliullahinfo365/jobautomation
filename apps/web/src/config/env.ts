@@ -16,7 +16,23 @@ function optionalBooleanEnv(key: string, fallback: boolean): boolean {
   return raw === "true";
 }
 
-export const API_URL = optionalEnv("NEXT_PUBLIC_API_URL", "http://localhost:4000");
+/**
+ * Public API base URL for browser `fetch`. Read only from `process.env.NEXT_PUBLIC_API_URL`.
+ * In production, missing or blank values throw (no localhost fallback).
+ */
+function resolveNextPublicApiUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (trimmed) return trimmed;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Missing NEXT_PUBLIC_API_URL: set it to your public API origin (e.g. https://jobautomation-production.up.railway.app). Production cannot fall back to localhost."
+    );
+  }
+  return "http://localhost:4000";
+}
+
+export const API_URL = resolveNextPublicApiUrl();
 export const DEMO_TENANT_ID = optionalEnv("NEXT_PUBLIC_DEMO_TENANT_ID", "demo-tenant-id");
 export const DEMO_USER_ID = optionalEnv("NEXT_PUBLIC_DEMO_USER_ID", "demo-user-id");
 /** Target inbox for report send-test actions (demo). */
