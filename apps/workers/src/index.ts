@@ -34,6 +34,8 @@ export async function processMemoryQueueNow() {
 }
 
 async function main() {
+  logger.info("Starting JobFlow workers");
+  logger.info({ queueMode: process.env.QUEUE_MODE }, "Worker queue mode loaded");
   validateWorkerEnv();
   await connectDatabase();
   await startWorkers();
@@ -64,7 +66,16 @@ function registerShutdown() {
 }
 
 registerShutdown();
-void main().catch((err) => {
-  logger.error(err, "workers failed to start");
+void main().catch((error) => {
+  logger.error(
+    {
+      err: error,
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      cause: error instanceof Error ? error.cause : undefined,
+    },
+    "workers failed to start"
+  );
   process.exit(1);
 });

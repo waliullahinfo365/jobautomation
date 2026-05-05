@@ -1,19 +1,15 @@
-function shouldValidate(): boolean {
-  return process.env.NODE_ENV === "production" || process.env.FORCE_ENV_VALIDATION === "true";
-}
-
 function warn(msg: string): void {
   console.warn(`[workers env] ${msg}`);
 }
 
-function fail(msg: string): never {
-  throw new Error(`[workers env] ${msg}`);
+function failMissingEnv(key: string): never {
+  throw new Error(`Missing required worker env: ${key}`);
 }
 
 export function validateWorkerEnv(): void {
-  if (!shouldValidate()) return;
-
   const required = [
+    ["NODE_ENV", process.env.NODE_ENV],
+    ["QUEUE_MODE", process.env.QUEUE_MODE],
     ["MONGODB_URI", process.env.MONGODB_URI],
     ["JWT_SECRET", process.env.JWT_SECRET],
     ["ENCRYPTION_KEY", process.env.ENCRYPTION_KEY],
@@ -21,13 +17,13 @@ export function validateWorkerEnv(): void {
 
   for (const [key, val] of required) {
     if (!val || String(val).trim() === "") {
-      fail(`Missing required environment variable: ${key}`);
+      failMissingEnv(key);
     }
   }
 
-  const mode = process.env.QUEUE_MODE ?? "memory";
+  const mode = process.env.QUEUE_MODE!;
   if (mode === "bullmq" && !process.env.REDIS_URL) {
-    fail("QUEUE_MODE is bullmq but REDIS_URL is not set");
+    failMissingEnv("REDIS_URL");
   }
 
   if (process.env.NODE_ENV === "production" && mode === "memory") {
