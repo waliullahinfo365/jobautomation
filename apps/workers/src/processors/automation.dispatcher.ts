@@ -43,15 +43,30 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
     case "pdf-export":
       return processPdfExportJob({ tenantId: payload.tenantId, documentId: (payload as { documentId: string }).documentId, userId: payload.userId ?? "system", operationId: payload.operationId });
     case "research-document":
-      return processResearchGenerationJob({ tenantId: payload.tenantId, jobId: (payload as { jobId: string }).jobId, userId: payload.userId ?? "system", mode: (payload as { mode?: "research" | "draft" }).mode ?? "research", correlationId: payload.correlationId });
+      return processResearchGenerationJob({
+        tenantId: payload.tenantId,
+        jobId: (payload as { jobId: string }).jobId,
+        userId: payload.userId ?? "system",
+        mode: (payload as { mode?: "research" | "draft" }).mode ?? "research",
+        operationId: payload.operationId,
+        correlationId: payload.correlationId,
+      });
     case "ai-processing":
-      return processAiProcessingJob({ tenantId: payload.tenantId, jobId: (payload as { jobId: string }).jobId, userId: payload.userId ?? "system", mode: (payload as { mode?: "research" | "draft" | "full" }).mode ?? "full", correlationId: payload.correlationId });
+      return processAiProcessingJob({
+        tenantId: payload.tenantId,
+        jobId: (payload as { jobId: string }).jobId,
+        userId: payload.userId ?? "system",
+        mode: (payload as { mode?: "research" | "draft" | "full" }).mode ?? "full",
+        operationId: payload.operationId,
+        correlationId: payload.correlationId,
+      });
     case "cover-letter":
       return processAiProcessingJob({
         tenantId: payload.tenantId,
         jobId: (payload as { jobId: string }).jobId,
         userId: payload.userId ?? "system",
         mode: "draft",
+        operationId: payload.operationId,
         correlationId: payload.correlationId,
       });
     case "daily-digest":
