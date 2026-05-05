@@ -1,22 +1,43 @@
+import { useState } from "react";
 import type { SecuritySettings } from "@/types/settings";
 import { SettingSectionCard } from "./SettingSectionCard";
 import { Button } from "@/components/ui/button";
+import { ChangePasswordModal } from "@/components/profile/ChangePasswordModal";
+import { SecuritySettingsModal } from "./SecuritySettingsModal";
 
 export function SecuritySection({ security }: { security: SecuritySettings }) {
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   return (
-    <SettingSectionCard title="Security" description="Security controls are placeholders in this UI phase.">
-      <div className="space-y-2 text-sm">
-        <Field label="Password" value={security.passwordStatus} />
-        <Field label="Two-factor authentication" value={security.twoFactorStatus} />
-        <Field label="Active sessions" value={security.activeSessions} />
-        <Field label="API keys" value={security.apiKeysStatus} />
-        <Field label="Audit logs" value={security.auditLogsStatus} />
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="outline">Manage Password</Button>
-        <Button variant="outline">Manage Sessions</Button>
-      </div>
-    </SettingSectionCard>
+    <>
+      <SettingSectionCard title="Security" description="Security controls are placeholders in this UI phase.">
+        <div className="space-y-2 text-sm">
+          <Field label="Password" value={security.passwordStatus} />
+          <Field label="Two-factor authentication" value={security.twoFactorStatus} />
+          <Field label="Active sessions" value={security.activeSessions} />
+          <Field label="API keys" value={security.apiKeysStatus} />
+          <Field label="Audit logs" value={security.auditLogsStatus} />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setIsPasswordOpen(true)}>
+            Manage Password
+          </Button>
+          <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
+            Manage Settings
+          </Button>
+        </div>
+      </SettingSectionCard>
+
+      <ChangePasswordModal
+        isOpen={isPasswordOpen}
+        onClose={() => setIsPasswordOpen(false)}
+      />
+      <SecuritySettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+    </>
   );
 }
 

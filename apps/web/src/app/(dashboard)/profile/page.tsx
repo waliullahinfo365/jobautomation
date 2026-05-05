@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Button } from "@/components/ui/button";
 import { SettingsIcon } from "@/components/icons";
+import { EditProfileModal } from "@/components/profile/EditProfileModal";
+import { ChangePasswordModal } from "@/components/profile/ChangePasswordModal";
 import { me } from "@/lib/api/auth.api";
-import { showInfo } from "@/lib/ui/toast";
 
 type ProfileState = {
   name: string;
@@ -29,6 +30,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileState>(FALLBACK_PROFILE);
   const [loading, setLoading] = useState(true);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -83,16 +86,37 @@ export default function ProfilePage() {
       </SectionCard>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => showInfo("Profile editing will be available soon.")}>
+        <Button type="button" onClick={() => setIsEditProfileOpen(true)}>
           Edit Profile
         </Button>
-        <Button type="button" variant="outline" onClick={() => showInfo("Password change will be available soon.")}>
+        <Button type="button" variant="outline" onClick={() => setIsChangePasswordOpen(true)}>
           Change Password
         </Button>
         <Button type="button" variant="secondary" onClick={() => router.push("/settings")}>
           Back to Settings
         </Button>
       </div>
+
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        currentProfile={{
+          name: profile.name,
+          email: profile.email,
+          workspaceName: profile.workspaceName,
+        }}
+        onSave={(updatedProfile) => {
+          setProfile((prev) => ({
+            ...prev,
+            ...updatedProfile,
+          }));
+        }}
+      />
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }
