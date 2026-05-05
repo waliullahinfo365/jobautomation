@@ -8,7 +8,7 @@ type QueueMode = "memory" | "bullmq" | "disabled";
 
 const memoryQueue: Array<{ id: string; name: AutomationJobName; payload: AutomationJobPayload }> = [];
 const idempotencyMap = new Map<string, { jobId: string; operationId: string; timestamp: number }>();
-const IDEMPOTENCY_WINDOW_MS = 15 * 60 * 1000;
+const IDEMPOTENCY_WINDOW_MS = 60 * 1000;
 
 let bullQueue: { add: (name: string, payload: unknown, options?: Record<string, unknown>) => Promise<{ id?: string }> } | null = null;
 let resolvedQueueMode: QueueMode | null = null;
@@ -111,7 +111,7 @@ export async function enqueueAutomationJob(input: EnqueueAutomationJobInput): Pr
       jobId: duplicate.jobId,
       name: input.name,
       status: "skipped",
-      message: "Skipped: matching idempotency key already queued recently",
+      message: "This action was already queued recently. Please wait a moment.",
     };
   }
 
@@ -139,7 +139,6 @@ export async function enqueueAutomationJob(input: EnqueueAutomationJobInput): Pr
       delay: input.delayMs ?? 0,
       attempts: input.attempts ?? 3,
       priority: input.priority ?? 5,
-      jobId: idempotencyKey || undefined,
       removeOnComplete: 100,
       removeOnFail: 100,
     });

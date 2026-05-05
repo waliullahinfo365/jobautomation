@@ -10,7 +10,7 @@ export type AiProcessingProcessorPayload = {
 };
 
 import { AutomationLogModel } from "@jobflow/database/models";
-import { createCoverLetterDocument, createResearchDocument } from "./ai-document-generation";
+import { createAiAnalysisDocument, createCoverLetterDocument, createResearchDocument } from "./ai-document-generation";
 
 export async function processAiProcessingJob(payload: AiProcessingProcessorPayload) {
   const operationId = payload.operationId ?? payload.correlationId ?? `ai-processing-${Date.now()}`;
@@ -30,31 +30,40 @@ export async function processAiProcessingJob(payload: AiProcessingProcessorPaylo
         userId: payload.userId,
         jobId: payload.jobId,
         operationId,
+        logModuleKey: "ai-processing",
       });
     }
 
-    const [research, coverLetter] = await Promise.all([
-      createResearchDocument({
-        tenantId: payload.tenantId,
-        userId: payload.userId,
-        jobId: payload.jobId,
-        operationId,
-      }),
-      createCoverLetterDocument({
-        tenantId: payload.tenantId,
-        userId: payload.userId,
-        jobId: payload.jobId,
-        operationId,
-      }),
-    ]);
+    const research = await createResearchDocument({
+      tenantId: payload.tenantId,
+      userId: payload.userId,
+      jobId: payload.jobId,
+      operationId,
+    });
+
+    const coverLetter = await createCoverLetterDocument({
+      tenantId: payload.tenantId,
+      userId: payload.userId,
+      jobId: payload.jobId,
+      operationId,
+      logModuleKey: "ai-processing",
+    });
+
+    const analysis = await createAiAnalysisDocument({
+      tenantId: payload.tenantId,
+      userId: payload.userId,
+      jobId: payload.jobId,
+      operationId,
+    });
 
     return {
+      suppressWorkerCompletionLog: true as const,
       moduleKey: "ai-processing",
       status: "completed",
       operationId,
       jobId: payload.jobId,
-      documentsCreated: [research.documentId, coverLetter.documentId],
-      summary: "Research and cover letter documents generated.",
+      documentsCreated: [research.documentId, coverLetter.documentId, analysis.documentId],
+      summary: "Research, cover letter, and AI analysis documents generated.",
     };
   } catch (error) {
     await AutomationLogModel.create({

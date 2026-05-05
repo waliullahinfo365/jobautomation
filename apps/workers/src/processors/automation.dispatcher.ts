@@ -18,7 +18,12 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
     case "job-intake":
       return processJobIntakeProcessor({ tenantId: payload.tenantId, userId: payload.userId ?? "system", payload: {} as never, correlationId: payload.correlationId });
     case "duplicate-protection":
-      return processDuplicateProtectionProcessor({ tenantId: payload.tenantId, jobId: (payload as { jobId: string }).jobId, correlationId: payload.correlationId });
+      return processDuplicateProtectionProcessor({
+        tenantId: payload.tenantId,
+        jobId: (payload as { jobId: string }).jobId,
+        operationId: payload.operationId,
+        correlationId: payload.correlationId,
+      });
     case "folder-automation":
       return processFolderAutomationJob({ tenantId: payload.tenantId, jobId: (payload as { jobId: string }).jobId, userId: payload.userId ?? "system", operationId: payload.operationId });
     case "applied-status":

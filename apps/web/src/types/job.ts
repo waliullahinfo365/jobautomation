@@ -16,9 +16,14 @@ export type JobSource = "Gmail" | "LinkedIn" | "Indeed" | "Company Website" | "R
 export interface JobDocument {
   id: string;
   fileName: string;
-  type: "CV" | "Cover Letter" | "Research" | "Final PDF";
-  status: "Draft" | "Ready" | "Generated" | "Sent";
+  type: "CV" | "Cover Letter" | "Research" | "Final PDF" | "Other";
+  status: "Draft" | "Ready" | "Generated" | "Sent" | "Archived";
   url: string;
+  createdAt?: string;
+  documentKind?: string;
+  contentPreview?: string;
+  /** Present for API-loaded documents; used in the view modal. */
+  contentText?: string;
 }
 
 export interface JobTimelineEvent {
@@ -35,6 +40,8 @@ export interface JobAutomationLog {
   detail: string;
   timestamp: Date | string;
   status: "success" | "warning" | "error";
+  moduleKey?: string;
+  raw?: Record<string, unknown>;
 }
 
 export interface Job {

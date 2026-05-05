@@ -8,6 +8,8 @@ type UseApiQueryOptions<T> = {
   fallbackToMock?: boolean;
   fallbackData?: T;
   mockResourceName?: string;
+  /** When this value changes, the query re-runs (e.g. route `id`). */
+  refreshKey?: string | number;
 };
 
 export function useApiQuery<T>(
@@ -30,6 +32,7 @@ export function useApiQuery<T>(
   const fetchingRef = useRef(false);
 
   const enabled = options?.enabled !== false;
+  const refreshKey = options?.refreshKey ?? "";
 
   const refetch = useCallback(async () => {
     const o = optionsRef.current;
@@ -91,7 +94,7 @@ export function useApiQuery<T>(
         fetchingRef.current = false;
       }
     })();
-  }, [enabled]); // only re-run if enabled toggles
+  }, [enabled, refreshKey]);
 
   return { data, loading, error, isUsingFallback, refetch };
 }

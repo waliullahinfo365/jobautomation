@@ -2,6 +2,23 @@ import type { Job } from "@/types/job";
 import { DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
 import { apiFetch, withQuery } from "./client";
 
+/** Response from POST queue endpoints (generate-research, generate-draft, etc.). */
+export type JobQueueEnqueueResponse = {
+  operationId: string;
+  jobId: string;
+  moduleKey: string;
+  status: "queued" | "scheduled" | "skipped";
+  message: string;
+};
+
+/** Response from POST /jobs/:id/check-duplicate (sync). */
+export type JobDuplicateCheckResponse = {
+  status: "Unique" | "Possible Duplicate" | "Duplicate" | "Skipped";
+  duplicateOfJobId?: string;
+  duplicateScore: number;
+  reasons: string[];
+};
+
 function tenantIdsForJobCreate(): { tenantId: string; createdBy: string } {
   if (typeof window === "undefined") {
     return { tenantId: DEMO_TENANT_ID, createdBy: DEMO_USER_ID };
@@ -64,8 +81,30 @@ export function createJob(payload: Record<string, unknown>) { return apiFetch<Jo
 export function updateJob(id: string, payload: Record<string, unknown>) { return apiFetch<Job>(`/jobs/${id}`, { method: "PATCH", body: payload }); }
 export function archiveJob(id: string) { return apiFetch(`/jobs/${id}/archive`, { method: "DELETE" }); }
 export function intakeTest(payload: Record<string, unknown>) { return apiFetch("/jobs/intake-test", { method: "POST", body: payload }); }
-export function generateResearch(id: string, options?: { execute?: boolean }) { return apiFetch(withQuery(`/jobs/${id}/generate-research`, { execute: options?.execute } as any), { method: "POST" }); }
-export function generateDraft(id: string, options?: { execute?: boolean }) { return apiFetch(withQuery(`/jobs/${id}/generate-draft`, { execute: options?.execute } as any), { method: "POST" }); }
-export function runAiProcessing(id: string, options?: Record<string, unknown>) { return apiFetch(withQuery(`/jobs/${id}/ai-processing/run`, { execute: options?.execute as boolean } as any), { method: "POST", body: options }); }
-export function provisionFolders(id: string, options?: { execute?: boolean }) { return apiFetch(withQuery(`/jobs/${id}/folders/provision`, { execute: options?.execute } as any), { method: "POST" }); }
-export function checkDuplicate(id: string) { return apiFetch(`/jobs/${id}/check-duplicate`, { method: "POST" }); }
+export function generateResearch(id: string, options?: { execute?: boolean }) {
+  return apiFetch<JobQueueEnqueueResponse>(
+    withQuery(`/jobs/${id}/generate-research`, { execute: options?.execute } as Record<string, string | number | boolean | null | undefined>),
+    { method: "POST" }
+  );
+}
+export function generateDraft(id: string, options?: { execute?: boolean }) {
+  return apiFetch<JobQueueEnqueueResponse>(
+    withQuery(`/jobs/${id}/generate-draft`, { execute: options?.execute } as Record<string, string | number | boolean | null | undefined>),
+    { method: "POST" }
+  );
+}
+export function runAiProcessing(id: string, options?: Record<string, unknown>) {
+  return apiFetch<JobQueueEnqueueResponse>(
+    withQuery(`/jobs/${id}/ai-processing/run`, { execute: options?.execute as boolean } as Record<string, string | number | boolean | null | undefined>),
+    { method: "POST", body: options }
+  );
+}
+export function provisionFolders(id: string, options?: { execute?: boolean }) {
+  return apiFetch<JobQueueEnqueueResponse>(
+    withQuery(`/jobs/${id}/folders/provision`, { execute: options?.execute } as Record<string, string | number | boolean | null | undefined>),
+    { method: "POST" }
+  );
+}
+export function checkDuplicate(id: string) {
+  return apiFetch<JobDuplicateCheckResponse>(`/jobs/${id}/check-duplicate`, { method: "POST" });
+}

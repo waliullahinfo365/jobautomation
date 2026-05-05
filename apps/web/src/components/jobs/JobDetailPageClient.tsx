@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoaderIcon, SparklesIcon } from "@/components/icons";
 import { JobDetailHeader } from "@/components/jobs/JobDetailHeader";
@@ -28,10 +29,15 @@ interface JobDetailPageClientProps {
   id: string;
 }
 
+const POLL_INTERVAL_MS = 2500;
+const POLL_MAX_TICKS = 12;
+
 export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [logAppOpen, setLogAppOpen] = useState(false);
+  const [duplicateFollowUp, setDuplicateFollowUp] = useState<{ jobId: string; status: string } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const mockFallbackJob = mockJobs.find((j) => j.id === id || j._id === id);
 
@@ -45,11 +51,34 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
 
   const job: Job | undefined = rawJob ? normalizeJobForUi(rawJob) : undefined;
 
-  const withLoading = useCallback(async (key: string, fn: () => Promise<unknown>) => {
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const startPollingJob = useCallback(() => {
+    stopPolling();
+    let ticks = 0;
+    pollRef.current = setInterval(() => {
+      ticks += 1;
+      void refetchJob();
+      if (ticks >= POLL_MAX_TICKS) stopPolling();
+    }, POLL_INTERVAL_MS);
+  }, [refetchJob, stopPolling]);
+
+  useEffect(() => {
+    setDuplicateFollowUp(null);
+    stopPolling();
+  }, [id, stopPolling]);
+
+  useEffect(() => () => stopPolling(), [stopPolling]);
+
+  const withLoading = useCallback(async <T,>(key: string, fn: () => Promise<T>): Promise<T> => {
     setActionLoading(key);
     try {
-      const result = await fn();
-      return result;
+      return await fn();
     } finally {
       setActionLoading(null);
     }
@@ -57,48 +86,82 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
 
   const handleCheckDuplicate = useCallback(async () => {
     try {
-      await withLoading("duplicate", () => jobsApi.checkDuplicate(id));
-      showSuccess("Duplicate check queued.");
+      setDuplicateFollowUp(null);
+      const result = await withLoading("duplicate", () => jobsApi.checkDuplicate(id));
+      if (result.status === "Duplicate" || result.status === "Possible Duplicate") {
+        if (result.duplicateOfJobId) {
+          setDuplicateFollowUp({ jobId: result.duplicateOfJobId, status: result.status });
+          showInfo(
+            `Possible duplicate (${result.status}). Match score ${Math.round(result.duplicateScore * 100)}%. Open the linked job to compare.`
+          );
+        } else {
+          showInfo("Duplicate check flagged a possible match. See automation activity for details.");
+        }
+        await refetchJob();
+        return;
+      }
+      showSuccess("No duplicate found.");
+      await refetchJob();
     } catch {
       showError("Duplicate check failed.");
     }
-  }, [id, jobsApi, withLoading]);
+  }, [id, jobsApi, refetchJob, withLoading]);
 
   const handleGenerateResearch = useCallback(async () => {
     try {
-      await withLoading("research", () => jobsApi.generateResearch({ id, execute: false }));
-      showSuccess("Research generation queued.");
+      const res = await withLoading("research", () => jobsApi.generateResearch({ id, execute: false }));
+      if (res.status === "skipped") {
+        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        return;
+      }
+      showSuccess("Research generation started.");
+      startPollingJob();
     } catch {
       showError("Failed to queue research generation.");
     }
-  }, [id, jobsApi, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading]);
 
   const handleGenerateDraft = useCallback(async () => {
     try {
-      await withLoading("draft", () => jobsApi.generateDraft({ id, execute: false }));
-      showSuccess("Draft generation queued.");
+      const res = await withLoading("draft", () => jobsApi.generateDraft({ id, execute: false }));
+      if (res.status === "skipped") {
+        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        return;
+      }
+      showSuccess("Draft generation started.");
+      startPollingJob();
     } catch {
       showError("Failed to queue draft generation.");
     }
-  }, [id, jobsApi, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading]);
 
   const handleRunAiProcessing = useCallback(async () => {
     try {
-      await withLoading("ai", () => jobsApi.runAiProcessing({ id, options: { mode: "full" } }));
-      showSuccess("AI processing queued.");
+      const res = await withLoading("ai", () => jobsApi.runAiProcessing({ id, options: { mode: "full" } }));
+      if (res.status === "skipped") {
+        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        return;
+      }
+      showSuccess("AI processing started.");
+      startPollingJob();
     } catch {
       showError("Failed to queue AI processing.");
     }
-  }, [id, jobsApi, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading]);
 
   const handleProvisionFolders = useCallback(async () => {
     try {
-      await withLoading("folders", () => jobsApi.provisionFolders({ id, execute: false }));
-      showSuccess("Folder provisioning queued.");
+      const res = await withLoading("folders", () => jobsApi.provisionFolders({ id, execute: false }));
+      if (res.status === "skipped") {
+        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        return;
+      }
+      showSuccess("Folder provisioning started.");
+      startPollingJob();
     } catch {
       showError("Failed to queue folder provisioning.");
     }
-  }, [id, jobsApi, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading]);
 
   const handleArchive = useCallback(async () => {
     try {
@@ -211,6 +274,18 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   return (
     <div className="space-y-6">
       <JobDetailHeader job={job} renderActions={actionBar} />
+
+      {duplicateFollowUp ? (
+        <div className="rounded-lg border border-[rgba(229,162,59,0.35)] bg-[var(--amber-bg)] px-4 py-3 text-sm text-[var(--text-2)]">
+          <span className="font-medium text-[var(--amber)]">{duplicateFollowUp.status}:</span> a matching job may exist.{" "}
+          <Link
+            href={`/jobs/${duplicateFollowUp.jobId}`}
+            className="font-medium text-[var(--violet)] underline underline-offset-2 hover:brightness-110"
+          >
+            Open matching job
+          </Link>
+        </div>
+      ) : null}
 
       <LogApplicationModal
         open={logAppOpen}

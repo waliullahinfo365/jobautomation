@@ -66,6 +66,124 @@ export function getResourceId(item: { id?: string; _id?: string } | null | undef
   return item.id ?? item._id ?? "";
 }
 
+function mapDocumentTypeToJobCard(t: string, meta?: Record<string, unknown>): JobDocument["type"] {
+  if (t === "CV" || t === "Cover Letter" || t === "Research" || t === "Final PDF") return t;
+  if (meta?.documentCategory === "ai-analysis") return "Other";
+  return "Other";
+}
+
+function mapDocumentRowStatus(status: string, generationStatus?: string): JobDocument["status"] {
+  if (generationStatus === "Generated") {
+    if (status === "Sent") return "Sent";
+    return "Generated";
+  }
+  const allowed: JobDocument["status"][] = ["Draft", "Ready", "Generated", "Sent", "Archived"];
+  return (allowed.includes(status as JobDocument["status"]) ? status : "Draft") as JobDocument["status"];
+}
+
+/** Maps a Mongo/API Document row (or mock row) into the job detail card shape. */
+export function normalizeJobDocumentRow(raw: unknown): JobDocument {
+  const d = (raw ?? {}) as Record<string, unknown>;
+  const meta = (d.metadata && typeof d.metadata === "object" ? d.metadata : {}) as Record<string, unknown>;
+
+  if (
+    typeof d.fileName === "string" &&
+    typeof d.type === "string" &&
+    d.id &&
+    !d._id &&
+    d.contentText === undefined &&
+    d.generationStatus === undefined
+  ) {
+    return {
+      id: String(d.id),
+      fileName: String(d.fileName),
+      type: d.type as JobDocument["type"],
+      status: (d.status as JobDocument["status"]) ?? "Draft",
+      url: String(d.url ?? ""),
+      createdAt: d.createdAt as string | undefined,
+      documentKind: d.documentKind as string | undefined,
+      contentPreview: d.contentPreview as string | undefined,
+    };
+  }
+
+  const id = String(d._id ?? d.id ?? "");
+  const contentText = typeof d.contentText === "string" ? d.contentText : "";
+  const typeRaw = String(d.type ?? "Other");
+  return {
+    id,
+    fileName: String(d.fileName ?? "Untitled"),
+    type: mapDocumentTypeToJobCard(typeRaw, meta),
+    status: mapDocumentRowStatus(String(d.status ?? "Draft"), String(d.generationStatus ?? "")),
+    url: typeof d.storageUrl === "string" && d.storageUrl.length > 0 ? d.storageUrl : "",
+    createdAt:
+      typeof d.createdAt === "string"
+        ? d.createdAt
+        : d.createdAt instanceof Date
+          ? d.createdAt.toISOString()
+          : undefined,
+    documentKind: d.documentKind ? String(d.documentKind) : undefined,
+    contentPreview: contentText ? contentText.slice(0, 280) : undefined,
+    contentText: contentText || undefined,
+  };
+}
+
+function mapAutomationLogBackendToJobActivityStatus(s: string): JobAutomationLog["status"] {
+  const u = s.toLowerCase();
+  if (u === "failed") return "error";
+  if (u === "warning" || u === "running") return "warning";
+  return "success";
+}
+
+function formatAutomationModuleLabel(key: string): string {
+  return key
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Maps an AutomationLog row (or mock activity row) for the job detail sidebar. */
+export function normalizeJobAutomationLogRow(raw: unknown): JobAutomationLog {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  if (typeof r.event === "string" && typeof r.detail === "string" && typeof r.status === "string") {
+    const statusLower = r.status.toLowerCase();
+    const status: JobAutomationLog["status"] =
+      statusLower === "error" || statusLower === "failed"
+        ? "error"
+        : statusLower === "warning"
+          ? "warning"
+          : "success";
+    return {
+      id: String(r.id ?? r._id ?? ""),
+      event: r.event,
+      detail: r.detail,
+      timestamp: String(r.timestamp ?? new Date().toISOString()),
+      status,
+      raw: { ...r },
+    };
+  }
+
+  const id = String(r._id ?? r.id ?? "");
+  const moduleKey = String(r.moduleKey ?? r.moduleName ?? "automation");
+  const message = String(r.message ?? "");
+  const created =
+    typeof r.createdAt === "string"
+      ? r.createdAt
+      : r.createdAt instanceof Date
+        ? r.createdAt.toISOString()
+        : new Date().toISOString();
+
+  return {
+    id,
+    event: formatAutomationModuleLabel(moduleKey),
+    detail: message,
+    timestamp: created,
+    status: mapAutomationLogBackendToJobActivityStatus(String(r.status ?? "Success")),
+    moduleKey,
+    raw: { ...r },
+  };
+}
+
 /**
  * Normalizes a raw backend Job (which uses _id, may alias fields differently)
  * to the frontend Job shape that components expect.
@@ -73,6 +191,17 @@ export function getResourceId(item: { id?: string; _id?: string } | null | undef
 export function normalizeJobForUi(raw: unknown): Job {
   const j = (raw ?? {}) as Record<string, unknown>;
   const id = ((j.id ?? j._id) as string) ?? "";
+  const documentsRaw = j.documents;
+  const automationRaw = j.automationLogs;
+
+  const documents: JobDocument[] = Array.isArray(documentsRaw)
+    ? (documentsRaw as unknown[]).map(normalizeJobDocumentRow)
+    : [];
+
+  const automationLogs: JobAutomationLog[] = Array.isArray(automationRaw)
+    ? (automationRaw as unknown[]).map(normalizeJobAutomationLogRow)
+    : [];
+
   return {
     id,
     _id: id,
@@ -98,9 +227,9 @@ export function normalizeJobForUi(raw: unknown): Job {
     aiSummary: (j.aiSummary as string) ?? "",
     duplicateStatus: (j.duplicateStatus as Job["duplicateStatus"]) ?? "Skipped Duplicate",
     folderCreated: Boolean(j.folderCreated),
-    documents: ((j.documents ?? []) as JobDocument[]),
+    documents,
     timeline: ((j.timeline ?? []) as JobTimelineEvent[]),
-    automationLogs: ((j.automationLogs ?? []) as JobAutomationLog[]),
+    automationLogs,
     tags: ((j.tags ?? []) as string[]),
     notes: (j.notes as string | undefined),
     contactIds: ((j.contactIds ?? []) as string[]),

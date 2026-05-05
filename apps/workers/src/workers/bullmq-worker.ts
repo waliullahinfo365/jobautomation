@@ -62,6 +62,9 @@ export async function processAutomationJob(name: AutomationJobName, payload: Aut
         });
         return result;
       }
+      if (resultObj.suppressWorkerCompletionLog === true) {
+        return result;
+      }
     }
 
     await createWorkerLog({

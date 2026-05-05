@@ -162,4 +162,4 @@ export const runAutomationModule = asyncHandler(async (req: Request, res) => {
     "Automation queued"
   );
 });
-export const getAutomationLogs = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const logs=await listAutomationLogs(tenantId,{ moduleKey: typeof req.query.moduleKey==='string'?req.query.moduleKey:undefined, status: typeof req.query.status==='string'?req.query.status:undefined, limit: typeof req.query.limit==='string'?Number(req.query.limit):undefined }); return successResponse(res,logs); });
+export const getAutomationLogs = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const logs=await listAutomationLogs(tenantId,{ moduleKey: typeof req.query.moduleKey==='string'?req.query.moduleKey:undefined, status: typeof req.query.status==='string'?req.query.status:undefined, limit: typeof req.query.limit==='string'?Number(req.query.limit):undefined, jobId: typeof req.query.jobId==='string'?req.query.jobId:undefined }); return successResponse(res,logs); });

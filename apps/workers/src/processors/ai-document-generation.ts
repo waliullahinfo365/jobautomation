@@ -23,7 +23,7 @@ function toId(value: unknown): string {
   return String(value ?? "");
 }
 
-function sanitizeFileName(value: string): string {
+function sanitizeTitle(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
@@ -57,7 +57,7 @@ export async function loadJobContext(input: {
   };
 }
 
-async function createAutomationLog(input: {
+async function writeAutomationLog(input: {
   tenantId: string;
   moduleKey: string;
   status: "Success" | "Warning" | "Failed" | "Running";
@@ -67,6 +67,7 @@ async function createAutomationLog(input: {
   relatedRecordId?: string;
   metadata?: Record<string, unknown>;
   error?: string;
+  durationMs?: number;
 }) {
   await AutomationLogModel.create({
     tenantId: input.tenantId,
@@ -80,6 +81,7 @@ async function createAutomationLog(input: {
     relatedRecordId: input.relatedRecordId,
     metadata: input.metadata ?? {},
     error: input.error,
+    durationMs: input.durationMs,
   });
 }
 
@@ -133,26 +135,29 @@ async function generateWithClaude(input: {
   return { text, model, usedFallback: false };
 }
 
+const suppressFlag = { suppressWorkerCompletionLog: true as const };
+
 export async function createResearchDocument(input: {
   tenantId: string;
   userId: string;
   jobId: string;
   operationId?: string;
 }) {
+  const started = Date.now();
   const ctx = await loadJobContext(input);
-  const title = sanitizeFileName(`Research — ${ctx.company} ${ctx.position}`);
+  const title = sanitizeTitle(`Research — ${ctx.company} — ${ctx.position}`);
 
   const prompt = [
-    "Create a concise job research brief in plain text with these sections:",
-    "1) Company overview",
-    "2) Role summary",
-    "3) Key requirements",
-    "4) Suggested resume keywords",
-    "5) Suggested cover letter angles",
-    "6) Interview preparation notes",
+    "Create a concise job research brief in plain text with these section headings:",
+    "Company Overview",
+    "Role Summary",
+    "Key Requirements",
+    "Resume Keywords",
+    "Cover Letter Angles",
+    "Interview Prep Notes",
     "",
-    `Tenant/workspace: ${ctx.tenantName ?? "Unknown Workspace"}`,
-    `Candidate/User: ${ctx.userName ?? "Unknown User"}`,
+    `Workspace: ${ctx.tenantName ?? "Unknown Workspace"}`,
+    `Candidate: ${ctx.userName ?? "Unknown User"}`,
     `Company: ${ctx.company}`,
     `Position: ${ctx.position}`,
     `Location: ${ctx.location ?? "Not specified"}`,
@@ -160,22 +165,29 @@ export async function createResearchDocument(input: {
   ].join("\n");
 
   const fallbackText = [
-    `Company overview: ${ctx.company} is actively hiring for ${ctx.position}.`,
-    `Role summary: The role focuses on delivery, collaboration, and measurable impact.`,
-    "Key requirements:",
-    "- Relevant role experience",
+    "Company Overview",
+    `${ctx.company} is hiring for ${ctx.position}.`,
+    "",
+    "Role Summary",
+    "Focus on delivery, collaboration, and measurable outcomes aligned with the role.",
+    "",
+    "Key Requirements",
+    "- Relevant experience for the role",
     "- Strong communication and ownership",
-    "- Evidence of shipped outcomes",
-    "Suggested resume keywords:",
-    "- Frontend architecture",
+    "- Track record of shipped work",
+    "",
+    "Resume Keywords",
     "- Cross-functional delivery",
-    "- Performance optimization",
-    "Suggested cover letter angles:",
+    "- System design",
+    "- Metrics-driven execution",
+    "",
+    "Cover Letter Angles",
     "- Business impact from prior projects",
     "- Alignment with company mission",
-    "- Collaboration and leadership examples",
-    "Interview preparation notes:",
-    "- Prepare 2-3 STAR examples with metrics.",
+    "",
+    "Interview Prep Notes",
+    "- Prepare 2–3 STAR stories with metrics",
+    "- Research recent company news",
   ].join("\n");
 
   const generated = await generateWithClaude({
@@ -201,7 +213,7 @@ export async function createResearchDocument(input: {
       operationId: ctx.operationId,
       source: "worker:research-document",
       model: generated.model,
-      completedStatus: true,
+      generatedAt: new Date().toISOString(),
     },
   });
 
@@ -212,8 +224,10 @@ export async function createResearchDocument(input: {
     lastAiRunAt: new Date(),
   });
 
+  const durationMs = Date.now() - started;
+
   if (generated.usedFallback) {
-    await createAutomationLog({
+    await writeAutomationLog({
       tenantId: ctx.tenantId,
       moduleKey: "research-document",
       status: "Warning",
@@ -221,22 +235,25 @@ export async function createResearchDocument(input: {
       operationId: ctx.operationId,
       relatedRecordType: "Document",
       relatedRecordId: toId(doc._id),
-      metadata: { jobId: ctx.jobId, usedFallback: true },
+      durationMs,
+      metadata: { jobId: ctx.jobId, usedFallback: true, model: generated.model },
+    });
+  } else {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: "research-document",
+      status: "Success",
+      message: "Research document generated",
+      operationId: ctx.operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: toId(doc._id),
+      durationMs,
+      metadata: { jobId: ctx.jobId, documentId: toId(doc._id), model: generated.model },
     });
   }
 
-  await createAutomationLog({
-    tenantId: ctx.tenantId,
-    moduleKey: "research-document",
-    status: "Success",
-    message: "Research document generated successfully.",
-    operationId: ctx.operationId,
-    relatedRecordType: "Document",
-    relatedRecordId: toId(doc._id),
-    metadata: { jobId: ctx.jobId, model: generated.model, usedFallback: generated.usedFallback },
-  });
-
   return {
+    ...suppressFlag,
     moduleKey: "research-document",
     status: "completed",
     operationId: ctx.operationId,
@@ -252,17 +269,19 @@ export async function createCoverLetterDocument(input: {
   userId: string;
   jobId: string;
   operationId?: string;
+  logModuleKey?: string;
 }) {
+  const started = Date.now();
+  const logModule = input.logModuleKey ?? "ai-processing";
   const ctx = await loadJobContext(input);
-  const title = sanitizeFileName(`Cover Letter — ${ctx.company} ${ctx.position}`);
+  const title = sanitizeTitle(`Cover Letter — ${ctx.company} — ${ctx.position}`);
 
   const prompt = [
     "Write a professional cover letter in plain text.",
-    "Keep it concise (around 250-350 words), specific, and tailored to the role.",
-    "Include greeting, role-fit body, measurable outcomes, and a clear close.",
+    "Keep it concise (around 250–350 words), tailored to the role.",
     "",
-    `Tenant/workspace: ${ctx.tenantName ?? "Unknown Workspace"}`,
-    `Candidate/User: ${ctx.userName ?? "Unknown User"}`,
+    `Workspace: ${ctx.tenantName ?? "Unknown Workspace"}`,
+    `Candidate: ${ctx.userName ?? "Unknown User"}`,
     `Company: ${ctx.company}`,
     `Position: ${ctx.position}`,
     `Location: ${ctx.location ?? "Not specified"}`,
@@ -272,11 +291,9 @@ export async function createCoverLetterDocument(input: {
   const fallbackText = [
     `Dear Hiring Team at ${ctx.company},`,
     "",
-    `I am excited to apply for the ${ctx.position} role. My background includes delivering projects with measurable business impact, collaborating across functions, and taking ownership from planning through execution.`,
+    `I am writing to express my interest in the ${ctx.position} role. My experience includes shipping impactful work, collaborating across teams, and owning outcomes end to end.`,
     "",
-    "In my recent work, I improved delivery speed and quality by simplifying workflows, partnering closely with product and design, and prioritizing outcomes that matter to customers and stakeholders.",
-    "",
-    `I would value the opportunity to bring this same focus to ${ctx.company}. Thank you for your time and consideration.`,
+    "I would welcome the opportunity to contribute to your team. Thank you for your consideration.",
   ].join("\n");
 
   const generated = await generateWithClaude({
@@ -302,7 +319,7 @@ export async function createCoverLetterDocument(input: {
       operationId: ctx.operationId,
       source: "worker:cover-letter",
       model: generated.model,
-      completedStatus: true,
+      generatedAt: new Date().toISOString(),
     },
   });
 
@@ -313,36 +330,158 @@ export async function createCoverLetterDocument(input: {
     lastAiRunAt: new Date(),
   });
 
+  const durationMs = Date.now() - started;
+
   if (generated.usedFallback) {
-    await createAutomationLog({
+    await writeAutomationLog({
       tenantId: ctx.tenantId,
-      moduleKey: "cover-letter",
+      moduleKey: logModule,
       status: "Warning",
       message: "Claude API key missing; generated demo placeholder document.",
       operationId: ctx.operationId,
       relatedRecordType: "Document",
       relatedRecordId: toId(doc._id),
-      metadata: { jobId: ctx.jobId, usedFallback: true },
+      durationMs,
+      metadata: { jobId: ctx.jobId, usedFallback: true, model: generated.model },
+    });
+  } else {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: logModule,
+      status: "Success",
+      message: "Cover letter generated",
+      operationId: ctx.operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: toId(doc._id),
+      durationMs,
+      metadata: { jobId: ctx.jobId, documentId: toId(doc._id), model: generated.model },
     });
   }
 
-  await createAutomationLog({
-    tenantId: ctx.tenantId,
-    moduleKey: "cover-letter",
-    status: "Success",
-    message: "Cover letter generated successfully.",
-    operationId: ctx.operationId,
-    relatedRecordType: "Document",
-    relatedRecordId: toId(doc._id),
-    metadata: { jobId: ctx.jobId, model: generated.model, usedFallback: generated.usedFallback },
-  });
-
   return {
-    moduleKey: "cover-letter",
+    ...suppressFlag,
+    moduleKey: logModule,
     status: "completed",
     operationId: ctx.operationId,
     jobId: ctx.jobId,
     documentId: toId(doc._id),
+    model: generated.model,
+    usedFallback: generated.usedFallback,
+  };
+}
+
+export async function createAiAnalysisDocument(input: {
+  tenantId: string;
+  userId: string;
+  jobId: string;
+  operationId?: string;
+}) {
+  const started = Date.now();
+  const ctx = await loadJobContext(input);
+  const title = sanitizeTitle(`AI Analysis — ${ctx.company} — ${ctx.position}`);
+
+  const prompt = [
+    "Produce a structured job-fit analysis in plain text with headings:",
+    "Fit summary",
+    "Missing information",
+    "Recommended next actions",
+    "Suggested follow-up",
+    "",
+    `Company: ${ctx.company}`,
+    `Position: ${ctx.position}`,
+    `Location: ${ctx.location ?? "Not specified"}`,
+    `Description: ${ctx.description ?? "Not provided"}`,
+  ].join("\n");
+
+  const fallbackText = [
+    "Fit summary",
+    `The ${ctx.position} role at ${ctx.company} appears aligned with a candidate who can deliver outcomes and collaborate broadly. Strength areas: execution, communication, ownership.`,
+    "",
+    "Missing information",
+    "- Compensation band",
+    "- Team size and stack details",
+    "- Interview process timeline",
+    "",
+    "Recommended next actions",
+    "- Complete research brief and tailor resume bullets",
+    "- Draft cover letter emphasizing measurable impact",
+    "- Schedule informational chat if possible",
+    "",
+    "Suggested follow-up",
+    "- Track application status weekly",
+    "- Prepare questions for hiring manager",
+  ].join("\n");
+
+  const generated = await generateWithClaude({
+    prompt,
+    fallbackText,
+    modelHint: "claude-3-5-sonnet-latest",
+  });
+
+  const doc = await DocumentModel.create({
+    tenantId: ctx.tenantId,
+    createdBy: ctx.userId,
+    jobId: ctx.jobId,
+    fileName: title,
+    type: "Other",
+    status: "Ready",
+    documentKind: "Other",
+    generationStatus: "Generated",
+    aiGenerated: true,
+    aiProvider: generated.usedFallback ? "Stub" : "Claude",
+    aiModel: generated.model,
+    contentText: generated.text,
+    metadata: {
+      operationId: ctx.operationId,
+      source: "worker:ai-processing",
+      documentCategory: "ai-analysis",
+      model: generated.model,
+      generatedAt: new Date().toISOString(),
+    },
+  });
+
+  await JobModel.findByIdAndUpdate(ctx.jobId, {
+    aiProcessingStatus: "Completed",
+    aiProcessingCompletedAt: new Date(),
+    lastAiRunAt: new Date(),
+  });
+
+  const durationMs = Date.now() - started;
+
+  if (generated.usedFallback) {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: "ai-processing",
+      status: "Warning",
+      message: "Claude API key missing; saved demo AI analysis document.",
+      operationId: ctx.operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: toId(doc._id),
+      durationMs,
+      metadata: { jobId: ctx.jobId, usedFallback: true, kind: "ai-analysis" },
+    });
+  } else {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: "ai-processing",
+      status: "Success",
+      message: "AI job analysis generated",
+      operationId: ctx.operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: toId(doc._id),
+      durationMs,
+      metadata: { jobId: ctx.jobId, documentId: toId(doc._id), kind: "ai-analysis", model: generated.model },
+    });
+  }
+
+  return {
+    ...suppressFlag,
+    moduleKey: "ai-processing",
+    status: "completed",
+    operationId: ctx.operationId,
+    jobId: ctx.jobId,
+    documentId: toId(doc._id),
+    kind: "ai-analysis",
     model: generated.model,
     usedFallback: generated.usedFallback,
   };

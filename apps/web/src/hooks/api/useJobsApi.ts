@@ -54,5 +54,6 @@ export function useJobDetail(id: string, options?: { fallbackToMock?: boolean; m
   return useApiQuery(() => jobsApi.getJob(id), {
     fallbackToMock: options?.fallbackToMock,
     fallbackData: options?.mockFallbackJob,
+    refreshKey: id,
   });
 }
