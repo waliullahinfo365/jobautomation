@@ -108,18 +108,15 @@ export function Topbar() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem
-              onSelect={() => {
-                if (process.env.NODE_ENV !== "production") {
-                  console.info("Navigating to /profile");
-                }
-                router.push("/profile");
-              }}
-            >
-              Account / Profile
+            <DropdownMenuItem>
+              <Link href="/profile" className="block cursor-pointer">
+                Account / Profile
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push("/settings")}>
-              Settings
+            <DropdownMenuItem>
+              <Link href="/settings" className="block cursor-pointer">
+                Settings
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleLogout}>
               Logout
