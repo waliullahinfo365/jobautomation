@@ -112,6 +112,12 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
         item.metadata.reconnectBanner.trim().length > 0 ? (
           <Field label="Reconnect required" value={item.metadata.reconnectBanner} />
         ) : null}
+        {!demoGoogle && item.slug === "google-drive" && item.metadata?.googleDocsScopeMissing === true ? (
+          <Field
+            label="Google Docs"
+            value="Google Docs API must be enabled in Google Cloud Console if you use Docs creation. OAuth must include the Documents scope — use Reconnect."
+          />
+        ) : null}
         {item.scopes?.length ? <Field label="Scopes" value={item.scopes.join(", ")} /> : null}
         {modelPreview ? <Field label="Model" value={modelPreview} /> : null}
         {apiPreview ? <Field label="API key" value={apiPreview} /> : null}

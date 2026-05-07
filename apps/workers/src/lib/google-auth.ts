@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { IntegrationConnectionModel } from "@jobflow/database/models";
+import { GOOGLE_DOCUMENTS_SCOPE, scopeGranted } from "@jobflow/shared/constants/googleScopes";
 
 const DEV_PREFIX = "dev-insecure-plain:";
 const ENC_PREFIX = "enc:v1:";
@@ -50,6 +51,8 @@ export type GoogleAuthContext = {
   scopes: string[];
   connected: boolean;
   reason?: string;
+  /** Scopes still required after comparing granted vs requested */
+  missingScopes?: string[];
 };
 
 export type GoogleIntegrationProvider = "Google Drive" | "Google Docs" | "Gmail" | "Google Calendar";
@@ -65,6 +68,8 @@ export type GoogleApiFailureMeta = {
   requiredScope?: string;
   reconnectRequired: boolean;
   fallbackUsed: boolean;
+  /** Set when Docs API returns accessNotConfigured / API disabled in project */
+  googleDocsApiNotEnabled?: boolean;
 };
 
 export class GoogleApiHttpError extends Error {
@@ -244,7 +249,7 @@ export async function loadGoogleAccessToken(input: {
   }
 
   const scopes = conn.scopes ?? [];
-  const missingScopes = input.requiredScopes.filter((scope) => !scopes.includes(scope));
+  const missingScopes = input.requiredScopes.filter((scope) => !scopeGranted(scopes, scope));
   if (missingScopes.length > 0) {
     if (conn.status === "Connected") {
       await IntegrationConnectionModel.updateOne(
@@ -252,8 +257,11 @@ export async function loadGoogleAccessToken(input: {
         {
           $set: {
             "metadata.reconnectRequired": true,
-            "metadata.reconnectBanner": "Reconnect required because Google scopes changed.",
+            "metadata.reconnectBanner": missingScopes.includes(GOOGLE_DOCUMENTS_SCOPE)
+              ? "Reconnect required — Google Docs scope missing."
+              : "Reconnect required because Google scopes changed.",
             "metadata.missingScopes": missingScopes,
+            "metadata.googleDocsScopeMissing": missingScopes.includes(GOOGLE_DOCUMENTS_SCOPE),
           },
         }
       );
@@ -263,6 +271,7 @@ export async function loadGoogleAccessToken(input: {
       accessToken: "",
       scopes,
       reason: `Missing required scopes: ${missingScopes.join(", ")}`,
+      missingScopes,
     };
   }
 
@@ -302,6 +311,15 @@ export async function googleApiJson<T>(input: {
     const { provider, endpointType } = classifyGoogleRequest(input.url, method);
     const requiredScope = inferRequiredScope(endpointType, statusCode);
     const reconnectRequired = statusCode === 403 || statusCode === 401;
+    const msgLower = (parsed.message ?? "").toLowerCase();
+    const docsEndpoint = endpointType.includes("docs") || input.url.includes("docs.googleapis.com");
+    const googleDocsApiNotEnabled =
+      docsEndpoint &&
+      (parsed.reason === "accessNotConfigured" ||
+        msgLower.includes("has not been used") ||
+        msgLower.includes("it is disabled") ||
+        msgLower.includes("api is disabled") ||
+        msgLower.includes("enable the google docs api"));
     const meta: GoogleApiFailureMeta = {
       googleApi: true,
       provider,
@@ -313,6 +331,7 @@ export async function googleApiJson<T>(input: {
       requiredScope,
       reconnectRequired,
       fallbackUsed: false,
+      googleDocsApiNotEnabled,
     };
     throw new GoogleApiHttpError(`Google API ${endpointType} failed (${statusCode})`, meta);
   }

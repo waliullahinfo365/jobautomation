@@ -217,8 +217,11 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
         : "Google reconnect required for live API access.";
     delete mergedMeta.missingScopes;
   } else if (missingAfterOAuth.length > 0) {
-    mergedMeta.reconnectBanner = "Reconnect required because Google scopes changed.";
+    mergedMeta.reconnectBanner = missingAfterOAuth.some((s) => s.includes("/auth/documents"))
+      ? "Reconnect required — Google Docs scope missing."
+      : "Reconnect required because Google scopes changed.";
     mergedMeta.missingScopes = missingAfterOAuth;
+    mergedMeta.googleDocsScopeMissing = missingAfterOAuth.some((s) => s.includes("/auth/documents"));
   } else {
     delete mergedMeta.reconnectBanner;
     delete mergedMeta.missingScopes;

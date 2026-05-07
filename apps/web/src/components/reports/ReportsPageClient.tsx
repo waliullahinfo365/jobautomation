@@ -464,7 +464,7 @@ export function ReportsPageClient() {
           documentId: record.documentId,
           pdfUnavailableNotice:
             record.textPreviewAvailable || !record.exportPublicUrl
-              ? "PDF file is not available yet. Showing text export."
+              ? "PDF provider is not configured. Text export is available."
               : undefined,
         });
       } catch {

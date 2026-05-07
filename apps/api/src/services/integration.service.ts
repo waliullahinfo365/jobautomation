@@ -188,9 +188,13 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     const required = getGoogleScopesForProvider(entry.provider);
     const scopeGap = missingGoogleScopes(scopesList, required);
     if (scopeGap.length > 0) {
+      const docsMissing = scopeGap.some((s) => s.includes("/auth/documents"));
       cleanMeta.reconnectRequired = true;
-      cleanMeta.reconnectBanner = "Reconnect required because Google scopes changed.";
+      cleanMeta.reconnectBanner = docsMissing
+        ? "Reconnect required — Google Docs scope missing."
+        : "Reconnect required because Google scopes changed.";
       cleanMeta.missingScopes = scopeGap;
+      cleanMeta.googleDocsScopeMissing = docsMissing;
       resolvedSyncStatus = resolvedSyncStatus ?? "Reconnect — scopes outdated";
     }
   }

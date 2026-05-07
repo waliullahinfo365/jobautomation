@@ -50,7 +50,7 @@ async function persistTextExportFallback(input: {
     moduleKey: "pdf-export",
     moduleName: "pdf-export",
     status: "Warning",
-    message: "PDF service not configured; text preview available.",
+    message: "PDF provider is not configured; text preview available.",
     operationId: input.operationId,
     relatedRecordType: "Document",
     relatedRecordId: input.documentId,
@@ -61,6 +61,10 @@ async function persistTextExportFallback(input: {
       pdfUrlValid: false,
       fallbackUsed: input.fallbackUsed,
       pdfFallbackReason: input.reason,
+      pdfFallbackUsed: true,
+      googleDocsScopeMissing: false,
+      telegramSuccess: false,
+      slackSuccess: false,
       notificationCreated: true,
     },
   });
@@ -70,7 +74,7 @@ async function persistTextExportFallback(input: {
     createdBy: "system",
     updatedBy: "system",
     title: "PDF export — text preview only",
-    body: "PDF service is not configured; you can preview or download text. Configure Google Drive / PDF pipeline for real exports.",
+    body: "PDF provider is not configured. Text export is available. Connect Google Drive with Docs scope or configure a PDF pipeline for binary PDFs.",
     severity: "warning",
     moduleKey: "pdf-export",
     relatedRecordType: "Document",
@@ -125,7 +129,7 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         status: "completed-text",
         operationId,
         documentId: payload.documentId,
-        message: "PDF service not configured; text preview available.",
+        message: "PDF provider is not configured; text preview available.",
       };
     }
 
@@ -152,7 +156,7 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         status: "completed-text",
         operationId,
         documentId: payload.documentId,
-        message: "PDF service not configured; text preview available.",
+        message: "PDF provider is not configured; text preview available.",
       };
     }
 

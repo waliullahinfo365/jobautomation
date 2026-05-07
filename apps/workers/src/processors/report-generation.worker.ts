@@ -13,7 +13,11 @@ import {
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
 import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
-import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
+import {
+  GOOGLE_DOCUMENTS_SCOPE,
+  GOOGLE_DRIVE_FILE_SCOPE,
+  GOOGLE_DRIVE_DOCS_WORKER_SCOPES,
+} from "@jobflow/shared/constants/googleScopes";
 import {
   GoogleApiHttpError,
   googleFailureMetaFromUnknown,
@@ -283,6 +287,40 @@ type RouteReportDriveResult =
       googleDelivery?: Record<string, unknown>;
     };
 
+function warningMessageForGoogleDriveSkip(input: {
+  reason?: string;
+  googleDelivery?: Record<string, unknown>;
+}): string {
+  const gd = input.googleDelivery ?? {};
+  if (Boolean(gd.googleDocsApiNotEnabled)) {
+    return "Google Docs API must be enabled in Google Cloud Console (APIs & Services → Library). Report saved to dashboard; Telegram/Slack are unaffected.";
+  }
+  const docsScopeIssue =
+    Boolean(gd.googleDocsScopeMissing) ||
+    gd.endpointType === "docs.documents.batchUpdate" ||
+    String(gd.requiredScope ?? "").includes("/auth/documents");
+  if (docsScopeIssue) {
+    return "Reconnect required — Google Docs scope missing. Reconnect Google Drive in Settings. Report saved to dashboard; Telegram/Slack are unaffected.";
+  }
+  return `Google Drive/Docs delivery skipped: ${input.reason ?? "provider error"}`;
+}
+
+function automationMetaForDriveSkip(gd: Record<string, unknown>): Record<string, unknown> {
+  const docsMissing =
+    Boolean(gd.googleDocsScopeMissing) ||
+    String(gd.requiredScope ?? "").includes("/auth/documents") ||
+    gd.endpointType === "docs.documents.batchUpdate";
+  return {
+    ...gd,
+    googleDocsScopeMissing: docsMissing && !Boolean(gd.googleDocsApiNotEnabled),
+    requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+    reconnectRequired: Boolean(gd.reconnectRequired) || (docsMissing && !Boolean(gd.googleDocsApiNotEnabled)),
+    telegramSuccess: false,
+    slackSuccess: false,
+    pdfFallbackUsed: false,
+  };
+}
+
 async function routeReportToDrive(input: {
   tenantId: string;
   title: string;
@@ -296,6 +334,8 @@ async function routeReportToDrive(input: {
       requiredScopes: [...GOOGLE_DRIVE_DOCS_WORKER_SCOPES],
     });
     if (!auth.connected) {
+      const missing = auth.missingScopes ?? [];
+      const googleDocsScopeMissing = missing.includes(GOOGLE_DOCUMENTS_SCOPE);
       const reconnect =
         typeof auth.reason === "string" &&
         (auth.reason.includes("scope") || auth.reason.includes("Scope"));
@@ -312,9 +352,9 @@ async function routeReportToDrive(input: {
           googleErrorMessage: auth.reason,
           reconnectRequired: reconnect,
           fallbackUsed: true,
-          requiredScope: auth.reason?.includes("documents")
-            ? "https://www.googleapis.com/auth/documents"
-            : "https://www.googleapis.com/auth/drive.file",
+          success: false,
+          requiredScope: googleDocsScopeMissing ? GOOGLE_DOCUMENTS_SCOPE : GOOGLE_DRIVE_FILE_SCOPE,
+          googleDocsScopeMissing,
         },
       };
     }
@@ -351,11 +391,18 @@ async function routeReportToDrive(input: {
     const meta = googleFailureMetaFromUnknown(error, "report.routeToDrive");
     const msg = redactForLog(error instanceof Error ? error.message : String(error));
     logger.warn({ err: error, tenantId: input.tenantId }, "routeReportToDrive: dashboard fallback (Google delivery skipped)");
+    const baseGd = { ...meta } as Record<string, unknown>;
+    if (error instanceof GoogleApiHttpError) {
+      baseGd.googleDocsApiNotEnabled = error.meta.googleDocsApiNotEnabled === true;
+      baseGd.googleDocsScopeMissing =
+        error.meta.requiredScope === GOOGLE_DOCUMENTS_SCOPE ||
+        error.meta.endpointType === "docs.documents.batchUpdate";
+    }
     return {
       ok: false,
       reason: msg,
       fallbackUsed: true,
-      googleDelivery: { ...meta } as Record<string, unknown>,
+      googleDelivery: baseGd,
     };
   }
 }
@@ -408,10 +455,6 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       });
     } else {
       const gd = drive.googleDelivery ?? {};
-      const endpointType = String((gd as { endpointType?: string }).endpointType ?? "");
-      const scopeGap =
-        endpointType === "docs.documents.batchUpdate" ||
-        String((gd as { requiredScope?: string }).requiredScope ?? "").includes("documents");
       mergedData = {
         ...mergedData,
         deliveryWarning: true,
@@ -428,12 +471,13 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
         tenantId: payload.tenantId,
         moduleKey: "daily-digest",
         status: "Warning",
-        message: scopeGap
-          ? "Google Docs scope missing or insufficient. Reconnect Google Drive integration. Digest saved to dashboard only."
-          : `Google Drive/Docs delivery skipped: ${drive.reason ?? "provider error"}`,
+        message: warningMessageForGoogleDriveSkip({
+          reason: drive.reason,
+          googleDelivery: gd as Record<string, unknown>,
+        }),
         operationId,
         relatedRecordId: String(report._id),
-        metadata: gd,
+        metadata: automationMetaForDriveSkip(gd as Record<string, unknown>),
       });
     }
 
@@ -491,6 +535,12 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
               slack: delivery.slack,
               email: delivery.email,
             },
+            telegramSuccess: delivery.telegram.success,
+            slackSuccess: delivery.slack.success,
+            pdfFallbackUsed: false,
+            googleDocsScopeMissing: false,
+            requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+            reconnectRequired: false,
           },
         });
       } else {
@@ -507,6 +557,12 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
               slack: delivery.slack,
               email: delivery.email,
             },
+            telegramSuccess: delivery.telegram.success,
+            slackSuccess: delivery.slack.success,
+            pdfFallbackUsed: false,
+            googleDocsScopeMissing: false,
+            requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+            reconnectRequired: false,
           },
         });
       }
@@ -606,10 +662,6 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       });
     } else {
       const gd = drive.googleDelivery ?? {};
-      const endpointType = String((gd as { endpointType?: string }).endpointType ?? "");
-      const scopeGap =
-        endpointType === "docs.documents.batchUpdate" ||
-        String((gd as { requiredScope?: string }).requiredScope ?? "").includes("documents");
       mergedData = {
         ...mergedData,
         deliveryWarning: true,
@@ -626,12 +678,13 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
         tenantId: payload.tenantId,
         moduleKey: "weekly-report",
         status: "Warning",
-        message: scopeGap
-          ? "Google Docs scope missing or insufficient. Reconnect Google Drive integration. Report saved to dashboard only."
-          : `Google Drive/Docs delivery skipped: ${drive.reason ?? "provider error"}`,
+        message: warningMessageForGoogleDriveSkip({
+          reason: drive.reason,
+          googleDelivery: gd as Record<string, unknown>,
+        }),
         operationId,
         relatedRecordId: String(report._id),
-        metadata: gd,
+        metadata: automationMetaForDriveSkip(gd as Record<string, unknown>),
       });
     }
 
@@ -689,6 +742,12 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
               slack: delivery.slack,
               email: delivery.email,
             },
+            telegramSuccess: delivery.telegram.success,
+            slackSuccess: delivery.slack.success,
+            pdfFallbackUsed: false,
+            googleDocsScopeMissing: false,
+            requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+            reconnectRequired: false,
           },
         });
       } else {
@@ -705,6 +764,12 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
               slack: delivery.slack,
               email: delivery.email,
             },
+            telegramSuccess: delivery.telegram.success,
+            slackSuccess: delivery.slack.success,
+            pdfFallbackUsed: false,
+            googleDocsScopeMissing: false,
+            requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+            reconnectRequired: false,
           },
         });
       }

@@ -45,7 +45,7 @@ export function PDFExportsTable({
                   status={record.exportStatus}
                   tooltip={
                     record.exportStatus === "Preview Only"
-                      ? "PDF service is not configured. You can preview or download text. Configure a PDF provider or connect Google Drive for real exports."
+                      ? "No real PDF provider configured. You can preview or download text. Connect Google Drive (Docs + Drive scopes) or enable a PDF pipeline for binary PDFs."
                       : undefined
                   }
                 />

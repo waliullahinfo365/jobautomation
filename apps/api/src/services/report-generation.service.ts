@@ -66,9 +66,17 @@ function googleDeliveryMessageSuffix(data: Record<string, unknown>): string | un
   const g = gd as Record<string, unknown>;
   if (g.success === true && g.fallbackUsed !== true) return undefined;
 
-  const reconnect = g.reconnectRequired === true ? " Reconnect the integration in Settings." : "";
+  const reconnect = g.reconnectRequired === true ? " Reconnect Google Drive in Settings." : "";
   const endpointType = typeof g.endpointType === "string" ? g.endpointType : "";
   const requiredScope = typeof g.requiredScope === "string" ? g.requiredScope : "";
+
+  if (g.googleDocsApiNotEnabled === true) {
+    return "Google Docs API must be enabled in Google Cloud Console (APIs & Services → Library).";
+  }
+
+  if (g.googleDocsScopeMissing === true) {
+    return `Reconnect required — Google Docs scope missing.${reconnect}`;
+  }
 
   if (endpointType === "oauth.precondition") {
     const base =
@@ -85,7 +93,7 @@ function googleDeliveryMessageSuffix(data: Record<string, unknown>): string | un
     requiredScope.includes("documents") ||
     endpointType.includes("documents")
   ) {
-    return `Google Docs scope missing or insufficient. Reconnect Google Drive integration.${reconnect}`;
+    return `Reconnect required — Google Docs scope missing or Docs API not enabled.${reconnect}`;
   }
 
   if (
