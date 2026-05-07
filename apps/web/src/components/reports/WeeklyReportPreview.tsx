@@ -5,7 +5,19 @@ import { ApplicationsBySourceChart } from "./ApplicationsBySourceChart";
 import { ResponseRateTrendChart } from "./ResponseRateTrendChart";
 import { PipelineConversionChart } from "./PipelineConversionChart";
 
-export function WeeklyReportPreview({ report, onSendTest }: { report: WeeklyReportData; onSendTest?: () => void }) {
+export function WeeklyReportPreview({
+  report,
+  onSendTest,
+  onPreviewWeekly,
+  previewLoading,
+  sendLoading,
+}: {
+  report: WeeklyReportData;
+  onSendTest?: () => void;
+  onPreviewWeekly?: () => void;
+  previewLoading?: boolean;
+  sendLoading?: boolean;
+}) {
   return (
     <div className="space-y-6">
       <Card>
@@ -34,11 +46,18 @@ export function WeeklyReportPreview({ report, onSendTest }: { report: WeeklyRepo
         <PipelineConversionChart data={report.pipelineConversion} />
       </div>
 
-      {onSendTest ? (
-        <div className="flex justify-end">
-          <Button type="button" variant="secondary" onClick={() => onSendTest()}>
-            Send Test
-          </Button>
+      {onSendTest || onPreviewWeekly ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          {onPreviewWeekly ? (
+            <Button type="button" variant="outline" disabled={previewLoading} onClick={() => onPreviewWeekly()}>
+              {previewLoading ? "Generating…" : "Preview Weekly Report"}
+            </Button>
+          ) : null}
+          {onSendTest ? (
+            <Button type="button" variant="secondary" disabled={sendLoading} onClick={() => onSendTest()}>
+              {sendLoading ? "Sending…" : "Send Test"}
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>

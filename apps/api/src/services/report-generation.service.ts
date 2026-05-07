@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { ReportModel } from "@jobflow/database/models";
-import { sendReportEmailStub } from "@jobflow/integrations/smtp/smtp.service";
+import { IntegrationConnectionModel, ReportModel } from "@jobflow/database/models";
+import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
 import type { DailyDigestMetrics, ReportDeliveryResult, ReportGenerationResult, WeeklyPerformanceMetrics } from "@jobflow/shared/types/report";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
@@ -33,37 +33,73 @@ function summaryForWeekly(metrics: WeeklyPerformanceMetrics): string {
   return `Weekly performance ${metrics.weekStart} to ${metrics.weekEnd}: ${metrics.applicationsSubmitted} applications, ${metrics.repliesReceived} replies (${metrics.responseRate}), ${metrics.interviewsScheduled} interviews (${metrics.interviewConversionRate}), ${metrics.offersReceived} offers (${metrics.offerRate}).`;
 }
 
+async function isSmtpIntegrationConnected(tenantId: string): Promise<boolean> {
+  const conn = await IntegrationConnectionModel.findOne({ tenantId, provider: "SMTP", status: "Connected" }).select("_id").lean();
+  return Boolean(conn);
+}
+
 async function sendReportDelivery(input: { tenantId: string; reportId: string; to?: string | string[]; operationId: string }): Promise<ReportDeliveryResult> {
   const report = await findTenantScopedById(ReportModel, input.tenantId, input.reportId);
   if (!report) throw new ApiError("Report not found", 404, "NOT_FOUND");
 
   await ReportModel.findByIdAndUpdate(report._id, { deliveryStatus: "Queued", deliveryError: undefined });
 
-  const sendResult = await sendReportEmailStub({
-    to: input.to ?? "reports@example.local",
-    subject: `[Stub] ${report.name}`,
-    html: `<h1>${report.name}</h1><p>${report.summaryText ?? ""}</p>`,
-    text: `${report.name}\n${report.summaryText ?? ""}`,
-    reportType: report.type,
+  const data = (report.data && typeof report.data === "object" ? report.data : {}) as Record<string, unknown>;
+  const markdown = typeof data.markdown === "string" ? data.markdown : String(report.summaryText ?? "");
+  const detailUrl = typeof data.googleDocUrl === "string" ? data.googleDocUrl : undefined;
+  const smtpOk = await isSmtpIntegrationConnected(input.tenantId);
+  const toRaw = Array.isArray(input.to) ? input.to[0] : input.to;
+
+  const reportType = report.type as "Daily Digest" | "Weekly Performance" | "PDF Export" | "Manual Report";
+  const event = report.type === "Daily Digest" ? ("daily-digest" as const) : ("weekly-report" as const);
+
+  const delivery = await deliverReportNotifications({
+    tenantId: input.tenantId,
+    title: report.name,
+    summaryText: markdown || String(report.summaryText ?? ""),
+    detailUrl,
+    reportType,
+    event,
+    smtpIntegrationConnected: smtpOk,
+    email: smtpOk && toRaw ? { to: toRaw, html: `<pre>${markdown}</pre>`, text: markdown } : undefined,
   });
 
+  const providerResults = {
+    telegram: delivery.telegram,
+    slack: delivery.slack,
+    email: delivery.email,
+  };
+
+  const previewOnly = !delivery.anySent;
+  const methods = [delivery.telegram.success ? "telegram" : null, delivery.slack.success ? "slack" : null, delivery.email.success ? "email" : null].filter(
+    Boolean
+  ) as string[];
+
   await ReportModel.findByIdAndUpdate(report._id, {
-    deliveryStatus: "Sent",
-    deliveryId: sendResult.deliveryId,
-    sentAt: new Date(sendResult.sentAt),
-    sentTo: Array.isArray(input.to) ? input.to : [input.to ?? "reports@example.local"],
-    status: "Sent",
-    deliveryMethod: "smtp-stub",
-    deliveryError: undefined,
+    deliveryStatus: delivery.anySent ? "Sent" : "Not Sent",
+    deliveryError: previewOnly ? "No notification provider delivered successfully." : undefined,
+    deliveryMethod: delivery.anySent ? (methods.length ? methods.join("+") : "dashboard") : "dashboard-preview",
+    sentAt: delivery.anySent ? new Date() : undefined,
+    sentTo: delivery.anySent && toRaw ? [toRaw] : report.sentTo,
+    status: delivery.anySent ? "Sent" : report.status,
+    data: {
+      ...data,
+      providerResults,
+      lastDeliveryAt: new Date().toISOString(),
+      previewOnly,
+    },
   });
 
   return {
     operationId: input.operationId,
     tenantId: input.tenantId,
     reportId: input.reportId,
-    deliveryStatus: "Sent",
-    deliveryId: sendResult.deliveryId,
-    message: "Report sent via stub delivery",
+    deliveryStatus: delivery.anySent ? "Sent" : "Not Sent",
+    message: previewOnly
+      ? "No Telegram, Slack, or SMTP channel delivered successfully; report remains available in the dashboard."
+      : "Report delivery attempted on configured channels.",
+    providerResults,
+    previewOnly,
   };
 }
 
@@ -301,6 +337,12 @@ export async function generateWeeklyReport(input: {
   }
 }
 
+function moduleKeyForReportType(type: string): string {
+  if (type === "Daily Digest") return "daily-digest";
+  if (type === "Weekly Performance") return "weekly-report";
+  return "report-generation";
+}
+
 export async function sendReportTest(input: {
   tenantId: string;
   reportId: string;
@@ -313,11 +355,12 @@ export async function sendReportTest(input: {
   const report = await findTenantScopedById(ReportModel, tenantId, input.reportId);
   if (!report) throw new ApiError("Report not found", 404, "NOT_FOUND");
   const idempotencyKey = `report-send-test:${tenantId}:${input.reportId}:${input.to ?? "default"}`;
+  const mk = moduleKeyForReportType(report.type);
 
   await createAutomationLog({
     tenantId,
-    moduleKey: report.type === "Daily Digest" ? "daily-digest" : "weekly-report",
-    moduleName: "Report Delivery",
+    moduleKey: mk,
+    moduleName: mk,
     status: "Running",
     message: "Report test send started",
     relatedRecordType: "Report",
@@ -330,15 +373,17 @@ export async function sendReportTest(input: {
     const result = await sendReportDelivery({ tenantId, reportId: input.reportId, to: input.to, operationId });
     await createAutomationLog({
       tenantId,
-      moduleKey: report.type === "Daily Digest" ? "daily-digest" : "weekly-report",
-      moduleName: "Report Delivery",
-      status: "Success",
-      message: "Report test send completed",
+      moduleKey: mk,
+      moduleName: mk,
+      status: result.previewOnly ? "Warning" : "Success",
+      message: result.previewOnly
+        ? "No notification provider configured or delivery failed; report preview saved only."
+        : "Report test send completed",
       relatedRecordType: "Report",
       relatedRecordId: input.reportId,
       operationId,
       idempotencyKey,
-      metadata: { deliveryId: result.deliveryId },
+      metadata: { providerResults: result.providerResults, previewOnly: result.previewOnly },
     });
     return result;
   } catch (error) {
@@ -348,8 +393,8 @@ export async function sendReportTest(input: {
     });
     await createAutomationLog({
       tenantId,
-      moduleKey: report.type === "Daily Digest" ? "daily-digest" : "weekly-report",
-      moduleName: "Report Delivery",
+      moduleKey: mk,
+      moduleName: mk,
       status: "Failed",
       message: "Report test send failed",
       relatedRecordType: "Report",

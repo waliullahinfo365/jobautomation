@@ -28,6 +28,7 @@ export interface DailyDigestData {
   applicationsSent: number;
   followUpsDue: number;
   repliesReceived: number;
+  interviewsScheduled: number;
   deadlinesApproaching: number;
   failedAutomations: number;
   recommendedActions: string[];
@@ -75,6 +76,12 @@ export interface ReportHistoryRecord {
   sentTo: string;
   deliveryMethod: string;
   summaryText?: string;
+  /** Backend delivery tracking */
+  deliveryStatus?: string;
+  /** True when last send attempt stored preview-only outcome */
+  previewOnly?: boolean;
+  pdfUrl?: string;
+  googleDocUrl?: string;
 }
 
 // Compatibility aliases for older components

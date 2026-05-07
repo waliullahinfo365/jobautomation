@@ -17,6 +17,10 @@ export function useReportsApi(options?: { fallbackToMock?: boolean; params?: Rec
     fallbackToMock: fb,
     mockResourceName: "reportStats",
   });
+  const summaryQuery = useApiQuery(() => api.getReportsSummary(), {
+    fallbackToMock: fb,
+    mockResourceName: "reportStats",
+  });
   const dailyQuery = useApiQuery(() => api.getDailyAnalytics(p), {
     fallbackToMock: fb,
     mockResourceName: "reportDailyAnalytics",
@@ -43,23 +47,27 @@ export function useReportsApi(options?: { fallbackToMock?: boolean; params?: Rec
     await Promise.all([
       listQuery.refetch(),
       statsQuery.refetch(),
+      summaryQuery.refetch(),
       dailyQuery.refetch(),
       weeklyQuery.refetch(),
     ]);
-  }, [listQuery, statsQuery, dailyQuery, weeklyQuery]);
+  }, [listQuery, statsQuery, summaryQuery, dailyQuery, weeklyQuery]);
 
   const loading =
-    listQuery.loading || statsQuery.loading || dailyQuery.loading || weeklyQuery.loading;
-  const error = listQuery.error ?? statsQuery.error ?? dailyQuery.error ?? weeklyQuery.error;
+    listQuery.loading || statsQuery.loading || summaryQuery.loading || dailyQuery.loading || weeklyQuery.loading;
+  const error =
+    listQuery.error ?? statsQuery.error ?? summaryQuery.error ?? dailyQuery.error ?? weeklyQuery.error;
   const isUsingFallback =
     listQuery.isUsingFallback ||
     statsQuery.isUsingFallback ||
+    summaryQuery.isUsingFallback ||
     dailyQuery.isUsingFallback ||
     weeklyQuery.isUsingFallback;
 
   return {
     listQuery,
     statsQuery,
+    summaryQuery,
     dailyAnalyticsQuery: dailyQuery,
     weeklyAnalyticsQuery: weeklyQuery,
     list: listQuery.data,
@@ -68,6 +76,7 @@ export function useReportsApi(options?: { fallbackToMock?: boolean; params?: Rec
     refetch: refetchAll,
     refetchList: listQuery.refetch,
     getReportStats: statsQuery,
+    getReportsSummary: summaryQuery,
     getDailyAnalytics: dailyQuery,
     getWeeklyAnalytics: weeklyQuery,
     runDailyDigest: runDailyMutation.mutate,

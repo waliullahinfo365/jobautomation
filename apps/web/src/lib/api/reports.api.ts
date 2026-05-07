@@ -13,5 +13,6 @@ export function sendWeeklyReportTest(payload?: Record<string, unknown>) { return
 export function queuePdfExport(payload: { documentId: string }) { return apiFetch("/reports/pdf-export", { method: "POST", body: payload }); }
 export function sendReportTest(id: string, payload?: Record<string, unknown>) { return apiFetch(`/reports/${id}/send-test`, { method: "POST", body: payload ?? {} }); }
 export function getReportStats() { return apiFetch("/reports/stats"); }
+export function getReportsSummary() { return apiFetch("/reports/summary"); }
 export function getDailyAnalytics(params?: Record<string, unknown>) { return apiFetch(withQuery("/reports/analytics/daily", params as any)); }
 export function getWeeklyAnalytics(params?: Record<string, unknown>) { return apiFetch(withQuery("/reports/analytics/weekly", params as any)); }

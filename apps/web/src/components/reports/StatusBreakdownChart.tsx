@@ -20,6 +20,20 @@ const SLICE_FILLS = [
 ] as const;
 
 export function StatusBreakdownChart({ data }: { data: ChartDataPoint[] }) {
+  if (!data.length || data.every((d) => Number(d.value) <= 0)) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Status Breakdown</CardTitle>
+          <CardDescription>Pipeline status distribution from live applications (when available).</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[300px] items-center justify-center text-sm text-[var(--text-3)]">
+          No status data yet — apply to roles this week to populate this chart.
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>

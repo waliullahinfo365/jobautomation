@@ -5,12 +5,16 @@ import { ReportStatusBadge } from "./ReportStatusBadge";
 
 export function DailyDigestPreview({
   digest,
-  onPreviewEmail,
+  onPreviewDigest,
   onSendTest,
+  previewLoading,
+  sendLoading,
 }: {
   digest: DailyDigestData;
-  onPreviewEmail?: () => void;
+  onPreviewDigest?: () => void;
   onSendTest?: () => void;
+  previewLoading?: boolean;
+  sendLoading?: boolean;
 }) {
   return (
     <Card>
@@ -30,6 +34,7 @@ export function DailyDigestPreview({
           <Metric label="Follow-ups due" value={digest.followUpsDue} />
           <Metric label="Replies received" value={digest.repliesReceived} />
           <Metric label="Deadlines approaching" value={digest.deadlinesApproaching} />
+          <Metric label="Interviews scheduled" value={digest.interviewsScheduled} />
           <Metric label="Failed automations" value={digest.failedAutomations} />
         </div>
         <div>
@@ -46,11 +51,11 @@ export function DailyDigestPreview({
           <Meta label="Next Scheduled" value={digest.nextScheduledTime} />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" type="button" onClick={() => onPreviewEmail?.()}>
-            Preview Email
+          <Button variant="outline" type="button" disabled={previewLoading} onClick={() => onPreviewDigest?.()}>
+            {previewLoading ? "Generating…" : "Preview Digest"}
           </Button>
-          <Button variant="secondary" type="button" onClick={() => onSendTest?.()}>
-            Send Test
+          <Button variant="secondary" type="button" disabled={sendLoading} onClick={() => onSendTest?.()}>
+            {sendLoading ? "Sending…" : "Send Test"}
           </Button>
         </div>
       </CardContent>

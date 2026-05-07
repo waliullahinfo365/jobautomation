@@ -22,6 +22,20 @@ const BAR_FILLS = [
 ] as const;
 
 export function WeeklyApplicationTrendChart({ data }: { data: { day: string; applications: number }[] }) {
+  if (!data.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Weekly Application Trend</CardTitle>
+          <CardDescription>Applications submitted by day in current week.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[300px] items-center justify-center text-sm text-[var(--text-3)]">
+          No applications logged this week yet.
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>

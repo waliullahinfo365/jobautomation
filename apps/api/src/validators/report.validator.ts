@@ -13,10 +13,12 @@ export const weeklyReportRunBodySchema = z.object({
   force: z.boolean().optional(),
 });
 export const reportsGenerateBodySchema = z.object({
+  type: z.enum(["weekly-report", "daily-digest", "performance-report"]).optional(),
   send: z.boolean().optional(),
   force: z.boolean().optional(),
   weekStart: z.string().optional(),
   weekEnd: z.string().optional(),
+  date: z.string().optional(),
 });
 export const reportPdfExportBodySchema = z.object({
   documentId: z.string().min(1),

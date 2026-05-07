@@ -49,6 +49,20 @@ export interface ReportGenerationResult {
   deliveryStatus: ReportDeliveryStatus;
 }
 
+/** Per-channel outcomes for report test/send flows (never include secrets). */
+export interface ReportProviderDeliveryMeta {
+  attempted: boolean;
+  configured: boolean;
+  success: boolean;
+  message?: string;
+}
+
+export interface ReportProviderResults {
+  telegram: ReportProviderDeliveryMeta;
+  slack: ReportProviderDeliveryMeta;
+  email: ReportProviderDeliveryMeta;
+}
+
 export interface ReportDeliveryResult {
   operationId: string;
   tenantId: string;
@@ -56,4 +70,6 @@ export interface ReportDeliveryResult {
   deliveryStatus: ReportDeliveryStatus;
   deliveryId?: string;
   message: string;
+  providerResults?: ReportProviderResults;
+  previewOnly?: boolean;
 }

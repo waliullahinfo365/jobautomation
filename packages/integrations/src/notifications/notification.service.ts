@@ -89,20 +89,25 @@ export async function sendTelegramNotification(input: {
   tenantId: string;
   message: string;
   event: NotificationEvent;
+  /** Avoid Markdown parsing for arbitrary report bodies (special chars break Telegram). */
+  plainText?: boolean;
 }) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
   const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
   if (!botToken || !chatId) {
     return { status: "Warning" as const, reason: "Telegram not configured." };
   }
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text: input.message.slice(0, 4090),
+  };
+  if (!input.plainText) {
+    body.parse_mode = "Markdown";
+  }
   const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: input.message,
-      parse_mode: "Markdown",
-    }),
+    body: JSON.stringify(body),
   });
   if (!response.ok) {
     return { status: "Failed" as const, reason: `Telegram API failed (${response.status})` };

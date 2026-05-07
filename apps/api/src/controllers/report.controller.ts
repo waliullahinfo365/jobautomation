@@ -4,8 +4,16 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { paginatedResponse, successResponse } from "../utils/apiResponse";
 import { ApiError } from "../utils/errors";
 import { assertTenantId, buildTenantFilter, createTenantScopedRecord, findTenantScopedById, updateTenantScopedById } from "../services/baseTenant.service";
+import { logApiAction } from "../services/automation-log.service";
+import {
+  defaultReportWeekBounds,
+  getDailyDigestMetrics,
+  getReportHistoryStats,
+  getReportsSummary,
+  getWeeklyPerformanceMetrics,
+} from "../services/report-analytics.service";
+import { buildDailyDigestMarkdown, buildWeeklyPerformanceMarkdown } from "../services/report-markdown.builder";
 import { getPagination } from "../utils/pagination";
-import { getDailyDigestMetrics, getReportHistoryStats, getWeeklyPerformanceMetrics } from "../services/report-analytics.service";
 import { generateDailyDigest, generateWeeklyReport, sendReportTest } from "../services/report-generation.service";
 import { enqueueAutomationModule } from "../services/automation-queue.service";
 export const listReports = asyncHandler(async (req: Request, res) => {
@@ -99,11 +107,84 @@ export const runWeeklyReport = asyncHandler(async (req: Request, res) => {
 export const sendTestReport = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const result = await sendReportTest({ tenantId, reportId: req.params.id, userId: req.user?.id ?? "system", to: req.body?.to });
-  return successResponse(res, result, "Report test sent");
+  return successResponse(res, result, result.previewOnly ? "No provider delivered — preview only" : "Report test processed");
 });
 
 export const generateReport = asyncHandler(async (req: Request, res) => {
-  return runWeeklyReport(req, res, () => undefined);
+  const tenantId = assertTenantId(req.tenantId);
+  const userId = req.user?.id ?? "system";
+  const body = req.body as {
+    type?: string;
+    force?: boolean;
+    send?: boolean;
+    weekStart?: string;
+    weekEnd?: string;
+    date?: string;
+  };
+  const type = body.type ?? "weekly-report";
+  const force = Boolean(body.force);
+
+  if (type === "daily-digest") {
+    const queued = await enqueueAutomationModule({
+      tenantId,
+      userId,
+      moduleKey: "daily-digest",
+      payload: { date: body.date, send: body.send ?? false, force },
+      source: "api",
+    });
+    await logApiAction({
+      tenantId,
+      moduleKey: "report-generation",
+      status: "Success",
+      message: "Daily digest generation queued",
+      operationId: queued.operationId,
+      metadata: { moduleKey: "daily-digest", jobId: queued.jobId },
+    });
+    return successResponse(
+      res,
+      {
+        operationId: queued.operationId,
+        jobId: queued.jobId,
+        moduleKey: "daily-digest",
+        status: queued.status,
+        message: queued.message,
+      },
+      "Report generation started"
+    );
+  }
+
+  const queued = await enqueueAutomationModule({
+    tenantId,
+    userId,
+    moduleKey: "weekly-report",
+    payload: { weekStart: body.weekStart, weekEnd: body.weekEnd, send: body.send ?? false, force },
+    source: "api",
+  });
+  await logApiAction({
+    tenantId,
+    moduleKey: "report-generation",
+    status: "Success",
+    message: type === "performance-report" ? "Performance report generation queued" : "Weekly report generation queued",
+    operationId: queued.operationId,
+    metadata: { moduleKey: "weekly-report", requestedType: type, jobId: queued.jobId },
+  });
+  return successResponse(
+    res,
+    {
+      operationId: queued.operationId,
+      jobId: queued.jobId,
+      moduleKey: "weekly-report",
+      status: queued.status,
+      message: queued.message,
+    },
+    "Report generation started"
+  );
+});
+
+export const getSummary = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const summary = await getReportsSummary({ tenantId });
+  return successResponse(res, summary);
 });
 
 export const previewDailyDigest = asyncHandler(async (req: Request, res) => {
@@ -115,9 +196,18 @@ export const previewDailyDigest = asyncHandler(async (req: Request, res) => {
     metrics.failedAutomations > 0
       ? ["Review failed automations and re-run critical jobs.", "Prioritize follow-ups due today before end-of-day."]
       : ["No critical automation failures detected today.", "Keep current application cadence for top response sources."];
+  const markdown = buildDailyDigestMarkdown(metrics, recommendations);
+  await logApiAction({
+    tenantId,
+    moduleKey: "daily-digest",
+    status: "Success",
+    message: "Daily digest preview generated",
+    metadata: { date: metrics.date },
+  });
   return successResponse(res, {
     date: metrics.date,
     summary: `Daily digest ${metrics.date}: ${metrics.newJobs} new jobs, ${metrics.applicationsSent} applications sent, ${metrics.repliesReceived} replies.`,
+    markdown,
     metrics,
     recommendations,
     latestReportId: latest && !Array.isArray(latest) ? String((latest as { _id?: unknown })._id ?? "") : undefined,
@@ -126,15 +216,25 @@ export const previewDailyDigest = asyncHandler(async (req: Request, res) => {
 
 export const previewWeeklyReport = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const now = new Date();
-  const weekStart = typeof req.body?.weekStart === "string" ? new Date(req.body.weekStart) : new Date(now.setDate(now.getDate() - (now.getDay() || 7) + 1));
-  const weekEnd = typeof req.body?.weekEnd === "string" ? new Date(req.body.weekEnd) : new Date(new Date(weekStart).setDate(weekStart.getDate() + 6));
+  const { weekStart, weekEnd } =
+    typeof req.body?.weekStart === "string" && typeof req.body?.weekEnd === "string"
+      ? { weekStart: new Date(req.body.weekStart), weekEnd: new Date(req.body.weekEnd) }
+      : defaultReportWeekBounds();
   const metrics = await getWeeklyPerformanceMetrics({ tenantId, weekStart, weekEnd });
   const latest = await ReportModel.findOne({ tenantId, type: "Weekly Performance" }).sort({ generatedAt: -1 }).lean();
+  const markdown = buildWeeklyPerformanceMarkdown(metrics);
+  await logApiAction({
+    tenantId,
+    moduleKey: "weekly-report",
+    status: "Success",
+    message: "Weekly report preview generated",
+    metadata: { weekStart: metrics.weekStart, weekEnd: metrics.weekEnd },
+  });
   return successResponse(res, {
     weekStart: metrics.weekStart,
     weekEnd: metrics.weekEnd,
     summary: `Weekly performance ${metrics.weekStart} to ${metrics.weekEnd}: ${metrics.applicationsSubmitted} applications, ${metrics.repliesReceived} replies, ${metrics.interviewsScheduled} interviews.`,
+    markdown,
     metrics,
     recommendations: metrics.recommendations ?? [],
     latestReportId: latest && !Array.isArray(latest) ? String((latest as { _id?: unknown })._id ?? "") : undefined,
@@ -150,6 +250,14 @@ export const sendDailyDigestTest = asyncHandler(async (req: Request, res) => {
     moduleKey: "daily-digest",
     payload: { date: req.body?.date, send: true, force: req.body?.force ?? false, to: req.body?.to },
     source: "api",
+  });
+  await logApiAction({
+    tenantId,
+    moduleKey: "daily-digest",
+    status: "Success",
+    message: "Daily digest test queued",
+    operationId: queued.operationId,
+    metadata: { jobId: queued.jobId },
   });
   return successResponse(
     res,
@@ -167,6 +275,14 @@ export const sendWeeklyReportTest = asyncHandler(async (req: Request, res) => {
     moduleKey: "weekly-report",
     payload: { weekStart: req.body?.weekStart, weekEnd: req.body?.weekEnd, send: true, force: req.body?.force ?? false, to: req.body?.to },
     source: "api",
+  });
+  await logApiAction({
+    tenantId,
+    moduleKey: "weekly-report",
+    status: "Success",
+    message: "Weekly report test queued",
+    operationId: queued.operationId,
+    metadata: { jobId: queued.jobId },
   });
   return successResponse(
     res,
@@ -186,6 +302,16 @@ export const queuePdfExportFromReports = asyncHandler(async (req: Request, res) 
     moduleKey: "pdf-export",
     payload: { documentId: req.body.documentId },
     source: "api",
+  });
+  await logApiAction({
+    tenantId,
+    moduleKey: "pdf-export",
+    status: "Success",
+    message: "PDF export queued",
+    operationId: queued.operationId,
+    relatedRecordType: "Document",
+    relatedRecordId: req.body.documentId,
+    metadata: { jobId: queued.jobId },
   });
   return successResponse(
     res,
@@ -223,9 +349,10 @@ export const getDailyAnalytics = asyncHandler(async (req: Request, res) => {
 
 export const getWeeklyAnalytics = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const now = new Date();
-  const weekStart = typeof req.query.weekStart === "string" ? new Date(req.query.weekStart) : new Date(now.setDate(now.getDate() - (now.getDay() || 7) + 1));
-  const weekEnd = typeof req.query.weekEnd === "string" ? new Date(req.query.weekEnd) : new Date(new Date(weekStart).setDate(weekStart.getDate() + 6));
+  const { weekStart, weekEnd } =
+    typeof req.query.weekStart === "string" && typeof req.query.weekEnd === "string"
+      ? { weekStart: new Date(req.query.weekStart), weekEnd: new Date(req.query.weekEnd) }
+      : defaultReportWeekBounds();
   const metrics = await getWeeklyPerformanceMetrics({ tenantId, weekStart, weekEnd });
   return successResponse(res, metrics);
 });

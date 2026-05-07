@@ -559,6 +559,9 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
     : typeof sentToRaw === "string"
       ? sentToRaw
       : "—";
+  const dataObj = (r.data && typeof r.data === "object" ? r.data : {}) as Record<string, unknown>;
+  const previewOnly = Boolean(dataObj.previewOnly);
+  const deliveryStatusRaw = String(r.deliveryStatus ?? "");
   const genAt = r.generatedAt ?? r.createdAt ?? new Date().toISOString();
   return {
     id,
@@ -567,8 +570,12 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
     status: mapBackendReportStatus(String(r.status ?? "Generated")),
     generatedAt: typeof genAt === "string" ? genAt : new Date(genAt as Date).toISOString(),
     sentTo,
-    deliveryMethod: String(r.deliveryMethod ?? "Email"),
+    deliveryMethod: String(r.deliveryMethod ?? "dashboard"),
     summaryText: typeof r.summaryText === "string" ? r.summaryText : undefined,
+    deliveryStatus: deliveryStatusRaw,
+    previewOnly,
+    pdfUrl: typeof r.pdfUrl === "string" && r.pdfUrl ? r.pdfUrl : undefined,
+    googleDocUrl: typeof dataObj.googleDocUrl === "string" ? dataObj.googleDocUrl : undefined,
   };
 }
 
@@ -576,12 +583,22 @@ export function normalizeReportsForUi(raw: unknown[]): ReportHistoryRecord[] {
   return raw.map(normalizeReportForUi);
 }
 
-/** Maps `getReportStats` API payload (history counters) into dashboard `ReportStats` cards. */
+/** Maps `getReportStats` / `getReportsSummary` API payload into dashboard `ReportStats` cards. */
 export function normalizeReportStatsForUi(raw: unknown, fallback: ReportStats): ReportStats {
   const r = raw as Record<string, unknown> | null | undefined;
   if (!r || typeof r !== "object") return fallback;
   if ("reportsGenerated" in r && typeof r.reportsGenerated === "number") {
-    return { ...fallback, ...(r as unknown as ReportStats) };
+    const last =
+      typeof r.lastReport === "string"
+        ? r.lastReport
+        : typeof r.lastReportAt === "string"
+          ? new Date(r.lastReportAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+          : fallback.lastReport;
+    return {
+      ...fallback,
+      ...(r as unknown as ReportStats),
+      lastReport: last,
+    };
   }
   const total = Number(r.totalReports ?? 0);
   const failed = Number(r.failedReports ?? 0);
@@ -609,15 +626,25 @@ export function normalizeDailyDigestDataForUi(raw: unknown, fallback: DailyDiges
   if (!m || typeof m !== "object" || !("newJobs" in m || "applicationsSent" in m)) {
     return fallback;
   }
+  const failed = Number(m.failedAutomations ?? fallback.failedAutomations);
+  const followDue = Number(m.followUpsDue ?? fallback.followUpsDue);
+  const deadlines = Number(m.deadlinesApproaching ?? fallback.deadlinesApproaching);
+  const recommendedActions: string[] = [];
+  if (failed > 0) recommendedActions.push("Review failed automations in Automation Logs.");
+  if (followDue > 0) recommendedActions.push(`Clear ${followDue} pending follow-up${followDue === 1 ? "" : "s"}.`);
+  if (deadlines > 0) recommendedActions.push(`${deadlines} deadline${deadlines === 1 ? "" : "s"} approaching — prioritize submissions.`);
+  if (!recommendedActions.length) recommendedActions.push("Pipeline looks steady — keep your application cadence.");
   return {
     ...fallback,
     date: String(m.date ?? fallback.date),
     newJobsDetected: Number(m.newJobs ?? m.newJobsDetected ?? fallback.newJobsDetected),
     applicationsSent: Number(m.applicationsSent ?? fallback.applicationsSent),
-    followUpsDue: Number(m.followUpsDue ?? fallback.followUpsDue),
+    followUpsDue: followDue,
     repliesReceived: Number(m.repliesReceived ?? fallback.repliesReceived),
-    deadlinesApproaching: Number(m.deadlinesApproaching ?? fallback.deadlinesApproaching),
-    failedAutomations: Number(m.failedAutomations ?? fallback.failedAutomations),
+    interviewsScheduled: Number(m.interviewsScheduled ?? fallback.interviewsScheduled),
+    deadlinesApproaching: deadlines,
+    failedAutomations: failed,
+    recommendedActions,
   };
 }
 
@@ -633,6 +660,12 @@ export function normalizeWeeklyReportDataForUi(raw: unknown, fallback: WeeklyRep
     ? (m.topSources as { source: string; count: number }[])
     : fallback.topSources;
   const rec = Array.isArray(m.recommendations) ? (m.recommendations as string[]) : [];
+  const pb = m.pipelineBreakdown as { applications?: Record<string, number> } | undefined;
+  const appsPb = pb?.applications ?? {};
+  const pipelineConversion =
+    Object.keys(appsPb).length > 0
+      ? Object.entries(appsPb).map(([stage, conversion]) => ({ stage, conversion: Number(conversion) }))
+      : [];
   return {
     ...fallback,
     weekRange:
@@ -649,8 +682,8 @@ export function normalizeWeeklyReportDataForUi(raw: unknown, fallback: WeeklyRep
     bottlenecks: rec.length > 3 ? rec.slice(3) : fallback.bottlenecks,
     nextWeekFocus: fallback.nextWeekFocus,
     applicationsBySource: topSources.length ? topSources : fallback.applicationsBySource,
-    responseRateTrend: fallback.responseRateTrend,
-    pipelineConversion: fallback.pipelineConversion,
+    responseRateTrend: [],
+    pipelineConversion: pipelineConversion.length ? pipelineConversion : fallback.pipelineConversion,
   };
 }
 

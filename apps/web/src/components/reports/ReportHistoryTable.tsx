@@ -6,6 +6,14 @@ import { ReportTypeBadge } from "./ReportTypeBadge";
 import { formatDate } from "@/lib/utils";
 import type { ReportHistoryRecord } from "@/types/report";
 
+function deliveryLabel(record: ReportHistoryRecord): string {
+  if (record.previewOnly) return "Preview only";
+  if (record.deliveryStatus === "Sent") return "Sent";
+  if (record.deliveryStatus === "Failed") return "Failed";
+  if (record.deliveryStatus === "Queued") return "Queued";
+  return "Not sent";
+}
+
 export function ReportHistoryTable({
   records,
   onView,
@@ -27,7 +35,8 @@ export function ReportHistoryTable({
             <TableHead>Status</TableHead>
             <TableHead>Generated At</TableHead>
             <TableHead>Sent To</TableHead>
-            <TableHead>Delivery Method</TableHead>
+            <TableHead>Outcome</TableHead>
+            <TableHead>Method</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -39,6 +48,7 @@ export function ReportHistoryTable({
               <TableCell><ReportStatusBadge status={record.status} /></TableCell>
               <TableCell>{formatDate(record.generatedAt, "MMM d, yyyy HH:mm")}</TableCell>
               <TableCell>{record.sentTo}</TableCell>
+              <TableCell>{deliveryLabel(record)}</TableCell>
               <TableCell>{record.deliveryMethod}</TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex gap-2">

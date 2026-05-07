@@ -69,6 +69,7 @@ export const mockDailyDigestPreview: DailyDigestData = {
   applicationsSent: 2,
   followUpsDue: 4,
   repliesReceived: 2,
+  interviewsScheduled: 0,
   deadlinesApproaching: 1,
   failedAutomations: 1,
   recommendedActions: [

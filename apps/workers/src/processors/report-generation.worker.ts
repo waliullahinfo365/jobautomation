@@ -12,7 +12,7 @@ import {
   callAnthropicMessages,
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
-import { sendReportEmailStub } from "@jobflow/integrations/smtp/smtp.service";
+import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
 import { loadGoogleAccessToken } from "../lib/google-auth";
 import { createGoogleDoc, ensureWorkspaceFolderStructure } from "../lib/google-drive";
 import { notifyAutomationEvent } from "../lib/notifications";
@@ -350,23 +350,61 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
 
     const smtpReady = await isSmtpConfigured(payload.tenantId);
     if (payload.send) {
-      if (smtpReady) {
-        const delivered = await sendReportEmailStub({
-          to: payload.to ?? "reports@example.local",
-          subject: title,
-          html: `<pre>${generated.body}</pre>`,
-          text: generated.body,
-          reportType: "Daily Digest",
+      const prevData = (report.data ?? {}) as Record<string, unknown>;
+      const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
+      const delivery = await deliverReportNotifications({
+        tenantId: payload.tenantId,
+        title,
+        summaryText: generated.body,
+        detailUrl: docLink,
+        reportType: "Daily Digest",
+        event: "daily-digest",
+        smtpIntegrationConnected: smtpReady,
+        email:
+          smtpReady && payload.to
+            ? { to: payload.to, html: `<pre>${generated.body}</pre>`, text: generated.body }
+            : undefined,
+      });
+      const methods = [
+        delivery.telegram.success ? "telegram" : null,
+        delivery.slack.success ? "slack" : null,
+        delivery.email.success ? "email" : null,
+      ].filter(Boolean) as string[];
+      await ReportModel.findByIdAndUpdate(report._id, {
+        status: delivery.anySent ? "Sent" : report.status,
+        deliveryStatus: delivery.anySent ? "Sent" : "Not Sent",
+        deliveryMethod: delivery.anySent ? (methods.length ? methods.join("+") : "dashboard") : "dashboard-preview",
+        sentAt: delivery.anySent ? new Date() : undefined,
+        sentTo: delivery.anySent && payload.to ? [payload.to] : [],
+        deliveryError: delivery.anySent ? undefined : "No notification provider delivered successfully.",
+        data: {
+          ...prevData,
+          markdown: generated.body,
+          providerResults: {
+            telegram: delivery.telegram,
+            slack: delivery.slack,
+            email: delivery.email,
+          },
+          previewOnly: !delivery.anySent,
+        },
+      });
+      if (!delivery.anySent) {
+        await createLog({
+          tenantId: payload.tenantId,
+          moduleKey: "daily-digest",
+          status: "Warning",
+          message: "No notification provider configured. Report preview saved only.",
+          operationId,
+          relatedRecordId: String(report._id),
+          metadata: {
+            providerResults: {
+              telegram: delivery.telegram,
+              slack: delivery.slack,
+              email: delivery.email,
+            },
+          },
         });
-        await ReportModel.findByIdAndUpdate(report._id, {
-          status: "Sent",
-          deliveryStatus: "Sent",
-          deliveryMethod: "smtp",
-          sentAt: new Date(delivered.sentAt),
-          sentTo: [payload.to ?? "reports@example.local"],
-          deliveryId: delivered.deliveryId,
-          deliveryError: undefined,
-        });
+      } else {
         await createLog({
           tenantId: payload.tenantId,
           moduleKey: "daily-digest",
@@ -374,16 +412,13 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
           message: "Daily digest test sent",
           operationId,
           relatedRecordId: String(report._id),
-        });
-      } else {
-        await createLog({
-          tenantId: payload.tenantId,
-          moduleKey: "daily-digest",
-          status: "Warning",
-          message: "SMTP not configured; daily digest test email preview generated.",
-          operationId,
-          relatedRecordId: String(report._id),
-          metadata: { smtpConfigured: false },
+          metadata: {
+            providerResults: {
+              telegram: delivery.telegram,
+              slack: delivery.slack,
+              email: delivery.email,
+            },
+          },
         });
       }
     } else {
@@ -408,11 +443,7 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       status: "completed",
       reportId: String(report._id),
       operationId,
-      message: payload.send
-        ? smtpReady
-          ? "Daily digest generated and test sent."
-          : "SMTP not configured; daily digest preview generated."
-        : "Daily digest generated.",
+      message: payload.send ? "Daily digest test processed (see provider results on report)." : "Daily digest generated.",
     };
   } catch (error) {
     const ser = serializeWorkerError(error);
@@ -490,23 +521,61 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
 
     const smtpReady = await isSmtpConfigured(payload.tenantId);
     if (payload.send) {
-      if (smtpReady) {
-        const delivered = await sendReportEmailStub({
-          to: payload.to ?? "reports@example.local",
-          subject: title,
-          html: `<pre>${generated.body}</pre>`,
-          text: generated.body,
-          reportType: "Weekly Performance",
+      const prevData = (report.data ?? {}) as Record<string, unknown>;
+      const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
+      const delivery = await deliverReportNotifications({
+        tenantId: payload.tenantId,
+        title,
+        summaryText: generated.body,
+        detailUrl: docLink,
+        reportType: "Weekly Performance",
+        event: "weekly-report",
+        smtpIntegrationConnected: smtpReady,
+        email:
+          smtpReady && payload.to
+            ? { to: payload.to, html: `<pre>${generated.body}</pre>`, text: generated.body }
+            : undefined,
+      });
+      const methods = [
+        delivery.telegram.success ? "telegram" : null,
+        delivery.slack.success ? "slack" : null,
+        delivery.email.success ? "email" : null,
+      ].filter(Boolean) as string[];
+      await ReportModel.findByIdAndUpdate(report._id, {
+        status: delivery.anySent ? "Sent" : report.status,
+        deliveryStatus: delivery.anySent ? "Sent" : "Not Sent",
+        deliveryMethod: delivery.anySent ? (methods.length ? methods.join("+") : "dashboard") : "dashboard-preview",
+        sentAt: delivery.anySent ? new Date() : undefined,
+        sentTo: delivery.anySent && payload.to ? [payload.to] : [],
+        deliveryError: delivery.anySent ? undefined : "No notification provider delivered successfully.",
+        data: {
+          ...prevData,
+          markdown: generated.body,
+          providerResults: {
+            telegram: delivery.telegram,
+            slack: delivery.slack,
+            email: delivery.email,
+          },
+          previewOnly: !delivery.anySent,
+        },
+      });
+      if (!delivery.anySent) {
+        await createLog({
+          tenantId: payload.tenantId,
+          moduleKey: "weekly-report",
+          status: "Warning",
+          message: "No notification provider configured. Report preview saved only.",
+          operationId,
+          relatedRecordId: String(report._id),
+          metadata: {
+            providerResults: {
+              telegram: delivery.telegram,
+              slack: delivery.slack,
+              email: delivery.email,
+            },
+          },
         });
-        await ReportModel.findByIdAndUpdate(report._id, {
-          status: "Sent",
-          deliveryStatus: "Sent",
-          deliveryMethod: "smtp",
-          sentAt: new Date(delivered.sentAt),
-          sentTo: [payload.to ?? "reports@example.local"],
-          deliveryId: delivered.deliveryId,
-          deliveryError: undefined,
-        });
+      } else {
         await createLog({
           tenantId: payload.tenantId,
           moduleKey: "weekly-report",
@@ -514,16 +583,13 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
           message: "Weekly report test sent",
           operationId,
           relatedRecordId: String(report._id),
-        });
-      } else {
-        await createLog({
-          tenantId: payload.tenantId,
-          moduleKey: "weekly-report",
-          status: "Warning",
-          message: "SMTP not configured; weekly report test email preview generated.",
-          operationId,
-          relatedRecordId: String(report._id),
-          metadata: { smtpConfigured: false },
+          metadata: {
+            providerResults: {
+              telegram: delivery.telegram,
+              slack: delivery.slack,
+              email: delivery.email,
+            },
+          },
         });
       }
     } else {
@@ -548,11 +614,7 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       status: "completed",
       reportId: String(report._id),
       operationId,
-      message: payload.send
-        ? smtpReady
-          ? "Weekly report generated and test sent."
-          : "SMTP not configured; weekly report preview generated."
-        : "Weekly report generated.",
+      message: payload.send ? "Weekly report test processed (see provider results on report)." : "Weekly report generated.",
     };
   } catch (error) {
     const ser = serializeWorkerError(error);

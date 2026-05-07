@@ -5,6 +5,7 @@ import {
   getDailyAnalytics,
   getReportById,
   getReportStats,
+  getSummary,
   getWeeklyAnalytics,
   listReports,
   previewDailyDigest,
@@ -36,6 +37,7 @@ export const reportRoutes = Router();
 reportRoutes.get("/", requirePermission("reports.read"), validateQuery(listQuerySchema), listReports);
 reportRoutes.post("/", requirePermission("reports.generate"), validateBody(reportCreateSchema), createReport);
 reportRoutes.get("/stats", requirePermission("reports.read"), getReportStats);
+reportRoutes.get("/summary", requirePermission("reports.read"), getSummary);
 reportRoutes.get("/analytics/daily", requirePermission("reports.read"), validateQuery(reportAnalyticsQuerySchema), getDailyAnalytics);
 reportRoutes.get("/analytics/weekly", requirePermission("reports.read"), validateQuery(reportAnalyticsQuerySchema), getWeeklyAnalytics);
 reportRoutes.post("/generate", requirePermission("reports.generate"), validateBody(reportsGenerateBodySchema), generateReport);

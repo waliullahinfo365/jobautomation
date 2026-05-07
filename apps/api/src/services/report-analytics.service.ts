@@ -1,4 +1,11 @@
-import { ApplicationModel, AutomationLogModel, InterviewModel, JobModel, ReportModel } from "@jobflow/database/models";
+import {
+  ApplicationModel,
+  AutomationLogModel,
+  DocumentModel,
+  InterviewModel,
+  JobModel,
+  ReportModel,
+} from "@jobflow/database/models";
 import type { DailyDigestMetrics, WeeklyPerformanceMetrics } from "@jobflow/shared/types/report";
 import { assertTenantId } from "./baseTenant.service";
 
@@ -140,6 +147,141 @@ export async function getWeeklyPerformanceMetrics(input: {
   };
   metrics.recommendations = deterministicRecommendations(metrics);
   return metrics;
+}
+
+/** Current calendar week (Mon–Sun) using local timezone, aligned with weekly analytics defaults. */
+export function defaultReportWeekBounds(now = new Date()): { weekStart: Date; weekEnd: Date } {
+  const day = now.getDay() || 7;
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - day + 1);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  return { weekStart, weekEnd };
+}
+
+function localIsoDay(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export async function getApplicationsCountByLocalDay(input: { tenantId: string; from: Date; to: Date }) {
+  const tenantId = assertTenantId(input.tenantId);
+  const apps = await ApplicationModel.find({
+    tenantId,
+    dateApplied: { $gte: input.from, $lte: input.to },
+  })
+    .select("dateApplied")
+    .lean();
+  const counts = new Map<string, number>();
+  for (const row of apps) {
+    const d = row.dateApplied instanceof Date ? row.dateApplied : new Date(String(row.dateApplied));
+    const key = localIsoDay(d);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Array.from(counts.entries()).map(([day, applications]) => ({ day, applications }));
+}
+
+export function fillWeeklyTrendForUi(
+  countsByDay: { day: string; applications: number }[],
+  weekStart: Date,
+  weekEnd: Date
+): { day: string; applications: number }[] {
+  const map = new Map(countsByDay.map((t) => [t.day, t.applications]));
+  const out: { day: string; applications: number }[] = [];
+  const cur = new Date(weekStart);
+  cur.setHours(0, 0, 0, 0);
+  const end = new Date(weekEnd);
+  end.setHours(23, 59, 59, 999);
+  while (cur <= end) {
+    const key = localIsoDay(cur);
+    const label = cur.toLocaleDateString(undefined, { weekday: "short" });
+    out.push({ day: label, applications: map.get(key) ?? 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+export function weeklyPipelineStatusChart(metrics: WeeklyPerformanceMetrics): { label: string; value: number }[] {
+  const apps = metrics.pipelineBreakdown?.applications ?? {};
+  const entries = Object.entries(apps).filter(([, v]) => Number(v) > 0);
+  if (entries.length) {
+    return entries.map(([label, value]) => ({ label, value: Number(value) })).slice(0, 10);
+  }
+  const jobs = metrics.pipelineBreakdown?.jobs ?? {};
+  return Object.entries(jobs)
+    .filter(([, v]) => Number(v) > 0)
+    .map(([label, value]) => ({ label: `Job ${label}`, value: Number(value) }))
+    .slice(0, 10);
+}
+
+export async function getReportsSummary(input: { tenantId: string }) {
+  const tenantId = assertTenantId(input.tenantId);
+  const { weekStart, weekEnd } = defaultReportWeekBounds();
+
+  const [
+    stats,
+    dailyDigestsSent,
+    weeklyReportsSent,
+    pdfExports,
+    weeklyMetrics,
+    lastReportRaw,
+    trendRaw,
+    followUpsDue,
+  ] = await Promise.all([
+    getReportHistoryStats({ tenantId }),
+    ReportModel.countDocuments({ tenantId, type: "Daily Digest", deliveryStatus: "Sent" }),
+    ReportModel.countDocuments({ tenantId, type: "Weekly Performance", deliveryStatus: "Sent" }),
+    DocumentModel.countDocuments({ tenantId, pdfExportStatus: "Exported" }),
+    getWeeklyPerformanceMetrics({ tenantId, weekStart, weekEnd }),
+    ReportModel.findOne({ tenantId }).sort({ generatedAt: -1 }).select("generatedAt").lean(),
+    getApplicationsCountByLocalDay({ tenantId, from: weekStart, to: weekEnd }),
+    ApplicationModel.countDocuments({
+      tenantId,
+      followUpDate: { $lte: new Date() },
+      followUpStatus: { $ne: "Sent" },
+    }),
+  ]);
+
+  const lastReportDoc = lastReportRaw as { generatedAt?: Date } | null;
+
+  const weeklyApplicationTrend = fillWeeklyTrendForUi(trendRaw, weekStart, weekEnd);
+  const apps = weeklyMetrics.applicationsSubmitted;
+  const rr = weeklyMetrics.responseRate <= 1 ? weeklyMetrics.responseRate : weeklyMetrics.responseRate / 100;
+
+  const performanceSummary = {
+    applicationsThisWeek: apps,
+    repliesThisWeek: apps > 0 ? Math.round(rr * apps) : 0,
+    interviewsThisWeek: weeklyMetrics.interviewsScheduled,
+    offersThisWeek: weeklyMetrics.offersReceived,
+    rejectionRate: apps > 0 ? Math.round((weeklyMetrics.rejections / apps) * 100) : 0,
+    followUpsDue,
+  };
+
+  const totalReports = stats.totalReports;
+  const successRate = totalReports > 0 ? Math.round(((totalReports - stats.failedReports) / totalReports) * 100) : 0;
+
+  const lastGen = lastReportDoc?.generatedAt ? new Date(lastReportDoc.generatedAt as Date) : null;
+
+  return {
+    reportsGenerated: totalReports,
+    dailyDigestsSent,
+    weeklyReportsSent,
+    pdfExports,
+    successRate,
+    lastReportAt: lastGen?.toISOString() ?? null,
+    lastReport: lastGen ? lastGen.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—",
+    performanceSummary,
+    weeklyApplicationTrend,
+    statusBreakdown: weeklyPipelineStatusChart(weeklyMetrics),
+    totalReports,
+    sentReports: stats.sentReports,
+    failedReports: stats.failedReports,
+    latestReports: stats.latestReports,
+  };
 }
 
 export async function getReportHistoryStats(input: { tenantId: string }) {
