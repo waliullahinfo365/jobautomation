@@ -33,6 +33,57 @@ function summaryForWeekly(metrics: WeeklyPerformanceMetrics): string {
   return `Weekly performance ${metrics.weekStart} to ${metrics.weekEnd}: ${metrics.applicationsSubmitted} applications, ${metrics.repliesReceived} replies (${metrics.responseRate}), ${metrics.interviewsScheduled} interviews (${metrics.interviewConversionRate}), ${metrics.offersReceived} offers (${metrics.offerRate}).`;
 }
 
+/** User-facing suffix when Google Doc/Drive/Gmail delivery was skipped (never logs secrets). */
+function googleDeliveryMessageSuffix(data: Record<string, unknown>): string | undefined {
+  const gd = data.googleDelivery;
+  if (!gd || typeof gd !== "object") return undefined;
+  const g = gd as Record<string, unknown>;
+  if (g.success === true && g.fallbackUsed !== true) return undefined;
+
+  const reconnect = g.reconnectRequired === true ? " Reconnect the integration in Settings." : "";
+  const endpointType = typeof g.endpointType === "string" ? g.endpointType : "";
+  const requiredScope = typeof g.requiredScope === "string" ? g.requiredScope : "";
+
+  if (endpointType === "oauth.precondition") {
+    const base =
+      typeof g.googleErrorMessage === "string" && g.googleErrorMessage.trim()
+        ? g.googleErrorMessage.trim()
+        : requiredScope
+          ? `Missing OAuth scope: ${requiredScope}`
+          : "Google OAuth precondition failed.";
+    return `${base}${reconnect}`;
+  }
+
+  if (
+    endpointType === "docs.documents.batchUpdate" ||
+    requiredScope.includes("documents") ||
+    endpointType.includes("documents")
+  ) {
+    return `Google Docs scope missing or insufficient. Reconnect Google Drive integration.${reconnect}`;
+  }
+
+  if (
+    endpointType.startsWith("gmail.") ||
+    requiredScope.includes("gmail.send") ||
+    requiredScope.includes("/auth/gmail")
+  ) {
+    return `Gmail send scope missing. Reconnect Gmail integration.${reconnect}`;
+  }
+
+  if (endpointType.startsWith("drive.") || requiredScope.includes("drive")) {
+    return `Google Drive write failed or scope insufficient. Reconnect Google Drive integration.${reconnect}`;
+  }
+
+  const code = typeof g.statusCode === "number" ? g.statusCode : 0;
+  const brief =
+    typeof g.googleErrorMessage === "string"
+      ? g.googleErrorMessage.slice(0, 220)
+      : typeof g.googleErrorReason === "string"
+        ? g.googleErrorReason
+        : "Google API delivery skipped.";
+  return code === 403 ? `Google delivery failed (403): ${brief}.${reconnect}` : `${brief}${reconnect}`;
+}
+
 async function isSmtpIntegrationConnected(tenantId: string): Promise<boolean> {
   const conn = await IntegrationConnectionModel.findOne({ tenantId, provider: "SMTP", status: "Connected" }).select("_id").lean();
   return Boolean(conn);
@@ -75,6 +126,12 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     Boolean
   ) as string[];
 
+  const googleSuffix = googleDeliveryMessageSuffix(data);
+  const baseMessage = previewOnly
+    ? "No Telegram, Slack, or SMTP channel delivered successfully; report remains available in the dashboard."
+    : "Report delivery attempted on configured channels.";
+  const message = googleSuffix ? `${baseMessage} ${googleSuffix}` : baseMessage;
+
   await ReportModel.findByIdAndUpdate(report._id, {
     deliveryStatus: delivery.anySent ? "Sent" : "Not Sent",
     deliveryError: previewOnly ? "No notification provider delivered successfully." : undefined,
@@ -95,9 +152,7 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     tenantId: input.tenantId,
     reportId: input.reportId,
     deliveryStatus: delivery.anySent ? "Sent" : "Not Sent",
-    message: previewOnly
-      ? "No Telegram, Slack, or SMTP channel delivered successfully; report remains available in the dashboard."
-      : "Report delivery attempted on configured channels.",
+    message,
     providerResults,
     previewOnly,
   };

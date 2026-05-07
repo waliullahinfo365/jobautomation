@@ -13,7 +13,14 @@ import {
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
 import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
-import { loadGoogleAccessToken } from "../lib/google-auth";
+import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
+import {
+  GoogleApiHttpError,
+  googleFailureMetaFromUnknown,
+  integrationProviderForGoogleFailure,
+  loadGoogleAccessToken,
+  persistGoogleReconnectHint,
+} from "../lib/google-auth";
 import { createGoogleDoc, ensureWorkspaceFolderStructure } from "../lib/google-drive";
 import { notifyAutomationEvent } from "../lib/notifications";
 import { logger } from "../utils/logger";
@@ -267,35 +274,90 @@ async function notifyReport(input: { tenantId: string; message: string; event: "
   });
 }
 
+type RouteReportDriveResult =
+  | { ok: true; googleDocId: string; googleDocUrl: string; reportsFolderId: string }
+  | {
+      ok: false;
+      reason: string;
+      fallbackUsed: true;
+      googleDelivery?: Record<string, unknown>;
+    };
+
 async function routeReportToDrive(input: {
   tenantId: string;
   title: string;
   content: string;
   category: "Daily Digests" | "Weekly Reports";
-}) {
-  const auth = await loadGoogleAccessToken({
-    tenantId: input.tenantId,
-    provider: "Google Drive",
-    requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
-  });
-  if (!auth.connected) return { ok: false as const, reason: auth.reason };
-  const workspace = await ensureWorkspaceFolderStructure({
-    tenantId: input.tenantId,
-    accessToken: auth.accessToken,
-  });
-  const reportBucket = workspace.reportChildren.find((r) => r.folder.name === input.category) ?? workspace.reports;
-  const doc = await createGoogleDoc({
-    accessToken: auth.accessToken,
-    name: input.title,
-    content: input.content,
-    parentId: reportBucket.folder.id,
-  });
-  return {
-    ok: true as const,
-    googleDocId: doc.id,
-    googleDocUrl: doc.webViewLink ?? `https://docs.google.com/document/d/${doc.id}/edit`,
-    reportsFolderId: workspace.reports.folder.id,
-  };
+}): Promise<RouteReportDriveResult> {
+  try {
+    const auth = await loadGoogleAccessToken({
+      tenantId: input.tenantId,
+      provider: "Google Drive",
+      requiredScopes: [...GOOGLE_DRIVE_DOCS_WORKER_SCOPES],
+    });
+    if (!auth.connected) {
+      const reconnect =
+        typeof auth.reason === "string" &&
+        (auth.reason.includes("scope") || auth.reason.includes("Scope"));
+      return {
+        ok: false,
+        reason: auth.reason ?? "Google Drive not connected",
+        fallbackUsed: true,
+        googleDelivery: {
+          googleApi: true,
+          provider: "Google Drive",
+          endpointType: "oauth.precondition",
+          httpMethod: "N/A",
+          statusCode: 0,
+          googleErrorMessage: auth.reason,
+          reconnectRequired: reconnect,
+          fallbackUsed: true,
+          requiredScope: auth.reason?.includes("documents")
+            ? "https://www.googleapis.com/auth/documents"
+            : "https://www.googleapis.com/auth/drive.file",
+        },
+      };
+    }
+    const workspace = await ensureWorkspaceFolderStructure({
+      tenantId: input.tenantId,
+      accessToken: auth.accessToken,
+    });
+    const reportBucket = workspace.reportChildren.find((r) => r.folder.name === input.category) ?? workspace.reports;
+    const doc = await createGoogleDoc({
+      accessToken: auth.accessToken,
+      name: input.title,
+      content: input.content,
+      parentId: reportBucket.folder.id,
+    });
+    return {
+      ok: true as const,
+      googleDocId: doc.id,
+      googleDocUrl: doc.webViewLink ?? `https://docs.google.com/document/d/${doc.id}/edit`,
+      reportsFolderId: workspace.reports.folder.id,
+    };
+  } catch (error) {
+    if (error instanceof GoogleApiHttpError && error.meta.reconnectRequired) {
+      await persistGoogleReconnectHint({
+        tenantId: input.tenantId,
+        provider: integrationProviderForGoogleFailure(error.meta),
+        meta: {
+          endpointType: error.meta.endpointType,
+          statusCode: error.meta.statusCode,
+          googleErrorReason: error.meta.googleErrorReason,
+          requiredScope: error.meta.requiredScope,
+        },
+      });
+    }
+    const meta = googleFailureMetaFromUnknown(error, "report.routeToDrive");
+    const msg = redactForLog(error instanceof Error ? error.message : String(error));
+    logger.warn({ err: error, tenantId: input.tenantId }, "routeReportToDrive: dashboard fallback (Google delivery skipped)");
+    return {
+      ok: false,
+      reason: msg,
+      fallbackUsed: true,
+      googleDelivery: { ...meta } as Record<string, unknown>,
+    };
+  }
 }
 
 export async function processWorkerDailyDigest(payload: DailyPayload) {
@@ -322,6 +384,10 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       counts,
       operationId,
     });
+    let mergedData: Record<string, unknown> = {
+      ...((report.data ?? {}) as Record<string, unknown>),
+      markdown: generated.body,
+    };
     const drive = await routeReportToDrive({
       tenantId: payload.tenantId,
       title,
@@ -329,28 +395,51 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       category: "Daily Digests",
     });
     if (drive.ok) {
+      mergedData = {
+        ...mergedData,
+        googleDocId: drive.googleDocId,
+        googleDocUrl: drive.googleDocUrl,
+        deliveryWarning: false,
+        googleDelivery: { success: true, fallbackUsed: false },
+      };
       await ReportModel.findByIdAndUpdate(report._id, {
         deliveryMethod: "dashboard+drive",
-        data: {
-          ...(report.data ?? {}),
-          googleDocId: drive.googleDocId,
-          googleDocUrl: drive.googleDocUrl,
-        },
+        data: mergedData,
       });
     } else {
+      const gd = drive.googleDelivery ?? {};
+      const endpointType = String((gd as { endpointType?: string }).endpointType ?? "");
+      const scopeGap =
+        endpointType === "docs.documents.batchUpdate" ||
+        String((gd as { requiredScope?: string }).requiredScope ?? "").includes("documents");
+      mergedData = {
+        ...mergedData,
+        deliveryWarning: true,
+        googleDelivery: {
+          success: false,
+          fallbackUsed: true,
+          ...gd,
+        },
+      };
+      await ReportModel.findByIdAndUpdate(report._id, {
+        data: mergedData,
+      });
       await createLog({
         tenantId: payload.tenantId,
         moduleKey: "daily-digest",
         status: "Warning",
-        message: `Report Drive routing skipped: ${drive.reason ?? "Drive unavailable"}`,
+        message: scopeGap
+          ? "Google Docs scope missing or insufficient. Reconnect Google Drive integration. Digest saved to dashboard only."
+          : `Google Drive/Docs delivery skipped: ${drive.reason ?? "provider error"}`,
         operationId,
         relatedRecordId: String(report._id),
+        metadata: gd,
       });
     }
 
     const smtpReady = await isSmtpConfigured(payload.tenantId);
     if (payload.send) {
-      const prevData = (report.data ?? {}) as Record<string, unknown>;
+      const prevData = mergedData;
       const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
       const delivery = await deliverReportNotifications({
         tenantId: payload.tenantId,
@@ -493,6 +582,10 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       counts,
       operationId,
     });
+    let mergedData: Record<string, unknown> = {
+      ...((report.data ?? {}) as Record<string, unknown>),
+      markdown: generated.body,
+    };
     const drive = await routeReportToDrive({
       tenantId: payload.tenantId,
       title,
@@ -500,28 +593,51 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       category: "Weekly Reports",
     });
     if (drive.ok) {
+      mergedData = {
+        ...mergedData,
+        googleDocId: drive.googleDocId,
+        googleDocUrl: drive.googleDocUrl,
+        deliveryWarning: false,
+        googleDelivery: { success: true, fallbackUsed: false },
+      };
       await ReportModel.findByIdAndUpdate(report._id, {
         deliveryMethod: "dashboard+drive",
-        data: {
-          ...(report.data ?? {}),
-          googleDocId: drive.googleDocId,
-          googleDocUrl: drive.googleDocUrl,
-        },
+        data: mergedData,
       });
     } else {
+      const gd = drive.googleDelivery ?? {};
+      const endpointType = String((gd as { endpointType?: string }).endpointType ?? "");
+      const scopeGap =
+        endpointType === "docs.documents.batchUpdate" ||
+        String((gd as { requiredScope?: string }).requiredScope ?? "").includes("documents");
+      mergedData = {
+        ...mergedData,
+        deliveryWarning: true,
+        googleDelivery: {
+          success: false,
+          fallbackUsed: true,
+          ...gd,
+        },
+      };
+      await ReportModel.findByIdAndUpdate(report._id, {
+        data: mergedData,
+      });
       await createLog({
         tenantId: payload.tenantId,
         moduleKey: "weekly-report",
         status: "Warning",
-        message: `Report Drive routing skipped: ${drive.reason ?? "Drive unavailable"}`,
+        message: scopeGap
+          ? "Google Docs scope missing or insufficient. Reconnect Google Drive integration. Report saved to dashboard only."
+          : `Google Drive/Docs delivery skipped: ${drive.reason ?? "provider error"}`,
         operationId,
         relatedRecordId: String(report._id),
+        metadata: gd,
       });
     }
 
     const smtpReady = await isSmtpConfigured(payload.tenantId);
     if (payload.send) {
-      const prevData = (report.data ?? {}) as Record<string, unknown>;
+      const prevData = mergedData;
       const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
       const delivery = await deliverReportNotifications({
         tenantId: payload.tenantId,

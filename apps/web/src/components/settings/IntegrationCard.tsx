@@ -65,7 +65,11 @@ type Props = {
 
 export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending }: Props) {
   const isGoogle = item.slug === "gmail" || item.slug === "google-drive" || item.slug === "google-calendar";
-  const demoGoogle = isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true);
+  const demoGoogle =
+    isGoogle &&
+    (item.metadata?.demoConnection === true ||
+      item.metadata?.stub === true ||
+      item.connectedEmail === "oauth-demo-user@example.com");
   const isSlack = item.slug === "slack";
   const connectLabel =
     demoGoogle ? "Configure Google OAuth" : item.status === "Not Connected" ? "Connect" : "Reconnect";
@@ -102,6 +106,11 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
           <Field label="Status" value="Demo / Not Live - reconnect with Google OAuth." />
         ) : item.errorMessage ? (
           <Field label="Error" value={item.errorMessage} />
+        ) : null}
+        {!demoGoogle &&
+        typeof item.metadata?.reconnectBanner === "string" &&
+        item.metadata.reconnectBanner.trim().length > 0 ? (
+          <Field label="Reconnect required" value={item.metadata.reconnectBanner} />
         ) : null}
         {item.scopes?.length ? <Field label="Scopes" value={item.scopes.join(", ")} /> : null}
         {modelPreview ? <Field label="Model" value={modelPreview} /> : null}

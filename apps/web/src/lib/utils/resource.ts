@@ -549,6 +549,57 @@ function mapBackendReportStatus(s: string): ReportHistoryRecord["status"] {
   return (allowed.includes(s as ReportHistoryRecord["status"]) ? s : "Generated") as ReportHistoryRecord["status"];
 }
 
+/** Human-readable Google delivery gap from saved report `data` (aligned with API test-send messaging). */
+export function summarizeGoogleDeliveryWarning(data: Record<string, unknown>): string | undefined {
+  const gd = data.googleDelivery;
+  if (!gd || typeof gd !== "object") return undefined;
+  const g = gd as Record<string, unknown>;
+  if (g.success === true && g.fallbackUsed !== true) return undefined;
+
+  const reconnect = g.reconnectRequired === true ? " Reconnect the integration in Settings." : "";
+  const endpointType = typeof g.endpointType === "string" ? g.endpointType : "";
+  const requiredScope = typeof g.requiredScope === "string" ? g.requiredScope : "";
+
+  if (endpointType === "oauth.precondition") {
+    const base =
+      typeof g.googleErrorMessage === "string" && g.googleErrorMessage.trim()
+        ? g.googleErrorMessage.trim()
+        : requiredScope
+          ? `Missing OAuth scope: ${requiredScope}`
+          : "Google OAuth precondition failed.";
+    return `${base}${reconnect}`;
+  }
+
+  if (
+    endpointType === "docs.documents.batchUpdate" ||
+    requiredScope.includes("documents") ||
+    endpointType.includes("documents")
+  ) {
+    return `Google Docs scope missing or insufficient. Reconnect Google Drive integration.${reconnect}`;
+  }
+
+  if (
+    endpointType.startsWith("gmail.") ||
+    requiredScope.includes("gmail.send") ||
+    requiredScope.includes("/auth/gmail")
+  ) {
+    return `Gmail send scope missing. Reconnect Gmail integration.${reconnect}`;
+  }
+
+  if (endpointType.startsWith("drive.") || requiredScope.includes("drive")) {
+    return `Google Drive write failed or scope insufficient. Reconnect Google Drive integration.${reconnect}`;
+  }
+
+  const code = typeof g.statusCode === "number" ? g.statusCode : 0;
+  const brief =
+    typeof g.googleErrorMessage === "string"
+      ? g.googleErrorMessage.slice(0, 220)
+      : typeof g.googleErrorReason === "string"
+        ? g.googleErrorReason
+        : "Google API delivery skipped.";
+  return code === 403 ? `Google delivery failed (403): ${brief}.${reconnect}` : `${brief}${reconnect}`;
+}
+
 /** Normalizes API / DB report row to `ReportHistoryRecord`. */
 export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
   const r = (raw ?? {}) as Record<string, unknown>;
@@ -563,6 +614,8 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
   const previewOnly = Boolean(dataObj.previewOnly);
   const deliveryStatusRaw = String(r.deliveryStatus ?? "");
   const genAt = r.generatedAt ?? r.createdAt ?? new Date().toISOString();
+  const deliveryWarning = Boolean(dataObj.deliveryWarning);
+  const deliveryWarningSummary = deliveryWarning ? summarizeGoogleDeliveryWarning(dataObj) : undefined;
   return {
     id,
     reportName: String(r.name ?? r.reportName ?? "Report"),
@@ -576,6 +629,8 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
     previewOnly,
     pdfUrl: typeof r.pdfUrl === "string" && r.pdfUrl ? r.pdfUrl : undefined,
     googleDocUrl: typeof dataObj.googleDocUrl === "string" ? dataObj.googleDocUrl : undefined,
+    deliveryWarning,
+    deliveryWarningSummary,
   };
 }
 

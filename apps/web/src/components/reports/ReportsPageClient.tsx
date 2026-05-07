@@ -29,6 +29,7 @@ import {
   normalizeReportStatsForUi,
   normalizeReportsForUi,
   normalizeWeeklyReportDataForUi,
+  summarizeGoogleDeliveryWarning,
 } from "@/lib/utils/resource";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -265,8 +266,12 @@ export function ReportsPageClient() {
       const res = (await reportsApi.sendReportTest({ id: record.id, payload: {} })) as Record<string, unknown>;
       const previewOnly = Boolean(res.previewOnly);
       const msg = String(res.message ?? "");
-      if (previewOnly) {
-        showInfo(msg || "No notification provider configured. Report preview saved only.");
+      const googleHint =
+        /Google Docs scope missing|Gmail send scope missing|Missing OAuth scope|Google delivery failed \(403\)/i.test(
+          msg,
+        );
+      if (previewOnly || googleHint) {
+        showInfo(msg || "Delivery completed with warnings; see details in message.");
       } else {
         showSuccess(msg || "Report test delivery completed.");
       }
@@ -300,6 +305,9 @@ export function ReportsPageClient() {
       metaLines.push(`Generated: ${typeof genAt === "string" ? genAt : String(genAt ?? "—")}`);
       metaLines.push(`Delivery: ${String(row.deliveryMethod ?? record.deliveryMethod ?? "—")}`);
       if (data.previewOnly) metaLines.push("Last send: preview only (no provider delivered)");
+      const dwHint =
+        data.deliveryWarning === true ? summarizeGoogleDeliveryWarning(data as Record<string, unknown>) : undefined;
+      if (dwHint) metaLines.push(`Delivery warning: ${dwHint}`);
 
       setSelectedReport({
         title: String(row.name ?? record.reportName),

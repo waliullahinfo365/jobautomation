@@ -52,6 +52,127 @@ export type GoogleAuthContext = {
   reason?: string;
 };
 
+export type GoogleIntegrationProvider = "Google Drive" | "Google Docs" | "Gmail" | "Google Calendar";
+
+export type GoogleApiFailureMeta = {
+  googleApi: true;
+  provider: GoogleIntegrationProvider;
+  endpointType: string;
+  httpMethod: string;
+  statusCode: number;
+  googleErrorReason?: string;
+  googleErrorMessage?: string;
+  requiredScope?: string;
+  reconnectRequired: boolean;
+  fallbackUsed: boolean;
+};
+
+export class GoogleApiHttpError extends Error {
+  readonly meta: GoogleApiFailureMeta;
+
+  constructor(message: string, meta: GoogleApiFailureMeta) {
+    super(message);
+    this.name = "GoogleApiHttpError";
+    this.meta = meta;
+  }
+}
+
+function parseGoogleErrorPayload(text: string): { reason?: string; message?: string } {
+  try {
+    const j = JSON.parse(text) as {
+      error?: {
+        errors?: Array<{ reason?: string; message?: string }>;
+        message?: string;
+        status?: string;
+      };
+    };
+    const e = j.error;
+    const first = e?.errors?.[0];
+    return {
+      reason: first?.reason ?? e?.status,
+      message: first?.message ?? e?.message,
+    };
+  } catch {
+    return {};
+  }
+}
+
+function truncateGoogleMessage(s: string, max = 240): string {
+  const t = s.replace(/\s+/g, " ").trim();
+  return t.length <= max ? t : `${t.slice(0, max)}…`;
+}
+
+export function classifyGoogleRequest(
+  url: string,
+  method: string
+): { provider: GoogleIntegrationProvider; endpointType: string } {
+  const base = url.split("?")[0];
+  if (base.includes("gmail.googleapis.com")) {
+    return { provider: "Gmail", endpointType: "gmail.api" };
+  }
+  if (base.includes("googleapis.com/calendar/v3")) {
+    return { provider: "Google Calendar", endpointType: "calendar.events" };
+  }
+  if (base.includes("docs.googleapis.com")) {
+    if (base.includes(":batchUpdate")) return { provider: "Google Docs", endpointType: "docs.documents.batchUpdate" };
+    return { provider: "Google Docs", endpointType: "docs.documents" };
+  }
+  if (base.includes("drive/v3/files")) {
+    const tail = base.split("/files/")[1] ?? "";
+    if (method === "POST" && !tail) return { provider: "Google Drive", endpointType: "drive.files.create" };
+    if (method === "POST" && tail.endsWith("/copy")) return { provider: "Google Drive", endpointType: "drive.files.copy" };
+    if (method === "PATCH") return { provider: "Google Drive", endpointType: "drive.files.update" };
+    if (method === "GET") return { provider: "Google Drive", endpointType: "drive.files.list" };
+    return { provider: "Google Drive", endpointType: "drive.files" };
+  }
+  return { provider: "Google Drive", endpointType: "google.api" };
+}
+
+function inferRequiredScope(endpointType: string, statusCode: number): string | undefined {
+  if (statusCode !== 403 && statusCode !== 401) return undefined;
+  switch (endpointType) {
+    case "docs.documents.batchUpdate":
+      return "https://www.googleapis.com/auth/documents";
+    case "drive.files.create":
+    case "drive.files.copy":
+    case "drive.files.update":
+    case "drive.files.list":
+    case "drive.files":
+      return "https://www.googleapis.com/auth/drive.file";
+    default:
+      return undefined;
+  }
+}
+
+export function integrationProviderForGoogleFailure(meta: GoogleApiFailureMeta): ProviderName {
+  if (meta.provider === "Gmail") return "Gmail";
+  if (meta.provider === "Google Calendar") return "Google Calendar";
+  return "Google Drive";
+}
+
+export async function persistGoogleReconnectHint(input: {
+  tenantId: string;
+  provider: ProviderName;
+  meta: Pick<GoogleApiFailureMeta, "endpointType" | "statusCode" | "googleErrorReason" | "requiredScope">;
+}): Promise<void> {
+  await IntegrationConnectionModel.updateOne(
+    { tenantId: input.tenantId, provider: input.provider, status: "Connected" },
+    {
+      $set: {
+        "metadata.reconnectRequired": true,
+        "metadata.reconnectBanner": "Reconnect required because Google scopes changed.",
+        "metadata.lastGoogleApiFailure": {
+          endpointType: input.meta.endpointType,
+          statusCode: input.meta.statusCode,
+          googleErrorReason: input.meta.googleErrorReason,
+          requiredScope: input.meta.requiredScope,
+          recordedAt: new Date().toISOString(),
+        },
+      },
+    }
+  );
+}
+
 async function refreshAccessToken(refreshToken: string): Promise<{
   accessToken: string;
   expiresAt?: Date;
@@ -101,8 +222,7 @@ export async function loadGoogleAccessToken(input: {
   const isDemoConnection =
     conn.connectedEmail === "oauth-demo-user@example.com" ||
     metadata.demoConnection === true ||
-    metadata.stub === true ||
-    metadata.reconnectRequired === true;
+    metadata.stub === true;
   if (isDemoConnection) {
     return {
       connected: false,
@@ -126,6 +246,18 @@ export async function loadGoogleAccessToken(input: {
   const scopes = conn.scopes ?? [];
   const missingScopes = input.requiredScopes.filter((scope) => !scopes.includes(scope));
   if (missingScopes.length > 0) {
+    if (conn.status === "Connected") {
+      await IntegrationConnectionModel.updateOne(
+        { _id: conn._id },
+        {
+          $set: {
+            "metadata.reconnectRequired": true,
+            "metadata.reconnectBanner": "Reconnect required because Google scopes changed.",
+            "metadata.missingScopes": missingScopes,
+          },
+        }
+      );
+    }
     return {
       connected: false,
       accessToken: "",
@@ -154,8 +286,9 @@ export async function googleApiJson<T>(input: {
   accessToken: string;
   body?: Record<string, unknown>;
 }): Promise<T> {
+  const method = input.method ?? "GET";
   const response = await fetch(input.url, {
-    method: input.method ?? "GET",
+    method,
     headers: {
       authorization: `Bearer ${input.accessToken}`,
       "content-type": "application/json",
@@ -164,7 +297,41 @@ export async function googleApiJson<T>(input: {
   });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Google API ${input.method ?? "GET"} failed (${response.status}): ${text.slice(0, 300)}`);
+    const parsed = parseGoogleErrorPayload(text);
+    const statusCode = response.status;
+    const { provider, endpointType } = classifyGoogleRequest(input.url, method);
+    const requiredScope = inferRequiredScope(endpointType, statusCode);
+    const reconnectRequired = statusCode === 403 || statusCode === 401;
+    const meta: GoogleApiFailureMeta = {
+      googleApi: true,
+      provider,
+      endpointType,
+      httpMethod: method,
+      statusCode,
+      googleErrorReason: parsed.reason,
+      googleErrorMessage: parsed.message ? truncateGoogleMessage(parsed.message) : undefined,
+      requiredScope,
+      reconnectRequired,
+      fallbackUsed: false,
+    };
+    throw new GoogleApiHttpError(`Google API ${endpointType} failed (${statusCode})`, meta);
   }
   return (await response.json()) as T;
+}
+
+export function googleFailureMetaFromUnknown(error: unknown, fallbackEndpoint = "unknown"): GoogleApiFailureMeta {
+  if (error instanceof GoogleApiHttpError) {
+    return { ...error.meta, fallbackUsed: true };
+  }
+  const msg = error instanceof Error ? error.message : String(error);
+  return {
+    googleApi: true,
+    provider: "Google Drive",
+    endpointType: fallbackEndpoint,
+    httpMethod: "?",
+    statusCode: 0,
+    googleErrorMessage: truncateGoogleMessage(msg),
+    reconnectRequired: false,
+    fallbackUsed: true,
+  };
 }

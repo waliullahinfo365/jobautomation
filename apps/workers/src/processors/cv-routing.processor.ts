@@ -1,6 +1,7 @@
 import { AutomationLogModel, DocumentModel, JobModel } from "@jobflow/database/models";
 import { loadGoogleAccessToken } from "../lib/google-auth";
 import { createGoogleDoc, ensureWorkspaceFolderStructure, findOrCreateFolder } from "../lib/google-drive";
+import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
 
 export type CvRoutingPayload = {
   tenantId: string;
@@ -15,7 +16,7 @@ export async function processCvRoutingJob(payload: CvRoutingPayload) {
   const auth = await loadGoogleAccessToken({
     tenantId: payload.tenantId,
     provider: "Google Drive",
-    requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
+    requiredScopes: [...GOOGLE_DRIVE_DOCS_WORKER_SCOPES],
   });
   if (!auth.connected) {
     await AutomationLogModel.create({

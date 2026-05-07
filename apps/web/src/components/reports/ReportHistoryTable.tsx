@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/utils";
 import type { ReportHistoryRecord } from "@/types/report";
 
 function deliveryLabel(record: ReportHistoryRecord): string {
+  if (record.deliveryWarning) return "Delivery warning";
   if (record.previewOnly) return "Preview only";
   if (record.deliveryStatus === "Sent") return "Sent";
   if (record.deliveryStatus === "Failed") return "Failed";
@@ -45,10 +46,10 @@ export function ReportHistoryTable({
             <TableRow key={record.id}>
               <TableCell className="font-medium">{record.reportName}</TableCell>
               <TableCell><ReportTypeBadge type={record.type} /></TableCell>
-              <TableCell><ReportStatusBadge status={record.status} /></TableCell>
+              <TableCell><ReportStatusBadge status={record.status} deliveryWarning={record.deliveryWarning} /></TableCell>
               <TableCell>{formatDate(record.generatedAt, "MMM d, yyyy HH:mm")}</TableCell>
               <TableCell>{record.sentTo}</TableCell>
-              <TableCell>{deliveryLabel(record)}</TableCell>
+              <TableCell title={record.deliveryWarningSummary}>{deliveryLabel(record)}</TableCell>
               <TableCell>{record.deliveryMethod}</TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex gap-2">

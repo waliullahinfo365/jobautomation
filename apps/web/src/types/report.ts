@@ -82,6 +82,9 @@ export interface ReportHistoryRecord {
   previewOnly?: boolean;
   pdfUrl?: string;
   googleDocUrl?: string;
+  /** True when digest/report body saved but external Google delivery failed or fell back. */
+  deliveryWarning?: boolean;
+  deliveryWarningSummary?: string;
 }
 
 // Compatibility aliases for older components

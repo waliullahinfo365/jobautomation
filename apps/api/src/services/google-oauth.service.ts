@@ -1,5 +1,5 @@
 import { IntegrationConnectionModel } from "@jobflow/database/models";
-import { getGoogleScopesForProvider } from "@jobflow/shared/constants/googleScopes";
+import { getGoogleScopesForProvider, missingGoogleScopes } from "@jobflow/shared/constants/googleScopes";
 import type { IntegrationListItem, IntegrationProvider, IntegrationStatus } from "@jobflow/shared/types/integration";
 import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED, GOOGLE_REDIRECT_URI } from "../config/google-oauth";
 import { assertTenantId } from "./baseTenant.service";
@@ -193,18 +193,36 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
   const isDemoConnection =
     apiMode !== "oauth-live" || (profile.email != null && profile.email === "oauth-demo-user@example.com");
 
-  const mergedMeta = {
+  const missingAfterOAuth = missingGoogleScopes(scopes, defaultScopes);
+  const scopeIncomplete = !isDemoConnection && missingAfterOAuth.length > 0;
+
+  const mergedMeta: Record<string, unknown> = {
     ...((prev?.metadata as Record<string, unknown>) ?? {}),
     oauthConnected: true,
     tokenType: tokens.token_type ?? "Bearer",
     apiMode,
     stub: apiMode === "stub",
     demoConnection: isDemoConnection,
-    reconnectRequired: isDemoConnection,
+    reconnectRequired: isDemoConnection || scopeIncomplete,
     provider: providerSlug,
-    enabled: !isDemoConnection,
-    isActive: !isDemoConnection,
+    enabled: !isDemoConnection && !scopeIncomplete,
+    isActive: !isDemoConnection && !scopeIncomplete,
   };
+
+  if (isDemoConnection) {
+    const prevBanner = (prev?.metadata as Record<string, unknown> | undefined)?.reconnectBanner;
+    mergedMeta.reconnectBanner =
+      typeof prevBanner === "string" && prevBanner.trim().length > 0
+        ? prevBanner
+        : "Google reconnect required for live API access.";
+    delete mergedMeta.missingScopes;
+  } else if (missingAfterOAuth.length > 0) {
+    mergedMeta.reconnectBanner = "Reconnect required because Google scopes changed.";
+    mergedMeta.missingScopes = missingAfterOAuth;
+  } else {
+    delete mergedMeta.reconnectBanner;
+    delete mergedMeta.missingScopes;
+  }
 
   await IntegrationConnectionModel.updateMany(
     {
@@ -236,14 +254,16 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
       $set: {
         tenantId,
         provider,
-        status: (isDemoConnection ? "Needs Attention" : "Connected") as IntegrationStatus,
+        status: (isDemoConnection || scopeIncomplete ? "Needs Attention" : "Connected") as IntegrationStatus,
         connectedEmail: profile.email,
         accountName: profile.name ?? profile.email ?? "Google Account",
         scopes,
         errorMessage: isDemoConnection
           ? "Google reconnect required: demo connection cannot call Google APIs."
-          : undefined,
-        syncStatus: isDemoConnection ? "Demo / Not Live" : "OK",
+          : scopeIncomplete
+            ? "Reconnect required because Google scopes changed."
+            : undefined,
+        syncStatus: isDemoConnection ? "Demo / Not Live" : scopeIncomplete ? "Scopes outdated — reconnect" : "OK",
         lastSyncAt: new Date(),
         expiresAt,
         accessTokenEncrypted: accessEnc,

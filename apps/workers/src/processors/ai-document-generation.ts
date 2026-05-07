@@ -7,6 +7,7 @@ import {
 import { formatProfileContextBlock, loadWorkspaceProfileForPrompt } from "../lib/workspace-profile-docs";
 import { loadGoogleAccessToken } from "../lib/google-auth";
 import { createGoogleDoc, ensureWorkspaceFolderStructure, findOrCreateFolder } from "../lib/google-drive";
+import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
 import { notifyAutomationEvent } from "../lib/notifications";
 import { logger } from "../utils/logger";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
@@ -225,7 +226,7 @@ async function routeGeneratedDocToDrive(input: {
   const auth = await loadGoogleAccessToken({
     tenantId: input.tenantId,
     provider: "Google Drive",
-    requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
+    requiredScopes: [...GOOGLE_DRIVE_DOCS_WORKER_SCOPES],
   });
   if (!auth.connected) return { ok: false as const, reason: auth.reason };
   const job = await JobModel.findOne({ tenantId: input.tenantId, _id: input.jobId }).lean();

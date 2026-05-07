@@ -15,6 +15,7 @@ import { assertTenantId } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
 import { encryptSecret } from "../utils/encryption";
 import { providerFromSlug, slugForProvider } from "../utils/provider-slug";
+import { getGoogleScopesForProvider, missingGoogleScopes } from "@jobflow/shared/constants/googleScopes";
 
 export { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 
@@ -28,8 +29,9 @@ const CATALOG: IntegrationCatalogEntry[] = [
   {
     provider: "Google Drive",
     slug: "google-drive",
-    purpose: "Job folders, CV routing, document storage, and PDF exports.",
-    requiredFor: ["folder-automation", "cv-routing", "pdf-export"],
+    purpose:
+      "Job folders, CV routing, storage, PDF exports, and scheduled reports (Drive API + Google Docs API for digest/report documents).",
+    requiredFor: ["folder-automation", "cv-routing", "pdf-export", "daily-digest", "weekly-report"],
   },
   {
     provider: "Google Calendar",
@@ -180,6 +182,19 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     }
   }
 
+  const scopesList = Array.isArray(row?.scopes) ? (row.scopes as string[]) : [];
+
+  if (isGoogleProvider && !isDemoGoogle && row && resolvedStatus === "Connected") {
+    const required = getGoogleScopesForProvider(entry.provider);
+    const scopeGap = missingGoogleScopes(scopesList, required);
+    if (scopeGap.length > 0) {
+      cleanMeta.reconnectRequired = true;
+      cleanMeta.reconnectBanner = "Reconnect required because Google scopes changed.";
+      cleanMeta.missingScopes = scopeGap;
+      resolvedSyncStatus = resolvedSyncStatus ?? "Reconnect — scopes outdated";
+    }
+  }
+
   return {
     ...entry,
     status: resolvedStatus,
@@ -191,7 +206,7 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
       entry.provider === "Telegram" && !(cleanMeta.botTokenConfigured === true && cleanMeta.chatIdConfigured === true)
         ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
         : resolvedError,
-    scopes: Array.isArray(row?.scopes) ? (row.scopes as string[]) : [],
+    scopes: scopesList,
     metadata: cleanMeta,
     lastTest,
   };
@@ -214,7 +229,10 @@ function canonicalProviderKey(value: string): string {
 function rankIntegrationRow(row: Record<string, unknown>): number {
   const status = row.status as IntegrationStatus | undefined;
   const meta = (row.metadata as Record<string, unknown> | undefined) ?? {};
-  const demo = meta.demoConnection === true || meta.reconnectRequired === true || row.connectedEmail === "oauth-demo-user@example.com";
+  const demo =
+    meta.demoConnection === true ||
+    meta.stub === true ||
+    row.connectedEmail === "oauth-demo-user@example.com";
   const active = meta.isActive === true || status === "Connected";
   if (active && !demo) return 100;
   if (!demo && status === "Needs Attention") return 80;
