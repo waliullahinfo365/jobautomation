@@ -96,6 +96,16 @@ function maskSecret(raw: string): string {
   return `${t.slice(0, 3)}••••${t.slice(-4)}`;
 }
 
+function smtpTestSafeReason(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const noSecretHint = raw
+    .replace(/\b(pass|password|auth)\s*[=:]\s*\S+/gi, "")
+    .replace(/\bxoauth2\b/gi, "")
+    .trim();
+  const brief = (noSecretHint || "Send error").slice(0, 180);
+  return brief;
+}
+
 function sanitizeConfigForStorage(provider: IntegrationProvider, config: Record<string, unknown>): Record<string, unknown> {
   const next = { ...config };
   if (provider === "SMTP" && typeof next.password === "string" && typeof next.pass !== "string") {
@@ -115,7 +125,6 @@ function sanitizeConfigForStorage(provider: IntegrationProvider, config: Record<
     delete next.clientSecret;
   }
   if (provider === "SMTP" && typeof next.pass === "string") {
-    next.passPreview = maskSecret(next.pass as string);
     delete next.pass;
   }
   return next;
@@ -129,6 +138,7 @@ function sanitizeMetadataForResponse(meta: Record<string, unknown>): Record<stri
   delete out.pass;
   delete out.accessToken;
   delete out.refreshToken;
+  delete out.passPreview;
   return out;
 }
 
@@ -204,6 +214,10 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
       cleanMeta.googleDocsScopeMissing = docsMissing;
       resolvedSyncStatus = resolvedSyncStatus ?? "Reconnect — scopes outdated";
     }
+  }
+
+  if (entry.provider === "SMTP" && row) {
+    cleanMeta.smtpPasswordSaved = Boolean(row.accessTokenEncrypted);
   }
 
   return {
@@ -580,24 +594,25 @@ export async function testIntegration(input: {
     const outbound = await getSmtpOutboundCredentials(tenantId);
     if (!outbound) {
       testStatus = "Warning";
-      message =
-        statusRow === "Needs Attention"
-          ? "SMTP settings are incomplete — add host, username, from email, and app password."
-          : "SMTP is not configured.";
+      message = "SMTP is not fully configured.";
     } else {
+      const toAddr =
+        typeof row?.connectedEmail === "string" && row.connectedEmail.trim().length > 0
+          ? row.connectedEmail.trim()
+          : outbound.from;
       try {
         await sendSmtpMail({
           ...outbound,
-          to: outbound.from,
+          to: toAddr,
           subject: "JobFlow SMTP Test",
           html: "<p>SMTP email delivery is connected.</p>",
           text: "SMTP email delivery is connected.",
         });
         testStatus = "Success";
-        message = "Test email sent.";
+        message = "Test email sent successfully.";
       } catch (e) {
-        testStatus = "Warning";
-        message = e instanceof Error ? e.message.slice(0, 280) : "SMTP test failed.";
+        testStatus = "Failed";
+        message = `SMTP test email failed: ${smtpTestSafeReason(e)}`;
       }
     }
     const checkedAt = new Date().toISOString();

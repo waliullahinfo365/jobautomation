@@ -68,8 +68,8 @@ function sanitizeConfigForLocalPreview(cfg?: Record<string, unknown>): Record<st
     delete next.password;
   }
   if (typeof next.pass === "string") {
-    next.passPreview = maskSecret(next.pass as string);
     delete next.pass;
+    next.smtpPasswordSaved = true;
   }
   return next;
 }
@@ -113,6 +113,15 @@ function buildLocalDisconnectPatch(): Partial<IntegrationListItem> {
 function stubOfflineTest(item: IntegrationListItem): IntegrationTestResult {
   const checkedAt = new Date().toISOString();
   const p = item.provider;
+  if (item.slug === "smtp") {
+    return {
+      provider: p,
+      status: "Warning",
+      message: "SMTP test requires a live API connection. No email was sent.",
+      checkedAt,
+      metadata: { stub: true },
+    };
+  }
   if (item.status === "Connected") {
     const isGoogle = item.slug === "gmail" || item.slug === "google-drive" || item.slug === "google-calendar";
     if (isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true)) {

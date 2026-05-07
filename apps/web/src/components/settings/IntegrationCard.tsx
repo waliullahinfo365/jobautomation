@@ -132,8 +132,8 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
             <Field label="SMTP host" value={(item.metadata?.host as string | undefined) ?? "—"} />
             <Field label="Port" value={item.metadata?.port != null ? String(item.metadata.port) : "—"} />
             <Field label="From email" value={(item.metadata?.from as string | undefined) ?? "—"} />
-            {typeof item.metadata?.passPreview === "string" ? (
-              <Field label="App password" value={item.metadata.passPreview as string} />
+            {item.metadata?.smtpPasswordSaved === true ? (
+              <Field label="App password" value="Saved securely" />
             ) : null}
           </>
         ) : null}
