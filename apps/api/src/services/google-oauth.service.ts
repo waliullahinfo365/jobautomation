@@ -43,6 +43,8 @@ type GoogleTokenResponse = {
   scope?: string;
 };
 
+const GOOGLE_IDENTITY_SCOPES = ["openid", "email", "profile"];
+
 async function exchangeCodeForTokensLive(code: string): Promise<GoogleTokenResponse> {
   if (!GOOGLE_OAUTH_ENABLED) {
     throw new ApiError("Google OAuth is not enabled on the API", 503, "GOOGLE_OAUTH_DISABLED");
@@ -121,7 +123,7 @@ export async function getGoogleAuthorizationUrl(input: {
     };
   }
 
-  const scopes = getGoogleScopesForProvider(provider);
+  const scopes = Array.from(new Set([...getGoogleScopesForProvider(provider), ...GOOGLE_IDENTITY_SCOPES]));
   const u = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   u.searchParams.set("client_id", GOOGLE_CLIENT_ID);
   u.searchParams.set("redirect_uri", GOOGLE_REDIRECT_URI);
@@ -144,6 +146,7 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
   const tenantId = assertTenantId(payload.tenantId);
   const provider = payload.provider;
   const userId = payload.userId;
+  const providerSlug = slugForProvider(provider);
 
   const googleProviders: IntegrationProvider[] = ["Gmail", "Google Drive", "Google Calendar"];
   if (!googleProviders.includes(provider)) {
@@ -153,9 +156,17 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
   const tokens = GOOGLE_OAUTH_ENABLED
     ? await exchangeCodeForTokensLive(input.code)
     : exchangeCodeForTokensStub(input.code);
-  const profile = GOOGLE_OAUTH_ENABLED
-    ? await getGoogleAccountProfileLive(tokens.access_token)
-    : getGoogleAccountProfileStub(tokens as StubGoogleTokens);
+  let profile: { email?: string; name?: string };
+  let emailFetched = false;
+  try {
+    profile = GOOGLE_OAUTH_ENABLED
+      ? await getGoogleAccountProfileLive(tokens.access_token)
+      : getGoogleAccountProfileStub(tokens as StubGoogleTokens);
+    emailFetched = Boolean(profile.email);
+  } catch {
+    profile = { email: undefined, name: undefined };
+    emailFetched = false;
+  }
   const defaultScopes = getGoogleScopesForProvider(provider);
   const grantedScope = (tokens as GoogleTokenResponse).scope;
   const scopes = grantedScope
@@ -179,7 +190,8 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
   const refreshEnc = encryptSecret(tokens.refresh_token ?? "stub-google-refresh-token");
   const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000);
   const apiMode = GOOGLE_OAUTH_ENABLED ? "oauth-live" : "stub";
-  const isDemoConnection = apiMode !== "oauth-live" || profile.email === "oauth-demo-user@example.com";
+  const isDemoConnection =
+    apiMode !== "oauth-live" || (profile.email != null && profile.email === "oauth-demo-user@example.com");
 
   const mergedMeta = {
     ...((prev?.metadata as Record<string, unknown>) ?? {}),
@@ -189,23 +201,49 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
     stub: apiMode === "stub",
     demoConnection: isDemoConnection,
     reconnectRequired: isDemoConnection,
-    provider: slugForProvider(provider),
+    provider: providerSlug,
+    enabled: !isDemoConnection,
+    isActive: !isDemoConnection,
   };
 
+  await IntegrationConnectionModel.updateMany(
+    {
+      tenantId,
+      provider: { $in: [providerSlug, provider] },
+      connectedEmail: "oauth-demo-user@example.com",
+    },
+    {
+      $set: {
+        status: "Disabled" as IntegrationStatus,
+        syncStatus: "Demo / Not Live",
+        errorMessage: "Superseded by live OAuth connection.",
+        metadata: {
+          ...((prev?.metadata as Record<string, unknown>) ?? {}),
+          demoConnection: true,
+          reconnectRequired: true,
+          provider: providerSlug,
+          enabled: false,
+          isActive: false,
+          supersededByLive: true,
+        },
+      },
+    }
+  );
+
   await IntegrationConnectionModel.findOneAndUpdate(
-    { tenantId, provider },
+    { tenantId, provider: { $in: [provider, providerSlug] } },
     {
       $set: {
         tenantId,
         provider,
         status: (isDemoConnection ? "Needs Attention" : "Connected") as IntegrationStatus,
         connectedEmail: profile.email,
-        accountName: profile.name,
+        accountName: profile.name ?? profile.email ?? "Google Account",
         scopes,
         errorMessage: isDemoConnection
           ? "Google reconnect required: demo connection cannot call Google APIs."
           : undefined,
-        syncStatus: isDemoConnection ? "Demo / Not Live" : "Active",
+        syncStatus: isDemoConnection ? "Demo / Not Live" : "OK",
         lastSyncAt: new Date(),
         expiresAt,
         accessTokenEncrypted: accessEnc,
@@ -228,6 +266,19 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
     entityId: provider,
     message: `Google OAuth connected: ${provider} (${apiMode})`,
     metadata: { provider, slug: slugForProvider(provider), apiMode },
+  });
+
+  console.info("[google-oauth/callback-save]", {
+    provider: providerSlug,
+    tenantId,
+    userId,
+    tokenExchangeSuccess: true,
+    hasAccessToken: Boolean(tokens.access_token),
+    hasRefreshToken: Boolean(tokens.refresh_token),
+    scopesReceived: scopes,
+    emailFetched,
+    connectedEmail: profile.email ?? null,
+    demoConnection: isDemoConnection,
   });
 
   const item = await findIntegrationListItem({ tenantId, provider });

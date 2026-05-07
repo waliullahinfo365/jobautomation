@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
 import { assertTenantId } from "../services/baseTenant.service";
 import { ApiError } from "../utils/errors";
+import { verifyOAuthState } from "../utils/oauth-state";
 
 export const getGoogleAuthUrl = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
@@ -60,6 +61,11 @@ function settingsSuccessRedirect(providerSlug: string): string {
 export const googleOAuthCallback = asyncHandler(async (req: Request, res) => {
   const code = String(req.query.code ?? "");
   const state = String(req.query.state ?? "");
+  console.info("[google-oauth/callback]", {
+    callbackReceived: true,
+    hasCode: Boolean(code),
+    hasState: Boolean(state),
+  });
   if (!state) {
     res.redirect(302, settingsErrorRedirect("missing OAuth state"));
     return;
@@ -69,6 +75,12 @@ export const googleOAuthCallback = asyncHandler(async (req: Request, res) => {
     return;
   }
   try {
+    const statePayload = verifyOAuthState(state);
+    console.info("[google-oauth/callback-state]", {
+      providerFromState: statePayload.provider,
+      tenantId: statePayload.tenantId,
+      userId: statePayload.userId,
+    });
     const item = await googleOAuthService.handleGoogleOAuthCallback({ code, state });
     res.redirect(302, settingsSuccessRedirect(item.slug));
   } catch (e) {

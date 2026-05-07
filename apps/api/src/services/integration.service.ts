@@ -140,12 +140,43 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
   };
 }
 
+function canonicalProviderKey(value: string): string {
+  const v = value.trim().toLowerCase();
+  if (v === "gmail") return "Gmail";
+  if (v === "google-drive" || v === "google drive") return "Google Drive";
+  if (v === "google-calendar" || v === "google calendar") return "Google Calendar";
+  if (v === "openai") return "OpenAI";
+  if (v === "claude") return "Claude";
+  if (v === "smtp") return "SMTP";
+  if (v === "notion-legacy" || v === "notion legacy") return "Notion Legacy";
+  if (v === "slack") return "Slack";
+  return value;
+}
+
+function rankIntegrationRow(row: Record<string, unknown>): number {
+  const status = row.status as IntegrationStatus | undefined;
+  const meta = (row.metadata as Record<string, unknown> | undefined) ?? {};
+  const demo = meta.demoConnection === true || meta.reconnectRequired === true || row.connectedEmail === "oauth-demo-user@example.com";
+  const active = meta.isActive === true || status === "Connected";
+  if (active && !demo) return 100;
+  if (!demo && status === "Needs Attention") return 80;
+  if (demo && status === "Needs Attention") return 40;
+  if (status === "Connected") return 30;
+  if (status === "Disabled") return 10;
+  return 20;
+}
+
 export async function listIntegrations(input: { tenantId: string }): Promise<IntegrationListItem[]> {
   const tenantId = assertTenantId(input.tenantId);
   const rows = await IntegrationConnectionModel.find({ tenantId }).lean();
   const byProvider = new Map<string, Record<string, unknown>>();
   for (const r of rows) {
-    byProvider.set(String(r.provider), r as Record<string, unknown>);
+    const row = r as Record<string, unknown>;
+    const key = canonicalProviderKey(String(row.provider ?? ""));
+    const existing = byProvider.get(key);
+    if (!existing || rankIntegrationRow(row) > rankIntegrationRow(existing)) {
+      byProvider.set(key, row);
+    }
   }
   return CATALOG.map((entry) => rowToItem(entry, byProvider.get(entry.provider) ?? null));
 }
