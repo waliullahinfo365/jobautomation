@@ -124,3 +124,20 @@ export async function scheduleNetworkFollowUpSweep() {
     }))
   );
 }
+
+export async function scheduleJobIntakeSweep() {
+  const date = todayKey();
+  const tenantIds = await activeTenantIds();
+  return enqueueManyAutomationJobs(
+    tenantIds.map((tenantId) => ({
+      name: "job-intake",
+      payload: {
+        tenantId,
+        operationId: `job-intake-${tenantId}-${date}-${Date.now()}`,
+        idempotencyKey: `job-intake:${tenantId}:${date}:${Math.floor(Date.now() / (5 * 60_000))}`,
+        requestedAt: new Date().toISOString(),
+        source: "scheduler",
+      },
+    }))
+  );
+}

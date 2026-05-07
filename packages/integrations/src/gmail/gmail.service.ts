@@ -32,6 +32,51 @@ export function verifyGmailWebhookStub(payload: unknown): boolean {
   return typeof payload === "object" && payload !== null;
 }
 
+export async function gmailApiJson<T>(input: {
+  accessToken: string;
+  path: string;
+  query?: Record<string, string | number | undefined>;
+}): Promise<T> {
+  const url = new URL(`https://gmail.googleapis.com/gmail/v1/${input.path.replace(/^\//, "")}`);
+  for (const [key, value] of Object.entries(input.query ?? {})) {
+    if (value !== undefined && value !== null && String(value) !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  }
+  const response = await fetch(url.toString(), {
+    headers: { authorization: `Bearer ${input.accessToken}` },
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Gmail API failed (${response.status}): ${text.slice(0, 250)}`);
+  }
+  return (await response.json()) as T;
+}
+
+export function parseGmailMessageToPayload(message: any): JobIntakeEmailPayload {
+  const headers = new Map<string, string>();
+  const parts = message?.payload?.headers ?? [];
+  for (const h of parts) {
+    if (h?.name && h?.value) headers.set(String(h.name).toLowerCase(), String(h.value));
+  }
+  const subject = headers.get("subject") ?? "";
+  const from = headers.get("from") ?? "unknown@example.com";
+  const bodyData = message?.payload?.body?.data as string | undefined;
+  const bodyText = bodyData ? Buffer.from(bodyData, "base64url").toString("utf8") : "";
+
+  return normalizeGmailMessage({
+    provider: "gmail",
+    providerMessageId: String(message?.id ?? "unknown-message-id"),
+    providerThreadId: String(message?.threadId ?? ""),
+    from,
+    subject,
+    bodyText,
+    receivedAt: new Date(Number(message?.internalDate ?? Date.now())).toISOString(),
+    labels: Array.isArray(message?.labelIds) ? message.labelIds : [],
+    raw: { snippet: message?.snippet ?? "", historyId: message?.historyId },
+  });
+}
+
 export function normalizeGmailReply(input: Partial<EmailReplyPayload>): EmailReplyPayload {
   return {
     provider: input.provider ?? "gmail",

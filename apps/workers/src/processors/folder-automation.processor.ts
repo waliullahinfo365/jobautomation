@@ -1,4 +1,5 @@
-import { AutomationLogModel, DocumentModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
+import { AutomationLogModel, DocumentModel, JobModel } from "@jobflow/database/models";
+import { googleApiJson, loadGoogleAccessToken } from "../lib/google-auth";
 
 export type FolderAutomationPayload = {
   tenantId: string;
@@ -7,29 +8,17 @@ export type FolderAutomationPayload = {
   operationId?: string;
 };
 
-function slugify(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-}
-
-function deterministicId(prefix: string, parts: string[]): string {
-  return `${prefix}-${parts.map(slugify).filter(Boolean).join("-")}`;
-}
-
-function createJobFolderTreeStub(input: { tenantId: string; jobId: string; company: string; position: string }) {
-  const rootFolderId = deterministicId("drv-root", [input.tenantId]);
-  const jobFolderId = deterministicId("drv-job", [input.tenantId, input.jobId, input.company, input.position]);
-  const folderNames = ["CV", "Cover Letters", "Research", "Exports"];
-
-  return {
-    rootFolderId,
-    jobFolderId,
-    jobFolderUrl: `https://drive.stub.local/folders/${jobFolderId}`,
-    foldersCreated: folderNames.map((name) => ({
-      id: deterministicId("drv-sub", [jobFolderId, name]),
-      name,
-      url: `https://drive.stub.local/folders/${deterministicId("drv-sub", [jobFolderId, name])}`,
-    })),
-  };
+async function createDriveFolder(input: { accessToken: string; name: string; parentId?: string }) {
+  return googleApiJson<{ id: string; webViewLink?: string }>({
+    url: "https://www.googleapis.com/drive/v3/files?fields=id,webViewLink",
+    method: "POST",
+    accessToken: input.accessToken,
+    body: {
+      name: input.name,
+      mimeType: "application/vnd.google-apps.folder",
+      ...(input.parentId ? { parents: [input.parentId] } : {}),
+    },
+  });
 }
 
 export async function processFolderAutomationJob(payload: FolderAutomationPayload) {
@@ -45,17 +34,12 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
   const position = String((job as Record<string, unknown>).position ?? "Position");
   const folderLabel = `JobFlow/${company} - ${position}`;
 
-  const driveConn = await IntegrationConnectionModel.findOne({
+  const auth = await loadGoogleAccessToken({
     tenantId: payload.tenantId,
     provider: "Google Drive",
-  }).lean();
-
-  const driveLive =
-    driveConn &&
-    (driveConn as Record<string, unknown>).status === "Connected" &&
-    Boolean((driveConn as Record<string, unknown>).accessTokenEncrypted);
-
-  if (!driveLive) {
+    requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
+  });
+  if (!auth.connected) {
     await DocumentModel.create({
       tenantId: payload.tenantId,
       createdBy: payload.userId,
@@ -87,12 +71,12 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
       moduleKey: "folder-automation",
       moduleName: "folder-automation",
       status: "Warning",
-      message: "Drive folder record created. Live Drive folder creation requires Google Drive integration.",
+      message: `Drive folder automation skipped: ${auth.reason ?? "Drive integration unavailable"}`,
       operationId,
       relatedRecordType: "Job",
       relatedRecordId: payload.jobId,
       durationMs,
-      metadata: { jobId: payload.jobId, folderName: `${company} - ${position}`, pendingDrive: true },
+      metadata: { jobId: payload.jobId, folderName: `${company} - ${position}`, pendingDrive: true, reason: auth.reason },
     });
 
     return {
@@ -105,30 +89,28 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     };
   }
 
-  const folderTree = createJobFolderTreeStub({
-    tenantId: payload.tenantId,
-    jobId: payload.jobId,
-    company,
-    position,
+  const root = await createDriveFolder({ accessToken: auth.accessToken, name: "Job Applications" });
+  const appsFolder = await createDriveFolder({
+    accessToken: auth.accessToken,
+    name: "Applications",
+    parentId: root.id,
+  });
+  const jobFolder = await createDriveFolder({
+    accessToken: auth.accessToken,
+    name: `${company} — ${position}`,
+    parentId: appsFolder.id,
   });
 
   await JobModel.findByIdAndUpdate(payload.jobId, {
     folderCreated: true,
-    driveFolderId: folderTree.jobFolderId,
-    driveFolderUrl: folderTree.jobFolderUrl,
+    driveFolderId: jobFolder.id,
+    driveFolderUrl: jobFolder.webViewLink ?? `https://drive.google.com/drive/folders/${jobFolder.id}`,
     folderProvisionStatus: "Completed",
     folderProvisionedAt: new Date(),
     folderProvisionError: undefined,
   });
 
-  const folderDocuments = [
-    { fileName: "Job Folder", targetFolderId: folderTree.jobFolderId, targetPath: folderTree.jobFolderUrl },
-    ...folderTree.foldersCreated.map((folder) => ({
-      fileName: `${folder.name} Folder`,
-      targetFolderId: folder.id,
-      targetPath: folder.url,
-    })),
-  ];
+  const folderDocuments = [{ fileName: "Job Folder", targetFolderId: jobFolder.id, targetPath: jobFolder.webViewLink ?? "" }];
 
   for (const item of folderDocuments) {
     await DocumentModel.updateOne(
@@ -162,15 +144,15 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     moduleKey: "folder-automation",
     moduleName: "folder-automation",
     status: "Success",
-    message: "Job folder structure provisioned (integration connected; Drive API uses stub IDs until full API wiring).",
+    message: "Job folder created in Google Drive.",
     operationId,
     relatedRecordType: "Job",
     relatedRecordId: payload.jobId,
     durationMs,
     metadata: {
       jobId: payload.jobId,
-      jobFolderUrl: folderTree.jobFolderUrl,
-      jobFolderId: folderTree.jobFolderId,
+      jobFolderUrl: jobFolder.webViewLink ?? `https://drive.google.com/drive/folders/${jobFolder.id}`,
+      jobFolderId: jobFolder.id,
       driveConnected: true,
     },
   });
@@ -180,7 +162,7 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     moduleKey: "folder-automation",
     status: "completed",
     operationId,
-    folderUrl: folderTree.jobFolderUrl,
-    folderId: folderTree.jobFolderId,
+    folderUrl: jobFolder.webViewLink ?? `https://drive.google.com/drive/folders/${jobFolder.id}`,
+    folderId: jobFolder.id,
   };
 }

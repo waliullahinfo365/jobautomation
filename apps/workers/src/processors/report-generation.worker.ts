@@ -255,6 +255,38 @@ async function createLog(input: {
   });
 }
 
+async function notifyReport(input: { tenantId: string; message: string; event: "daily-digest" | "weekly-report" }) {
+  const webhook = process.env.SLACK_WEBHOOK_URL?.trim();
+  if (!webhook) {
+    await AutomationLogModel.create({
+      tenantId: input.tenantId,
+      createdBy: "system",
+      moduleKey: input.event,
+      moduleName: input.event,
+      status: "Warning",
+      message: "Slack notification skipped: SLACK_WEBHOOK_URL not configured",
+      metadata: { provider: "slack" },
+    });
+    return;
+  }
+  const response = await fetch(webhook, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ text: input.message }),
+  });
+  if (!response.ok) {
+    await AutomationLogModel.create({
+      tenantId: input.tenantId,
+      createdBy: "system",
+      moduleKey: input.event,
+      moduleName: input.event,
+      status: "Warning",
+      message: `Slack webhook failed (${response.status})`,
+      metadata: { provider: "slack" },
+    });
+  }
+}
+
 export async function processWorkerDailyDigest(payload: DailyPayload) {
   const operationId = payload.operationId ?? `daily-digest-${Date.now()}`;
   const day = payload.date ? new Date(payload.date) : new Date();
@@ -328,6 +360,11 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
         relatedRecordId: String(report._id),
       });
     }
+    await notifyReport({
+      tenantId: payload.tenantId,
+      message: `Daily digest ready: ${title}`,
+      event: "daily-digest",
+    });
 
     return {
       suppressWorkerCompletionLog: true as const,
@@ -431,6 +468,11 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
         relatedRecordId: String(report._id),
       });
     }
+    await notifyReport({
+      tenantId: payload.tenantId,
+      message: `Weekly report ready: ${title}`,
+      event: "weekly-report",
+    });
 
     return {
       suppressWorkerCompletionLog: true as const,

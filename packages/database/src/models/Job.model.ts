@@ -41,6 +41,7 @@ const JobSchema = new Schema(
     folderCreated: { type: Boolean, default: false },
     driveFolderId: String,
     driveFolderUrl: String,
+    driveFolderLink: String,
     folderProvisionStatus: {
       type: String,
       enum: ["Not Started", "Queued", "Completed", "Failed"],

@@ -16,7 +16,19 @@ import { processWeeklyReportJob } from "./weekly-report.processor";
 export async function dispatchAutomationJob(name: AutomationJobName, payload: AutomationJobPayload) {
   switch (name as string) {
     case "job-intake":
-      return processJobIntakeProcessor({ tenantId: payload.tenantId, userId: payload.userId ?? "system", payload: {} as never, correlationId: payload.correlationId });
+      return processJobIntakeProcessor({
+        tenantId: payload.tenantId,
+        userId: payload.userId ?? "system",
+        payload: {
+          provider: "gmail",
+          providerMessageId: (payload as { providerMessageId?: string }).providerMessageId ?? "",
+          from: "",
+          subject: "",
+          bodyText: "",
+          receivedAt: payload.requestedAt,
+        },
+        correlationId: payload.correlationId,
+      });
     case "duplicate-protection":
       return processDuplicateProtectionProcessor({
         tenantId: payload.tenantId,
@@ -37,9 +49,9 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
         tenantId: payload.tenantId,
         providerMessageId: (payload as { providerMessageId: string }).providerMessageId,
         providerThreadId: (payload as { providerThreadId?: string }).providerThreadId,
-        from: "stub@example.local",
-        subject: "Stub Email Reply",
-        bodyText: "Stub body",
+        from: (payload as { from?: string }).from ?? "unknown@example.local",
+        subject: (payload as { subject?: string }).subject ?? "",
+        bodyText: (payload as { bodyText?: string }).bodyText ?? "",
         receivedAt: payload.requestedAt,
         operationId: payload.operationId,
       });
