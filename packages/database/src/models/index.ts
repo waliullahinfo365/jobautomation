@@ -9,5 +9,6 @@ export * from "./Document.model";
 export * from "./AutomationModule.model";
 export * from "./AutomationLog.model";
 export * from "./Report.model";
+export * from "./Notification.model";
 export * from "./AuditLog.model";
 export * from "./AiUsageLog.model";

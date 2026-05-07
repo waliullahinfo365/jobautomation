@@ -1,4 +1,4 @@
-import { AutomationLogModel, DocumentModel, IntegrationConnectionModel } from "@jobflow/database/models";
+import { AutomationLogModel, DocumentModel, IntegrationConnectionModel, NotificationModel } from "@jobflow/database/models";
 import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
 import { isPublicFileUrl } from "@jobflow/shared/utils/is-public-file-url";
 import { loadGoogleAccessToken } from "../lib/google-auth";
@@ -28,7 +28,6 @@ async function persistTextExportFallback(input: {
   operationId: string;
   reason: string;
   fallbackUsed: boolean;
-  logMessage: string;
 }) {
   const metaClean = stripPdfMetaUrls(input.existingMeta);
   await DocumentModel.findByIdAndUpdate(input.docId, {
@@ -51,18 +50,34 @@ async function persistTextExportFallback(input: {
     moduleKey: "pdf-export",
     moduleName: "pdf-export",
     status: "Warning",
-    message: input.logMessage,
+    message: "PDF service not configured; text preview available.",
     operationId: input.operationId,
     relatedRecordType: "Document",
     relatedRecordId: input.documentId,
     metadata: {
       sourceDocumentId: input.documentId,
-      exportStatus: "Preview Only",
+      exportStatus: "preview-only",
       googleDriveFileId: undefined,
       pdfUrlValid: false,
       fallbackUsed: input.fallbackUsed,
-      reason: input.reason,
+      pdfFallbackReason: input.reason,
+      notificationCreated: true,
     },
+  });
+
+  await NotificationModel.create({
+    tenantId: input.tenantId,
+    createdBy: "system",
+    updatedBy: "system",
+    title: "PDF export — text preview only",
+    body: "PDF service is not configured; you can preview or download text. Configure Google Drive / PDF pipeline for real exports.",
+    severity: "warning",
+    moduleKey: "pdf-export",
+    relatedRecordType: "Document",
+    relatedRecordId: input.documentId,
+    actionUrl: "/reports",
+    metadata: { operationId: input.operationId, reason: input.reason },
+    readUserIds: [],
   });
 }
 
@@ -103,7 +118,6 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         operationId,
         reason: "Google Drive not connected.",
         fallbackUsed: true,
-        logMessage: "PDF service not configured; text export generated instead.",
       });
       return {
         suppressWorkerCompletionLog: true as const,
@@ -111,7 +125,7 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         status: "completed-text",
         operationId,
         documentId: payload.documentId,
-        message: "PDF service not configured; text export generated instead.",
+        message: "PDF service not configured; text preview available.",
       };
     }
 
@@ -131,7 +145,6 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         operationId,
         reason: auth.reason ?? "Google Drive OAuth unavailable.",
         fallbackUsed: true,
-        logMessage: "PDF service not configured; text export generated instead.",
       });
       return {
         suppressWorkerCompletionLog: true as const,
@@ -139,7 +152,7 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         status: "completed-text",
         operationId,
         documentId: payload.documentId,
-        message: "PDF service not configured; text export generated instead.",
+        message: "PDF service not configured; text preview available.",
       };
     }
 
@@ -220,7 +233,6 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         operationId,
         reason: msg,
         fallbackUsed: true,
-        logMessage: `Google Drive/Docs export failed; text export saved. ${msg}`,
       });
       return {
         suppressWorkerCompletionLog: true as const,
@@ -228,7 +240,7 @@ export async function processPdfExportJob(payload: PdfExportPayload) {
         status: "completed-text",
         operationId,
         documentId: payload.documentId,
-        message: "Google export failed; text export generated instead.",
+        message: "PDF export fallback: text preview available.",
       };
     }
   } catch (error) {

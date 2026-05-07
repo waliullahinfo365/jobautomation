@@ -616,13 +616,33 @@ export function summarizeGoogleDeliveryWarning(data: Record<string, unknown>): s
   return code === 403 ? `Google delivery failed (403): ${brief}.${reconnect}` : `${brief}${reconnect}`;
 }
 
+/** Human-readable per-channel outcomes from report `data.providerResults`. */
+export function summarizeProviderResults(data: Record<string, unknown>): string | undefined {
+  const pr = data.providerResults;
+  if (!pr || typeof pr !== "object") return undefined;
+  const p = pr as Record<string, Record<string, unknown>>;
+  const lines: string[] = [];
+  for (const key of ["telegram", "slack", "email"]) {
+    const x = p[key];
+    if (!x || typeof x !== "object") continue;
+    const attempted = Boolean(x.attempted);
+    const configured = Boolean(x.configured);
+    const success = Boolean(x.success);
+    const msg = typeof x.message === "string" ? x.message : "";
+    lines.push(
+      `${key}: configured=${configured}, attempted=${attempted}, success=${success}${msg ? ` — ${msg}` : ""}`,
+    );
+  }
+  return lines.length ? lines.join("\n") : undefined;
+}
+
 /** Normalizes API / DB report row to `ReportHistoryRecord`. */
 export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
   const r = (raw ?? {}) as Record<string, unknown>;
   const id = String(r.id ?? r._id ?? "");
   const sentToRaw = r.sentTo;
   const sentTo = Array.isArray(sentToRaw)
-    ? String(sentToRaw[0] ?? "—")
+    ? sentToRaw.filter(Boolean).join(", ") || "—"
     : typeof sentToRaw === "string"
       ? sentToRaw
       : "—";
@@ -631,7 +651,10 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
   const deliveryStatusRaw = String(r.deliveryStatus ?? "");
   const genAt = r.generatedAt ?? r.createdAt ?? new Date().toISOString();
   const deliveryWarning = Boolean(dataObj.deliveryWarning);
-  const deliveryWarningSummary = deliveryWarning ? summarizeGoogleDeliveryWarning(dataObj) : undefined;
+  const googleSum = summarizeGoogleDeliveryWarning(dataObj);
+  const providerSummary = summarizeProviderResults(dataObj);
+  const deliveryWarningSummary = [googleSum, providerSummary].filter(Boolean).join("\n\n") || undefined;
+  const deliveryOutcome = typeof dataObj.deliveryOutcome === "string" ? dataObj.deliveryOutcome : undefined;
   return {
     id,
     reportName: String(r.name ?? r.reportName ?? "Report"),
@@ -642,6 +665,7 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
     deliveryMethod: String(r.deliveryMethod ?? "dashboard"),
     summaryText: typeof r.summaryText === "string" ? r.summaryText : undefined,
     deliveryStatus: deliveryStatusRaw,
+    deliveryOutcome,
     previewOnly,
     pdfUrl: typeof r.pdfUrl === "string" && r.pdfUrl ? r.pdfUrl : undefined,
     googleDocUrl: typeof dataObj.googleDocUrl === "string" ? dataObj.googleDocUrl : undefined,

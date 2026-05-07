@@ -72,4 +72,7 @@ export interface ReportDeliveryResult {
   message: string;
   providerResults?: ReportProviderResults;
   previewOnly?: boolean;
+  /** Summarized outcome after external channels + Google delivery hints */
+  deliveryOutcome?: string;
+  deliveryWarning?: boolean;
 }

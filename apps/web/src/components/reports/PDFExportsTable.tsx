@@ -41,7 +41,14 @@ export function PDFExportsTable({
                 <ReportTypeBadge type={record.type} />
               </TableCell>
               <TableCell>
-                <ReportStatusBadge status={record.exportStatus} />
+                <ReportStatusBadge
+                  status={record.exportStatus}
+                  tooltip={
+                    record.exportStatus === "Preview Only"
+                      ? "PDF service is not configured. You can preview or download text. Configure a PDF provider or connect Google Drive for real exports."
+                      : undefined
+                  }
+                />
               </TableCell>
               <TableCell>{formatDate(record.createdAt, "MMM d, yyyy HH:mm")}</TableCell>
               <TableCell>
@@ -53,6 +60,17 @@ export function PDFExportsTable({
                   >
                     Open PDF
                   </button>
+                ) : record.exportStatus === "Failed" ? (
+                  <button
+                    type="button"
+                    className="text-[var(--text-2)] underline hover:no-underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+                    disabled={busyId === record.id || !record.documentId}
+                    onClick={() => onExportAgain?.(record)}
+                  >
+                    {busyId === record.id ? "Pending…" : "Retry Export"}
+                  </button>
+                ) : record.exportStatus === "Pending" ? (
+                  <span className="text-muted-foreground text-sm">Pending</span>
                 ) : record.textPreviewAvailable && onPreviewText ? (
                   <button
                     type="button"
@@ -76,7 +94,11 @@ export function PDFExportsTable({
                   title={record.documentId ? undefined : "Only document exports can be re-queued from here"}
                   onClick={() => onExportAgain?.(record)}
                 >
-                  {busyId === record.id ? "Queueing..." : "Export Again"}
+                  {busyId === record.id
+                    ? "Queueing..."
+                    : record.exportStatus === "Failed"
+                      ? "Retry Export"
+                      : "Export Again"}
                 </Button>
               </TableCell>
             </TableRow>

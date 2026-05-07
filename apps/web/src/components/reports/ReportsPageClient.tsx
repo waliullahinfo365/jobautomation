@@ -30,7 +30,9 @@ import {
   normalizeReportsForUi,
   normalizeWeeklyReportDataForUi,
   summarizeGoogleDeliveryWarning,
+  summarizeProviderResults,
 } from "@/lib/utils/resource";
+import { invalidateApiCache } from "@/lib/api/client";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -95,13 +97,25 @@ const EMPTY_WEEKLY_FALLBACK: WeeklyReportData = {
 type ReportDetailModal = {
   title: string;
   content: string;
+  reportId?: string;
+  reportTypeLabel?: string;
+  documentId?: string;
   type?: string;
   generatedAt?: string;
   status?: string;
+  deliveryMethod?: string;
+  deliveryStatus?: string;
+  deliveryOutcome?: string;
+  sentTo?: string;
+  previewOnly?: boolean;
+  deliveryWarning?: boolean;
+  googleDeliveryHint?: string;
+  providerSummary?: string;
   googleDocUrl?: string;
   pdfUrl?: string;
   metaLines?: string[];
   pdfUnavailableNotice?: string;
+  contentMissing?: boolean;
 };
 
 function toastReportGenerationSuccess(res: unknown) {
@@ -292,16 +306,19 @@ export function ReportsPageClient() {
       setBusyRowId(record.id);
       const res = (await reportsApi.sendReportTest({ id: record.id, payload: {} })) as Record<string, unknown>;
       const previewOnly = Boolean(res.previewOnly);
+      const deliveryWarning = Boolean(res.deliveryWarning);
       const msg = String(res.message ?? "");
       const googleHint =
-        /Google Docs scope missing|Gmail send scope missing|Missing OAuth scope|Google delivery failed \(403\)/i.test(
-          msg,
-        );
-      if (previewOnly || googleHint) {
-        showInfo(msg || "Delivery completed with warnings; see details in message.");
+        /Google Docs scope missing|Gmail send scope missing|Missing OAuth scope|Google delivery failed \(403\)/i.test(msg);
+      if (previewOnly) {
+        showInfo("No notification provider configured. Report preview saved only.");
+      } else if (deliveryWarning || googleHint) {
+        showInfo(msg || "Delivery completed with warnings; open the report for channel details.");
       } else {
         showSuccess(msg || "Report test delivery completed.");
       }
+      invalidateApiCache("/notifications");
+      invalidateApiCache("/automation");
       await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
@@ -320,9 +337,8 @@ export function ReportsPageClient() {
           : typeof row.summaryText === "string"
             ? row.summaryText
             : "";
-      const content = markdown.trim()
-        ? markdown
-        : "Report content is missing. Regenerate this report.";
+      const contentMissing = !markdown.trim();
+      const content = contentMissing ? "Report content is missing. Regenerate this report." : markdown;
       const googleDocUrlRaw = typeof data.googleDocUrl === "string" ? data.googleDocUrl : undefined;
       const pdfUrlRaw = typeof row.pdfUrl === "string" ? row.pdfUrl : undefined;
       const googleDocUrl =
@@ -333,21 +349,44 @@ export function ReportsPageClient() {
       metaLines.push(`Status: ${String(row.status ?? record.status)}`);
       const genAt = row.generatedAt ?? record.generatedAt;
       metaLines.push(`Generated: ${typeof genAt === "string" ? genAt : String(genAt ?? "—")}`);
-      metaLines.push(`Delivery: ${String(row.deliveryMethod ?? record.deliveryMethod ?? "—")}`);
-      if (data.previewOnly) metaLines.push("Last send: preview only (no provider delivered)");
-      const dwHint =
-        data.deliveryWarning === true ? summarizeGoogleDeliveryWarning(data as Record<string, unknown>) : undefined;
-      if (dwHint) metaLines.push(`Delivery warning: ${dwHint}`);
+      metaLines.push(`Delivery status: ${String(row.deliveryStatus ?? record.deliveryStatus ?? "—")}`);
+      metaLines.push(`Delivery method: ${String(row.deliveryMethod ?? record.deliveryMethod ?? "—")}`);
+      const sentArr = row.sentTo;
+      const sentJoined = Array.isArray(sentArr)
+        ? sentArr.filter(Boolean).join(", ")
+        : typeof sentArr === "string"
+          ? sentArr
+          : record.sentTo;
+      metaLines.push(`Sent to: ${sentJoined || "—"}`);
+      const outcome = typeof data.deliveryOutcome === "string" ? data.deliveryOutcome : record.deliveryOutcome;
+      if (outcome) metaLines.push(`Outcome: ${outcome}`);
+      if (data.previewOnly) metaLines.push("Last send: preview only (no external channel delivered)");
+      const googleHint = summarizeGoogleDeliveryWarning(data as Record<string, unknown>);
+      if (googleHint) metaLines.push(`Google delivery: ${googleHint}`);
+      const providerSummary = summarizeProviderResults(data as Record<string, unknown>);
+      const deliveryWarning =
+        Boolean(data.deliveryWarning) || outcome === "Delivery warning" || Boolean(record.deliveryWarning);
 
       setSelectedReport({
         title: String(row.name ?? record.reportName),
         content,
+        reportId: record.id,
+        reportTypeLabel: String(row.type ?? record.type),
         type: String(row.type ?? ""),
         generatedAt: typeof genAt === "string" ? genAt : undefined,
         status: String(row.status ?? ""),
+        deliveryMethod: String(row.deliveryMethod ?? record.deliveryMethod ?? ""),
+        deliveryStatus: String(row.deliveryStatus ?? record.deliveryStatus ?? ""),
+        deliveryOutcome: outcome,
+        sentTo: sentJoined || "—",
+        previewOnly: Boolean(data.previewOnly),
+        deliveryWarning,
+        googleDeliveryHint: googleHint,
+        providerSummary,
         googleDocUrl,
         pdfUrl,
         metaLines,
+        contentMissing,
       });
     } catch {
       showError("Could not open report.");
@@ -422,6 +461,7 @@ export function ReportsPageClient() {
           title: record.documentName,
           content: text,
           type: record.type,
+          documentId: record.documentId,
           pdfUnavailableNotice:
             record.textPreviewAvailable || !record.exportPublicUrl
               ? "PDF file is not available yet. Showing text export."
@@ -455,11 +495,44 @@ export function ReportsPageClient() {
       const res = await reportsApi.queuePdfExport({ documentId: record.documentId });
       const msg = String((res as Record<string, unknown>).message ?? "");
       showInfo(msg || "PDF export queued.");
+      invalidateApiCache("/notifications");
       await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
     } catch {
       showError("Could not queue PDF export.");
     } finally {
       setBusyRowId(null);
+    }
+  };
+
+  const handleRegenerateFromModal = async () => {
+    if (!selectedReport?.reportId || !selectedReport.reportTypeLabel) return;
+    const t =
+      selectedReport.reportTypeLabel === "Daily Digest"
+        ? "daily-digest"
+        : selectedReport.reportTypeLabel === "Weekly Performance"
+          ? "weekly-report"
+          : "weekly-report";
+    try {
+      await reportsApi.generateReport({ type: t, force: true, send: false });
+      showSuccess("Report regeneration queued.");
+      setSelectedReport(null);
+      await reportsApi.refetch();
+    } catch {
+      showError("Could not queue report regeneration.");
+    }
+  };
+
+  const handleExportPdfFromModal = async () => {
+    if (!selectedReport?.documentId) return;
+    try {
+      const res = await reportsApi.queuePdfExport({ documentId: selectedReport.documentId });
+      const msg = String((res as Record<string, unknown>).message ?? "");
+      showInfo(msg || "PDF export queued.");
+      invalidateApiCache("/notifications");
+      await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
+      setSelectedReport(null);
+    } catch {
+      showError("Could not queue PDF export.");
     }
   };
 
@@ -615,22 +688,45 @@ export function ReportsPageClient() {
 
       <Modal isOpen={Boolean(selectedReport)} onClose={() => setSelectedReport(null)} title={selectedReport?.title ?? "Report"} size="lg">
         <div className="space-y-3">
-          {selectedReport?.metaLines?.length ? (
-            <ul className="space-y-1 text-xs text-[var(--text-3)]">
-              {selectedReport.metaLines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
+          {(selectedReport?.deliveryWarning ||
+            selectedReport?.previewOnly ||
+            Boolean(selectedReport?.providerSummary) ||
+            Boolean(selectedReport?.googleDeliveryHint)) &&
+          !selectedReport?.pdfUnavailableNotice ? (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-[var(--text-2)]">
+              <p className="font-medium text-amber-200">Delivery details</p>
+              {selectedReport?.previewOnly ? (
+                <p className="mt-1 text-xs">
+                  No external notification provider delivered successfully. The report is still saved in the dashboard.
+                </p>
+              ) : null}
+              {selectedReport?.googleDeliveryHint ? (
+                <p className="mt-1 text-xs whitespace-pre-wrap">{selectedReport.googleDeliveryHint}</p>
+              ) : null}
+              {selectedReport?.providerSummary ? (
+                <pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap text-[11px] text-[var(--text-3)]">
+                  {selectedReport.providerSummary}
+                </pre>
+              ) : null}
+              {selectedReport?.deliveryWarning &&
+              !selectedReport?.providerSummary &&
+              !selectedReport?.googleDeliveryHint &&
+              !selectedReport?.previewOnly ? (
+                <p className="mt-1 text-xs">Delivery warning: provider not configured or channel returned an error.</p>
+              ) : null}
+            </div>
           ) : null}
           {selectedReport?.pdfUnavailableNotice ? (
             <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-[var(--text-2)]">
               {selectedReport.pdfUnavailableNotice}
             </p>
           ) : null}
-          {selectedReport?.type ? (
-            <p className="text-xs text-muted-foreground">
-              Type: {selectedReport.type}
-            </p>
+          {selectedReport?.metaLines?.length ? (
+            <ul className="space-y-1 text-xs text-[var(--text-3)]">
+              {selectedReport.metaLines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
           ) : null}
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap text-sm text-[var(--text-2)]">{selectedReport?.content}</pre>
           <div className="flex flex-wrap gap-2">
@@ -640,6 +736,21 @@ export function ReportsPageClient() {
             <Button type="button" variant="secondary" onClick={handleDownloadTxt}>
               Download .txt
             </Button>
+            {selectedReport?.documentId ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={reportsApi.mutations.queuePdfLoading}
+                onClick={() => void handleExportPdfFromModal()}
+              >
+                {reportsApi.mutations.queuePdfLoading ? "Queueing…" : "Export to PDF"}
+              </Button>
+            ) : null}
+            {selectedReport?.contentMissing && selectedReport.reportId ? (
+              <Button type="button" variant="default" onClick={() => void handleRegenerateFromModal()}>
+                Regenerate report
+              </Button>
+            ) : null}
             {selectedReport?.googleDocUrl && isPublicFileUrl(selectedReport.googleDocUrl, API_URL) ? (
               <a
                 href={selectedReport.googleDocUrl}

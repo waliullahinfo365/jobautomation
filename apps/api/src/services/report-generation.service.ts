@@ -1,13 +1,39 @@
 import { randomUUID } from "node:crypto";
 import { IntegrationConnectionModel, ReportModel } from "@jobflow/database/models";
 import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
-import type { DailyDigestMetrics, ReportDeliveryResult, ReportGenerationResult, WeeklyPerformanceMetrics } from "@jobflow/shared/types/report";
+import type {
+  DailyDigestMetrics,
+  ReportDeliveryResult,
+  ReportGenerationResult,
+  ReportProviderResults,
+  WeeklyPerformanceMetrics,
+} from "@jobflow/shared/types/report";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { getDailyDigestMetrics, getWeeklyPerformanceMetrics } from "./report-analytics.service";
 import { ApiError } from "../utils/errors";
 import { assertCanGenerateReport } from "./plan-limit.service";
 import { incrementUsage } from "./usage.service";
+import { createUserNotification } from "./in-app-notification.service";
+
+function deliveryChannelPartialFailure(pr: ReportProviderResults): boolean {
+  return (
+    (pr.telegram.configured && pr.telegram.attempted && !pr.telegram.success) ||
+    (pr.slack.configured && pr.slack.attempted && !pr.slack.success) ||
+    (pr.email.configured && pr.email.attempted && !pr.email.success)
+  );
+}
+
+function buildExternalDeliverySentToLabels(
+  delivery: { telegram: { success: boolean }; slack: { success: boolean }; email: { success: boolean } },
+  emailAddress?: string
+): string[] {
+  const labels: string[] = [];
+  if (delivery.telegram.success) labels.push("Telegram chat");
+  if (delivery.slack.success) labels.push("Slack channel");
+  if (delivery.email.success) labels.push(emailAddress?.trim() ? emailAddress.trim() : "Email");
+  return labels;
+}
 
 function formatDate(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -126,6 +152,18 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     Boolean
   ) as string[];
 
+  const providerTyped = providerResults as ReportProviderResults;
+  const channelWarn = !previewOnly && deliveryChannelPartialFailure(providerTyped);
+  const googleWarnLegacy = Boolean(googleDeliveryMessageSuffix(data));
+  const deliveryWarning = channelWarn || googleWarnLegacy || Boolean(data.deliveryWarning);
+
+  let deliveryOutcome: string;
+  if (previewOnly) deliveryOutcome = "Not delivered";
+  else if (deliveryWarning) deliveryOutcome = "Delivery warning";
+  else deliveryOutcome = "Delivered";
+
+  const sentToLabels = delivery.anySent ? buildExternalDeliverySentToLabels(delivery, toRaw ? String(toRaw) : undefined) : [];
+
   const googleSuffix = googleDeliveryMessageSuffix(data);
   const baseMessage = previewOnly
     ? "No Telegram, Slack, or SMTP channel delivered successfully; report remains available in the dashboard."
@@ -137,13 +175,16 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     deliveryError: previewOnly ? "No notification provider delivered successfully." : undefined,
     deliveryMethod: delivery.anySent ? (methods.length ? methods.join("+") : "dashboard") : "dashboard-preview",
     sentAt: delivery.anySent ? new Date() : undefined,
-    sentTo: delivery.anySent && toRaw ? [toRaw] : report.sentTo,
+    sentTo: sentToLabels,
     status: delivery.anySent ? "Sent" : report.status,
     data: {
       ...data,
       providerResults,
       lastDeliveryAt: new Date().toISOString(),
       previewOnly,
+      deliveryChannelWarning: channelWarn,
+      deliveryWarning,
+      deliveryOutcome,
     },
   });
 
@@ -155,6 +196,8 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     message,
     providerResults,
     previewOnly,
+    deliveryOutcome,
+    deliveryWarning,
   };
 }
 
@@ -426,20 +469,54 @@ export async function sendReportTest(input: {
 
   try {
     const result = await sendReportDelivery({ tenantId, reportId: input.reportId, to: input.to, operationId });
+    const channelWarn =
+      !result.previewOnly &&
+      Boolean(result.providerResults && deliveryChannelPartialFailure(result.providerResults as ReportProviderResults));
+
     await createAutomationLog({
       tenantId,
-      moduleKey: mk,
-      moduleName: mk,
-      status: result.previewOnly ? "Warning" : "Success",
+      moduleKey: "report-delivery",
+      moduleName: "Report delivery",
+      status: result.previewOnly ? "Warning" : channelWarn ? "Warning" : "Success",
       message: result.previewOnly
-        ? "No notification provider configured or delivery failed; report preview saved only."
-        : "Report test send completed",
+        ? "Report send test warning: no notification provider delivered successfully."
+        : channelWarn
+          ? "Report send test completed with delivery warnings on one or more channels."
+          : "Report test send completed",
       relatedRecordType: "Report",
       relatedRecordId: input.reportId,
       operationId,
       idempotencyKey,
-      metadata: { providerResults: result.providerResults, previewOnly: result.previewOnly },
+      metadata: {
+        providerResults: result.providerResults,
+        previewOnly: result.previewOnly,
+        sourceModule: mk,
+        telegram: result.providerResults?.telegram,
+        slack: result.providerResults?.slack,
+        email: result.providerResults?.email,
+        reportId: input.reportId,
+        deliveryOutcome: result.deliveryOutcome,
+        deliveryWarning: result.deliveryWarning,
+      },
     });
+
+    await createUserNotification({
+      tenantId,
+      userId: input.userId,
+      title: result.previewOnly || channelWarn ? "Report delivery warning" : "Report delivery completed",
+      message: result.message.slice(0, 900),
+      type: result.previewOnly || channelWarn ? "warning" : "success",
+      module: "report-delivery",
+      relatedRecordType: "Report",
+      relatedRecordId: input.reportId,
+      actionUrl: "/reports",
+      metadata: {
+        previewOnly: result.previewOnly,
+        channelWarn,
+        deliveryOutcome: result.deliveryOutcome,
+      },
+    });
+
     return result;
   } catch (error) {
     await ReportModel.findByIdAndUpdate(report._id, {
@@ -448,8 +525,8 @@ export async function sendReportTest(input: {
     });
     await createAutomationLog({
       tenantId,
-      moduleKey: mk,
-      moduleName: mk,
+      moduleKey: "report-delivery",
+      moduleName: "Report delivery",
       status: "Failed",
       message: "Report test send failed",
       relatedRecordType: "Report",
@@ -457,6 +534,7 @@ export async function sendReportTest(input: {
       operationId,
       idempotencyKey,
       error: error instanceof Error ? error.message : "Unknown error",
+      metadata: { sourceModule: mk, reportId: input.reportId },
     });
     throw error;
   }

@@ -82,6 +82,8 @@ export interface ReportHistoryRecord {
   summaryText?: string;
   /** Backend delivery tracking */
   deliveryStatus?: string;
+  /** From persisted report data (e.g. Delivered / Delivery warning / Not delivered) */
+  deliveryOutcome?: string;
   /** True when last send attempt stored preview-only outcome */
   previewOnly?: boolean;
   pdfUrl?: string;

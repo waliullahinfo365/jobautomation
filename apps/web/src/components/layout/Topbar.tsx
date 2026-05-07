@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { ChevronDownIcon, NotificationIcon, PlusIcon, SearchIcon, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
+import { ChevronDownIcon, PlusIcon, SearchIcon, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { clearAuthToken } from "@/lib/api/client";
 import { showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
 
 const flatNav: (SidebarNavItem & { section: string })[] = SIDEBAR_NAV.flatMap((s) =>
@@ -74,14 +75,7 @@ export function Topbar() {
         </span>
       </div>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="relative grid h-[34px] w-[34px] place-items-center rounded-[var(--r-sm)] border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-2)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]"
-          aria-label="Notifications"
-        >
-          <NotificationIcon size={15} />
-          <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-[var(--rose)] shadow-[0_0_0_2px_var(--surface-2)]" />
-        </button>
+        <NotificationBell />
         <ThemeToggle />
         <Link
           href="/jobs"

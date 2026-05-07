@@ -7,6 +7,9 @@ import { formatDate } from "@/lib/utils";
 import type { ReportHistoryRecord } from "@/types/report";
 
 function deliveryLabel(record: ReportHistoryRecord): string {
+  if (record.deliveryOutcome === "Delivery warning") return "Delivery warning";
+  if (record.deliveryOutcome === "Not delivered") return "Not delivered";
+  if (record.deliveryOutcome === "Delivered") return "Delivered";
   if (record.deliveryWarning) return "Delivery warning";
   if (record.previewOnly) return "Preview only";
   if (record.deliveryStatus === "Sent") return "Sent";
