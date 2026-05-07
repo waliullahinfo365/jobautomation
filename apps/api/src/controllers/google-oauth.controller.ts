@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { getGoogleScopesForProvider } from "@jobflow/shared/constants/googleScopes";
 import { env } from "../config/env";
 import * as googleOAuthService from "../services/google-oauth.service";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -14,6 +15,36 @@ export const getGoogleAuthUrl = asyncHandler(async (req: Request, res) => {
     tenantId,
     userId,
     providerSlug,
+  });
+  const provider = googleOAuthService.getProviderFromGoogleScope(
+    getGoogleScopesForProvider(
+      providerSlug === "gmail"
+        ? "Gmail"
+        : providerSlug === "google-drive"
+          ? "Google Drive"
+          : "Google Calendar"
+    ).join(" ")
+  );
+  console.info("[google-oauth/auth-url]", {
+    hasUserId: Boolean(userId && userId !== "system"),
+    hasTenantId: Boolean(tenantId),
+    userId,
+    tenantId,
+    provider: providerSlug,
+    oauthEnabled: result.oauthEnabled,
+    hasClientId: Boolean(process.env.GOOGLE_CLIENT_ID?.trim()),
+    hasClientSecret: Boolean(process.env.GOOGLE_CLIENT_SECRET?.trim()),
+    redirectUri: process.env.GOOGLE_REDIRECT_URI?.trim() || null,
+    scopes:
+      provider != null
+        ? getGoogleScopesForProvider(provider)
+        : getGoogleScopesForProvider(
+            providerSlug === "gmail"
+              ? "Gmail"
+              : providerSlug === "google-drive"
+                ? "Google Drive"
+                : "Google Calendar"
+          ),
   });
   return successResponse(res, result, "Google OAuth authorization URL");
 });

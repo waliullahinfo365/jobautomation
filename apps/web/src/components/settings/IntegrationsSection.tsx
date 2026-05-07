@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useAiApi } from "@/hooks/api/useAiApi";
 import { useIntegrationsApi } from "@/hooks/api/useIntegrationsApi";
 import { getGoogleAuthUrl } from "@/lib/api/integrations.api";
+import { getAuthToken } from "@/lib/api/client";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
 import { IntegrationCard } from "./IntegrationCard";
@@ -328,6 +329,10 @@ export function IntegrationsSection() {
     if (!modalSlug || !isGoogleSlug(modalSlug)) return;
     try {
       setGoogleConnectLoadingSlug(modalSlug);
+      if (process.env.NODE_ENV !== "production") {
+        const token = getAuthToken();
+        console.info("[Google OAuth] starting", { provider: modalSlug, hasAuthToken: Boolean(token) });
+      }
       const res = await getGoogleAuthUrl(modalSlug as "gmail" | "google-drive" | "google-calendar");
       setGoogleOauthState((s) => ({
         ...s,
@@ -415,8 +420,8 @@ export function IntegrationsSection() {
         onGoogleConnect={modalSlug && isGoogleSlug(modalSlug) ? () => void handleGoogleConnect() : undefined}
         googleConnectLoading={modalSlug !== null && googleConnectLoadingSlug === modalSlug}
         showLiveGoogleOAuthCopy={!isUsingFallback}
-      googleOAuthEnabled={modalSlug ? googleOauthState[modalSlug]?.oauthEnabled ?? null : null}
-      googleOAuthWarning={modalSlug ? googleOauthState[modalSlug]?.warning ?? null : null}
+        googleOAuthEnabled={modalSlug ? googleOauthState[modalSlug]?.oauthEnabled ?? null : null}
+        googleOAuthWarning={modalSlug ? googleOauthState[modalSlug]?.warning ?? null : null}
       />
 
       <ConfirmDialog

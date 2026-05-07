@@ -156,7 +156,14 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
   const profile = GOOGLE_OAUTH_ENABLED
     ? await getGoogleAccountProfileLive(tokens.access_token)
     : getGoogleAccountProfileStub(tokens as StubGoogleTokens);
-  const scopes = getGoogleScopesForProvider(provider);
+  const defaultScopes = getGoogleScopesForProvider(provider);
+  const grantedScope = (tokens as GoogleTokenResponse).scope;
+  const scopes = grantedScope
+    ? grantedScope
+        .split(/\s+/)
+        .map((s: string) => s.trim())
+        .filter(Boolean)
+    : defaultScopes;
 
   const prev = (await IntegrationConnectionModel.findOne({ tenantId, provider }).lean()) as Record<
     string,
@@ -198,7 +205,7 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
         errorMessage: isDemoConnection
           ? "Google reconnect required: demo connection cannot call Google APIs."
           : undefined,
-        syncStatus: isDemoConnection ? "Demo / Not Live" : "OK",
+        syncStatus: isDemoConnection ? "Demo / Not Live" : "Active",
         lastSyncAt: new Date(),
         expiresAt,
         accessTokenEncrypted: accessEnc,
