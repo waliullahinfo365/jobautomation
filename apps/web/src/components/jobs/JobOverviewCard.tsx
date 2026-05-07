@@ -34,8 +34,37 @@ export function JobOverviewCard({ job }: JobOverviewCardProps) {
         <OverviewItem label="Date Found" value={formatDate(job.dateFound)} />
         <OverviewItem label="Date Applied" value={job.dateApplied ? formatDate(job.dateApplied) : "—"} />
         <OverviewItem label="Contact Email" value={job.contactEmail ?? "—"} />
+        <OverviewItem
+          label="Open Drive Job Folder"
+          value={job.driveFolderLink ? <ExternalLink href={job.driveFolderLink} /> : "—"}
+        />
+        <OverviewItem
+          label="Open Research Folder"
+          value={job.researchFolderLink ? <ExternalLink href={job.researchFolderLink} /> : "—"}
+        />
+        <OverviewItem
+          label="Open Cover Letter Folder"
+          value={job.coverLetterFolderLink ? <ExternalLink href={job.coverLetterFolderLink} /> : "—"}
+        />
+        <OverviewItem
+          label="Open AI Draft Google Doc"
+          value={job.aiDraftDocUrl ? <ExternalLink href={job.aiDraftDocUrl} /> : "—"}
+        />
       </div>
     </SectionCard>
+  );
+}
+
+function ExternalLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-1 text-[var(--text-2)] hover:underline"
+    >
+      Open <ExternalLinkIcon size={14} />
+    </a>
   );
 }
 

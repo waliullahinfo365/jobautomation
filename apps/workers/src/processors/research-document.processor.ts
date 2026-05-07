@@ -9,6 +9,7 @@ export type ResearchDocumentProcessorPayload = {
 
 import { AutomationLogModel } from "@jobflow/database/models";
 import { createResearchDocument } from "./ai-document-generation";
+import { notifyAutomationEvent } from "../lib/notifications";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
 export async function processResearchGenerationJob(payload: ResearchDocumentProcessorPayload) {
@@ -44,6 +45,14 @@ export async function processResearchGenerationJob(payload: ResearchDocumentProc
             cause: ser.cause ? redactForLog(ser.cause) : undefined,
           },
         },
+      });
+      await notifyAutomationEvent({
+        tenantId: payload.tenantId,
+        moduleKey: "research-document",
+        event: "automation-failure",
+        message: `⚠️ Automation needs attention: research-document failed — ${msg}`,
+        operationId,
+        metadata: { jobId: payload.jobId },
       });
     } catch {
       /* ignore */

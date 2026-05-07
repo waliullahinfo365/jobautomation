@@ -169,6 +169,8 @@ export function IntegrationsSection() {
     connect,
     disconnect,
     test,
+    telegramStatus,
+    testTelegram,
     isUsingFallback,
     integrationsLoading,
     integrationsError,
@@ -214,9 +216,36 @@ export function IntegrationsSection() {
     return base.map((i) => {
       const local = localBySlug[i.slug];
       const lt = lastTestBySlug[i.slug] ?? local?.lastTest ?? i.lastTest;
+      if (i.slug === "telegram" && telegramStatus) {
+        return {
+          ...i,
+          ...local,
+          lastTest: (telegramStatus.lastTest as IntegrationTestResult | undefined) ?? lt,
+          status: (
+            telegramStatus.status === "connected"
+              ? "Connected"
+              : telegramStatus.status === "needs_attention"
+                ? "Needs Attention"
+                : "Not Connected"
+          ) as IntegrationListItem["status"],
+          syncStatus:
+            telegramStatus.status === "connected"
+              ? "Connected"
+              : telegramStatus.status === "needs_attention"
+                ? "Needs attention"
+                : "Not configured",
+          errorMessage: telegramStatus.status === "not_configured" ? telegramStatus.message : undefined,
+          metadata: {
+            ...(i.metadata ?? {}),
+            botTokenConfigured: telegramStatus.botTokenConfigured,
+            chatIdConfigured: telegramStatus.chatIdConfigured,
+            lastNotificationAt: telegramStatus.lastNotificationAt,
+          },
+        };
+      }
       return { ...i, ...local, lastTest: lt };
     });
-  }, [integrations, localBySlug, lastTestBySlug]);
+  }, [integrations, localBySlug, lastTestBySlug, telegramStatus]);
 
   const healthSummary = useMemo(() => {
     if (health) return health;
@@ -268,6 +297,22 @@ export function IntegrationsSection() {
         } else {
           showError(e instanceof Error ? e.message : "AI test failed");
         }
+      } finally {
+        setPending(null);
+      }
+      return;
+    }
+    if (slug === "telegram") {
+      try {
+        setPending({ slug, action: "test" });
+        const result = await testTelegram({});
+        setLastTestBySlug((o) => ({ ...o, [slug]: result }));
+        if (result.status === "Success") showSuccess(result.message);
+        else if (result.status === "Warning") showInfo(result.message);
+        else showError(result.message);
+        await refetch();
+      } catch (e) {
+        showError(e instanceof Error ? e.message : "Telegram test failed");
       } finally {
         setPending(null);
       }

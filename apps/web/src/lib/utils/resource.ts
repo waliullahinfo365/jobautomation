@@ -114,7 +114,12 @@ export function normalizeJobDocumentRow(raw: unknown): JobDocument {
     fileName: String(d.fileName ?? "Untitled"),
     type: mapDocumentTypeToJobCard(typeRaw, meta),
     status: mapDocumentRowStatus(String(d.status ?? "Draft"), String(d.generationStatus ?? "")),
-    url: typeof d.storageUrl === "string" && d.storageUrl.length > 0 ? d.storageUrl : "",
+    url:
+      typeof d.storageUrl === "string" && d.storageUrl.length > 0
+        ? d.storageUrl
+        : typeof meta.googleDocUrl === "string"
+          ? meta.googleDocUrl
+          : "",
     createdAt:
       typeof d.createdAt === "string"
         ? d.createdAt
@@ -124,6 +129,7 @@ export function normalizeJobDocumentRow(raw: unknown): JobDocument {
     documentKind: d.documentKind ? String(d.documentKind) : undefined,
     contentPreview: contentText ? contentText.slice(0, 280) : undefined,
     contentText: contentText || undefined,
+    googleDocUrl: typeof meta.googleDocUrl === "string" ? meta.googleDocUrl : undefined,
   };
 }
 
@@ -229,6 +235,13 @@ export function normalizeJobForUi(raw: unknown): Job {
     aiSummary: (j.aiSummary as string) ?? "",
     duplicateStatus: (j.duplicateStatus as Job["duplicateStatus"]) ?? "Skipped Duplicate",
     folderCreated: Boolean(j.folderCreated),
+    driveFolderLink: (j.driveFolderLink as string) ?? (j.driveFolderUrl as string),
+    researchFolderLink: (j.researchFolderLink as string | undefined),
+    coverLetterFolderLink: (j.coverLetterFolderLink as string | undefined),
+    cvFolderLink: (j.cvFolderLink as string | undefined),
+    applicationProofFolderLink: (j.applicationProofFolderLink as string | undefined),
+    interviewPrepFolderLink: (j.interviewPrepFolderLink as string | undefined),
+    aiDraftDocUrl: (j.aiDraftDocUrl as string | undefined),
     documents,
     timeline: ((j.timeline ?? []) as JobTimelineEvent[]),
     automationLogs,

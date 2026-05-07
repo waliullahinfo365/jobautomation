@@ -5,6 +5,7 @@ export type IntegrationProvider =
   | "Gmail"
   | "Google Drive"
   | "Google Calendar"
+  | "Telegram"
   | "OpenAI"
   | "Claude"
   | "SMTP"

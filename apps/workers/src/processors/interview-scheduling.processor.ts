@@ -1,5 +1,6 @@
 import { AutomationLogModel, InterviewModel, JobModel } from "@jobflow/database/models";
 import { googleApiJson, loadGoogleAccessToken } from "../lib/google-auth";
+import { notifyAutomationEvent } from "../lib/notifications";
 
 export type InterviewSchedulingPayload = {
   tenantId: string;
@@ -127,6 +128,14 @@ export async function processInterviewSchedulingJob(payload: InterviewScheduling
     relatedRecordType: "Interview",
     relatedRecordId: payload.interviewId,
     metadata: { calendarEventId: event.id, calendarEventLink: event.htmlLink },
+  });
+  await notifyAutomationEvent({
+    tenantId: payload.tenantId,
+    moduleKey: "interview-scheduling",
+    event: "interview-scheduled",
+    message: `📅 Interview prep event created for ${company} — ${position}`,
+    operationId,
+    metadata: { interviewId: payload.interviewId, calendarEventId: event.id },
   });
   return {
     suppressWorkerCompletionLog: true as const,

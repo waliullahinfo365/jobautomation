@@ -11,6 +11,7 @@ export type AiProcessingProcessorPayload = {
 
 import { AutomationLogModel, JobModel } from "@jobflow/database/models";
 import { createAiAnalysisDocument, createCoverLetterDocument, createResearchDocument } from "./ai-document-generation";
+import { notifyAutomationEvent } from "../lib/notifications";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
 export async function processAiProcessingJob(payload: AiProcessingProcessorPayload) {
@@ -100,6 +101,14 @@ export async function processAiProcessingJob(payload: AiProcessingProcessorPaylo
             cause: ser.cause ? redactForLog(ser.cause) : undefined,
           },
         },
+      });
+      await notifyAutomationEvent({
+        tenantId: payload.tenantId,
+        moduleKey: "ai-processing",
+        event: "automation-failure",
+        message: `⚠️ Automation needs attention: ai-processing failed — ${msg}`,
+        operationId,
+        metadata: { jobId: payload.jobId },
       });
     } catch {
       /* ignore log persistence failure */

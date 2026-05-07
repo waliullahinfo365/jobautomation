@@ -1,5 +1,6 @@
 import { ApplicationModel, AutomationLogModel, InterviewModel, JobModel } from "@jobflow/database/models";
 import { loadGoogleAccessToken } from "../lib/google-auth";
+import { notifyAutomationEvent } from "../lib/notifications";
 import { enqueueAutomationJob } from "../queues/automation.queue";
 
 function normalizeReply(input: {
@@ -152,6 +153,14 @@ export async function processEmailReplyDetectionJob(payload: {
     update.applicationStatus = "Offer";
     update.responseStatus = "Positive Reply";
     if (app.jobId) await JobModel.findByIdAndUpdate(app.jobId, { status: "Offer" });
+    await notifyAutomationEvent({
+      tenantId: payload.tenantId,
+      moduleKey: "email-reply-detection",
+      event: "offer-received",
+      message: `🎉 Offer received: ${app.company} — ${app.position}`,
+      operationId,
+      metadata: { applicationId: String(app._id), jobId: String(app.jobId ?? "") },
+    });
   }
   await ApplicationModel.findByIdAndUpdate(app._id, update);
   await AutomationLogModel.create({

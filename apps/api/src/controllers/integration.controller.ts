@@ -52,6 +52,19 @@ export const testIntegration = asyncHandler(async (req: Request, res) => {
   return successResponse(res, result, "Integration test complete");
 });
 
+export const getTelegramStatus = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const status = await integrationService.getTelegramStatus({ tenantId });
+  return successResponse(res, status, "Telegram status");
+});
+
+export const testTelegram = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const userId = req.user?.id ?? "system";
+  const result = await integrationService.testTelegramNotification({ tenantId, userId });
+  return successResponse(res, result, "Telegram test complete");
+});
+
 export const gmailReplyWebhook = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const isValid = verifyGmailWebhookStub(req.body);

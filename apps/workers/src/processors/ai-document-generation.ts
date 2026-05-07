@@ -5,6 +5,9 @@ import {
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
 import { formatProfileContextBlock, loadWorkspaceProfileForPrompt } from "../lib/workspace-profile-docs";
+import { loadGoogleAccessToken } from "../lib/google-auth";
+import { createGoogleDoc, ensureWorkspaceFolderStructure, findOrCreateFolder } from "../lib/google-drive";
+import { notifyAutomationEvent } from "../lib/notifications";
 import { logger } from "../utils/logger";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
@@ -211,6 +214,65 @@ async function persistDocument(docPayload: Record<string, unknown>) {
   }
 }
 
+async function routeGeneratedDocToDrive(input: {
+  tenantId: string;
+  jobId: string;
+  fileName: string;
+  content: string;
+  preferredFolderId?: string;
+  fallbackFolder: "research" | "cover-letter" | "ai-drafts";
+}) {
+  const auth = await loadGoogleAccessToken({
+    tenantId: input.tenantId,
+    provider: "Google Drive",
+    requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
+  });
+  if (!auth.connected) return { ok: false as const, reason: auth.reason };
+  const job = await JobModel.findOne({ tenantId: input.tenantId, _id: input.jobId }).lean();
+  const workspace = await ensureWorkspaceFolderStructure({
+    tenantId: input.tenantId,
+    accessToken: auth.accessToken,
+  });
+  let parentId = input.preferredFolderId;
+  if (!parentId && job) {
+    if (input.fallbackFolder === "research") {
+      parentId = String((job as Record<string, unknown>).researchFolderId ?? "");
+    } else if (input.fallbackFolder === "cover-letter") {
+      parentId = String((job as Record<string, unknown>).coverLetterFolderId ?? "");
+    } else {
+      parentId = workspace.aiDrafts.folder.id;
+    }
+  }
+  if (!parentId) {
+    const company = String((job as Record<string, unknown> | null)?.company ?? "Company");
+    const position = String((job as Record<string, unknown> | null)?.position ?? "Position");
+    const jobFolder = await findOrCreateFolder({
+      accessToken: auth.accessToken,
+      name: `${company} ${position}`,
+      parentId: workspace.applications.folder.id,
+    });
+    const sectionName = input.fallbackFolder === "research" ? "Research" : "Cover Letter";
+    const section = await findOrCreateFolder({
+      accessToken: auth.accessToken,
+      name: sectionName,
+      parentId: jobFolder.folder.id,
+    });
+    parentId = section.folder.id;
+  }
+
+  const doc = await createGoogleDoc({
+    accessToken: auth.accessToken,
+    name: input.fileName,
+    content: input.content,
+    parentId,
+  });
+  return {
+    ok: true as const,
+    googleDocId: doc.id,
+    googleDocUrl: doc.webViewLink ?? `https://docs.google.com/document/d/${doc.id}/edit`,
+  };
+}
+
 const suppressFlag = { suppressWorkerCompletionLog: true as const };
 
 export async function createResearchDocument(input: {
@@ -305,6 +367,40 @@ export async function createResearchDocument(input: {
       ...(generated.claudeFailureSummary ? { claudeErrorSummary: generated.claudeFailureSummary } : {}),
     },
   });
+  let driveRoute:
+    | { ok: true; googleDocId: string; googleDocUrl: string }
+    | { ok: false; reason?: string };
+  try {
+    driveRoute = await routeGeneratedDocToDrive({
+      tenantId: ctx.tenantId,
+      jobId: ctx.jobId,
+      fileName: `Research - ${ctx.company} - ${ctx.position}`,
+      content: generated.text,
+      fallbackFolder: "research",
+    });
+  } catch (error) {
+    driveRoute = { ok: false, reason: error instanceof Error ? error.message : "Drive route failed" };
+  }
+  if (driveRoute.ok) {
+    await DocumentModel.findByIdAndUpdate(doc._id, {
+      googleDriveFileId: driveRoute.googleDocId,
+      storageUrl: driveRoute.googleDocUrl,
+      $set: {
+        "metadata.googleDocId": driveRoute.googleDocId,
+        "metadata.googleDocUrl": driveRoute.googleDocUrl,
+      },
+    });
+  } else {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: "research-document",
+      status: "Warning",
+      message: `Drive save skipped: ${driveRoute.reason ?? "Drive unavailable"}`,
+      operationId: ctx.operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: toId(doc._id),
+    });
+  }
 
   try {
     await JobModel.findByIdAndUpdate(ctx.jobId, {
@@ -356,6 +452,14 @@ export async function createResearchDocument(input: {
       metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
     });
   }
+  await notifyAutomationEvent({
+    tenantId: ctx.tenantId,
+    moduleKey: "research-document",
+    event: "research-generated",
+    message: `📄 Research generated for ${ctx.company} — ${ctx.position}`,
+    operationId: ctx.operationId,
+    metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
+  });
 
   return {
     ...suppressFlag,
@@ -447,6 +551,62 @@ export async function createCoverLetterDocument(input: {
       ...(generated.claudeFailureSummary ? { claudeErrorSummary: generated.claudeFailureSummary } : {}),
     },
   });
+  let draftCopy:
+    | { ok: true; googleDocId: string; googleDocUrl: string }
+    | { ok: false; reason?: string } = { ok: false };
+  let coverLetterCopy:
+    | { ok: true; googleDocId: string; googleDocUrl: string }
+    | { ok: false; reason?: string } = { ok: false };
+  try {
+    draftCopy = await routeGeneratedDocToDrive({
+      tenantId: ctx.tenantId,
+      jobId: ctx.jobId,
+      fileName: `AI Draft - ${ctx.company} - ${ctx.position}`,
+      content: generated.text,
+      fallbackFolder: "ai-drafts",
+    });
+    coverLetterCopy = await routeGeneratedDocToDrive({
+      tenantId: ctx.tenantId,
+      jobId: ctx.jobId,
+      fileName: `Cover Letter - ${ctx.company} - ${ctx.position}`,
+      content: generated.text,
+      fallbackFolder: "cover-letter",
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Drive route failed";
+    draftCopy = { ok: false, reason };
+    coverLetterCopy = { ok: false, reason };
+  }
+  if (draftCopy.ok || coverLetterCopy.ok) {
+    await DocumentModel.findByIdAndUpdate(doc._id, {
+      googleDriveFileId: draftCopy.ok ? draftCopy.googleDocId : coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
+      storageUrl: draftCopy.ok ? draftCopy.googleDocUrl : coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : undefined,
+      $set: {
+        "metadata.googleDocId": draftCopy.ok ? draftCopy.googleDocId : coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
+        "metadata.googleDocUrl": draftCopy.ok ? draftCopy.googleDocUrl : coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : undefined,
+        "metadata.aiDraftGoogleDocId": draftCopy.ok ? draftCopy.googleDocId : undefined,
+        "metadata.aiDraftGoogleDocUrl": draftCopy.ok ? draftCopy.googleDocUrl : undefined,
+        "metadata.coverLetterGoogleDocId": coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
+        "metadata.coverLetterGoogleDocUrl": coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : undefined,
+      },
+    });
+    if (draftCopy.ok) {
+      await JobModel.findByIdAndUpdate(ctx.jobId, {
+        aiDraftDocId: draftCopy.googleDocId,
+        aiDraftDocUrl: draftCopy.googleDocUrl,
+      });
+    }
+  } else {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: logModule,
+      status: "Warning",
+      message: "Drive save skipped for draft/cover-letter; MongoDB document retained.",
+      operationId: ctx.operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: toId(doc._id),
+    });
+  }
 
   try {
     await JobModel.findByIdAndUpdate(ctx.jobId, {
@@ -498,6 +658,14 @@ export async function createCoverLetterDocument(input: {
       metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
     });
   }
+  await notifyAutomationEvent({
+    tenantId: ctx.tenantId,
+    moduleKey: logModule,
+    event: "cover-letter-generated",
+    message: `✍️ Cover letter draft generated for ${ctx.company} — ${ctx.position}`,
+    operationId: ctx.operationId,
+    metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
+  });
 
   return {
     ...suppressFlag,

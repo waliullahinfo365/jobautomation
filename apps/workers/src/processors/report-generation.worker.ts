@@ -13,6 +13,9 @@ import {
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
 import { sendReportEmailStub } from "@jobflow/integrations/smtp/smtp.service";
+import { loadGoogleAccessToken } from "../lib/google-auth";
+import { createGoogleDoc, ensureWorkspaceFolderStructure } from "../lib/google-drive";
+import { notifyAutomationEvent } from "../lib/notifications";
 import { logger } from "../utils/logger";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
@@ -256,35 +259,43 @@ async function createLog(input: {
 }
 
 async function notifyReport(input: { tenantId: string; message: string; event: "daily-digest" | "weekly-report" }) {
-  const webhook = process.env.SLACK_WEBHOOK_URL?.trim();
-  if (!webhook) {
-    await AutomationLogModel.create({
-      tenantId: input.tenantId,
-      createdBy: "system",
-      moduleKey: input.event,
-      moduleName: input.event,
-      status: "Warning",
-      message: "Slack notification skipped: SLACK_WEBHOOK_URL not configured",
-      metadata: { provider: "slack" },
-    });
-    return;
-  }
-  const response = await fetch(webhook, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text: input.message }),
+  await notifyAutomationEvent({
+    tenantId: input.tenantId,
+    moduleKey: input.event,
+    event: input.event,
+    message: input.message,
   });
-  if (!response.ok) {
-    await AutomationLogModel.create({
-      tenantId: input.tenantId,
-      createdBy: "system",
-      moduleKey: input.event,
-      moduleName: input.event,
-      status: "Warning",
-      message: `Slack webhook failed (${response.status})`,
-      metadata: { provider: "slack" },
-    });
-  }
+}
+
+async function routeReportToDrive(input: {
+  tenantId: string;
+  title: string;
+  content: string;
+  category: "Daily Digests" | "Weekly Reports";
+}) {
+  const auth = await loadGoogleAccessToken({
+    tenantId: input.tenantId,
+    provider: "Google Drive",
+    requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
+  });
+  if (!auth.connected) return { ok: false as const, reason: auth.reason };
+  const workspace = await ensureWorkspaceFolderStructure({
+    tenantId: input.tenantId,
+    accessToken: auth.accessToken,
+  });
+  const reportBucket = workspace.reportChildren.find((r) => r.folder.name === input.category) ?? workspace.reports;
+  const doc = await createGoogleDoc({
+    accessToken: auth.accessToken,
+    name: input.title,
+    content: input.content,
+    parentId: reportBucket.folder.id,
+  });
+  return {
+    ok: true as const,
+    googleDocId: doc.id,
+    googleDocUrl: doc.webViewLink ?? `https://docs.google.com/document/d/${doc.id}/edit`,
+    reportsFolderId: workspace.reports.folder.id,
+  };
 }
 
 export async function processWorkerDailyDigest(payload: DailyPayload) {
@@ -311,6 +322,31 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       counts,
       operationId,
     });
+    const drive = await routeReportToDrive({
+      tenantId: payload.tenantId,
+      title,
+      content: generated.body,
+      category: "Daily Digests",
+    });
+    if (drive.ok) {
+      await ReportModel.findByIdAndUpdate(report._id, {
+        deliveryMethod: "dashboard+drive",
+        data: {
+          ...(report.data ?? {}),
+          googleDocId: drive.googleDocId,
+          googleDocUrl: drive.googleDocUrl,
+        },
+      });
+    } else {
+      await createLog({
+        tenantId: payload.tenantId,
+        moduleKey: "daily-digest",
+        status: "Warning",
+        message: `Report Drive routing skipped: ${drive.reason ?? "Drive unavailable"}`,
+        operationId,
+        relatedRecordId: String(report._id),
+      });
+    }
 
     const smtpReady = await isSmtpConfigured(payload.tenantId);
     if (payload.send) {
@@ -389,6 +425,13 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       operationId,
       error: msg,
     });
+    await notifyAutomationEvent({
+      tenantId: payload.tenantId,
+      moduleKey: "daily-digest",
+      event: "automation-failure",
+      message: `⚠️ Automation needs attention: daily-digest failed — ${msg}`,
+      operationId,
+    });
     throw error;
   }
 }
@@ -419,6 +462,31 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       counts,
       operationId,
     });
+    const drive = await routeReportToDrive({
+      tenantId: payload.tenantId,
+      title,
+      content: generated.body,
+      category: "Weekly Reports",
+    });
+    if (drive.ok) {
+      await ReportModel.findByIdAndUpdate(report._id, {
+        deliveryMethod: "dashboard+drive",
+        data: {
+          ...(report.data ?? {}),
+          googleDocId: drive.googleDocId,
+          googleDocUrl: drive.googleDocUrl,
+        },
+      });
+    } else {
+      await createLog({
+        tenantId: payload.tenantId,
+        moduleKey: "weekly-report",
+        status: "Warning",
+        message: `Report Drive routing skipped: ${drive.reason ?? "Drive unavailable"}`,
+        operationId,
+        relatedRecordId: String(report._id),
+      });
+    }
 
     const smtpReady = await isSmtpConfigured(payload.tenantId);
     if (payload.send) {
@@ -497,6 +565,13 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       message: `Weekly report failed: ${msg}`,
       operationId,
       error: msg,
+    });
+    await notifyAutomationEvent({
+      tenantId: payload.tenantId,
+      moduleKey: "weekly-report",
+      event: "automation-failure",
+      message: `⚠️ Automation needs attention: weekly-report failed — ${msg}`,
+      operationId,
     });
     throw error;
   }

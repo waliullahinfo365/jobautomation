@@ -1,4 +1,5 @@
-import { IntegrationConnectionModel } from "@jobflow/database/models";
+import { AutomationLogModel, IntegrationConnectionModel } from "@jobflow/database/models";
+import { notifications } from "@jobflow/integrations";
 import type {
   IntegrationCatalogEntry,
   IntegrationHealthSummary,
@@ -35,6 +36,12 @@ const CATALOG: IntegrationCatalogEntry[] = [
     slug: "google-calendar",
     purpose: "Interview scheduling and calendar reminders.",
     requiredFor: ["interview-scheduling"],
+  },
+  {
+    provider: "Telegram",
+    slug: "telegram",
+    purpose: "Telegram notifications for job alerts, reminders, reports, and automation failures.",
+    requiredFor: ["notifications", "daily-digest", "weekly-report", "deadline-alert", "follow-up-reminder"],
   },
   {
     provider: "OpenAI",
@@ -126,6 +133,16 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     cleanMeta.reconnectRequired = true;
     cleanMeta.provider = entry.slug;
   }
+  if (entry.provider === "Telegram") {
+    const botTokenConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
+    const chatIdConfigured = Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+    cleanMeta.botTokenConfigured = botTokenConfigured;
+    cleanMeta.chatIdConfigured = chatIdConfigured;
+    if (!botTokenConfigured || !chatIdConfigured) {
+      cleanMeta.lastConfigWarning =
+        "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.";
+    }
+  }
   return {
     ...entry,
     status,
@@ -133,7 +150,10 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     accountName: row?.accountName as string | undefined,
     lastSyncAt: row?.lastSyncAt ? new Date(row.lastSyncAt as string | Date).toISOString() : undefined,
     syncStatus: row?.syncStatus as string | undefined,
-    errorMessage: row?.errorMessage as string | undefined,
+    errorMessage:
+      entry.provider === "Telegram" && !(cleanMeta.botTokenConfigured === true && cleanMeta.chatIdConfigured === true)
+        ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
+        : (row?.errorMessage as string | undefined),
     scopes: Array.isArray(row?.scopes) ? (row.scopes as string[]) : [],
     metadata: cleanMeta,
     lastTest,
@@ -145,6 +165,7 @@ function canonicalProviderKey(value: string): string {
   if (v === "gmail") return "Gmail";
   if (v === "google-drive" || v === "google drive") return "Google Drive";
   if (v === "google-calendar" || v === "google calendar") return "Google Calendar";
+  if (v === "telegram") return "Telegram";
   if (v === "openai") return "OpenAI";
   if (v === "claude") return "Claude";
   if (v === "smtp") return "SMTP";
@@ -263,7 +284,15 @@ export async function connectIntegration(input: {
     }
     delete mergedMeta.stub;
   } else {
-    mergedMeta.stub = true;
+    if (provider === "Telegram") {
+      const botTokenConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
+      const chatIdConfigured = Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+      mergedMeta.botTokenConfigured = botTokenConfigured;
+      mergedMeta.chatIdConfigured = chatIdConfigured;
+      mergedMeta.stub = false;
+    } else {
+      mergedMeta.stub = true;
+    }
     if (provider === "Gmail" || provider === "Google Drive" || provider === "Google Calendar") {
       mergedMeta.demoConnection = true;
       mergedMeta.reconnectRequired = true;
@@ -272,17 +301,21 @@ export async function connectIntegration(input: {
   }
 
   const isGoogleDemo = provider === "Gmail" || provider === "Google Drive" || provider === "Google Calendar";
+  const isTelegramConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()) && Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
   const setDoc: Record<string, unknown> = {
     tenantId,
     provider,
-    status: (isGoogleDemo ? "Needs Attention" : "Connected") as IntegrationStatus,
+    status: (isGoogleDemo ? "Needs Attention" : provider === "Telegram" && !isTelegramConfigured ? "Not Connected" : "Connected") as IntegrationStatus,
     connectedEmail: input.body.connectedEmail,
     accountName: input.body.accountName,
     scopes: input.body.scopes ?? [],
-    errorMessage: isGoogleDemo
-      ? "Google reconnect required: demo connection cannot call Google APIs."
-      : undefined,
-    syncStatus: isGoogleDemo ? "Demo / Not Live" : "OK",
+    errorMessage:
+      isGoogleDemo
+        ? "Google reconnect required: demo connection cannot call Google APIs."
+        : provider === "Telegram" && !isTelegramConfigured
+          ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
+          : undefined,
+    syncStatus: isGoogleDemo ? "Demo / Not Live" : provider === "Telegram" ? (isTelegramConfigured ? "Connected" : "Not configured") : "OK",
     lastSyncAt: new Date(),
     metadata: mergedMeta,
     updatedBy: input.userId,
@@ -452,4 +485,85 @@ export async function findIntegrationListItem(input: {
 }): Promise<IntegrationListItem | null> {
   const items = await listIntegrations({ tenantId: input.tenantId });
   return items.find((i) => i.provider === input.provider) ?? null;
+}
+
+export async function getTelegramStatus(input: { tenantId: string }) {
+  const tenantId = assertTenantId(input.tenantId);
+  const botTokenConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
+  const chatIdConfigured = Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+  const configured = botTokenConfigured && chatIdConfigured;
+  const row = (await IntegrationConnectionModel.findOne({ tenantId, provider: "Telegram" }).lean()) as
+    | Record<string, unknown>
+    | null;
+  const meta = ((row?.metadata as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>;
+  const lastTest = meta.lastTest ?? null;
+  const lastNotificationAt = meta.lastNotificationAt ?? null;
+  const status: "connected" | "not_configured" | "needs_attention" = configured
+    ? row?.status === "Needs Attention"
+      ? "needs_attention"
+      : "connected"
+    : "not_configured";
+  return {
+    configured,
+    botTokenConfigured,
+    chatIdConfigured,
+    status: status as "connected" | "not_configured" | "needs_attention",
+    lastTest,
+    lastNotificationAt,
+    message: configured
+      ? "Telegram is configured."
+      : "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.",
+  };
+}
+
+export async function testTelegramNotification(input: { tenantId: string; userId: string }) {
+  const tenantId = assertTenantId(input.tenantId);
+  const checkedAt = new Date().toISOString();
+  const result = await notifications.sendTelegramNotification({
+    tenantId,
+    event: "daily-digest",
+    message: "✅ JobFlow Telegram notifications are connected.",
+  });
+  const isConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()) && Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+  const status = result.status === "Sent" ? "Success" : result.status === "Warning" ? "Warning" : "Failed";
+  const message =
+    result.status === "Sent"
+      ? "Telegram test notification sent"
+      : result.reason ?? (isConfigured ? "Telegram test failed" : "Telegram not configured");
+  await IntegrationConnectionModel.findOneAndUpdate(
+    { tenantId, provider: "Telegram" },
+    {
+      $set: {
+        tenantId,
+        provider: "Telegram",
+        status: isConfigured ? "Connected" : "Not Connected",
+        syncStatus: isConfigured ? "Active" : "Not Configured",
+        lastSyncAt: new Date(),
+        metadata: {
+          botTokenConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()),
+          chatIdConfigured: Boolean(process.env.TELEGRAM_CHAT_ID?.trim()),
+          lastNotificationAt: result.status === "Sent" ? checkedAt : undefined,
+          lastTest: {
+            provider: "Telegram",
+            status,
+            message,
+            checkedAt,
+          },
+        },
+        updatedBy: input.userId,
+      },
+      $setOnInsert: { createdBy: input.userId },
+    },
+    { upsert: true }
+  );
+  await AutomationLogModel.create({
+    tenantId,
+    createdBy: input.userId,
+    moduleKey: "telegram-notifications",
+    moduleName: "telegram-notifications",
+    status,
+    message,
+    metadata: { provider: "telegram" },
+  });
+  return { provider: "Telegram" as const, status, message, checkedAt };
 }

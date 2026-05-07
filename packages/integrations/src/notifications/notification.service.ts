@@ -1,6 +1,7 @@
 export type NotificationEvent =
   | "new-job-detected"
   | "duplicate-skipped"
+  | "research-generated"
   | "cover-letter-generated"
   | "folder-created"
   | "interview-scheduled"
@@ -8,7 +9,14 @@ export type NotificationEvent =
   | "follow-up-due"
   | "offer-received"
   | "daily-digest"
-  | "weekly-report";
+  | "weekly-report"
+  | "automation-failure";
+
+export type NotificationSendResult = {
+  status: "Sent" | "Warning" | "Failed";
+  provider: "telegram" | "slack" | "email" | "none";
+  reason?: string;
+};
 
 export async function sendDashboardNotificationStub(input: {
   tenantId: string;
@@ -57,32 +65,47 @@ export async function sendSlackNotification(input: {
   return { status: "Sent" as const };
 }
 
-export async function sendWhatsAppNotification(input: {
+export async function sendTelegramNotification(input: {
   tenantId: string;
-  to: string;
   message: string;
   event: NotificationEvent;
 }) {
-  const apiUrl = process.env.WHATSAPP_API_URL?.trim();
-  const token = process.env.WHATSAPP_API_TOKEN?.trim();
-  const from = process.env.WHATSAPP_FROM_NUMBER?.trim();
-  if (!apiUrl || !token || !from) {
-    return { status: "Warning" as const, reason: "WhatsApp provider env is incomplete" };
+  const botToken = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
+  if (!botToken || !chatId) {
+    return { status: "Warning" as const, reason: "Telegram not configured." };
   }
-  const response = await fetch(apiUrl, {
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      from,
-      to: input.to,
+      chat_id: chatId,
       text: input.message,
+      parse_mode: "Markdown",
     }),
   });
   if (!response.ok) {
-    return { status: "Warning" as const, reason: `WhatsApp API failed (${response.status})` };
+    return { status: "Failed" as const, reason: `Telegram API failed (${response.status})` };
   }
   return { status: "Sent" as const };
+}
+
+export async function sendNotificationWithFallback(input: {
+  tenantId: string;
+  message: string;
+  event: NotificationEvent;
+}): Promise<NotificationSendResult> {
+  const telegram = await sendTelegramNotification(input);
+  if (telegram.status === "Sent") return { status: "Sent", provider: "telegram" };
+
+  const slack = await sendSlackNotification(input);
+  if (slack.status === "Sent") return { status: "Sent", provider: "slack" };
+
+  if (telegram.status === "Failed") {
+    return { status: "Failed", provider: "telegram", reason: telegram.reason };
+  }
+  if (slack.status === "Warning") {
+    return { status: "Warning", provider: "none", reason: "No notification provider configured." };
+  }
+  return { status: "Warning", provider: "none", reason: telegram.reason ?? "No notification provider configured." };
 }

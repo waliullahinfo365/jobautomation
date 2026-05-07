@@ -87,6 +87,7 @@ export function IntegrationConnectModal({
     if (providerSlug === "openai" || providerSlug === "claude") return "Save Demo Config";
     if (providerSlug === "smtp") return "Save SMTP Demo Config";
     if (providerSlug === "slack") return "Save Slack Demo Config";
+    if (providerSlug === "telegram") return "Configure Telegram";
     if (providerSlug === "notion-legacy") return "Save Legacy Import Config";
     return "Save";
   }, [providerSlug, googleOAuthEnabled]);
@@ -146,6 +147,10 @@ export function IntegrationConnectModal({
           databaseName,
         },
       });
+      return;
+    }
+    if (providerSlug === "telegram") {
+      await onSubmit({ config: {} });
     }
   }
 

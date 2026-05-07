@@ -25,6 +25,10 @@ export function useIntegrationsApi(options?: { fallbackToMock?: boolean }) {
   const testMutation = useApiMutation((provider: string) => api.testIntegration(provider));
 
   const replyTestMutation = useApiMutation((payload: Record<string, unknown>) => api.replyTest(payload));
+  const telegramStatusQuery = useApiQuery(() => api.getTelegramStatus(), {
+    fallbackToMock: options?.fallbackToMock,
+  });
+  const telegramTestMutation = useApiMutation((_payload: Record<string, unknown>) => api.testTelegram());
 
   const refetchAll = useCallback(async () => {
     await Promise.all([listQuery.refetch(), healthQuery.refetch()]);
@@ -48,5 +52,9 @@ export function useIntegrationsApi(options?: { fallbackToMock?: boolean }) {
     replyTest: replyTestMutation.mutate,
     gmailReplyTest: replyTestMutation.mutate,
     replyTestLoading: replyTestMutation.loading,
+    telegramStatus: telegramStatusQuery.data,
+    telegramStatusLoading: telegramStatusQuery.loading,
+    testTelegram: telegramTestMutation.mutate,
+    testTelegramLoading: telegramTestMutation.loading,
   };
 }

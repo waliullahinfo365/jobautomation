@@ -19,6 +19,6 @@ scenario | old Make trigger | native trigger | status | missing work
 13 Offer Tracking Automation | reply/offer status transition | scheduler queued module + reply detector updates | partially-working | dedicated offer-tracking processor and reporting counters
 14 Deadline Alert System | scheduled deadline scan | scheduler queued module | missing | implement deadline processor + notification fanout
 15 Lifecycle Monitoring Engine | daily lifecycle aging scan | scheduler queued module | missing | implement lifecycle processor rules
-16 Daily Status Digest | daily scheduler run | daily-digest processor | partially-working | provider fanout (WhatsApp/Slack) and template improvements
-17 Weekly Performance Report | weekly scheduler run | weekly-report processor | partially-working | provider fanout (WhatsApp/Slack) and KPI enrichment
+16 Daily Status Digest | daily scheduler run | daily-digest processor | partially-working | provider fanout (Telegram primary, Slack optional) and template improvements
+17 Weekly Performance Report | weekly scheduler run | weekly-report processor | partially-working | provider fanout (Telegram primary, Slack optional) and KPI enrichment
 */

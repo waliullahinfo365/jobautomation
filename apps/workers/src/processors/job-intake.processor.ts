@@ -4,6 +4,7 @@ import { runAiExtraction } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import { checkDuplicateJobWorker } from "../lib/duplicate-job-check";
 import { loadGoogleAccessToken } from "../lib/google-auth";
+import { notifyAutomationEvent } from "../lib/notifications";
 import { enqueueAutomationJob } from "../queues/automation.queue";
 
 async function gmailApiJson<T>(input: {
@@ -124,6 +125,14 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
         relatedRecordId: String(existing._id),
         metadata: { gmailMessageId: normalized.providerMessageId },
       });
+      await notifyAutomationEvent({
+        tenantId: payload.tenantId,
+        moduleKey: "job-intake",
+        event: "duplicate-skipped",
+        message: `Duplicate job skipped: ${data.company} — ${data.position}`,
+        operationId,
+        metadata: { jobId: String(existing._id) },
+      });
       continue;
     }
     const duplicate = await checkDuplicateJobWorker(payload.tenantId, data);
@@ -150,8 +159,30 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       extractionConfidence: data.confidence,
     });
     createdCount += 1;
+    await notifyAutomationEvent({
+      tenantId: payload.tenantId,
+      moduleKey: "job-intake",
+      event: "new-job-detected",
+      message: `🆕 New job detected: ${data.company} — ${data.position}`,
+      operationId,
+      metadata: { jobId: String(created._id) },
+    });
 
-    for (const moduleName of ["duplicate-protection", "research-document", "ai-processing", "folder-automation"] as const) {
+    const downstreamModules = ["duplicate-protection", "research-document", "ai-processing"] as const;
+    if (!created.folderCreated && !created.driveFolderId) {
+      await enqueueAutomationJob({
+        name: "folder-automation",
+        payload: {
+          tenantId: payload.tenantId,
+          userId: payload.userId,
+          operationId: `folder-automation-${Date.now()}-${created._id}`,
+          requestedAt: new Date().toISOString(),
+          source: "system",
+          jobId: String(created._id),
+        } as any,
+      });
+    }
+    for (const moduleName of downstreamModules) {
       await enqueueAutomationJob({
         name: moduleName,
         payload: {
@@ -160,7 +191,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
           operationId: `${moduleName}-${Date.now()}-${created._id}`,
           requestedAt: new Date().toISOString(),
           source: "system",
-          ...(moduleName === "folder-automation" || moduleName === "duplicate-protection" || moduleName === "research-document" || moduleName === "ai-processing"
+          ...(moduleName === "duplicate-protection" || moduleName === "research-document" || moduleName === "ai-processing"
             ? { jobId: String(created._id) }
             : {}),
         } as any,

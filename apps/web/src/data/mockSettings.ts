@@ -49,6 +49,15 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
     metadata: { stub: true },
   },
   {
+    provider: "Telegram",
+    slug: "telegram",
+    purpose: "Telegram notifications for job alerts, reminders, reports, and automation failures.",
+    requiredFor: ["notifications", "daily-digest", "weekly-report", "deadline-alert", "follow-up-reminder"],
+    status: "Not Connected",
+    scopes: [],
+    metadata: { botTokenConfigured: false, chatIdConfigured: false },
+  },
+  {
     provider: "OpenAI",
     slug: "openai",
     purpose: "Research, drafts, extraction, and classification.",

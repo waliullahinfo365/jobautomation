@@ -48,6 +48,7 @@ function ProviderIcon({ slug }: { slug: string }) {
     case "notion-legacy":
       return <DatabaseIcon size={32} className={iconClass} aria-hidden />;
     case "slack":
+    case "telegram":
       return <MessageSquareIcon size={32} className={iconClass} aria-hidden />;
     default:
       return <DatabaseIcon size={32} className={iconClass} aria-hidden />;
@@ -67,6 +68,7 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
   const demoGoogle = isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true);
   const connectLabel =
     demoGoogle ? "Configure Google OAuth" : item.status === "Not Connected" ? "Connect" : "Reconnect";
+  const isTelegram = item.slug === "telegram";
   const account =
     item.connectedEmail ?? item.accountName ?? (item.metadata?.workspaceName as string | undefined) ?? undefined;
   const modelPreview = item.metadata?.model as string | undefined;
@@ -103,6 +105,21 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
         {item.scopes?.length ? <Field label="Scopes" value={item.scopes.join(", ")} /> : null}
         {modelPreview ? <Field label="Model" value={modelPreview} /> : null}
         {apiPreview ? <Field label="API key" value={apiPreview} /> : null}
+        {isTelegram ? (
+          <>
+            <Field
+              label="Bot configured"
+              value={item.metadata?.botTokenConfigured === true ? "true" : "false"}
+            />
+            <Field
+              label="Chat configured"
+              value={item.metadata?.chatIdConfigured === true ? "true" : "false"}
+            />
+            {typeof item.metadata?.lastNotificationAt === "string" ? (
+              <Field label="Last notification" value={formatWhen(item.metadata.lastNotificationAt as string) ?? "—"} />
+            ) : null}
+          </>
+        ) : null}
         {item.lastTest ? (
           <div className="rounded-md border bg-muted/40 p-3 text-xs">
             <p className="font-medium text-muted-foreground">Last test</p>
@@ -117,10 +134,10 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
 
         <div className="flex flex-wrap gap-2 pt-2">
           <Button variant="default" size="sm" onClick={onConnect} disabled={isBusy(pending, item.slug, "connect")}>
-            {connectLabel}
+            {isTelegram ? "Configure Telegram" : connectLabel}
           </Button>
           <Button variant="secondary" size="sm" onClick={onTest} disabled={isBusy(pending, item.slug, "test")}>
-            Test
+            {isTelegram ? "Test Telegram" : "Test"}
           </Button>
           <Button variant="outline" size="sm" onClick={onDisconnect} disabled={isBusy(pending, item.slug, "disconnect")}>
             Disconnect

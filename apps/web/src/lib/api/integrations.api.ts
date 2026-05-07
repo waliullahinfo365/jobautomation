@@ -32,6 +32,16 @@ export type GoogleOAuthStartResult = {
   message?: string;
 };
 
+export type TelegramIntegrationStatus = {
+  configured: boolean;
+  botTokenConfigured: boolean;
+  chatIdConfigured: boolean;
+  status: "connected" | "not_configured" | "needs_attention";
+  lastTest?: IntegrationTestResult;
+  lastNotificationAt?: string;
+  message?: string;
+};
+
 export async function getGoogleAuthUrl(
   providerSlug: "gmail" | "google-drive" | "google-calendar"
 ): Promise<GoogleOAuthStartResult> {
@@ -55,4 +65,12 @@ export async function getGoogleAuthUrl(
     oauthEnabled,
     message,
   };
+}
+
+export function getTelegramStatus(): Promise<TelegramIntegrationStatus> {
+  return apiFetch<TelegramIntegrationStatus>("/integrations/telegram/status");
+}
+
+export function testTelegram(): Promise<IntegrationTestResult> {
+  return apiFetch<IntegrationTestResult>("/integrations/telegram/test", { method: "POST", body: {} });
 }

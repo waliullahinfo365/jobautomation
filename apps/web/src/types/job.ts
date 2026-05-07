@@ -24,6 +24,7 @@ export interface JobDocument {
   contentPreview?: string;
   /** Present for API-loaded documents; used in the view modal. */
   contentText?: string;
+  googleDocUrl?: string;
 }
 
 export interface JobTimelineEvent {
@@ -82,6 +83,13 @@ export interface Job {
   aiSummary: string;
   duplicateStatus: "Checked" | "Potential Duplicate" | "Skipped Duplicate";
   folderCreated: boolean;
+  driveFolderLink?: string;
+  researchFolderLink?: string;
+  coverLetterFolderLink?: string;
+  cvFolderLink?: string;
+  applicationProofFolderLink?: string;
+  interviewPrepFolderLink?: string;
+  aiDraftDocUrl?: string;
 
   documents: JobDocument[];
   timeline: JobTimelineEvent[];

@@ -4,10 +4,13 @@ import { processAppliedStatusJob } from "./applied-status.processor";
 import { processCvRoutingJob } from "./cv-routing.processor";
 import { processDuplicateProtectionProcessor } from "./duplicate-protection.processor";
 import { processEmailReplyDetectionJob } from "./email-reply-detection.processor";
+import { processDeadlineAlertJob } from "./deadline-alert.processor";
 import { processFollowUpReminderJob } from "./follow-up-reminder.processor";
 import { processFolderAutomationJob } from "./folder-automation.processor";
 import { processInterviewSchedulingJob } from "./interview-scheduling.processor";
 import { processJobIntakeProcessor } from "./job-intake.processor";
+import { processLifecycleMonitoringJob } from "./lifecycle-monitoring.processor";
+import { processOfferTrackingJob } from "./offer-tracking.processor";
 import { processPdfExportJob } from "./pdf-export.processor";
 import { processResearchGenerationJob } from "./research-document.processor";
 import { processDailyDigestJob } from "./daily-digest.processor";
@@ -107,10 +110,25 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
         to: (payload as { to?: string }).to,
         operationId: payload.operationId,
       });
-    case "network-follow-up":
     case "offer-tracking":
+      return processOfferTrackingJob({
+        tenantId: payload.tenantId,
+        operationId: payload.operationId,
+        date: (payload as { date?: string }).date,
+      });
     case "deadline-alert":
+      return processDeadlineAlertJob({
+        tenantId: payload.tenantId,
+        operationId: payload.operationId,
+        date: (payload as { date?: string }).date,
+      });
     case "lifecycle-monitoring":
+      return processLifecycleMonitoringJob({
+        tenantId: payload.tenantId,
+        operationId: payload.operationId,
+        date: (payload as { date?: string }).date,
+      });
+    case "network-follow-up":
       return {
         queued: true,
         moduleKey: name,

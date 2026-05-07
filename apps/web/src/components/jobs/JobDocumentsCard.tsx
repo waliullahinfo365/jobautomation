@@ -47,6 +47,16 @@ export function JobDocumentsCard({ documents }: JobDocumentsCardProps) {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Badge variant="outline">{doc.status}</Badge>
+                  {doc.googleDocUrl ? (
+                    <a
+                      href={doc.googleDocUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-md border border-[var(--border-default)] px-2.5 py-1 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+                    >
+                      Google Doc
+                    </a>
+                  ) : null}
                   {doc.url ? (
                     <a
                       href={doc.url}

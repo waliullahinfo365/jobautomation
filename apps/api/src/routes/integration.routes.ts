@@ -5,7 +5,9 @@ import {
   getIntegrationHealth,
   gmailReplyTest,
   gmailReplyWebhook,
+  getTelegramStatus,
   listIntegrations,
+  testTelegram,
   testIntegration,
 } from "../controllers/integration.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
@@ -17,6 +19,8 @@ export const integrationRoutes = Router();
 
 integrationRoutes.get("/", requirePermission("integrations.read"), listIntegrations);
 integrationRoutes.get("/health", requirePermission("integrations.read"), getIntegrationHealth);
+integrationRoutes.get("/telegram/status", requirePermission("integrations.read"), getTelegramStatus);
+integrationRoutes.post("/telegram/test", requirePermission("integrations.connect"), testTelegram);
 integrationRoutes.post(
   "/:provider/connect",
   requirePermission("integrations.connect"),
