@@ -16,7 +16,7 @@ export type DocumentType =
 
 export type DocumentStatus = "Draft" | "Ready" | "Exported" | "Failed" | "Needs Review" | "Archived";
 
-export type PDFExportStatus = "Pending" | "Exported" | "Failed" | "Needs Review";
+export type PDFExportStatus = "Pending" | "Exported" | "Failed" | "Needs Review" | "Preview Only";
 
 export interface DocumentRecord {
   id: string;
@@ -81,7 +81,9 @@ export interface PDFExportRecord {
   relatedJob: string;
   exportStatus: PDFExportStatus;
   createdAt: Date | string;
-  pdfUrl: string;
+  exportPublicUrl: string;
+  textPreviewAvailable: boolean;
+  pdfLink: string;
 }
 
 export interface FolderActivityRecord {

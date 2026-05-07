@@ -12,7 +12,7 @@ export function ReportStatusBadge({
   const variant =
     status === "Sent" || status === "Generated" || status === "Exported"
       ? "success"
-      : status === "Scheduled" || status === "Pending" || status === "Needs Review"
+      : status === "Scheduled" || status === "Pending" || status === "Needs Review" || status === "Preview Only"
         ? "warning"
         : "danger";
   const label =

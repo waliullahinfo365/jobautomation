@@ -34,7 +34,7 @@ const DocumentSchema = new Schema(
     routingError: String,
     pdfExportStatus: {
       type: String,
-      enum: ["Not Started", "Queued", "Exported", "Failed"],
+      enum: ["Not Started", "Queued", "Exported", "Failed", "Preview Only"],
       default: "Not Started",
     },
     pdfUrl: String,

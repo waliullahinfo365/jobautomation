@@ -8,12 +8,13 @@ import type { PDFExportRecord } from "@/types/report";
 
 export function PDFExportsTable({
   records,
-  onView,
+  onPreviewText,
   onExportAgain,
   busyId,
 }: {
   records: PDFExportRecord[];
-  onView?: (record: PDFExportRecord) => void;
+  /** Opens modal / preview when there is no public PDF URL */
+  onPreviewText?: (record: PDFExportRecord) => void;
   onExportAgain?: (record: PDFExportRecord) => void;
   busyId?: string | null;
 }) {
@@ -27,8 +28,8 @@ export function PDFExportsTable({
             <TableHead>Type</TableHead>
             <TableHead>Export Status</TableHead>
             <TableHead>Created At</TableHead>
-            <TableHead>PDF Link</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>Export</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -36,33 +37,47 @@ export function PDFExportsTable({
             <TableRow key={record.id}>
               <TableCell className="font-medium">{record.documentName}</TableCell>
               <TableCell>{record.relatedJob}</TableCell>
-              <TableCell><ReportTypeBadge type={record.type} /></TableCell>
-              <TableCell><ReportStatusBadge status={record.exportStatus} /></TableCell>
+              <TableCell>
+                <ReportTypeBadge type={record.type} />
+              </TableCell>
+              <TableCell>
+                <ReportStatusBadge status={record.exportStatus} />
+              </TableCell>
               <TableCell>{formatDate(record.createdAt, "MMM d, yyyy HH:mm")}</TableCell>
               <TableCell>
-                {record.pdfLink ? (
-                  <a href={record.pdfLink} target="_blank" rel="noreferrer" className="text-[var(--text-2)] hover:underline">
-                    View PDF
-                  </a>
+                {record.exportPublicUrl ? (
+                  <button
+                    type="button"
+                    className="text-[var(--text-2)] underline hover:no-underline"
+                    onClick={() => window.open(record.exportPublicUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    Open PDF
+                  </button>
+                ) : record.textPreviewAvailable && onPreviewText ? (
+                  <button
+                    type="button"
+                    className="text-[var(--text-2)] underline hover:no-underline"
+                    onClick={() => onPreviewText(record)}
+                  >
+                    Preview Text
+                  </button>
+                ) : record.textPreviewAvailable ? (
+                  <span className="text-muted-foreground text-sm">Text export — open row actions</span>
                 ) : (
-                  <span className="text-[var(--text-3)]">No PDF</span>
+                  <span className="text-muted-foreground">Pending</span>
                 )}
               </TableCell>
               <TableCell className="text-right">
-                <div className="inline-flex gap-2">
-                  <Button size="sm" variant="outline" type="button" onClick={() => onView?.(record)}>
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    type="button"
-                    disabled={busyId === record.id}
-                    onClick={() => onExportAgain?.(record)}
-                  >
-                    {busyId === record.id ? "Queueing..." : "Export Again"}
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  type="button"
+                  disabled={busyId === record.id || !record.documentId}
+                  title={record.documentId ? undefined : "Only document exports can be re-queued from here"}
+                  onClick={() => onExportAgain?.(record)}
+                >
+                  {busyId === record.id ? "Queueing..." : "Export Again"}
+                </Button>
               </TableCell>
             </TableRow>
           ))}

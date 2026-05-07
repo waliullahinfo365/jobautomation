@@ -18,6 +18,8 @@ import type {
   AutomationStatus,
 } from "@/types/automation";
 import { automationModules } from "@/data/automationModules";
+import { API_URL } from "@/config/env";
+import { isPublicFileUrl } from "@/lib/utils/is-public-file-url";
 
 /** Maps dashboard mock module card ids to backend `moduleKey` values. */
 const AUTOMATION_UI_ID_TO_BACKEND_KEY: Record<string, string> = {
@@ -466,6 +468,8 @@ function mapPdfExportStatusFromBackend(pes: string | undefined): PDFExportStatus
       return "Exported";
     case "Failed":
       return "Failed";
+    case "Preview Only":
+      return "Preview Only";
     case "Queued":
     case "Not Started":
       return "Pending";
@@ -489,7 +493,6 @@ export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
   const company = String(d.company ?? meta.company ?? "");
   const position = String(d.position ?? meta.position ?? "");
   const storagePath = String(d.storagePath ?? meta.storagePath ?? "");
-  const storageUrl = d.storageUrl ? String(d.storageUrl) : undefined;
   const jobId = d.jobId ? String(d.jobId) : undefined;
   const rawType = String(d.type ?? "Other");
   const type = mapBackendDocTypeToUi(rawType);
@@ -503,8 +506,21 @@ export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
         ? lastUpdatedRaw.toISOString()
         : new Date().toISOString();
 
-  const pdfExportStatus = mapPdfExportStatusFromBackend(d.pdfExportStatus as string | undefined);
-  const pdfUrl = d.pdfUrl ? String(d.pdfUrl) : undefined;
+  const pdfExportStatusRaw = mapPdfExportStatusFromBackend(d.pdfExportStatus as string | undefined);
+  let pdfExportStatus = pdfExportStatusRaw;
+  const rawPdfUrl = d.pdfUrl ? String(d.pdfUrl) : undefined;
+  const pdfUrl = rawPdfUrl && isPublicFileUrl(rawPdfUrl, API_URL) ? rawPdfUrl : undefined;
+  const rawStorageUrl = d.storageUrl ? String(d.storageUrl) : undefined;
+  const storageUrl =
+    rawStorageUrl && isPublicFileUrl(rawStorageUrl, API_URL) ? rawStorageUrl : undefined;
+  if (
+    !pdfExportStatus &&
+    (meta.textExportAvailable === true ||
+      meta.exportStatus === "preview-only" ||
+      meta.exportStatus === "completed-text")
+  ) {
+    pdfExportStatus = "Preview Only";
+  }
   const routingStatus = d.routingStatus as DocumentRecord["routingStatus"];
 
   return {

@@ -17,7 +17,7 @@ export interface PdfExportResult {
   operationId: string;
   tenantId: string;
   documentId: string;
-  status: "completed" | "existing" | "failed";
+  status: "completed" | "existing" | "failed" | "completed-text";
   pdfUrl?: string;
   message: string;
 }

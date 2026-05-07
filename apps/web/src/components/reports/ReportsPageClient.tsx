@@ -41,6 +41,8 @@ import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 import { getReport } from "@/lib/api/reports.api";
 import { getDocument } from "@/lib/api/documents.api";
+import { API_URL } from "@/config/env";
+import { isPublicFileUrl } from "@/lib/utils/is-public-file-url";
 
 const initialFilters: ReportFilterState = {
   query: "",
@@ -99,6 +101,7 @@ type ReportDetailModal = {
   googleDocUrl?: string;
   pdfUrl?: string;
   metaLines?: string[];
+  pdfUnavailableNotice?: string;
 };
 
 function toastReportGenerationSuccess(res: unknown) {
@@ -204,36 +207,60 @@ export function ReportsPageClient() {
     const docs = normalizeDocumentRecordsForUi(normalizeListResponse<unknown>(documentsApi.data));
     const fromDocs = docs
       .filter((d) => ["CV", "Cover Letter", "Research Document", "Other", "PDF Export"].includes(d.type))
-      .map((d) => ({
-        id: `doc-${d.id}`,
-        documentId: d.id,
-        documentName: d.fileName,
-        relatedJob: d.relatedJob || "Workspace",
-        type:
-          d.type === "CV"
-            ? ("CV" as const)
-            : d.type === "Cover Letter"
-              ? ("Cover Letter" as const)
-              : d.type === "PDF Export"
-                ? ("Weekly Report" as const)
-                : ("Research Document" as const),
-        exportStatus: normalizeDocumentRowStatusToPdfStatus(d),
-        createdAt: String(d.lastUpdated),
-        pdfLink: d.pdfUrl ?? d.storageUrl ?? "",
-      }));
+      .map((d) => {
+        const raw = (d as unknown as { metadata?: Record<string, unknown> }).metadata ?? {};
+        const meta = typeof raw === "object" && raw !== null ? raw : {};
+        const exportPublicUrl =
+          (d.pdfUrl && isPublicFileUrl(d.pdfUrl, API_URL) ? d.pdfUrl : "") ||
+          (d.storageUrl && isPublicFileUrl(d.storageUrl, API_URL) ? d.storageUrl : "") ||
+          "";
+        const textPreviewAvailable =
+          d.pdfExportStatus === "Preview Only" ||
+          meta.textExportAvailable === true ||
+          meta.exportStatus === "preview-only" ||
+          meta.exportStatus === "completed-text";
+        return {
+          id: `doc-${d.id}`,
+          documentId: d.id,
+          documentName: d.fileName,
+          relatedJob: d.relatedJob || "Workspace",
+          type:
+            d.type === "CV"
+              ? ("CV" as const)
+              : d.type === "Cover Letter"
+                ? ("Cover Letter" as const)
+                : d.type === "PDF Export"
+                  ? ("Weekly Report" as const)
+                  : ("Research Document" as const),
+          exportStatus: normalizeDocumentRowStatusToPdfStatus(d),
+          createdAt: String(d.lastUpdated),
+          exportPublicUrl,
+          textPreviewAvailable,
+          pdfLink: exportPublicUrl,
+        };
+      });
 
     const fromReports = mergedHistory
       .filter((r) => Boolean(r.pdfUrl || r.googleDocUrl))
-      .map((r) => ({
-        id: `report-${r.id}`,
-        reportId: r.id,
-        documentName: r.reportName,
-        relatedJob: "Report",
-        type: r.type === "Daily Digest" ? ("Daily Digest" as const) : ("Weekly Report" as const),
-        exportStatus: r.pdfUrl ? ("Exported" as const) : ("Needs Review" as const),
-        createdAt: r.generatedAt,
-        pdfLink: r.pdfUrl ?? r.googleDocUrl ?? "",
-      }));
+      .map((r) => {
+        const exportPublicUrl =
+          (r.pdfUrl && isPublicFileUrl(r.pdfUrl, API_URL) ? r.pdfUrl : "") ||
+          (r.googleDocUrl && isPublicFileUrl(r.googleDocUrl, API_URL) ? r.googleDocUrl : "") ||
+          "";
+        const textPreviewAvailable = !exportPublicUrl;
+        return {
+          id: `report-${r.id}`,
+          reportId: r.id,
+          documentName: r.reportName,
+          relatedJob: "Report",
+          type: r.type === "Daily Digest" ? ("Daily Digest" as const) : ("Weekly Report" as const),
+          exportStatus: r.pdfUrl && exportPublicUrl ? ("Exported" as const) : ("Needs Review" as const),
+          createdAt: r.generatedAt,
+          exportPublicUrl,
+          textPreviewAvailable,
+          pdfLink: exportPublicUrl,
+        };
+      });
 
     return [...fromReports, ...fromDocs];
   }, [documentsApi.data, mergedHistory]);
@@ -296,8 +323,11 @@ export function ReportsPageClient() {
       const content = markdown.trim()
         ? markdown
         : "Report content is missing. Regenerate this report.";
-      const googleDocUrl = typeof data.googleDocUrl === "string" ? data.googleDocUrl : undefined;
-      const pdfUrl = typeof row.pdfUrl === "string" ? row.pdfUrl : undefined;
+      const googleDocUrlRaw = typeof data.googleDocUrl === "string" ? data.googleDocUrl : undefined;
+      const pdfUrlRaw = typeof row.pdfUrl === "string" ? row.pdfUrl : undefined;
+      const googleDocUrl =
+        googleDocUrlRaw && isPublicFileUrl(googleDocUrlRaw, API_URL) ? googleDocUrlRaw : undefined;
+      const pdfUrl = pdfUrlRaw && isPublicFileUrl(pdfUrlRaw, API_URL) ? pdfUrlRaw : undefined;
       const metaLines: string[] = [];
       metaLines.push(`Type: ${String(row.type ?? record.type)}`);
       metaLines.push(`Status: ${String(row.status ?? record.status)}`);
@@ -371,15 +401,32 @@ export function ReportsPageClient() {
   };
 
   const handleViewPdfRecord = async (record: PDFExportRecord) => {
-    if (record.pdfLink) {
-      window.open(record.pdfLink, "_blank", "noopener,noreferrer");
+    if (record.exportPublicUrl) {
+      window.open(record.exportPublicUrl, "_blank", "noopener,noreferrer");
       return;
     }
     if (record.documentId) {
       try {
-        const doc = (await getDocument(record.documentId)) as unknown as { contentText?: string };
-        const text = typeof doc.contentText === "string" && doc.contentText.trim() ? doc.contentText : "No text content available.";
-        setSelectedReport({ title: record.documentName, content: text });
+        const doc = (await getDocument(record.documentId)) as unknown as Record<string, unknown>;
+        const meta =
+          doc.metadata && typeof doc.metadata === "object"
+            ? (doc.metadata as Record<string, unknown>)
+            : {};
+        const text =
+          typeof doc.contentText === "string" && doc.contentText.trim()
+            ? doc.contentText
+            : typeof meta.textExportContent === "string"
+              ? meta.textExportContent
+              : "No text content available.";
+        setSelectedReport({
+          title: record.documentName,
+          content: text,
+          type: record.type,
+          pdfUnavailableNotice:
+            record.textPreviewAvailable || !record.exportPublicUrl
+              ? "PDF file is not available yet. Showing text export."
+              : undefined,
+        });
       } catch {
         showError("Could not open export source.");
       }
@@ -528,8 +575,8 @@ export function ReportsPageClient() {
         ) : (
           <PDFExportsTable
             records={pdfRecords}
+            onPreviewText={(r) => void handleViewPdfRecord(r)}
             onExportAgain={(r) => void handleExportAgain(r)}
-            onView={(r) => void handleViewPdfRecord(r)}
             busyId={busyRowId}
           />
         )
@@ -575,6 +622,16 @@ export function ReportsPageClient() {
               ))}
             </ul>
           ) : null}
+          {selectedReport?.pdfUnavailableNotice ? (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-[var(--text-2)]">
+              {selectedReport.pdfUnavailableNotice}
+            </p>
+          ) : null}
+          {selectedReport?.type ? (
+            <p className="text-xs text-muted-foreground">
+              Type: {selectedReport.type}
+            </p>
+          ) : null}
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap text-sm text-[var(--text-2)]">{selectedReport?.content}</pre>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => void handleCopyModalContent()}>
@@ -583,7 +640,7 @@ export function ReportsPageClient() {
             <Button type="button" variant="secondary" onClick={handleDownloadTxt}>
               Download .txt
             </Button>
-            {selectedReport?.googleDocUrl ? (
+            {selectedReport?.googleDocUrl && isPublicFileUrl(selectedReport.googleDocUrl, API_URL) ? (
               <a
                 href={selectedReport.googleDocUrl}
                 target="_blank"
@@ -593,7 +650,7 @@ export function ReportsPageClient() {
                 Open in Google Drive
               </a>
             ) : null}
-            {selectedReport?.pdfUrl ? (
+            {selectedReport?.pdfUrl && isPublicFileUrl(selectedReport.pdfUrl, API_URL) ? (
               <a
                 href={selectedReport.pdfUrl}
                 target="_blank"

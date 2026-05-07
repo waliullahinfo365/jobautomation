@@ -38,6 +38,8 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import type { Job } from "@/types/job";
 import { getTenantUserIdsForApi } from "@/lib/api/jobs.api";
+import { API_URL } from "@/config/env";
+import { isPublicFileUrl } from "@/lib/utils/is-public-file-url";
 
 const initialFilters: DocumentFilterState = {
   query: "",
@@ -73,6 +75,11 @@ function toResearchRecord(d: DocumentRecord): ResearchDocumentRecord {
 }
 
 function toPdfExportRecord(d: DocumentRecord): PDFExportRecord {
+  const exportPublicUrl =
+    (d.pdfUrl && isPublicFileUrl(d.pdfUrl, API_URL) ? d.pdfUrl : "") ||
+    (d.storageUrl && isPublicFileUrl(d.storageUrl, API_URL) ? d.storageUrl : "") ||
+    "";
+  const textPreviewAvailable = d.pdfExportStatus === "Preview Only";
   return {
     id: d.id,
     documentName: d.fileName,
@@ -80,7 +87,9 @@ function toPdfExportRecord(d: DocumentRecord): PDFExportRecord {
     relatedJob: d.relatedJob,
     exportStatus: d.pdfExportStatus ?? "Pending",
     createdAt: d.lastUpdated,
-    pdfUrl: d.pdfUrl ?? "",
+    exportPublicUrl,
+    textPreviewAvailable,
+    pdfLink: exportPublicUrl,
   };
 }
 
@@ -209,7 +218,7 @@ export function DocumentsPageClient() {
       if (documentsApi.isUsingFallback) {
         patchFallback(id, {
           pdfExportStatus: "Exported",
-          pdfUrl: `/docs/exports/demo-${id}.pdf`,
+          pdfUrl: `https://drive.google.com/file/d/demo_${encodeURIComponent(id)}/view`,
           status: "Exported",
           lastUpdated: new Date().toISOString(),
         });

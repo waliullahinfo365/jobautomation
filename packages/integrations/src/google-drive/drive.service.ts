@@ -38,11 +38,12 @@ export async function routeFileToFolderStub(input: RouteFileToFolderInput) {
   };
 }
 
+/** Dev/test placeholder only — do not persist `pdfUrl` from this in production (no real file). */
 export async function exportDocumentToPdfStub(input: ExportDocumentToPdfInput) {
   const pdfFileId = deterministicId("drv-pdf", [input.tenantId, input.documentId, input.fileName]);
   return {
     pdfFileId,
-    pdfUrl: `https://drive.stub.local/files/${pdfFileId}.pdf`,
+    pdfUrl: "",
     exportedAt: new Date().toISOString(),
   };
 }

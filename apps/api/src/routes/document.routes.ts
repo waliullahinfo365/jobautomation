@@ -1,6 +1,14 @@
 import { Router } from "express";
 import { documentCreateSchema, documentUpdateSchema } from "@jobflow/shared/schemas";
-import { createDocument, exportPdf, getDocumentById, listDocuments, routeCv, updateDocument } from "../controllers/document.controller";
+import {
+  createDocument,
+  downloadDocumentText,
+  exportPdf,
+  getDocumentById,
+  listDocuments,
+  routeCv,
+  updateDocument,
+} from "../controllers/document.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
 import { routeCvBodySchema } from "../validators/ai-processing.validator";
@@ -10,6 +18,12 @@ export const documentRoutes = Router();
 
 documentRoutes.get("/", requirePermission("documents.read"), validateQuery(listQuerySchema), listDocuments);
 documentRoutes.post("/", requirePermission("documents.create"), validateBody(documentCreateSchema), createDocument);
+documentRoutes.get(
+  "/:id/download-text",
+  requirePermission("documents.read"),
+  validateParams(documentIdParamSchema),
+  downloadDocumentText
+);
 documentRoutes.get("/:id", requirePermission("documents.read"), validateParams(documentIdParamSchema), getDocumentById);
 documentRoutes.patch(
   "/:id",

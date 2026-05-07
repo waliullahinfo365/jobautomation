@@ -4,7 +4,7 @@ export type ReportType = "Daily Digest" | "Weekly Performance" | "PDF Export" | 
 
 export type ReportStatus = "Sent" | "Generated" | "Failed" | "Scheduled";
 
-export type PDFExportStatus = "Pending" | "Exported" | "Failed" | "Needs Review";
+export type PDFExportStatus = "Pending" | "Exported" | "Failed" | "Needs Review" | "Preview Only";
 
 export type PDFExportType = "Cover Letter" | "CV" | "Research Document" | "Weekly Report" | "Daily Digest";
 
@@ -61,10 +61,14 @@ export interface PDFExportRecord {
   type: PDFExportType;
   exportStatus: PDFExportStatus;
   createdAt: string;
-  pdfLink: string;
+  /** Public HTTPS Drive/Docs (or API) URL only; empty when unavailable */
+  exportPublicUrl: string;
+  /** True when text/metadata preview should open instead of a file URL */
+  textPreviewAvailable: boolean;
   documentId?: string;
   reportId?: string;
-  contentText?: string;
+  /** Same as exportPublicUrl; kept for older callers */
+  pdfLink: string;
 }
 
 export interface ReportHistoryRecord {
