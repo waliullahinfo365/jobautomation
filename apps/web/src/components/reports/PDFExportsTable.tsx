@@ -8,10 +8,14 @@ import type { PDFExportRecord } from "@/types/report";
 
 export function PDFExportsTable({
   records,
+  onView,
   onExportAgain,
+  busyId,
 }: {
   records: PDFExportRecord[];
+  onView?: (record: PDFExportRecord) => void;
   onExportAgain?: (record: PDFExportRecord) => void;
+  busyId?: string | null;
 }) {
   return (
     <SectionCard title="PDF Export Tracking" description="Document export queue and statuses." contentClassName="p-0">
@@ -35,12 +39,28 @@ export function PDFExportsTable({
               <TableCell><ReportTypeBadge type={record.type} /></TableCell>
               <TableCell><ReportStatusBadge status={record.exportStatus} /></TableCell>
               <TableCell>{formatDate(record.createdAt, "MMM d, yyyy HH:mm")}</TableCell>
-              <TableCell><a href={record.pdfLink} className="text-[var(--text-2)] hover:underline">View PDF</a></TableCell>
+              <TableCell>
+                {record.pdfLink ? (
+                  <a href={record.pdfLink} target="_blank" rel="noreferrer" className="text-[var(--text-2)] hover:underline">
+                    View PDF
+                  </a>
+                ) : (
+                  <span className="text-[var(--text-3)]">No PDF</span>
+                )}
+              </TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex gap-2">
-                  <Button size="sm" variant="outline">View</Button>
-                  <Button size="sm" variant="secondary" type="button" onClick={() => onExportAgain?.(record)}>
-                    Export Again
+                  <Button size="sm" variant="outline" type="button" onClick={() => onView?.(record)}>
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    type="button"
+                    disabled={busyId === record.id}
+                    onClick={() => onExportAgain?.(record)}
+                  >
+                    {busyId === record.id ? "Queueing..." : "Export Again"}
                   </Button>
                 </div>
               </TableCell>

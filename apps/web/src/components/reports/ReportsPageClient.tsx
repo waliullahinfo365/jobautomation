@@ -7,8 +7,6 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import type { DailyDigestData, PDFExportRecord, ReportHistoryRecord, ReportTab } from "@/types/report";
 import {
   mockDailyDigestPreview,
-  mockPDFExportRecords,
-  mockReportStats,
   mockStatusBreakdownData,
   mockWeeklyReportPreview,
   mockWeeklyTrendData,
@@ -35,6 +33,11 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import { DEMO_REPORT_EMAIL } from "@/config/env";
+import { useDocumentsApi } from "@/hooks/api/useDocumentsApi";
+import { normalizeDocumentRecordsForUi, normalizeDocumentRowStatusToPdfStatus } from "@/lib/utils/resource";
+import { Modal } from "@/components/ui/modal";
+import { getReport } from "@/lib/api/reports.api";
+import { getDocument } from "@/lib/api/documents.api";
 
 const initialFilters: ReportFilterState = {
   query: "",
@@ -59,23 +62,20 @@ function toastReportGenerationSuccess(res: unknown) {
 }
 
 export function ReportsPageClient() {
-  const reportsApi = useReportsApi({ fallbackToMock: true });
+  const reportsApi = useReportsApi({ fallbackToMock: false });
+  const documentsApi = useDocumentsApi({ fallbackToMock: false });
   const [tab, setTab] = useState<ReportTab>("Overview");
   const [filters, setFilters] = useState<ReportFilterState>(initialFilters);
-
-  const [localReportExtras, setLocalReportExtras] = useState<ReportHistoryRecord[]>([]);
-  const [fallbackReportEdits, setFallbackReportEdits] = useState<Record<string, Partial<ReportHistoryRecord>>>({});
-  const [localDigestOverlay, setLocalDigestOverlay] = useState<Partial<DailyDigestData>>({});
+  const [selectedReport, setSelectedReport] = useState<{ title: string; content: string } | null>(null);
+  const [previewEmail, setPreviewEmail] = useState<{ title: string; body: string } | null>(null);
+  const [busyRowId, setBusyRowId] = useState<string | null>(null);
 
   const baseHistory = useMemo(
     () => normalizeReportsForUi(normalizeListResponse<unknown>(reportsApi.listQuery.data)),
     [reportsApi.listQuery.data]
   );
 
-  const mergedHistory = useMemo(() => {
-    const edited = baseHistory.map((row) => ({ ...row, ...fallbackReportEdits[row.id] }));
-    return [...edited, ...localReportExtras];
-  }, [baseHistory, fallbackReportEdits, localReportExtras]);
+  const mergedHistory = baseHistory;
 
   const filteredHistory = useMemo(() => {
     return mergedHistory.filter((item) => {
@@ -88,14 +88,22 @@ export function ReportsPageClient() {
   }, [mergedHistory, filters]);
 
   const stats = useMemo(
-    () => normalizeReportStatsForUi(reportsApi.statsQuery.data, mockReportStats),
+    () =>
+      normalizeReportStatsForUi(reportsApi.statsQuery.data, {
+        reportsGenerated: 0,
+        dailyDigestsSent: 0,
+        weeklyReportsSent: 0,
+        pdfExports: 0,
+        successRate: 0,
+        lastReport: "—",
+      }),
     [reportsApi.statsQuery.data]
   );
 
   const dailyDigestData = useMemo(() => {
     const normalized = normalizeDailyDigestDataForUi(reportsApi.dailyAnalyticsQuery.data, mockDailyDigestPreview);
-    return { ...normalized, ...localDigestOverlay };
-  }, [reportsApi.dailyAnalyticsQuery.data, localDigestOverlay]);
+    return normalized;
+  }, [reportsApi.dailyAnalyticsQuery.data]);
 
   const weeklyReportData = useMemo(
     () => normalizeWeeklyReportDataForUi(reportsApi.weeklyAnalyticsQuery.data, mockWeeklyReportPreview),
@@ -118,21 +126,32 @@ export function ReportsPageClient() {
     };
   }, [weeklyReportData, dailyDigestData]);
 
-  const latestDailyReportId = useMemo(() => {
-    const row = mergedHistory.find((r) => r.type === "Daily Digest");
-    return row?.id;
-  }, [mergedHistory]);
-
-  const latestWeeklyReportId = useMemo(() => {
-    const row = mergedHistory.find((r) => r.type === "Weekly Performance");
-    return row?.id;
-  }, [mergedHistory]);
+  const pdfRecords: PDFExportRecord[] = useMemo(() => {
+    const docs = normalizeDocumentRecordsForUi(normalizeListResponse<unknown>(documentsApi.data));
+    return docs
+      .filter((d) => ["CV", "Cover Letter", "Research Document"].includes(d.type))
+      .map((d) => ({
+        id: `doc-${d.id}`,
+        documentId: d.id,
+        documentName: d.fileName,
+        relatedJob: d.relatedJob || "Workspace",
+        type:
+          d.type === "CV"
+            ? "CV"
+            : d.type === "Cover Letter"
+              ? "Cover Letter"
+              : "Research Document",
+        exportStatus: normalizeDocumentRowStatusToPdfStatus(d),
+        createdAt: String(d.lastUpdated),
+        pdfLink: d.pdfUrl ?? d.storageUrl ?? "",
+      }));
+  }, [documentsApi.data]);
 
   const [refreshing, setRefreshing] = useState(false);
   const refetchAll = async () => {
     setRefreshing(true);
     try {
-      await reportsApi.refetch();
+      await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
       showSuccess("Reports refreshed.");
     } catch {
       showError("Could not refresh reports.");
@@ -142,93 +161,48 @@ export function ReportsPageClient() {
   };
 
   const handleGenerateReport = async () => {
-    const isDaily = tab === "Daily Digest";
-    const isWeeklyFamily =
-      tab === "Weekly Report" || tab === "Overview" || tab === "PDF Exports" || tab === "Report History";
-
     try {
-      if (reportsApi.isUsingFallback) {
-        const id = `local-${Date.now()}`;
-        const row: ReportHistoryRecord = {
-          id,
-          reportName: isDaily ? "Daily Digest (local demo)" : "Weekly Performance (local demo)",
-          type: isDaily ? "Daily Digest" : "Weekly Performance",
-          status: "Generated",
-          generatedAt: new Date().toISOString(),
-          sentTo: DEMO_REPORT_EMAIL,
-          deliveryMethod: "Email",
-        };
-        setLocalReportExtras((prev) => [...prev, row]);
-        showInfo("API offline, updated demo report locally.");
-        return;
-      }
-
-      if (isDaily) {
-        const res = await reportsApi.runDailyDigest({ send: false, force: false });
-        toastReportGenerationSuccess(res);
-      } else if (isWeeklyFamily) {
-        const res = await reportsApi.runWeeklyReport({ send: false, force: false });
-        toastReportGenerationSuccess(res);
-      }
+      const res = await reportsApi.generateReport({ send: false, force: false });
+      toastReportGenerationSuccess(res);
       await reportsApi.refetch();
     } catch {
       showError("Could not queue report generation.");
     }
   };
 
-  const patchFallbackSendTest = (recordId: string) => {
-    setFallbackReportEdits((prev) => ({
-      ...prev,
-      [recordId]: { ...prev[recordId], status: "Sent" },
-    }));
-  };
-
   const handleSendTestHistoryRow = async (record: ReportHistoryRecord) => {
-    if (reportsApi.isUsingFallback) {
-      patchFallbackSendTest(record.id);
-      showInfo("API offline, updated demo report locally.");
-      return;
-    }
     try {
+      setBusyRowId(record.id);
       await reportsApi.sendReportTest({ id: record.id, payload: { to: DEMO_REPORT_EMAIL } });
       showSuccess("Test send queued.");
       await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
+    } finally {
+      setBusyRowId(null);
+    }
+  };
+
+  const handleViewReport = async (record: ReportHistoryRecord) => {
+    try {
+      const row = (await getReport(record.id)) as Record<string, unknown>;
+      const data = (row.data as Record<string, unknown> | undefined) ?? {};
+      const markdown =
+        typeof data.markdown === "string"
+          ? data.markdown
+          : typeof row.summaryText === "string"
+            ? row.summaryText
+            : "No report content available.";
+      setSelectedReport({ title: record.reportName, content: markdown });
+    } catch {
+      showError("Could not open report.");
     }
   };
 
   const handleSendTestDailyDigest = async () => {
-    if (reportsApi.isUsingFallback) {
-      if (latestDailyReportId) {
-        patchFallbackSendTest(latestDailyReportId);
-      } else {
-        const id = `local-${Date.now()}`;
-        setLocalReportExtras((prev) => [
-          ...prev,
-          {
-            id,
-            reportName: "Daily Digest — test",
-            type: "Daily Digest",
-            status: "Sent",
-            generatedAt: new Date().toISOString(),
-            sentTo: DEMO_REPORT_EMAIL,
-            deliveryMethod: "Email",
-          },
-        ]);
-      }
-      setLocalDigestOverlay({ deliveryStatus: "Sent" });
-      showInfo("API offline, updated demo report locally.");
-      return;
-    }
     try {
-      if (latestDailyReportId) {
-        await reportsApi.sendReportTest({ id: latestDailyReportId, payload: { to: DEMO_REPORT_EMAIL } });
-        showSuccess("Test send queued.");
-      } else {
-        const res = await reportsApi.runDailyDigest({ send: true, force: false });
-        toastReportGenerationSuccess(res);
-      }
+      await reportsApi.sendDailyDigestTest({ to: DEMO_REPORT_EMAIL });
+      showInfo("Daily digest test queued.");
       await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
@@ -236,43 +210,78 @@ export function ReportsPageClient() {
   };
 
   const handleSendTestWeekly = async () => {
-    if (reportsApi.isUsingFallback) {
-      if (latestWeeklyReportId) {
-        patchFallbackSendTest(latestWeeklyReportId);
-      } else {
-        const id = `local-${Date.now()}`;
-        setLocalReportExtras((prev) => [
-          ...prev,
-          {
-            id,
-            reportName: "Weekly Performance — test",
-            type: "Weekly Performance",
-            status: "Sent",
-            generatedAt: new Date().toISOString(),
-            sentTo: DEMO_REPORT_EMAIL,
-            deliveryMethod: "Email",
-          },
-        ]);
-      }
-      showInfo("API offline, updated demo report locally.");
-      return;
-    }
     try {
-      if (latestWeeklyReportId) {
-        await reportsApi.sendReportTest({ id: latestWeeklyReportId, payload: { to: DEMO_REPORT_EMAIL } });
-        showSuccess("Test send queued.");
-      } else {
-        const res = await reportsApi.runWeeklyReport({ send: true, force: false });
-        toastReportGenerationSuccess(res);
-      }
+      await reportsApi.sendWeeklyReportTest({ to: DEMO_REPORT_EMAIL });
+      showInfo("Weekly report test queued.");
       await reportsApi.refetch();
     } catch {
       showError("Send test failed.");
     }
   };
 
-  const handleExportAgain = (_record: PDFExportRecord) => {
-    showInfo("Export Again will run when document export is linked.");
+  const handlePreviewDailyDigest = async () => {
+    try {
+      const data = (await reportsApi.previewDailyDigest({})) as Record<string, unknown>;
+      const summary = String(data.summary ?? "Daily digest preview unavailable.");
+      const rec = Array.isArray(data.recommendations) ? (data.recommendations as string[]) : [];
+      setPreviewEmail({
+        title: "Daily Digest Preview",
+        body: [summary, "", "Recommended actions:", ...rec.map((r) => `- ${r}`)].join("\n"),
+      });
+    } catch {
+      showError("Could not generate preview.");
+    }
+  };
+
+  const handleViewPdfRecord = async (record: PDFExportRecord) => {
+    if (record.pdfLink) {
+      window.open(record.pdfLink, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (record.documentId) {
+      try {
+        const doc = (await getDocument(record.documentId)) as unknown as { contentText?: string };
+        const text = typeof doc.contentText === "string" && doc.contentText.trim() ? doc.contentText : "No text content available.";
+        setSelectedReport({ title: record.documentName, content: text });
+      } catch {
+        showError("Could not open export source.");
+      }
+    }
+  };
+
+  const handleExportAgain = async (record: PDFExportRecord) => {
+    if (!record.documentId) {
+      showInfo("This export is report-based and cannot be re-queued from documents.");
+      return;
+    }
+    try {
+      setBusyRowId(record.id);
+      const res = await reportsApi.queuePdfExport({ documentId: record.documentId });
+      const msg = String((res as Record<string, unknown>).message ?? "");
+      showInfo(msg || "PDF export queued.");
+      await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
+    } catch {
+      showError("Could not queue PDF export.");
+    } finally {
+      setBusyRowId(null);
+    }
+  };
+
+  const handleDownloadTxt = () => {
+    if (!selectedReport) return;
+    const blob = new Blob([selectedReport.content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${selectedReport.title.replace(/\s+/g, "-").toLowerCase()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyModalContent = async () => {
+    if (!selectedReport) return;
+    await navigator.clipboard.writeText(selectedReport.content);
+    showSuccess("Copied to clipboard.");
   };
 
   const initialListLoading = reportsApi.listQuery.loading && reportsApi.listQuery.data === undefined;
@@ -294,6 +303,7 @@ export function ReportsPageClient() {
   }
 
   const genBusy =
+    reportsApi.mutations.generateLoading ||
     reportsApi.mutations.runDailyLoading ||
     reportsApi.mutations.runWeeklyLoading ||
     reportsApi.mutations.sendTestLoading;
@@ -340,9 +350,7 @@ export function ReportsPageClient() {
       {tab === "Daily Digest" ? (
         <DailyDigestPreview
           digest={dailyDigestData}
-          onPreviewEmail={() =>
-            showInfo("Email preview is rendered locally in this demo — no provider message is sent.")
-          }
+          onPreviewEmail={() => void handlePreviewDailyDigest()}
           onSendTest={() => void handleSendTestDailyDigest()}
         />
       ) : null}
@@ -352,7 +360,7 @@ export function ReportsPageClient() {
       ) : null}
 
       {tab === "PDF Exports" ? (
-        <PDFExportsTable records={mockPDFExportRecords} onExportAgain={handleExportAgain} />
+        <PDFExportsTable records={pdfRecords} onExportAgain={(r) => void handleExportAgain(r)} onView={(r) => void handleViewPdfRecord(r)} busyId={busyRowId} />
       ) : null}
 
       {tab === "Report History" ? (
@@ -376,10 +384,27 @@ export function ReportsPageClient() {
               onAction={() => setFilters(initialFilters)}
             />
           ) : (
-            <ReportHistoryTable records={filteredHistory} onSendTest={(r) => void handleSendTestHistoryRow(r)} />
+            <ReportHistoryTable
+              records={filteredHistory}
+              onView={(r) => void handleViewReport(r)}
+              onSendTest={(r) => void handleSendTestHistoryRow(r)}
+              busyId={busyRowId}
+            />
           )}
         </div>
       ) : null}
+      <Modal isOpen={Boolean(selectedReport)} onClose={() => setSelectedReport(null)} title={selectedReport?.title ?? "Report"} size="lg">
+        <div className="space-y-3">
+          <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap text-sm text-[var(--text-2)]">{selectedReport?.content}</pre>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => void handleCopyModalContent()}>Copy</Button>
+            <Button type="button" variant="secondary" onClick={handleDownloadTxt}>Download .txt</Button>
+          </div>
+        </div>
+      </Modal>
+      <Modal isOpen={Boolean(previewEmail)} onClose={() => setPreviewEmail(null)} title={previewEmail?.title ?? "Email Preview"} size="lg">
+        <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap text-sm text-[var(--text-2)]">{previewEmail?.body}</pre>
+      </Modal>
     </div>
   );
 }

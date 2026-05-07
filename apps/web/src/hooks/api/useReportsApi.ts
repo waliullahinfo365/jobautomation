@@ -28,6 +28,13 @@ export function useReportsApi(options?: { fallbackToMock?: boolean; params?: Rec
 
   const runDailyMutation = useApiMutation((payload?: Record<string, unknown>) => api.runDailyDigest(payload));
   const runWeeklyMutation = useApiMutation((payload?: Record<string, unknown>) => api.runWeeklyReport(payload));
+  const generateMutation = useApiMutation((payload?: Record<string, unknown>) => api.generateReport(payload));
+  const previewDailyMutation = useApiMutation((payload?: Record<string, unknown>) => api.previewDailyDigest(payload));
+  const previewWeeklyMutation = useApiMutation((payload?: Record<string, unknown>) => api.previewWeeklyReport(payload));
+  const sendDailyTestMutation = useApiMutation((payload?: Record<string, unknown>) => api.sendDailyDigestTest(payload));
+  const sendWeeklyTestMutation = useApiMutation((payload?: Record<string, unknown>) => api.sendWeeklyReportTest(payload));
+  const queuePdfMutation = useApiMutation((payload: { documentId: string }) => api.queuePdfExport(payload));
+  const getReportMutation = useApiMutation((id: string) => api.getReport(id));
   const sendTestMutation = useApiMutation(({ id, payload }: { id: string; payload?: Record<string, unknown> }) =>
     api.sendReportTest(id, payload)
   );
@@ -65,6 +72,13 @@ export function useReportsApi(options?: { fallbackToMock?: boolean; params?: Rec
     getWeeklyAnalytics: weeklyQuery,
     runDailyDigest: runDailyMutation.mutate,
     runWeeklyReport: runWeeklyMutation.mutate,
+    generateReport: generateMutation.mutate,
+    previewDailyDigest: previewDailyMutation.mutate,
+    previewWeeklyReport: previewWeeklyMutation.mutate,
+    sendDailyDigestTest: sendDailyTestMutation.mutate,
+    sendWeeklyReportTest: sendWeeklyTestMutation.mutate,
+    queuePdfExport: queuePdfMutation.mutate,
+    getReport: getReportMutation.mutate,
     sendReportTest: sendTestMutation.mutate,
     loading,
     error,
@@ -72,6 +86,13 @@ export function useReportsApi(options?: { fallbackToMock?: boolean; params?: Rec
     mutations: {
       runDailyLoading: runDailyMutation.loading,
       runWeeklyLoading: runWeeklyMutation.loading,
+      generateLoading: generateMutation.loading,
+      previewDailyLoading: previewDailyMutation.loading,
+      previewWeeklyLoading: previewWeeklyMutation.loading,
+      sendDailyTestLoading: sendDailyTestMutation.loading,
+      sendWeeklyTestLoading: sendWeeklyTestMutation.loading,
+      queuePdfLoading: queuePdfMutation.loading,
+      getReportLoading: getReportMutation.loading,
       sendTestLoading: sendTestMutation.loading,
     },
   };

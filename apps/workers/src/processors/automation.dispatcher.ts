@@ -75,7 +75,15 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
         correlationId: payload.correlationId,
       });
     case "daily-digest":
-      return processDailyDigestJob({ tenantId: payload.tenantId, userId: payload.userId ?? "system", date: (payload as { date?: string }).date, send: (payload as { send?: boolean }).send, force: (payload as { force?: boolean }).force, operationId: payload.operationId });
+      return processDailyDigestJob({
+        tenantId: payload.tenantId,
+        userId: payload.userId ?? "system",
+        date: (payload as { date?: string }).date,
+        send: (payload as { send?: boolean }).send,
+        force: (payload as { force?: boolean }).force,
+        to: (payload as { to?: string }).to,
+        operationId: payload.operationId,
+      });
     case "weekly-report":
       return processWeeklyReportJob({
         tenantId: payload.tenantId,
@@ -84,6 +92,7 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
         weekEnd: (payload as { weekEnd?: string }).weekEnd,
         send: (payload as { send?: boolean }).send,
         force: (payload as { force?: boolean }).force,
+        to: (payload as { to?: string }).to,
         operationId: payload.operationId,
       });
     case "network-follow-up":

@@ -12,6 +12,15 @@ export const weeklyReportRunBodySchema = z.object({
   send: z.boolean().optional(),
   force: z.boolean().optional(),
 });
+export const reportsGenerateBodySchema = z.object({
+  send: z.boolean().optional(),
+  force: z.boolean().optional(),
+  weekStart: z.string().optional(),
+  weekEnd: z.string().optional(),
+});
+export const reportPdfExportBodySchema = z.object({
+  documentId: z.string().min(1),
+});
 export const reportSendTestBodySchema = z.object({
   to: z.string().optional(),
 });

@@ -461,6 +461,13 @@ function mapPdfExportStatusFromBackend(pes: string | undefined): PDFExportStatus
   }
 }
 
+export function normalizeDocumentRowStatusToPdfStatus(row: DocumentRecord): PDFExportStatus {
+  if (row.pdfExportStatus) return row.pdfExportStatus;
+  if (row.status === "Failed") return "Failed";
+  if (row.status === "Needs Review") return "Needs Review";
+  return "Pending";
+}
+
 /** Maps Mongo Document row into UI DocumentRecord used by tables and tabs. */
 export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
   const d = (raw ?? {}) as Record<string, unknown>;
@@ -548,6 +555,7 @@ export function normalizeReportForUi(raw: unknown): ReportHistoryRecord {
     generatedAt: typeof genAt === "string" ? genAt : new Date(genAt as Date).toISOString(),
     sentTo,
     deliveryMethod: String(r.deliveryMethod ?? "Email"),
+    summaryText: typeof r.summaryText === "string" ? r.summaryText : undefined,
   };
 }
 
@@ -573,11 +581,11 @@ export function normalizeReportStatsForUi(raw: unknown, fallback: ReportStats): 
       ? new Date(String(latest.generatedAt)).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
       : fallback.lastReport;
   return {
-    reportsGenerated: total || fallback.reportsGenerated,
-    dailyDigestsSent: sent || fallback.dailyDigestsSent,
-    weeklyReportsSent: Math.max(0, Math.floor(sent / 2)) || fallback.weeklyReportsSent,
-    pdfExports: Math.max(0, Math.floor(total / 4)) || fallback.pdfExports,
-    successRate: Number.isFinite(rate) ? rate : fallback.successRate,
+    reportsGenerated: Number(r.reportsGenerated ?? total ?? 0),
+    dailyDigestsSent: Number(r.dailyDigestsSent ?? sent ?? 0),
+    weeklyReportsSent: Number(r.weeklyReportsSent ?? 0),
+    pdfExports: Number(r.pdfExports ?? 0),
+    successRate: Number.isFinite(rate) ? rate : 0,
     lastReport,
   };
 }

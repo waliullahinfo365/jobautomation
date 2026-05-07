@@ -61,6 +61,9 @@ export interface PDFExportRecord {
   exportStatus: PDFExportStatus;
   createdAt: string;
   pdfLink: string;
+  documentId?: string;
+  reportId?: string;
+  contentText?: string;
 }
 
 export interface ReportHistoryRecord {
@@ -71,6 +74,7 @@ export interface ReportHistoryRecord {
   generatedAt: string;
   sentTo: string;
   deliveryMethod: string;
+  summaryText?: string;
 }
 
 // Compatibility aliases for older components

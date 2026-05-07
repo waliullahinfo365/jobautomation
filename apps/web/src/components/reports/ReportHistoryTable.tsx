@@ -8,10 +8,14 @@ import type { ReportHistoryRecord } from "@/types/report";
 
 export function ReportHistoryTable({
   records,
+  onView,
   onSendTest,
+  busyId,
 }: {
   records: ReportHistoryRecord[];
+  onView?: (record: ReportHistoryRecord) => void;
   onSendTest?: (record: ReportHistoryRecord) => void;
+  busyId?: string | null;
 }) {
   return (
     <SectionCard title="Report History" description="All generated and scheduled reports." contentClassName="p-0">
@@ -38,11 +42,17 @@ export function ReportHistoryTable({
               <TableCell>{record.deliveryMethod}</TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex gap-2">
-                  <Button size="sm" variant="ghost" type="button">
+                  <Button size="sm" variant="ghost" type="button" onClick={() => onView?.(record)}>
                     View
                   </Button>
-                  <Button size="sm" variant="outline" type="button" onClick={() => onSendTest?.(record)}>
-                    Send Test
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={() => onSendTest?.(record)}
+                    disabled={busyId === record.id}
+                  >
+                    {busyId === record.id ? "Sending..." : "Send Test"}
                   </Button>
                 </div>
               </TableCell>
