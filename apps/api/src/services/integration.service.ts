@@ -70,10 +70,20 @@ const CATALOG: IntegrationCatalogEntry[] = [
   {
     provider: "Slack",
     slug: "slack",
-    purpose: "Workspace notifications (stub).",
+    purpose:
+      "Admin/team alerts for automation failures, Google reconnect warnings, queue issues, and summaries.",
     requiredFor: ["lifecycle-monitoring"],
   },
 ];
+
+const SLACK_DEFAULT_CHANNEL = "#job-alerts";
+
+function slackAlertChannelDisplay(meta: Record<string, unknown>): string {
+  const fromMeta = meta.slackChannel ?? meta.channel;
+  if (typeof fromMeta === "string" && fromMeta.trim()) return fromMeta.trim();
+  const fromEnv = process.env.SLACK_ALERT_CHANNEL?.trim();
+  return fromEnv || SLACK_DEFAULT_CHANNEL;
+}
 
 function maskSecret(raw: string): string {
   const t = raw.trim();
@@ -143,17 +153,44 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
         "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.";
     }
   }
+
+  let resolvedStatus = status;
+  let resolvedSyncStatus = row?.syncStatus as string | undefined;
+  let resolvedError =
+    entry.provider === "Telegram" && !(cleanMeta.botTokenConfigured === true && cleanMeta.chatIdConfigured === true)
+      ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
+      : (row?.errorMessage as string | undefined);
+
+  if (entry.provider === "Slack") {
+    const webhookConfigured = Boolean(process.env.SLACK_WEBHOOK_URL?.trim());
+    cleanMeta.webhookConfigured = webhookConfigured;
+    cleanMeta.connectionType = "Incoming Webhook";
+    cleanMeta.slackChannel = slackAlertChannelDisplay(meta);
+    const lastFailed = lastTest?.status === "Failed";
+    resolvedSyncStatus = webhookConfigured ? "Incoming Webhook" : "Not configured";
+    if (!webhookConfigured) {
+      resolvedStatus = "Not Connected";
+      resolvedError = "Add SLACK_WEBHOOK_URL in Railway to enable Slack alerts.";
+    } else if (lastFailed) {
+      resolvedStatus = "Needs Attention";
+      resolvedError = lastTest?.message;
+    } else {
+      resolvedStatus = "Connected";
+      resolvedError = undefined;
+    }
+  }
+
   return {
     ...entry,
-    status,
+    status: resolvedStatus,
     connectedEmail: row?.connectedEmail as string | undefined,
     accountName: row?.accountName as string | undefined,
     lastSyncAt: row?.lastSyncAt ? new Date(row.lastSyncAt as string | Date).toISOString() : undefined,
-    syncStatus: row?.syncStatus as string | undefined,
+    syncStatus: resolvedSyncStatus,
     errorMessage:
       entry.provider === "Telegram" && !(cleanMeta.botTokenConfigured === true && cleanMeta.chatIdConfigured === true)
         ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
-        : (row?.errorMessage as string | undefined),
+        : resolvedError,
     scopes: Array.isArray(row?.scopes) ? (row.scopes as string[]) : [],
     metadata: cleanMeta,
     lastTest,
@@ -566,4 +603,42 @@ export async function testTelegramNotification(input: { tenantId: string; userId
     metadata: { provider: "telegram" },
   });
   return { provider: "Telegram" as const, status, message, checkedAt };
+}
+
+export async function testSlackNotification(input: { tenantId: string; userId: string }) {
+  const tenantId = assertTenantId(input.tenantId);
+  const checkedAt = new Date().toISOString();
+  const webhook = process.env.SLACK_WEBHOOK_URL?.trim();
+  let status: IntegrationTestStatus;
+  let message: string;
+
+  if (!webhook) {
+    status = "Warning";
+    message = "Slack webhook is not configured.";
+  } else {
+    const posted = await notifications.sendSlackNotification({
+      tenantId,
+      event: "daily-digest",
+      message: "✅ JobFlow Slack notifications are connected.",
+    });
+    if (posted.status === "Sent") {
+      status = "Success";
+      message = "Slack test notification sent";
+    } else {
+      status = posted.status === "Warning" ? "Warning" : "Failed";
+      message = posted.reason ?? "Slack test failed.";
+    }
+  }
+
+  await AutomationLogModel.create({
+    tenantId,
+    createdBy: input.userId,
+    moduleKey: "slack-notifications",
+    moduleName: "slack-notifications",
+    status,
+    message,
+    metadata: { provider: "slack" },
+  });
+
+  return { provider: "Slack" as const, status, message, checkedAt };
 }

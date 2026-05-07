@@ -45,24 +45,44 @@ export async function sendSlackNotificationStub(input: {
   };
 }
 
+/** Post to Slack Incoming Webhook (URL from env). Never logs or returns the webhook URL. */
+export async function postSlackIncomingWebhookMessage(message: string): Promise<
+  | { ok: true }
+  | { ok: false; kind: "missing_webhook" }
+  | { ok: false; kind: "request_failed"; reason: string }
+> {
+  const webhook = process.env.SLACK_WEBHOOK_URL?.trim();
+  if (!webhook) return { ok: false, kind: "missing_webhook" };
+  try {
+    const response = await fetch(webhook, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: message }),
+    });
+    if (!response.ok) {
+      return { ok: false, kind: "request_failed", reason: `Slack webhook failed (${response.status})` };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      kind: "request_failed",
+      reason: error instanceof Error ? error.message : "Slack webhook request failed",
+    };
+  }
+}
+
 export async function sendSlackNotification(input: {
   tenantId: string;
   message: string;
   event: NotificationEvent;
 }) {
-  const webhook = process.env.SLACK_WEBHOOK_URL?.trim();
-  if (!webhook) {
-    return { status: "Warning" as const, reason: "SLACK_WEBHOOK_URL not configured" };
+  const posted = await postSlackIncomingWebhookMessage(input.message);
+  if (posted.ok) return { status: "Sent" as const };
+  if (posted.kind === "missing_webhook") {
+    return { status: "Warning" as const, reason: "Slack webhook is not configured." };
   }
-  const response = await fetch(webhook, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ text: input.message }),
-  });
-  if (!response.ok) {
-    return { status: "Warning" as const, reason: `Slack webhook failed (${response.status})` };
-  }
-  return { status: "Sent" as const };
+  return { status: "Warning" as const, reason: posted.reason };
 }
 
 export async function sendTelegramNotification(input: {

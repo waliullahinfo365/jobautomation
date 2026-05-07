@@ -66,6 +66,7 @@ type Props = {
 export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending }: Props) {
   const isGoogle = item.slug === "gmail" || item.slug === "google-drive" || item.slug === "google-calendar";
   const demoGoogle = isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true);
+  const isSlack = item.slug === "slack";
   const connectLabel =
     demoGoogle ? "Configure Google OAuth" : item.status === "Not Connected" ? "Connect" : "Reconnect";
   const isTelegram = item.slug === "telegram";
@@ -105,6 +106,12 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
         {item.scopes?.length ? <Field label="Scopes" value={item.scopes.join(", ")} /> : null}
         {modelPreview ? <Field label="Model" value={modelPreview} /> : null}
         {apiPreview ? <Field label="API key" value={apiPreview} /> : null}
+        {isSlack ? (
+          <Field label="Connection type" value="Incoming Webhook" />
+        ) : null}
+        {isSlack ? (
+          <Field label="Channel" value={(item.metadata?.slackChannel as string) ?? "#job-alerts"} />
+        ) : null}
         {isTelegram ? (
           <>
             <Field
@@ -134,10 +141,10 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
 
         <div className="flex flex-wrap gap-2 pt-2">
           <Button variant="default" size="sm" onClick={onConnect} disabled={isBusy(pending, item.slug, "connect")}>
-            {isTelegram ? "Configure Telegram" : connectLabel}
+            {isTelegram ? "Configure Telegram" : isSlack ? "Configure Slack" : connectLabel}
           </Button>
           <Button variant="secondary" size="sm" onClick={onTest} disabled={isBusy(pending, item.slug, "test")}>
-            {isTelegram ? "Test Telegram" : "Test"}
+            {isTelegram ? "Test Telegram" : isSlack ? "Send Test Message" : "Test"}
           </Button>
           <Button variant="outline" size="sm" onClick={onDisconnect} disabled={isBusy(pending, item.slug, "disconnect")}>
             Disconnect

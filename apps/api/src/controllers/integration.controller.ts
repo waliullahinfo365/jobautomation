@@ -65,6 +65,13 @@ export const testTelegram = asyncHandler(async (req: Request, res) => {
   return successResponse(res, result, "Telegram test complete");
 });
 
+export const testSlack = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const userId = req.user?.id ?? "system";
+  const result = await integrationService.testSlackNotification({ tenantId, userId });
+  return successResponse(res, result, "Slack test complete");
+});
+
 export const gmailReplyWebhook = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const isValid = verifyGmailWebhookStub(req.body);

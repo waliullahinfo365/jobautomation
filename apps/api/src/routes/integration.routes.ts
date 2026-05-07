@@ -7,6 +7,7 @@ import {
   gmailReplyWebhook,
   getTelegramStatus,
   listIntegrations,
+  testSlack,
   testTelegram,
   testIntegration,
 } from "../controllers/integration.controller";
@@ -21,6 +22,7 @@ integrationRoutes.get("/", requirePermission("integrations.read"), listIntegrati
 integrationRoutes.get("/health", requirePermission("integrations.read"), getIntegrationHealth);
 integrationRoutes.get("/telegram/status", requirePermission("integrations.read"), getTelegramStatus);
 integrationRoutes.post("/telegram/test", requirePermission("integrations.connect"), testTelegram);
+integrationRoutes.post("/slack/test", requirePermission("integrations.connect"), testSlack);
 integrationRoutes.post(
   "/:provider/connect",
   requirePermission("integrations.connect"),

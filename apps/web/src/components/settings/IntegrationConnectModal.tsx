@@ -46,7 +46,7 @@ export function IntegrationConnectModal({
   const [smtpUser, setSmtpUser] = useState("");
   const [from, setFrom] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
-  const [channelName, setChannelName] = useState("");
+  const [channelName, setChannelName] = useState("#job-alerts");
   const [databaseName, setDatabaseName] = useState("");
   const [notionWorkspace, setNotionWorkspace] = useState("");
   const [fallbackToStub, setFallbackToStub] = useState(true);
@@ -86,7 +86,7 @@ export function IntegrationConnectModal({
       return googleOAuthEnabled === false ? "Configure Google OAuth" : "Connect with Google";
     if (providerSlug === "openai" || providerSlug === "claude") return "Save Demo Config";
     if (providerSlug === "smtp") return "Save SMTP Demo Config";
-    if (providerSlug === "slack") return "Save Slack Demo Config";
+    if (providerSlug === "slack") return "Send Test Message";
     if (providerSlug === "telegram") return "Configure Telegram";
     if (providerSlug === "notion-legacy") return "Save Legacy Import Config";
     return "Save";
@@ -256,13 +256,20 @@ export function IntegrationConnectModal({
 
           {providerSlug === "slack" && (
             <>
+              <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                Slack alerts are configured through the SLACK_WEBHOOK_URL environment variable in Railway.
+              </p>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Workspace name</p>
-                <Input value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} />
+                <p className="text-xs font-medium text-muted-foreground">Connection type</p>
+                <p className="text-sm">Incoming Webhook</p>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Channel name</p>
-                <Input value={channelName} onChange={(e) => setChannelName(e.target.value)} />
+                <p className="text-xs font-medium text-muted-foreground">Channel</p>
+                <Input
+                  value={channelName}
+                  onChange={(e) => setChannelName(e.target.value)}
+                  placeholder="#job-alerts"
+                />
               </div>
             </>
           )}
