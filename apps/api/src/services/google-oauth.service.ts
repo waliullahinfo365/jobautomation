@@ -1,7 +1,7 @@
 import { IntegrationConnectionModel } from "@jobflow/database/models";
 import { getGoogleScopesForProvider } from "@jobflow/shared/constants/googleScopes";
 import type { IntegrationListItem, IntegrationProvider, IntegrationStatus } from "@jobflow/shared/types/integration";
-import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED, GOOGLE_REDIRECT_URI, getApiPublicBaseUrl } from "../config/google-oauth";
+import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED, GOOGLE_REDIRECT_URI } from "../config/google-oauth";
 import { assertTenantId } from "./baseTenant.service";
 import { createAuditLog } from "./audit-log.service";
 import { findIntegrationListItem } from "./integration.service";
@@ -18,7 +18,6 @@ export type StubGoogleTokens = {
   token_type: string;
 };
 
-/** TODO: replace with real `POST https://oauth2.googleapis.com/token` exchange. */
 export function exchangeCodeForTokensStub(code: string): StubGoogleTokens {
   void code;
   return {
@@ -29,11 +28,61 @@ export function exchangeCodeForTokensStub(code: string): StubGoogleTokens {
   };
 }
 
-/** TODO: replace with `GET https://www.googleapis.com/oauth2/v2/userinfo` (or People API). */
 export function getGoogleAccountProfileStub(_tokens: StubGoogleTokens): { email: string; name: string } {
   return {
     email: "oauth-demo-user@example.com",
     name: "OAuth Demo User",
+  };
+}
+
+type GoogleTokenResponse = {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  scope?: string;
+};
+
+async function exchangeCodeForTokensLive(code: string): Promise<GoogleTokenResponse> {
+  if (!GOOGLE_OAUTH_ENABLED) {
+    throw new ApiError("Google OAuth is not enabled on the API", 503, "GOOGLE_OAUTH_DISABLED");
+  }
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+  if (!clientSecret) {
+    throw new ApiError("Google OAuth client secret missing", 503, "GOOGLE_OAUTH_MISSING_SECRET");
+  }
+  const body = new URLSearchParams({
+    code,
+    client_id: GOOGLE_CLIENT_ID,
+    client_secret: clientSecret,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    grant_type: "authorization_code",
+  });
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(`Google token exchange failed: ${text.slice(0, 220)}`, 502, "GOOGLE_TOKEN_EXCHANGE_FAILED");
+  }
+  return (await response.json()) as GoogleTokenResponse;
+}
+
+async function getGoogleAccountProfileLive(accessToken: string): Promise<{ email: string; name: string }> {
+  const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(`Google userinfo failed: ${text.slice(0, 220)}`, 502, "GOOGLE_USERINFO_FAILED");
+  }
+  const json = (await response.json()) as { email?: string; name?: string };
+  if (!json.email) throw new ApiError("Google userinfo missing email", 502, "GOOGLE_USERINFO_INVALID");
+  return {
+    email: json.email,
+    name: json.name ?? json.email,
   };
 }
 
@@ -53,7 +102,7 @@ export async function getGoogleAuthorizationUrl(input: {
   tenantId: string;
   userId: string;
   providerSlug: string;
-}): Promise<{ authorizationUrl: string; provider: string; oauthEnabled: boolean }> {
+}): Promise<{ authorizationUrl?: string; provider: string; oauthEnabled: boolean; message?: string }> {
   const tenantId = assertTenantId(input.tenantId);
   if (!isGoogleOAuthSlug(input.providerSlug)) {
     throw new ApiError("Invalid Google integration provider", 422, "INVALID_PROVIDER");
@@ -64,12 +113,11 @@ export async function getGoogleAuthorizationUrl(input: {
   const state = createOAuthState({ tenantId, userId: input.userId, provider });
 
   if (!GOOGLE_OAUTH_ENABLED) {
-    const u = new URL(`${getApiPublicBaseUrl()}/integrations/google/demo-callback`);
-    u.searchParams.set("state", state);
     return {
-      authorizationUrl: u.toString(),
       provider: input.providerSlug,
       oauthEnabled: false,
+      message:
+        "Google OAuth is not enabled on the API. This is only a demo connection and cannot create Drive folders, Calendar events, or read Gmail.",
     };
   }
 
@@ -87,6 +135,7 @@ export async function getGoogleAuthorizationUrl(input: {
     authorizationUrl: u.toString(),
     provider: input.providerSlug,
     oauthEnabled: true,
+    message: "Google OAuth is enabled.",
   };
 }
 
@@ -101,8 +150,12 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
     throw new ApiError("Invalid provider in OAuth state", 400, "OAUTH_STATE_INVALID");
   }
 
-  const tokens = exchangeCodeForTokensStub(input.code);
-  const profile = getGoogleAccountProfileStub(tokens);
+  const tokens = GOOGLE_OAUTH_ENABLED
+    ? await exchangeCodeForTokensLive(input.code)
+    : exchangeCodeForTokensStub(input.code);
+  const profile = GOOGLE_OAUTH_ENABLED
+    ? await getGoogleAccountProfileLive(tokens.access_token)
+    : getGoogleAccountProfileStub(tokens as StubGoogleTokens);
   const scopes = getGoogleScopesForProvider(provider);
 
   const prev = (await IntegrationConnectionModel.findOne({ tenantId, provider }).lean()) as Record<
@@ -116,16 +169,20 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
   }
 
   const accessEnc = encryptSecret(tokens.access_token);
-  const refreshEnc = encryptSecret(tokens.refresh_token);
-  const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-  const apiMode = GOOGLE_OAUTH_ENABLED ? "oauth-prepared" : "stub";
+  const refreshEnc = encryptSecret(tokens.refresh_token ?? "stub-google-refresh-token");
+  const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000);
+  const apiMode = GOOGLE_OAUTH_ENABLED ? "oauth-live" : "stub";
+  const isDemoConnection = apiMode !== "oauth-live" || profile.email === "oauth-demo-user@example.com";
 
   const mergedMeta = {
     ...((prev?.metadata as Record<string, unknown>) ?? {}),
     oauthConnected: true,
-    tokenType: tokens.token_type,
+    tokenType: tokens.token_type ?? "Bearer",
     apiMode,
     stub: apiMode === "stub",
+    demoConnection: isDemoConnection,
+    reconnectRequired: isDemoConnection,
+    provider: slugForProvider(provider),
   };
 
   await IntegrationConnectionModel.findOneAndUpdate(
@@ -134,12 +191,14 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
       $set: {
         tenantId,
         provider,
-        status: "Connected" as IntegrationStatus,
+        status: (isDemoConnection ? "Needs Attention" : "Connected") as IntegrationStatus,
         connectedEmail: profile.email,
         accountName: profile.name,
         scopes,
-        errorMessage: undefined,
-        syncStatus: "OK",
+        errorMessage: isDemoConnection
+          ? "Google reconnect required: demo connection cannot call Google APIs."
+          : undefined,
+        syncStatus: isDemoConnection ? "Demo / Not Live" : "OK",
         lastSyncAt: new Date(),
         expiresAt,
         accessTokenEncrypted: accessEnc,
@@ -160,7 +219,7 @@ export async function handleGoogleOAuthCallback(input: { code: string; state: st
     action: "integration.oauth_connected",
     entityType: "IntegrationConnection",
     entityId: provider,
-    message: `Google OAuth connected (stub exchange): ${provider}`,
+    message: `Google OAuth connected: ${provider} (${apiMode})`,
     metadata: { provider, slug: slugForProvider(provider), apiMode },
   });
 

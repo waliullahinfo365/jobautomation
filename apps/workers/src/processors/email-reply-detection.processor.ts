@@ -54,14 +54,23 @@ export async function processEmailReplyDetectionJob(payload: {
     requiredScopes: ["https://www.googleapis.com/auth/gmail.readonly"],
   });
   if (!auth.connected) {
+    const reconnectRequired = auth.reason === "Google reconnect required: demo connection cannot call Google APIs.";
     await AutomationLogModel.create({
       tenantId: payload.tenantId,
       createdBy: "system",
       moduleKey: "email-reply-detection",
       moduleName: "email-reply-detection",
       status: "Warning",
-      message: `Email reply detection skipped: ${auth.reason ?? "Gmail not connected"}`,
+      message: reconnectRequired
+        ? "Google reconnect required: demo connection cannot call Google APIs."
+        : `Email reply detection skipped: ${auth.reason ?? "Gmail not connected"}`,
       operationId,
+      metadata: {
+        reason: auth.reason,
+        reconnectRequired,
+        demoConnection: reconnectRequired,
+        provider: "gmail",
+      },
     });
     return { suppressWorkerCompletionLog: true as const, moduleKey: "email-reply-detection", status: "completed", operationId };
   }

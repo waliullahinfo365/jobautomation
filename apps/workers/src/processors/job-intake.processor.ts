@@ -54,14 +54,23 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     requiredScopes: ["https://www.googleapis.com/auth/gmail.readonly"],
   });
   if (!auth.connected) {
+    const reconnectRequired = auth.reason === "Google reconnect required: demo connection cannot call Google APIs.";
     await AutomationLogModel.create({
       tenantId: payload.tenantId,
       createdBy: "system",
       moduleKey: "job-intake",
       moduleName: "job-intake",
       status: "Warning",
-      message: `Gmail intake skipped: ${auth.reason ?? "Gmail not connected"}`,
+      message: reconnectRequired
+        ? "Google reconnect required: demo connection cannot call Google APIs."
+        : `Gmail intake skipped: ${auth.reason ?? "Gmail not connected"}`,
       operationId,
+      metadata: {
+        reason: auth.reason,
+        reconnectRequired,
+        demoConnection: reconnectRequired,
+        provider: "gmail",
+      },
     });
     return { suppressWorkerCompletionLog: true as const, moduleKey: "job-intake", status: "completed", operationId };
   }

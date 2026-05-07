@@ -63,7 +63,10 @@ type Props = {
 };
 
 export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending }: Props) {
-  const connectLabel = item.status === "Not Connected" ? "Connect" : "Reconnect";
+  const isGoogle = item.slug === "gmail" || item.slug === "google-drive" || item.slug === "google-calendar";
+  const demoGoogle = isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true);
+  const connectLabel =
+    demoGoogle ? "Configure Google OAuth" : item.status === "Not Connected" ? "Connect" : "Reconnect";
   const account =
     item.connectedEmail ?? item.accountName ?? (item.metadata?.workspaceName as string | undefined) ?? undefined;
   const modelPreview = item.metadata?.model as string | undefined;
@@ -92,7 +95,11 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
         />
         {lastSync ? <Field label="Last sync" value={lastSync} /> : null}
         {item.syncStatus ? <Field label="Sync status" value={item.syncStatus} /> : null}
-        {item.errorMessage ? <Field label="Error" value={item.errorMessage} /> : null}
+        {demoGoogle ? (
+          <Field label="Status" value="Demo / Not Live - reconnect with Google OAuth." />
+        ) : item.errorMessage ? (
+          <Field label="Error" value={item.errorMessage} />
+        ) : null}
         {item.scopes?.length ? <Field label="Scopes" value={item.scopes.join(", ")} /> : null}
         {modelPreview ? <Field label="Model" value={modelPreview} /> : null}
         {apiPreview ? <Field label="API key" value={apiPreview} /> : null}

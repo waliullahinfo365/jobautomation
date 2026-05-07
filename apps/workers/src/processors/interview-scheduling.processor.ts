@@ -52,17 +52,25 @@ export async function processInterviewSchedulingJob(payload: InterviewScheduling
     requiredScopes: ["https://www.googleapis.com/auth/calendar.events"],
   });
   if (!auth.connected) {
+    const reconnectRequired = auth.reason === "Google reconnect required: demo connection cannot call Google APIs.";
     await AutomationLogModel.create({
       tenantId: payload.tenantId,
       createdBy: "system",
       moduleKey: "interview-scheduling",
       moduleName: "interview-scheduling",
       status: "Warning",
-      message: `Calendar event skipped: ${auth.reason ?? "Calendar integration unavailable"}`,
+      message: reconnectRequired
+        ? "Google reconnect required: demo connection cannot call Google APIs."
+        : `Calendar event skipped: ${auth.reason ?? "Calendar integration unavailable"}`,
       operationId,
       relatedRecordType: "Interview",
       relatedRecordId: payload.interviewId,
-      metadata: { reason: auth.reason },
+      metadata: {
+        reason: auth.reason,
+        reconnectRequired,
+        demoConnection: reconnectRequired,
+        provider: "google-calendar",
+      },
     });
     return {
       suppressWorkerCompletionLog: true as const,

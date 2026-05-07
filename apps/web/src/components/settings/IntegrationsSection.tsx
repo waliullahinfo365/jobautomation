@@ -69,10 +69,11 @@ function sanitizeConfigForLocalPreview(cfg?: Record<string, unknown>): Record<st
   return next;
 }
 
-function buildLocalConnectPatch(body: Record<string, unknown>): Partial<IntegrationListItem> {
+function buildLocalConnectPatch(slug: string, body: Record<string, unknown>): Partial<IntegrationListItem> {
   const cfg = body.config as Record<string, unknown> | undefined;
+  const isGoogle = slug === "gmail" || slug === "google-drive" || slug === "google-calendar";
   return {
-    status: "Connected",
+    status: isGoogle ? "Needs Attention" : "Connected",
     connectedEmail: body.connectedEmail as string | undefined,
     accountName: body.accountName as string | undefined,
     lastSyncAt: new Date().toISOString(),
@@ -81,6 +82,9 @@ function buildLocalConnectPatch(body: Record<string, unknown>): Partial<Integrat
     scopes: Array.isArray(body.scopes) ? (body.scopes as string[]) : [],
     metadata: {
       stub: true,
+      demoConnection: isGoogle,
+      reconnectRequired: isGoogle,
+      ...(isGoogle ? { provider: slug } : {}),
       demoConnectedAt: new Date().toISOString(),
       ...sanitizeConfigForLocalPreview(cfg),
     },
@@ -105,6 +109,16 @@ function stubOfflineTest(item: IntegrationListItem): IntegrationTestResult {
   const checkedAt = new Date().toISOString();
   const p = item.provider;
   if (item.status === "Connected") {
+    const isGoogle = item.slug === "gmail" || item.slug === "google-drive" || item.slug === "google-calendar";
+    if (isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true)) {
+      return {
+        provider: p,
+        status: "Warning",
+        message: "Google OAuth demo connection detected. Configure live Google OAuth and reconnect.",
+        checkedAt,
+        metadata: { stub: true, demoConnection: true, reconnectRequired: true, provider: item.slug },
+      };
+    }
     return {
       provider: p,
       status: "Success",
@@ -167,6 +181,9 @@ export function IntegrationsSection() {
   const [disconnectSlug, setDisconnectSlug] = useState<string | null>(null);
   const [pending, setPending] = useState<{ slug: string; action: "connect" | "test" | "disconnect" } | null>(null);
   const [googleConnectLoadingSlug, setGoogleConnectLoadingSlug] = useState<string | null>(null);
+  const [googleOauthState, setGoogleOauthState] = useState<
+    Record<string, { oauthEnabled: boolean; warning?: string }>
+  >({});
   const oauthQueryHandled = useRef<string | null>(null);
 
   useEffect(() => {
@@ -223,7 +240,7 @@ export function IntegrationsSection() {
       setModalSlug(null);
     } catch (e) {
       if (shouldUseMockFallback(e)) {
-        setLocalBySlug((o) => ({ ...o, [slug]: buildLocalConnectPatch(body) }));
+        setLocalBySlug((o) => ({ ...o, [slug]: buildLocalConnectPatch(slug, body) }));
         showInfo("API offline, updated demo integration locally.");
         setModalSlug(null);
       } else {
@@ -312,12 +329,26 @@ export function IntegrationsSection() {
     try {
       setGoogleConnectLoadingSlug(modalSlug);
       const res = await getGoogleAuthUrl(modalSlug as "gmail" | "google-drive" | "google-calendar");
+      setGoogleOauthState((s) => ({
+        ...s,
+        [modalSlug]: {
+          oauthEnabled: res.oauthEnabled,
+          warning: res.oauthEnabled
+            ? undefined
+            : (res.message ??
+              "Google OAuth is not enabled on the API. This is only a demo connection and cannot create Drive folders, Calendar events, or read Gmail."),
+        },
+      }));
       const isDemoRedirect =
         !res.oauthEnabled ||
         res.authUrl.includes("/integrations/google/demo-callback") ||
         res.authUrl.includes("demo-callback");
       if (isDemoRedirect) {
-        showInfo("Google OAuth env is missing on API; using demo connection.");
+        showInfo(
+          res.message ??
+            "Google OAuth is not enabled on the API. This is only a demo connection and cannot create Drive folders, Calendar events, or read Gmail."
+        );
+        return;
       }
       window.location.href = res.authUrl;
     } catch (e) {
@@ -336,7 +367,7 @@ export function IntegrationsSection() {
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Integrations</h2>
           <p className="text-sm text-muted-foreground">
-            Connect providers used by automation modules. OAuth and live APIs are stubbed in this environment.
+            Connect providers used by automation modules. Demo connections are marked as not live and require OAuth reconnect.
           </p>
           {integrationsError ? (
             <p className="mt-2 text-sm text-destructive">
@@ -384,6 +415,8 @@ export function IntegrationsSection() {
         onGoogleConnect={modalSlug && isGoogleSlug(modalSlug) ? () => void handleGoogleConnect() : undefined}
         googleConnectLoading={modalSlug !== null && googleConnectLoadingSlug === modalSlug}
         showLiveGoogleOAuthCopy={!isUsingFallback}
+      googleOAuthEnabled={modalSlug ? googleOauthState[modalSlug]?.oauthEnabled ?? null : null}
+      googleOAuthWarning={modalSlug ? googleOauthState[modalSlug]?.warning ?? null : null}
       />
 
       <ConfirmDialog

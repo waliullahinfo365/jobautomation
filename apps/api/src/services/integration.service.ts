@@ -110,7 +110,22 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
   const meta = (row?.metadata as Record<string, unknown>) ?? {};
   const lastTest = meta.lastTest as IntegrationTestResult | undefined;
   const cleanMeta = sanitizeMetadataForResponse(meta);
-  const status = (row?.status as IntegrationStatus) ?? "Not Connected";
+  const isGoogleProvider =
+    entry.provider === "Gmail" || entry.provider === "Google Drive" || entry.provider === "Google Calendar";
+  const isDemoGoogle =
+    isGoogleProvider &&
+    (cleanMeta.demoConnection === true ||
+      cleanMeta.stub === true ||
+      row?.connectedEmail === "oauth-demo-user@example.com");
+  const status =
+    isDemoGoogle && (row?.status as IntegrationStatus | undefined) === "Connected"
+      ? "Needs Attention"
+      : ((row?.status as IntegrationStatus) ?? "Not Connected");
+  if (isDemoGoogle) {
+    cleanMeta.demoConnection = true;
+    cleanMeta.reconnectRequired = true;
+    cleanMeta.provider = entry.slug;
+  }
   return {
     ...entry,
     status,
@@ -218,17 +233,25 @@ export async function connectIntegration(input: {
     delete mergedMeta.stub;
   } else {
     mergedMeta.stub = true;
+    if (provider === "Gmail" || provider === "Google Drive" || provider === "Google Calendar") {
+      mergedMeta.demoConnection = true;
+      mergedMeta.reconnectRequired = true;
+      mergedMeta.provider = slugForProvider(provider);
+    }
   }
 
+  const isGoogleDemo = provider === "Gmail" || provider === "Google Drive" || provider === "Google Calendar";
   const setDoc: Record<string, unknown> = {
     tenantId,
     provider,
-    status: "Connected" as IntegrationStatus,
+    status: (isGoogleDemo ? "Needs Attention" : "Connected") as IntegrationStatus,
     connectedEmail: input.body.connectedEmail,
     accountName: input.body.accountName,
     scopes: input.body.scopes ?? [],
-    errorMessage: undefined,
-    syncStatus: "OK",
+    errorMessage: isGoogleDemo
+      ? "Google reconnect required: demo connection cannot call Google APIs."
+      : undefined,
+    syncStatus: isGoogleDemo ? "Demo / Not Live" : "OK",
     lastSyncAt: new Date(),
     metadata: mergedMeta,
     updatedBy: input.userId,
@@ -326,9 +349,16 @@ export async function testIntegration(input: {
   let message: string;
 
   if (statusRow === "Connected") {
-    if (provider === "OpenAI" || provider === "Claude") {
+    const meta = (row?.metadata as Record<string, unknown>) ?? {};
+    const isGoogleProvider = provider === "Gmail" || provider === "Google Drive" || provider === "Google Calendar";
+    const demoGoogle =
+      isGoogleProvider &&
+      (meta.demoConnection === true || meta.reconnectRequired === true || row?.connectedEmail === "oauth-demo-user@example.com");
+    if (demoGoogle) {
+      testStatus = "Failed";
+      message = "Google OAuth demo connection detected. Configure live Google OAuth and reconnect.";
+    } else if (provider === "OpenAI" || provider === "Claude") {
       const accessEnc = row?.accessTokenEncrypted;
-      const meta = row?.metadata as Record<string, unknown> | undefined;
       const preview = meta?.apiKeyPreview;
       if (!accessEnc && !preview) {
         testStatus = "Warning";
@@ -339,7 +369,7 @@ export async function testIntegration(input: {
       }
     } else {
       testStatus = "Success";
-      message = `${provider} demo connection healthy (no external API call).`;
+      message = `${provider} connection is configured and ready.`;
     }
   } else if (statusRow === "Not Connected" || !statusRow) {
     testStatus = "Warning";

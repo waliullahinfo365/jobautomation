@@ -94,8 +94,30 @@ export async function loadGoogleAccessToken(input: {
     tenantId: input.tenantId,
     provider: input.provider,
   });
-  if (!conn || conn.status !== "Connected") {
+  if (!conn) {
     return { connected: false, accessToken: "", scopes: [], reason: `${input.provider} integration not connected` };
+  }
+  const metadata = (conn.metadata as Record<string, unknown> | undefined) ?? {};
+  const isDemoConnection =
+    conn.connectedEmail === "oauth-demo-user@example.com" ||
+    metadata.demoConnection === true ||
+    metadata.stub === true ||
+    metadata.reconnectRequired === true;
+  if (isDemoConnection) {
+    return {
+      connected: false,
+      accessToken: "",
+      scopes: conn.scopes ?? [],
+      reason: "Google reconnect required: demo connection cannot call Google APIs.",
+    };
+  }
+  if (conn.status !== "Connected") {
+    return {
+      connected: false,
+      accessToken: "",
+      scopes: conn.scopes ?? [],
+      reason: `${input.provider} integration status is ${conn.status}`,
+    };
   }
   if (!conn.accessTokenEncrypted) {
     return { connected: false, accessToken: "", scopes: conn.scopes ?? [], reason: "Missing stored OAuth token" };

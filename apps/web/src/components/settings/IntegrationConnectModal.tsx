@@ -18,6 +18,8 @@ type Props = {
   googleConnectLoading?: boolean;
   /** When the integrations API is reachable (not mock fallback), show live OAuth copy instead of demo-only text. */
   showLiveGoogleOAuthCopy?: boolean;
+  googleOAuthEnabled?: boolean | null;
+  googleOAuthWarning?: string | null;
 };
 
 export function IntegrationConnectModal({
@@ -31,6 +33,8 @@ export function IntegrationConnectModal({
   onGoogleConnect,
   googleConnectLoading,
   showLiveGoogleOAuthCopy,
+  googleOAuthEnabled,
+  googleOAuthWarning,
 }: Props) {
   const [connectedEmail, setConnectedEmail] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -78,13 +82,14 @@ export function IntegrationConnectModal({
 
   const primaryLabel = useMemo(() => {
     if (!providerSlug) return "Save";
-    if (providerSlug === "gmail" || providerSlug === "google-drive" || providerSlug === "google-calendar") return "Connect Demo";
+    if (providerSlug === "gmail" || providerSlug === "google-drive" || providerSlug === "google-calendar")
+      return googleOAuthEnabled === false ? "Configure Google OAuth" : "Connect with Google";
     if (providerSlug === "openai" || providerSlug === "claude") return "Save Demo Config";
     if (providerSlug === "smtp") return "Save SMTP Demo Config";
     if (providerSlug === "slack") return "Save Slack Demo Config";
     if (providerSlug === "notion-legacy") return "Save Legacy Import Config";
     return "Save";
-  }, [providerSlug]);
+  }, [providerSlug, googleOAuthEnabled]);
 
   if (!open || !providerSlug) return null;
 
@@ -155,7 +160,9 @@ export function IntegrationConnectModal({
           {googleBlock ? (
             <>
               <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                {showLiveGoogleOAuthCopy
+                {googleOAuthWarning
+                  ? googleOAuthWarning
+                  : showLiveGoogleOAuthCopy
                   ? "Connect your Google account securely using OAuth. You will be redirected to Google to approve access."
                   : "OAuth will be connected in production. This demo stores a stub connection only—no Google API calls are made."}
               </p>
@@ -166,7 +173,11 @@ export function IntegrationConnectModal({
                   onClick={() => void onGoogleConnect()}
                   disabled={loading || googleConnectLoading}
                 >
-                  {googleConnectLoading ? "Opening Google…" : "Connect with Google"}
+                  {googleConnectLoading
+                    ? "Opening Google…"
+                    : googleOAuthEnabled === false
+                      ? "Configure Google OAuth"
+                      : "Connect with Google"}
                 </Button>
               ) : null}
               <p className="text-center text-xs text-muted-foreground">or use offline demo</p>

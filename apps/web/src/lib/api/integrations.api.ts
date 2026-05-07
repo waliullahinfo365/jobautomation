@@ -29,6 +29,7 @@ export type GoogleOAuthStartResult = {
   authUrl: string;
   provider: string;
   oauthEnabled: boolean;
+  message?: string;
 };
 
 export async function getGoogleAuthUrl(
@@ -43,12 +44,15 @@ export async function getGoogleAuthUrl(
       (raw as { authorizationUrl?: string }).authorizationUrl ??
       ""
   ).trim();
-  if (!authUrl) {
+  const oauthEnabled = Boolean((raw as { oauthEnabled?: boolean }).oauthEnabled);
+  const message = typeof (raw as { message?: unknown }).message === "string" ? (raw as { message: string }).message : undefined;
+  if (oauthEnabled && !authUrl) {
     throw new ApiError("Invalid OAuth URL response", 500);
   }
   return {
     authUrl,
     provider: String((raw as { provider?: string }).provider ?? providerSlug),
-    oauthEnabled: Boolean((raw as { oauthEnabled?: boolean }).oauthEnabled),
+    oauthEnabled,
+    message,
   };
 }

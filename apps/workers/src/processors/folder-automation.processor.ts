@@ -40,6 +40,7 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     requiredScopes: ["https://www.googleapis.com/auth/drive.file"],
   });
   if (!auth.connected) {
+    const reconnectRequired = auth.reason === "Google reconnect required: demo connection cannot call Google APIs.";
     await DocumentModel.create({
       tenantId: payload.tenantId,
       createdBy: payload.userId,
@@ -71,12 +72,22 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
       moduleKey: "folder-automation",
       moduleName: "folder-automation",
       status: "Warning",
-      message: `Drive folder automation skipped: ${auth.reason ?? "Drive integration unavailable"}`,
+      message: reconnectRequired
+        ? "Google reconnect required: demo connection cannot call Google APIs."
+        : `Drive folder automation skipped: ${auth.reason ?? "Drive integration unavailable"}`,
       operationId,
       relatedRecordType: "Job",
       relatedRecordId: payload.jobId,
       durationMs,
-      metadata: { jobId: payload.jobId, folderName: `${company} - ${position}`, pendingDrive: true, reason: auth.reason },
+      metadata: {
+        jobId: payload.jobId,
+        folderName: `${company} - ${position}`,
+        pendingDrive: true,
+        reason: auth.reason,
+        reconnectRequired,
+        demoConnection: reconnectRequired,
+        provider: "google-drive",
+      },
     });
 
     return {

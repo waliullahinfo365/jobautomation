@@ -47,6 +47,10 @@ export const googleOAuthCallback = asyncHandler(async (req: Request, res) => {
 });
 
 export const googleOAuthDemoCallback = asyncHandler(async (req: Request, res) => {
+  if (env.nodeEnv === "production") {
+    res.redirect(302, settingsErrorRedirect("Google OAuth demo callback is disabled in production"));
+    return;
+  }
   const state = String(req.query.state ?? "");
   if (!state) {
     res.redirect(302, settingsErrorRedirect("missing OAuth state"));
