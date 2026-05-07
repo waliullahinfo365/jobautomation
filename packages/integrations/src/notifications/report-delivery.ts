@@ -1,4 +1,5 @@
-import { sendReportEmailStub } from "../smtp/smtp.service";
+import type { SmtpOutboundCredentials } from "../smtp/mail";
+import { sendSmtpMail } from "../smtp/mail";
 import { sendSlackNotification, sendTelegramNotification } from "./notification.service";
 import type { NotificationEvent } from "./notification.service";
 
@@ -25,8 +26,10 @@ export type DeliverReportNotificationsInput = {
   reportType: "Daily Digest" | "Weekly Performance" | "PDF Export" | "Manual Report";
   event: NotificationEvent;
   email?: { to: string; html: string; text: string };
-  /** Tenant has SMTP integration marked Connected (actual send may still be stub). */
+  /** True when the tenant has an SMTP row marked connected (may still be incomplete). */
   smtpIntegrationConnected: boolean;
+  /** Decrypted SMTP transport when host/user/from/password are stored. */
+  smtpOutbound?: SmtpOutboundCredentials | null;
 };
 
 export type DeliverReportNotificationsResult = {
@@ -91,26 +94,28 @@ export async function deliverReportNotifications(input: DeliverReportNotificatio
 
   const email: ProviderDeliveryMeta = {
     attempted: false,
-    configured: input.smtpIntegrationConnected,
+    configured: Boolean(input.smtpOutbound),
     success: false,
   };
-  if (input.smtpIntegrationConnected && input.email?.to) {
+  if (input.smtpOutbound && input.email?.to) {
     email.attempted = true;
     try {
-      await sendReportEmailStub({
+      await sendSmtpMail({
+        ...input.smtpOutbound,
         to: input.email.to,
         subject: input.title,
         html: input.email.html,
         text: input.email.text,
-        reportType: input.reportType,
       });
       email.success = true;
-      email.message = "SMTP integration connected; delivery simulated via stub until live SMTP send ships.";
+      email.message = "Delivered via SMTP.";
     } catch (e) {
-      email.message = e instanceof Error ? e.message : "Email send failed.";
+      email.message = e instanceof Error ? e.message.slice(0, 280) : "SMTP send failed.";
     }
-  } else if (!input.smtpIntegrationConnected) {
-    email.message = "SMTP integration not connected.";
+  } else if (!input.smtpOutbound) {
+    email.message = input.smtpIntegrationConnected
+      ? "SMTP settings incomplete (host, credentials, or from address)."
+      : "SMTP integration not configured.";
   }
 
   const anySent = telegram.success || slack.success || email.success;

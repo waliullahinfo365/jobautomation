@@ -15,13 +15,17 @@ import { ApiError } from "../utils/errors";
 import { assertCanGenerateReport } from "./plan-limit.service";
 import { incrementUsage } from "./usage.service";
 import { createUserNotification } from "./in-app-notification.service";
+import { getSmtpOutboundCredentials } from "./smtp-config.service";
 
 function deliveryChannelPartialFailure(pr: ReportProviderResults): boolean {
   return (
     (pr.telegram.configured && pr.telegram.attempted && !pr.telegram.success) ||
-    (pr.slack.configured && pr.slack.attempted && !pr.slack.success) ||
-    (pr.email.configured && pr.email.attempted && !pr.email.success)
+    (pr.slack.configured && pr.slack.attempted && !pr.slack.success)
   );
+}
+
+function smtpDeliveryAttemptFailed(pr: ReportProviderResults): boolean {
+  return pr.email.configured && pr.email.attempted && !pr.email.success;
 }
 
 function buildExternalDeliverySentToLabels(
@@ -118,11 +122,6 @@ function googleDeliveryMessageSuffix(data: Record<string, unknown>): string | un
   return code === 403 ? `Google delivery failed (403): ${brief}.${reconnect}` : `${brief}${reconnect}`;
 }
 
-async function isSmtpIntegrationConnected(tenantId: string): Promise<boolean> {
-  const conn = await IntegrationConnectionModel.findOne({ tenantId, provider: "SMTP", status: "Connected" }).select("_id").lean();
-  return Boolean(conn);
-}
-
 async function sendReportDelivery(input: { tenantId: string; reportId: string; to?: string | string[]; operationId: string }): Promise<ReportDeliveryResult> {
   const report = await findTenantScopedById(ReportModel, input.tenantId, input.reportId);
   if (!report) throw new ApiError("Report not found", 404, "NOT_FOUND");
@@ -132,7 +131,8 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
   const data = (report.data && typeof report.data === "object" ? report.data : {}) as Record<string, unknown>;
   const markdown = typeof data.markdown === "string" ? data.markdown : String(report.summaryText ?? "");
   const detailUrl = typeof data.googleDocUrl === "string" ? data.googleDocUrl : undefined;
-  const smtpOk = await isSmtpIntegrationConnected(input.tenantId);
+  const smtpOutbound = await getSmtpOutboundCredentials(input.tenantId);
+  const smtpIntegrationConnected = Boolean(await IntegrationConnectionModel.findOne({ tenantId: input.tenantId, provider: "SMTP", status: "Connected" }).select("_id").lean());
   const toRaw = Array.isArray(input.to) ? input.to[0] : input.to;
 
   const reportType = report.type as "Daily Digest" | "Weekly Performance" | "PDF Export" | "Manual Report";
@@ -145,8 +145,9 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     detailUrl,
     reportType,
     event,
-    smtpIntegrationConnected: smtpOk,
-    email: smtpOk && toRaw ? { to: toRaw, html: `<pre>${markdown}</pre>`, text: markdown } : undefined,
+    smtpIntegrationConnected,
+    smtpOutbound,
+    email: smtpOutbound && toRaw ? { to: toRaw, html: `<pre>${markdown}</pre>`, text: markdown } : undefined,
   });
 
   const providerResults = {
@@ -162,8 +163,9 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
 
   const providerTyped = providerResults as ReportProviderResults;
   const channelWarn = !previewOnly && deliveryChannelPartialFailure(providerTyped);
+  const smtpWarn = !previewOnly && smtpDeliveryAttemptFailed(providerTyped);
   const googleWarnLegacy = Boolean(googleDeliveryMessageSuffix(data));
-  const deliveryWarning = channelWarn || googleWarnLegacy || Boolean(data.deliveryWarning);
+  const deliveryWarning = channelWarn || smtpWarn || googleWarnLegacy || Boolean(data.deliveryWarning);
 
   let deliveryOutcome: string;
   if (previewOnly) deliveryOutcome = "Not delivered";
@@ -191,6 +193,7 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
       lastDeliveryAt: new Date().toISOString(),
       previewOnly,
       deliveryChannelWarning: channelWarn,
+      smtpDeliveryWarning: smtpWarn,
       deliveryWarning,
       deliveryOutcome,
     },
@@ -477,18 +480,18 @@ export async function sendReportTest(input: {
 
   try {
     const result = await sendReportDelivery({ tenantId, reportId: input.reportId, to: input.to, operationId });
-    const channelWarn =
-      !result.previewOnly &&
-      Boolean(result.providerResults && deliveryChannelPartialFailure(result.providerResults as ReportProviderResults));
+    const warn =
+      Boolean(result.previewOnly) ||
+      Boolean(result.deliveryWarning);
 
     await createAutomationLog({
       tenantId,
       moduleKey: "report-delivery",
       moduleName: "Report delivery",
-      status: result.previewOnly ? "Warning" : channelWarn ? "Warning" : "Success",
+      status: result.previewOnly ? "Warning" : warn ? "Warning" : "Success",
       message: result.previewOnly
         ? "Report send test warning: no notification provider delivered successfully."
-        : channelWarn
+        : warn
           ? "Report send test completed with delivery warnings on one or more channels."
           : "Report test send completed",
       relatedRecordType: "Report",
@@ -511,16 +514,16 @@ export async function sendReportTest(input: {
     await createUserNotification({
       tenantId,
       userId: input.userId,
-      title: result.previewOnly || channelWarn ? "Report delivery warning" : "Report delivery completed",
+      title: warn ? "Report delivery warning" : "Report delivery completed",
       message: result.message.slice(0, 900),
-      type: result.previewOnly || channelWarn ? "warning" : "success",
+      type: warn ? "warning" : "success",
       module: "report-delivery",
       relatedRecordType: "Report",
       relatedRecordId: input.reportId,
       actionUrl: "/reports",
       metadata: {
         previewOnly: result.previewOnly,
-        channelWarn,
+        deliveryWarning: result.deliveryWarning,
         deliveryOutcome: result.deliveryOutcome,
       },
     });

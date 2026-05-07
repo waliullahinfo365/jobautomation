@@ -1,5 +1,6 @@
 import { AutomationLogModel, IntegrationConnectionModel } from "@jobflow/database/models";
 import { notifications } from "@jobflow/integrations";
+import { sendSmtpMail } from "@jobflow/integrations/smtp/mail";
 import type {
   IntegrationCatalogEntry,
   IntegrationHealthSummary,
@@ -14,6 +15,7 @@ import { assertCanAddIntegration } from "./plan-limit.service";
 import { assertTenantId } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
 import { encryptSecret } from "../utils/encryption";
+import { getSmtpOutboundCredentials } from "./smtp-config.service";
 import { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 import { getGoogleScopesForProvider, missingGoogleScopes } from "@jobflow/shared/constants/googleScopes";
 
@@ -60,7 +62,8 @@ const CATALOG: IntegrationCatalogEntry[] = [
   {
     provider: "SMTP",
     slug: "smtp",
-    purpose: "Fallback delivery for digests, reminders, and reports.",
+    purpose:
+      "Optional email delivery for reports, digests, and reminders. Telegram and Slack are primary; SMTP is only used when configured.",
     requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder"],
   },
   {
@@ -95,6 +98,10 @@ function maskSecret(raw: string): string {
 
 function sanitizeConfigForStorage(provider: IntegrationProvider, config: Record<string, unknown>): Record<string, unknown> {
   const next = { ...config };
+  if (provider === "SMTP" && typeof next.password === "string" && typeof next.pass !== "string") {
+    next.pass = next.password;
+    delete next.password;
+  }
   if (typeof next.apiKey === "string") {
     next.apiKeyPreview = maskSecret(next.apiKey);
     delete next.apiKey;
@@ -320,6 +327,105 @@ export async function connectIntegration(input: {
   }
 
   const catalog = CATALOG.find((c) => c.provider === provider)!;
+
+  if (provider === "SMTP") {
+    const raw = (input.body.config ?? {}) as Record<string, unknown>;
+    const host = typeof raw.host === "string" ? raw.host.trim() : "";
+    const user = typeof raw.user === "string" ? raw.user.trim() : "";
+    const from = typeof raw.from === "string" ? raw.from.trim() : "";
+    const fromName = typeof raw.fromName === "string" ? raw.fromName.trim() : "";
+    const portRaw = raw.port;
+    const portNum =
+      typeof portRaw === "number" && Number.isFinite(portRaw)
+        ? portRaw
+        : typeof portRaw === "string"
+          ? Number.parseInt(portRaw, 10)
+          : Number.NaN;
+    const port = Number.isFinite(portNum) ? portNum : 587;
+    const secure = Boolean(raw.secure);
+    const passRaw =
+      typeof raw.pass === "string"
+        ? raw.pass.trim()
+        : typeof raw.password === "string"
+          ? raw.password.trim()
+          : "";
+
+    const sanitized = sanitizeConfigForStorage("SMTP", {
+      host,
+      port,
+      secure,
+      user,
+      from,
+      ...(fromName ? { fromName } : {}),
+      ...(passRaw ? { pass: passRaw } : {}),
+    });
+
+    const prevMeta = (prev?.metadata as Record<string, unknown>) ?? {};
+    const mergedMeta: Record<string, unknown> = {
+      ...prevMeta,
+      ...sanitized,
+      stub: false,
+    };
+    delete mergedMeta.demoConnection;
+    mergedMeta.smtpSavedAt = new Date().toISOString();
+
+    let newAccessEncrypted: string | undefined;
+    if (passRaw) {
+      newAccessEncrypted = encryptSecret(passRaw);
+    }
+
+    const prevEnc = prev?.accessTokenEncrypted as string | undefined;
+    const hasSecret = Boolean(newAccessEncrypted ?? prevEnc);
+    const fieldsOk = Boolean(host && user && from);
+    const complete = fieldsOk && hasSecret;
+    const status = complete ? ("Connected" as IntegrationStatus) : ("Needs Attention" as IntegrationStatus);
+    const errorMessage = complete
+      ? undefined
+      : !fieldsOk
+        ? "Host, username, and from email are required."
+        : "Add an app password (or save without changing password when one is already stored).";
+
+    const setDoc: Record<string, unknown> = {
+      tenantId,
+      provider,
+      status,
+      connectedEmail: from || undefined,
+      accountName: fromName || undefined,
+      scopes: [],
+      errorMessage,
+      syncStatus: complete ? "SMTP ready" : "Incomplete",
+      lastSyncAt: new Date(),
+      metadata: mergedMeta,
+      updatedBy: input.userId,
+    };
+    if (newAccessEncrypted !== undefined) {
+      setDoc.accessTokenEncrypted = newAccessEncrypted;
+    }
+
+    const doc = await IntegrationConnectionModel.findOneAndUpdate(
+      { tenantId, provider },
+      {
+        $set: setDoc,
+        $setOnInsert: {
+          createdBy: input.userId,
+        },
+      },
+      { upsert: true, new: true, lean: true }
+    );
+
+    await createAuditLog({
+      tenantId,
+      userId: input.userId,
+      action: "integration.connected",
+      entityType: "IntegrationConnection",
+      entityId: provider,
+      message: `SMTP settings saved`,
+      metadata: { provider, slug: input.providerSlug },
+    });
+
+    return rowToItem(catalog, doc as Record<string, unknown>);
+  }
+
   const cfg = input.body.config ? sanitizeConfigForStorage(provider, input.body.config) : {};
   const prevMeta = (prev?.metadata as Record<string, unknown>) ?? {};
   const mergedMeta: Record<string, unknown> = {
@@ -467,6 +573,65 @@ export async function testIntegration(input: {
     unknown
   > | null;
   const statusRow = row?.status as IntegrationStatus | undefined;
+
+  if (provider === "SMTP") {
+    let testStatus: IntegrationTestStatus;
+    let message: string;
+    const outbound = await getSmtpOutboundCredentials(tenantId);
+    if (!outbound) {
+      testStatus = "Warning";
+      message =
+        statusRow === "Needs Attention"
+          ? "SMTP settings are incomplete — add host, username, from email, and app password."
+          : "SMTP is not configured.";
+    } else {
+      try {
+        await sendSmtpMail({
+          ...outbound,
+          to: outbound.from,
+          subject: "JobFlow SMTP Test",
+          html: "<p>SMTP email delivery is connected.</p>",
+          text: "SMTP email delivery is connected.",
+        });
+        testStatus = "Success";
+        message = "Test email sent.";
+      } catch (e) {
+        testStatus = "Warning";
+        message = e instanceof Error ? e.message.slice(0, 280) : "SMTP test failed.";
+      }
+    }
+    const checkedAt = new Date().toISOString();
+    const result: IntegrationTestResult = {
+      provider,
+      status: testStatus,
+      message,
+      checkedAt,
+      metadata: {},
+    };
+
+    if (row?._id) {
+      await IntegrationConnectionModel.updateOne(
+        { _id: row._id },
+        {
+          $set: {
+            "metadata.lastTest": result,
+          },
+        }
+      );
+    }
+
+    await createAuditLog({
+      tenantId,
+      userId: input.userId,
+      action: "integration.tested",
+      entityType: "IntegrationConnection",
+      entityId: provider,
+      message: `Integration test: ${testStatus}`,
+      metadata: { provider, slug: input.providerSlug, result: testStatus },
+    });
+
+    return result;
+  }
 
   let testStatus: IntegrationTestStatus;
   let message: string;

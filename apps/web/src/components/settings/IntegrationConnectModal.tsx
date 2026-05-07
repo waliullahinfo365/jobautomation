@@ -20,6 +20,15 @@ type Props = {
   showLiveGoogleOAuthCopy?: boolean;
   googleOAuthEnabled?: boolean | null;
   googleOAuthWarning?: string | null;
+  /** Saved SMTP fields from API (never includes password). */
+  initialSmtp?: {
+    host?: string;
+    port?: number;
+    secure?: boolean;
+    user?: string;
+    from?: string;
+    fromName?: string;
+  };
 };
 
 export function IntegrationConnectModal({
@@ -35,6 +44,7 @@ export function IntegrationConnectModal({
   showLiveGoogleOAuthCopy,
   googleOAuthEnabled,
   googleOAuthWarning,
+  initialSmtp,
 }: Props) {
   const [connectedEmail, setConnectedEmail] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -42,9 +52,11 @@ export function IntegrationConnectModal({
   const [apiKey, setApiKey] = useState("");
   const [host, setHost] = useState("");
   const [port, setPort] = useState("587");
-  const [secure, setSecure] = useState(false);
+  const [secure, setSecure] = useState(true);
   const [smtpUser, setSmtpUser] = useState("");
   const [from, setFrom] = useState("");
+  const [fromName, setFromName] = useState("");
+  const [smtpPass, setSmtpPass] = useState("");
   const [workspaceName, setWorkspaceName] = useState("");
   const [channelName, setChannelName] = useState("#job-alerts");
   const [databaseName, setDatabaseName] = useState("");
@@ -60,6 +72,18 @@ export function IntegrationConnectModal({
     if (!open || !providerSlug) return;
     setConnectedEmail(initialEmail ?? "");
     setAccountName(initialAccountName ?? "");
+    if (providerSlug === "smtp") {
+      const s = initialSmtp;
+      setHost(typeof s?.host === "string" ? s.host : "");
+      setPort(s?.port != null ? String(s.port) : "587");
+      setSecure(typeof s?.secure === "boolean" ? s.secure : true);
+      setSmtpUser(typeof s?.user === "string" ? s.user : "");
+      setFrom(typeof s?.from === "string" ? s.from : "");
+      setFromName(typeof s?.fromName === "string" ? s.fromName : "");
+      setSmtpPass("");
+      return;
+    }
+
     const defaultModel =
       providerSlug === "claude"
         ? AI_MODEL_OPTIONS.find((m) => m.provider === "claude")?.model ?? "claude-3-5-haiku-latest"
@@ -69,23 +93,18 @@ export function IntegrationConnectModal({
     setModel(defaultModel);
     setFallbackToStub(true);
     setApiKey("");
-    setHost("smtp.example.com");
-    setPort("587");
-    setSecure(false);
-    setSmtpUser("noreply");
-    setFrom("noreply@example.com");
     setWorkspaceName("Demo Workspace");
     setChannelName("#jobflow-alerts");
     setDatabaseName("Job Pipeline — Legacy");
     setNotionWorkspace("Legacy Teamspace");
-  }, [open, providerSlug, initialEmail, initialAccountName]);
+  }, [open, providerSlug, initialEmail, initialAccountName, initialSmtp]);
 
   const primaryLabel = useMemo(() => {
     if (!providerSlug) return "Save";
     if (providerSlug === "gmail" || providerSlug === "google-drive" || providerSlug === "google-calendar")
       return googleOAuthEnabled === false ? "Configure Google OAuth" : "Connect with Google";
     if (providerSlug === "openai" || providerSlug === "claude") return "Save Demo Config";
-    if (providerSlug === "smtp") return "Save SMTP Demo Config";
+    if (providerSlug === "smtp") return "Save SMTP Settings";
     if (providerSlug === "slack") return "Send Test Message";
     if (providerSlug === "telegram") return "Configure Telegram";
     if (providerSlug === "notion-legacy") return "Save Legacy Import Config";
@@ -122,11 +141,13 @@ export function IntegrationConnectModal({
       const portNum = Number.parseInt(port, 10);
       await onSubmit({
         config: {
-          host,
+          host: host.trim(),
           port: Number.isFinite(portNum) ? portNum : 587,
           secure,
-          user: smtpUser,
-          from,
+          user: smtpUser.trim(),
+          from: from.trim(),
+          fromName: fromName.trim() || undefined,
+          ...(smtpPass.trim() ? { pass: smtpPass.trim() } : {}),
         },
       });
       return;
@@ -229,27 +250,77 @@ export function IntegrationConnectModal({
 
           {providerSlug === "smtp" && (
             <>
+              <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                SMTP is optional. Telegram and Slack are primary. SMTP is used only if you want email delivery for
+                reports, daily digests, weekly reports, and reminders.
+              </p>
+              <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Gmail / Google Workspace</p>
+                <ul className="mt-2 list-inside list-disc space-y-1">
+                  <li>Host: smtp.gmail.com</li>
+                  <li>Port: 587</li>
+                  <li>Secure TLS: enabled (STARTTLS)</li>
+                  <li>Username: your Gmail or Workspace email</li>
+                  <li>Password: Gmail App Password (not your login password)</li>
+                </ul>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Host</p>
-                  <Input value={host} onChange={(e) => setHost(e.target.value)} />
+                  <Input
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                    placeholder="smtp.gmail.com"
+                    autoComplete="off"
+                  />
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Port</p>
-                  <Input value={port} onChange={(e) => setPort(e.target.value)} />
+                  <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="587" autoComplete="off" />
                 </div>
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)} />
-                Secure (TLS)
+                Secure TLS
               </label>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">User</p>
-                <Input value={smtpUser} onChange={(e) => setSmtpUser(e.target.value)} />
+                <p className="text-xs font-medium text-muted-foreground">Username</p>
+                <Input
+                  value={smtpUser}
+                  onChange={(e) => setSmtpUser(e.target.value)}
+                  placeholder="you@company.com"
+                  type="email"
+                  autoComplete="off"
+                />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">From</p>
-                <Input value={from} onChange={(e) => setFrom(e.target.value)} />
+                <p className="text-xs font-medium text-muted-foreground">Password / App Password</p>
+                <Input
+                  value={smtpPass}
+                  onChange={(e) => setSmtpPass(e.target.value)}
+                  placeholder="Leave blank to keep saved password"
+                  type="password"
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">From email</p>
+                <Input
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  placeholder="notifications@company.com"
+                  type="email"
+                  autoComplete="off"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">From name</p>
+                <Input
+                  value={fromName}
+                  onChange={(e) => setFromName(e.target.value)}
+                  placeholder="JobFlow"
+                  autoComplete="off"
+                />
               </div>
             </>
           )}

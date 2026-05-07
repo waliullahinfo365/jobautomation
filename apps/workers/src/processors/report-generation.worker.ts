@@ -13,6 +13,7 @@ import {
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
 import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
+import { getSmtpOutboundCredentialsForWorker } from "../lib/smtp-config";
 import {
   GOOGLE_DOCUMENTS_SCOPE,
   GOOGLE_DRIVE_FILE_SCOPE,
@@ -29,6 +30,21 @@ import { createGoogleDoc, ensureWorkspaceFolderStructure } from "../lib/google-d
 import { notifyAutomationEvent } from "../lib/notifications";
 import { logger } from "../utils/logger";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
+
+function smtpFailedWhileOthersSent(delivery: {
+  anySent: boolean;
+  telegram: { success: boolean };
+  slack: { success: boolean };
+  email: { attempted: boolean; configured: boolean; success: boolean };
+}): boolean {
+  return (
+    delivery.anySent &&
+    delivery.email.configured &&
+    delivery.email.attempted &&
+    !delivery.email.success &&
+    (delivery.telegram.success || delivery.slack.success)
+  );
+}
 
 export type WorkerReportType = "Daily Digest" | "Weekly Performance";
 
@@ -187,17 +203,6 @@ async function buildReportBody(input: { type: WorkerReportType; periodLabel: str
     model: "fallback",
     warning: `Claude failed: ${redactForLog(result.message, 260)}`,
   };
-}
-
-async function isSmtpConfigured(tenantId: string): Promise<boolean> {
-  const conn = await IntegrationConnectionModel.findOne({
-    tenantId,
-    provider: "SMTP",
-    status: "Connected",
-  })
-    .select("_id")
-    .lean();
-  return Boolean(conn);
 }
 
 async function upsertReport(input: {
@@ -481,7 +486,12 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
       });
     }
 
-    const smtpReady = await isSmtpConfigured(payload.tenantId);
+    const smtpOutbound = await getSmtpOutboundCredentialsForWorker(payload.tenantId);
+    const smtpIntegrationConnected = Boolean(
+      await IntegrationConnectionModel.findOne({ tenantId: payload.tenantId, provider: "SMTP", status: "Connected" })
+        .select("_id")
+        .lean(),
+    );
     if (payload.send) {
       const prevData = mergedData;
       const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
@@ -492,9 +502,10 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
         detailUrl: docLink,
         reportType: "Daily Digest",
         event: "daily-digest",
-        smtpIntegrationConnected: smtpReady,
+        smtpIntegrationConnected,
+        smtpOutbound,
         email:
-          smtpReady && payload.to
+          smtpOutbound && payload.to
             ? { to: payload.to, html: `<pre>${generated.body}</pre>`, text: generated.body }
             : undefined,
       });
@@ -527,6 +538,31 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
           moduleKey: "daily-digest",
           status: "Warning",
           message: "No notification provider configured. Report preview saved only.",
+          operationId,
+          relatedRecordId: String(report._id),
+          metadata: {
+            providerResults: {
+              telegram: delivery.telegram,
+              slack: delivery.slack,
+              email: delivery.email,
+            },
+            telegramSuccess: delivery.telegram.success,
+            slackSuccess: delivery.slack.success,
+            pdfFallbackUsed: false,
+            googleDocsScopeMissing: false,
+            requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+            reconnectRequired: false,
+          },
+        });
+      } else if (smtpFailedWhileOthersSent(delivery)) {
+        await createLog({
+          tenantId: payload.tenantId,
+          moduleKey: "daily-digest",
+          status: "Warning",
+          message:
+            typeof delivery.email.message === "string" && delivery.email.message.trim()
+              ? `Daily digest sent via Telegram/Slack; SMTP failed: ${delivery.email.message.slice(0, 220)}`
+              : "Daily digest sent via Telegram/Slack; SMTP email delivery failed.",
           operationId,
           relatedRecordId: String(report._id),
           metadata: {
@@ -688,7 +724,12 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
       });
     }
 
-    const smtpReady = await isSmtpConfigured(payload.tenantId);
+    const smtpOutbound = await getSmtpOutboundCredentialsForWorker(payload.tenantId);
+    const smtpIntegrationConnected = Boolean(
+      await IntegrationConnectionModel.findOne({ tenantId: payload.tenantId, provider: "SMTP", status: "Connected" })
+        .select("_id")
+        .lean(),
+    );
     if (payload.send) {
       const prevData = mergedData;
       const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
@@ -699,9 +740,10 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
         detailUrl: docLink,
         reportType: "Weekly Performance",
         event: "weekly-report",
-        smtpIntegrationConnected: smtpReady,
+        smtpIntegrationConnected,
+        smtpOutbound,
         email:
-          smtpReady && payload.to
+          smtpOutbound && payload.to
             ? { to: payload.to, html: `<pre>${generated.body}</pre>`, text: generated.body }
             : undefined,
       });
@@ -734,6 +776,31 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
           moduleKey: "weekly-report",
           status: "Warning",
           message: "No notification provider configured. Report preview saved only.",
+          operationId,
+          relatedRecordId: String(report._id),
+          metadata: {
+            providerResults: {
+              telegram: delivery.telegram,
+              slack: delivery.slack,
+              email: delivery.email,
+            },
+            telegramSuccess: delivery.telegram.success,
+            slackSuccess: delivery.slack.success,
+            pdfFallbackUsed: false,
+            googleDocsScopeMissing: false,
+            requiredScope: GOOGLE_DOCUMENTS_SCOPE,
+            reconnectRequired: false,
+          },
+        });
+      } else if (smtpFailedWhileOthersSent(delivery)) {
+        await createLog({
+          tenantId: payload.tenantId,
+          moduleKey: "weekly-report",
+          status: "Warning",
+          message:
+            typeof delivery.email.message === "string" && delivery.email.message.trim()
+              ? `Weekly report sent via Telegram/Slack; SMTP failed: ${delivery.email.message.slice(0, 220)}`
+              : "Weekly report sent via Telegram/Slack; SMTP email delivery failed.",
           operationId,
           relatedRecordId: String(report._id),
           metadata: {

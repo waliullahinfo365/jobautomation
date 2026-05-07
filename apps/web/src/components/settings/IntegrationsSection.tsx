@@ -55,6 +55,10 @@ function maskSecret(raw: string): string {
 function sanitizeConfigForLocalPreview(cfg?: Record<string, unknown>): Record<string, unknown> {
   if (!cfg) return {};
   const next = { ...cfg };
+  if (typeof next.password === "string" && typeof next.pass !== "string") {
+    next.pass = next.password;
+    delete next.password;
+  }
   if (typeof next.apiKey === "string") {
     next.apiKeyPreview = maskSecret(next.apiKey as string);
     delete next.apiKey;
@@ -465,6 +469,26 @@ export function IntegrationsSection() {
         onGoogleConnect={modalSlug && isGoogleSlug(modalSlug) ? () => void handleGoogleConnect() : undefined}
         googleConnectLoading={modalSlug !== null && googleConnectLoadingSlug === modalSlug}
         showLiveGoogleOAuthCopy={!isUsingFallback}
+        initialSmtp={
+          modalSlug === "smtp" && modalItem?.metadata
+            ? {
+                host: typeof modalItem.metadata.host === "string" ? modalItem.metadata.host : undefined,
+                port: (() => {
+                  const p = modalItem.metadata?.port;
+                  if (typeof p === "number" && Number.isFinite(p)) return p;
+                  if (typeof p === "string") {
+                    const n = Number.parseInt(p, 10);
+                    return Number.isFinite(n) ? n : undefined;
+                  }
+                  return undefined;
+                })(),
+                secure: modalItem.metadata.secure === true,
+                user: typeof modalItem.metadata.user === "string" ? modalItem.metadata.user : undefined,
+                from: typeof modalItem.metadata.from === "string" ? modalItem.metadata.from : undefined,
+                fromName: typeof modalItem.metadata.fromName === "string" ? modalItem.metadata.fromName : undefined,
+              }
+            : undefined
+        }
         googleOAuthEnabled={modalSlug ? googleOauthState[modalSlug]?.oauthEnabled ?? null : null}
         googleOAuthWarning={modalSlug ? googleOauthState[modalSlug]?.warning ?? null : null}
       />

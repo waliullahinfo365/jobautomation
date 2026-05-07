@@ -76,9 +76,11 @@
     "lint": "echo 'integrations lint placeholder'"
   },
   "dependencies": {
-    "@jobflow/shared": "workspace:*"
+    "@jobflow/shared": "workspace:*",
+    "nodemailer": "^6.9.16"
   },
   "devDependencies": {
+    "@types/nodemailer": "^6.4.17",
     "@types/node": "^20",
     "typescript": "^5"
   }

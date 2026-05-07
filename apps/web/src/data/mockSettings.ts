@@ -78,7 +78,8 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
   {
     provider: "SMTP",
     slug: "smtp",
-    purpose: "Fallback delivery for digests, reminders, and reports.",
+    purpose:
+      "Optional email delivery for reports, digests, and reminders. Telegram and Slack are primary; SMTP is only used when configured.",
     requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder"],
     status: "Disabled",
     scopes: [],
