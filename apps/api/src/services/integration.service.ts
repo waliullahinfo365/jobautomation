@@ -106,6 +106,24 @@ function smtpTestSafeReason(error: unknown): string {
   return brief;
 }
 
+const GMAIL_SMTP_AUTH_MESSAGE =
+  "SMTP authentication failed. Check Gmail App Password and 2-Step Verification.";
+
+function smtpFailureIsLikelyAuth(error: unknown): boolean {
+  const raw = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    raw.includes("invalid login") ||
+    raw.includes("authentication failed") ||
+    raw.includes("badcredentials") ||
+    raw.includes("username and password not accepted") ||
+    raw.includes("5.7.8") ||
+    raw.includes("535") ||
+    raw.includes("eauth") ||
+    raw.includes("application-specific password") ||
+    raw.includes("534-5.7.9")
+  );
+}
+
 function sanitizeConfigForStorage(provider: IntegrationProvider, config: Record<string, unknown>): Record<string, unknown> {
   const next = { ...config };
   if (provider === "SMTP" && typeof next.password === "string" && typeof next.pass !== "string") {
@@ -591,10 +609,13 @@ export async function testIntegration(input: {
   if (provider === "SMTP") {
     let testStatus: IntegrationTestStatus;
     let message: string;
+    let automationLogMessage: string;
+
     const outbound = await getSmtpOutboundCredentials(tenantId);
     if (!outbound) {
       testStatus = "Warning";
       message = "SMTP is not fully configured.";
+      automationLogMessage = "SMTP not fully configured.";
     } else {
       const toAddr =
         typeof row?.connectedEmail === "string" && row.connectedEmail.trim().length > 0
@@ -610,11 +631,20 @@ export async function testIntegration(input: {
         });
         testStatus = "Success";
         message = "Test email sent successfully.";
+        automationLogMessage = "SMTP test email sent";
       } catch (e) {
-        testStatus = "Failed";
-        message = `SMTP test email failed: ${smtpTestSafeReason(e)}`;
+        if (smtpFailureIsLikelyAuth(e)) {
+          testStatus = "Warning";
+          message = GMAIL_SMTP_AUTH_MESSAGE;
+          automationLogMessage = GMAIL_SMTP_AUTH_MESSAGE;
+        } else {
+          testStatus = "Failed";
+          message = `SMTP test email failed: ${smtpTestSafeReason(e)}`;
+          automationLogMessage = "SMTP test failed";
+        }
       }
     }
+
     const checkedAt = new Date().toISOString();
     const result: IntegrationTestResult = {
       provider,
@@ -623,6 +653,19 @@ export async function testIntegration(input: {
       checkedAt,
       metadata: {},
     };
+
+    const automationStatus =
+      testStatus === "Success" ? "Success" : testStatus === "Warning" ? "Warning" : "Failed";
+
+    await AutomationLogModel.create({
+      tenantId,
+      createdBy: input.userId,
+      moduleKey: "smtp",
+      moduleName: "smtp",
+      status: automationStatus,
+      message: automationLogMessage,
+      metadata: { provider: "smtp", slug: input.providerSlug },
+    });
 
     if (row?._id) {
       await IntegrationConnectionModel.updateOne(

@@ -37,7 +37,8 @@ export const DEMO_TENANT_ID = optionalEnv("NEXT_PUBLIC_DEMO_TENANT_ID", "demo-te
 export const DEMO_USER_ID = optionalEnv("NEXT_PUBLIC_DEMO_USER_ID", "demo-user-id");
 /** Target inbox for report send-test actions (demo). */
 export const DEMO_REPORT_EMAIL = optionalEnv("NEXT_PUBLIC_DEMO_REPORT_EMAIL", "wali.ullah@gmail.com");
-export const USE_MOCK_FALLBACK = optionalBooleanEnv("NEXT_PUBLIC_USE_MOCK_FALLBACK", true);
+/** Default false so integration tests (e.g. SMTP) hit the real API unless explicitly opted into demo/offline mode. */
+export const USE_MOCK_FALLBACK = optionalBooleanEnv("NEXT_PUBLIC_USE_MOCK_FALLBACK", false);
 
 /** localStorage key for API Bearer token (optional; demo headers used when unset). */
 export const AUTH_TOKEN_STORAGE_KEY = optionalEnv("NEXT_PUBLIC_AUTH_TOKEN_KEY", "jobflow_access_token");

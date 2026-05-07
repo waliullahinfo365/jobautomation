@@ -21,6 +21,11 @@ export function testIntegration(provider: string): Promise<IntegrationTestResult
   return apiFetch<IntegrationTestResult>(`/integrations/${provider}/test`, { method: "POST", body: {} });
 }
 
+/** POST `/integrations/smtp/test` — sends a real test email via tenant SMTP integration (Bearer auth). */
+export function testSmtpIntegration(): Promise<IntegrationTestResult> {
+  return testIntegration("smtp");
+}
+
 export function replyTest(payload: Record<string, unknown>): Promise<unknown> {
   return apiFetch("/integrations/gmail/reply-test", { method: "POST", body: payload });
 }

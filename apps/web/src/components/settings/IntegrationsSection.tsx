@@ -7,8 +7,8 @@ import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { useAiApi } from "@/hooks/api/useAiApi";
 import { useIntegrationsApi } from "@/hooks/api/useIntegrationsApi";
-import { getGoogleAuthUrl } from "@/lib/api/integrations.api";
-import { getAuthToken } from "@/lib/api/client";
+import { getGoogleAuthUrl, testSmtpIntegration } from "@/lib/api/integrations.api";
+import { ApiError, getAuthToken } from "@/lib/api/client";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
 import { IntegrationCard } from "./IntegrationCard";
@@ -113,15 +113,6 @@ function buildLocalDisconnectPatch(): Partial<IntegrationListItem> {
 function stubOfflineTest(item: IntegrationListItem): IntegrationTestResult {
   const checkedAt = new Date().toISOString();
   const p = item.provider;
-  if (item.slug === "smtp") {
-    return {
-      provider: p,
-      status: "Warning",
-      message: "SMTP test requires a live API connection. No email was sent.",
-      checkedAt,
-      metadata: { stub: true },
-    };
-  }
   if (item.status === "Connected") {
     const isGoogle = item.slug === "gmail" || item.slug === "google-drive" || item.slug === "google-calendar";
     if (isGoogle && (item.metadata?.demoConnection === true || item.metadata?.reconnectRequired === true)) {
@@ -331,6 +322,24 @@ export function IntegrationsSection() {
       }
       return;
     }
+    if (slug === "smtp") {
+      try {
+        setPending({ slug, action: "test" });
+        const result = await testSmtpIntegration();
+        setLastTestBySlug((o) => ({ ...o, [slug]: result }));
+        if (result.status === "Success") showSuccess(result.message);
+        else if (result.status === "Warning") showInfo(result.message);
+        else showError(result.message);
+        await refetch();
+      } catch (e) {
+        const detail =
+          e instanceof ApiError ? e.message : e instanceof Error ? e.message : "SMTP test failed";
+        showError(detail);
+      } finally {
+        setPending(null);
+      }
+      return;
+    }
     try {
       setPending({ slug, action: "test" });
       const result = await test(slug);
@@ -340,14 +349,17 @@ export function IntegrationsSection() {
       else showError(result.message);
       await refetch();
     } catch (e) {
-      if (shouldUseMockFallback(e)) {
+      const allowOfflineStub = slug !== "smtp" && shouldUseMockFallback(e);
+      if (allowOfflineStub) {
         const r = stubOfflineTest(item);
         setLastTestBySlug((o) => ({ ...o, [slug]: r }));
         if (r.status === "Success") showSuccess(r.message);
         else if (r.status === "Warning") showInfo(r.message);
         else showError(r.message);
       } else {
-        showError(e instanceof Error ? e.message : "Test failed");
+        const detail =
+          e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Test failed";
+        showError(detail);
       }
     } finally {
       setPending(null);
