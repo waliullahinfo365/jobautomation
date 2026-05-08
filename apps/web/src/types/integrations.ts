@@ -19,6 +19,7 @@ export type IntegrationProvider =
   | "OpenAI"
   | "Claude"
   | "SMTP"
+  | "Resend"
   | "Notion Legacy"
   | "Slack";
 

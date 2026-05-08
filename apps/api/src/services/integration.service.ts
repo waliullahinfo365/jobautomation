@@ -1,5 +1,6 @@
 import { AutomationLogModel, IntegrationConnectionModel } from "@jobflow/database/models";
 import { notifications } from "@jobflow/integrations";
+import { sendResendEmail } from "@jobflow/integrations/email/resend.service";
 import { sendSmtpMail } from "@jobflow/integrations/smtp/mail";
 import type {
   IntegrationCatalogEntry,
@@ -63,8 +64,15 @@ const CATALOG: IntegrationCatalogEntry[] = [
     provider: "SMTP",
     slug: "smtp",
     purpose:
-      "Optional email delivery for reports, digests, and reminders. Telegram and Slack are primary; SMTP is only used when configured.",
+      "Legacy SMTP (often blocked on Railway). Prefer Resend for production email. Optional fallback when Resend is not configured.",
     requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder"],
+  },
+  {
+    provider: "Resend",
+    slug: "resend",
+    purpose:
+      "Email API delivery for reports, digests, and reminders. Recommended for Railway production (HTTPS, no raw SMTP).",
+    requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder", "deadline-alert"],
   },
   {
     provider: "Notion Legacy",
@@ -217,6 +225,28 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     }
   }
 
+  if (entry.provider === "Resend") {
+    const apiKeyConfigured = Boolean(process.env.RESEND_API_KEY?.trim());
+    const fromEmailConfigured = Boolean(process.env.RESEND_FROM_EMAIL?.trim());
+    cleanMeta.apiKeyConfigured = apiKeyConfigured;
+    cleanMeta.fromEmailConfigured = fromEmailConfigured;
+    const envOk = apiKeyConfigured && fromEmailConfigured;
+    if (!envOk) {
+      resolvedStatus = "Not Connected";
+      resolvedSyncStatus = "Not configured";
+      resolvedError = "Add RESEND_API_KEY and RESEND_FROM_EMAIL to the API server environment (Railway).";
+    } else {
+      resolvedSyncStatus = "Resend API";
+      if (lastTest?.status === "Failed") {
+        resolvedStatus = "Needs Attention";
+        resolvedError = typeof lastTest.message === "string" ? lastTest.message : undefined;
+      } else {
+        resolvedStatus = "Connected";
+        resolvedError = undefined;
+      }
+    }
+  }
+
   const scopesList = Array.isArray(row?.scopes) ? (row.scopes as string[]) : [];
 
   if (isGoogleProvider && !isDemoGoogle && row && resolvedStatus === "Connected") {
@@ -266,6 +296,7 @@ function canonicalProviderKey(value: string): string {
   if (v === "smtp") return "SMTP";
   if (v === "notion-legacy" || v === "notion legacy") return "Notion Legacy";
   if (v === "slack") return "Slack";
+  if (v === "resend") return "Resend";
   return value;
 }
 
@@ -347,6 +378,15 @@ export async function connectIntegration(input: {
   const tenantId = assertTenantId(input.tenantId);
   const provider = providerFromSlug(input.providerSlug);
   if (!provider) throw new ApiError("Unknown integration provider", 422, "UNKNOWN_PROVIDER");
+
+  if (provider === "Resend") {
+    const catalog = CATALOG.find((c) => c.provider === "Resend")!;
+    const row = (await IntegrationConnectionModel.findOne({ tenantId, provider: "Resend" }).lean()) as Record<
+      string,
+      unknown
+    > | null;
+    return rowToItem(catalog, row);
+  }
 
   const prev = (await IntegrationConnectionModel.findOne({ tenantId, provider }).lean()) as Record<
     string,
@@ -555,6 +595,12 @@ export async function disconnectIntegration(input: {
   if (!provider) throw new ApiError("Unknown integration provider", 422, "UNKNOWN_PROVIDER");
 
   const catalog = CATALOG.find((c) => c.provider === provider)!;
+
+  if (provider === "Resend") {
+    await IntegrationConnectionModel.deleteMany({ tenantId, provider: "Resend" });
+    return rowToItem(catalog, null);
+  }
+
   const doc = await IntegrationConnectionModel.findOneAndUpdate(
     { tenantId, provider },
     {
@@ -605,6 +651,14 @@ export async function testIntegration(input: {
     unknown
   > | null;
   const statusRow = row?.status as IntegrationStatus | undefined;
+
+  if (provider === "Resend") {
+    throw new ApiError(
+      'Use POST /integrations/resend/test with optional body { "to": "you@example.com" }.',
+      400,
+      "USE_RESEND_TEST_ROUTE"
+    );
+  }
 
   if (provider === "SMTP") {
     let testStatus: IntegrationTestStatus;
@@ -886,4 +940,165 @@ export async function testSlackNotification(input: { tenantId: string; userId: s
   });
 
   return { provider: "Slack" as const, status, message, checkedAt };
+}
+
+export type ResendEnvStatus = {
+  configured: boolean;
+  apiKeyConfigured: boolean;
+  fromEmailConfigured: boolean;
+  status: "connected" | "not_configured" | "needs_attention";
+  lastTest?: IntegrationTestResult;
+};
+
+export async function getResendEnvStatus(input: { tenantId: string }): Promise<ResendEnvStatus> {
+  const tenantId = assertTenantId(input.tenantId);
+  const apiKeyConfigured = Boolean(process.env.RESEND_API_KEY?.trim());
+  const fromEmailConfigured = Boolean(process.env.RESEND_FROM_EMAIL?.trim());
+  const configured = apiKeyConfigured && fromEmailConfigured;
+  const row = (await IntegrationConnectionModel.findOne({ tenantId, provider: "Resend" }).lean()) as Record<
+    string,
+    unknown
+  > | null;
+  const meta = (row?.metadata as Record<string, unknown> | undefined) ?? {};
+  const lastTest = meta.lastTest as IntegrationTestResult | undefined;
+  let status: ResendEnvStatus["status"];
+  if (!configured) status = "not_configured";
+  else if (lastTest?.status === "Failed") status = "needs_attention";
+  else status = "connected";
+  return { configured, apiKeyConfigured, fromEmailConfigured, status, lastTest };
+}
+
+export async function testResendNotification(input: {
+  tenantId: string;
+  userId: string;
+  to?: string;
+  userEmail?: string;
+}): Promise<IntegrationTestResult> {
+  const tenantId = assertTenantId(input.tenantId);
+  const checkedAt = new Date().toISOString();
+  const apiKeyConfigured = Boolean(process.env.RESEND_API_KEY?.trim());
+  const fromEmailConfigured = Boolean(process.env.RESEND_FROM_EMAIL?.trim());
+
+  async function persistLastTest(result: IntegrationTestResult) {
+    await IntegrationConnectionModel.findOneAndUpdate(
+      { tenantId, provider: "Resend" },
+      {
+        $set: {
+          tenantId,
+          provider: "Resend",
+          status:
+            result.status === "Success"
+              ? ("Connected" as IntegrationStatus)
+              : ("Needs Attention" as IntegrationStatus),
+          syncStatus: "Resend API",
+          lastSyncAt: new Date(),
+          metadata: { lastTest: result },
+          scopes: [],
+          updatedBy: input.userId,
+        },
+        $setOnInsert: { createdBy: input.userId },
+      },
+      { upsert: true }
+    );
+  }
+
+  if (!apiKeyConfigured || !fromEmailConfigured) {
+    const result: IntegrationTestResult = {
+      provider: "Resend",
+      status: "Warning",
+      message: "Resend is not fully configured.",
+      checkedAt,
+      metadata: {},
+    };
+    await persistLastTest(result);
+    await AutomationLogModel.create({
+      tenantId,
+      createdBy: input.userId,
+      moduleKey: "resend-email",
+      moduleName: "resend-email",
+      status: "Warning",
+      message: "Resend not configured",
+      metadata: {},
+    });
+    await createAuditLog({
+      tenantId,
+      userId: input.userId,
+      action: "integration.tested",
+      entityType: "IntegrationConnection",
+      entityId: "Resend",
+      message: `Integration test: ${result.status}`,
+      metadata: { provider: "Resend", slug: "resend", result: result.status },
+    });
+    return result;
+  }
+
+  const recipient =
+    typeof input.to === "string" && input.to.trim()
+      ? input.to.trim()
+      : typeof input.userEmail === "string" && input.userEmail.trim()
+        ? input.userEmail.trim()
+        : "";
+  if (!recipient) {
+    throw new ApiError(
+      'Provide recipient email in the request body as { "to": "you@example.com" } or sign in with a JWT that includes your email.',
+      422,
+      "RECIPIENT_REQUIRED"
+    );
+  }
+
+  const sendResult = await sendResendEmail({
+    to: recipient,
+    subject: "JobFlow Resend Test",
+    html: "<p>Resend email delivery is connected.</p>",
+    text: "Resend email delivery is connected.",
+  });
+
+  let result: IntegrationTestResult;
+  let automationStatus: "Success" | "Warning" | "Failed";
+  let automationMessage: string;
+
+  if (sendResult.success) {
+    result = {
+      provider: "Resend",
+      status: "Success",
+      message: "Test email sent successfully.",
+      checkedAt,
+      metadata: {},
+    };
+    automationStatus = "Success";
+    automationMessage = "Resend test email sent";
+  } else {
+    const safe = sendResult.message.replace(/\b(sk|rsk)_[a-z0-9_-]{10,}/gi, "[redacted]");
+    result = {
+      provider: "Resend",
+      status: "Failed",
+      message: `Resend email failed: ${safe.slice(0, 220)}`,
+      checkedAt,
+      metadata: {},
+    };
+    automationStatus = "Failed";
+    automationMessage = `Resend email failed: ${safe.slice(0, 180)}`;
+  }
+
+  await persistLastTest(result);
+  await AutomationLogModel.create({
+    tenantId,
+    createdBy: input.userId,
+    moduleKey: "resend-email",
+    moduleName: "resend-email",
+    status: automationStatus,
+    message: automationMessage,
+    metadata: {},
+  });
+  await createAuditLog({
+    tenantId,
+    userId: input.userId,
+    action: "integration.tested",
+    entityType: "IntegrationConnection",
+    entityId: "Resend",
+    message: `Integration test: ${result.status}`,
+    metadata: { provider: "Resend", slug: "resend", result: result.status },
+  });
+
+  return result;
 }

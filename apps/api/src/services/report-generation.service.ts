@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { IntegrationConnectionModel, ReportModel } from "@jobflow/database/models";
 import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
+import { isResendConfigured } from "@jobflow/integrations/email/send-report-email";
 import type {
   DailyDigestMetrics,
   ReportDeliveryResult,
@@ -134,6 +135,7 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
   const smtpOutbound = await getSmtpOutboundCredentials(input.tenantId);
   const smtpIntegrationConnected = Boolean(await IntegrationConnectionModel.findOne({ tenantId: input.tenantId, provider: "SMTP", status: "Connected" }).select("_id").lean());
   const toRaw = Array.isArray(input.to) ? input.to[0] : input.to;
+  const emailEnabled = isResendConfigured() || smtpOutbound;
 
   const reportType = report.type as "Daily Digest" | "Weekly Performance" | "PDF Export" | "Manual Report";
   const event = report.type === "Daily Digest" ? ("daily-digest" as const) : ("weekly-report" as const);
@@ -147,7 +149,7 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
     event,
     smtpIntegrationConnected,
     smtpOutbound,
-    email: smtpOutbound && toRaw ? { to: toRaw, html: `<pre>${markdown}</pre>`, text: markdown } : undefined,
+    email: toRaw && emailEnabled ? { to: String(toRaw), html: `<pre>${markdown}</pre>`, text: markdown } : undefined,
   });
 
   const providerResults = {
@@ -176,7 +178,7 @@ async function sendReportDelivery(input: { tenantId: string; reportId: string; t
 
   const googleSuffix = googleDeliveryMessageSuffix(data);
   const baseMessage = previewOnly
-    ? "No Telegram, Slack, or SMTP channel delivered successfully; report remains available in the dashboard."
+    ? "No Telegram, Slack, or email channel delivered successfully; report remains available in the dashboard."
     : "Report delivery attempted on configured channels.";
   const message = googleSuffix ? `${baseMessage} ${googleSuffix}` : baseMessage;
 

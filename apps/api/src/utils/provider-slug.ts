@@ -9,6 +9,7 @@ export const SLUG_TO_PROVIDER: Record<string, IntegrationProvider> = {
   openai: "OpenAI",
   claude: "Claude",
   smtp: "SMTP",
+  resend: "Resend",
   "notion-legacy": "Notion Legacy",
   slack: "Slack",
 };

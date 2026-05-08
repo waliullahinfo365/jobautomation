@@ -13,6 +13,7 @@ import {
   resolveAnthropicApiKey,
 } from "@jobflow/integrations/ai/anthropic-messages";
 import { deliverReportNotifications } from "@jobflow/integrations/notifications/report-delivery";
+import { isResendConfigured } from "@jobflow/integrations/email/send-report-email";
 import { getSmtpOutboundCredentialsForWorker } from "../lib/smtp-config";
 import {
   GOOGLE_DOCUMENTS_SCOPE,
@@ -492,6 +493,7 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
         .select("_id")
         .lean(),
     );
+    const emailEnabled = isResendConfigured() || smtpOutbound;
     if (payload.send) {
       const prevData = mergedData;
       const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
@@ -505,7 +507,7 @@ export async function processWorkerDailyDigest(payload: DailyPayload) {
         smtpIntegrationConnected,
         smtpOutbound,
         email:
-          smtpOutbound && payload.to
+          payload.to && emailEnabled
             ? { to: payload.to, html: `<pre>${generated.body}</pre>`, text: generated.body }
             : undefined,
       });
@@ -730,6 +732,7 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
         .select("_id")
         .lean(),
     );
+    const emailEnabled = isResendConfigured() || smtpOutbound;
     if (payload.send) {
       const prevData = mergedData;
       const docLink = typeof prevData.googleDocUrl === "string" ? prevData.googleDocUrl : undefined;
@@ -743,7 +746,7 @@ export async function processWorkerWeeklyReport(payload: WeeklyPayload) {
         smtpIntegrationConnected,
         smtpOutbound,
         email:
-          smtpOutbound && payload.to
+          payload.to && emailEnabled
             ? { to: payload.to, html: `<pre>${generated.body}</pre>`, text: generated.body }
             : undefined,
       });

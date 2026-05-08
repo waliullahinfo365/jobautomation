@@ -45,6 +45,8 @@ function ProviderIcon({ slug }: { slug: string }) {
       return <BotIcon size={32} className={iconClass} aria-hidden />;
     case "smtp":
       return <SendIcon size={32} className={iconClass} aria-hidden />;
+    case "resend":
+      return <MailIcon size={32} className={iconClass} aria-hidden />;
     case "notion-legacy":
       return <DatabaseIcon size={32} className={iconClass} aria-hidden />;
     case "slack":
@@ -71,8 +73,15 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
       item.metadata?.stub === true ||
       item.connectedEmail === "oauth-demo-user@example.com");
   const isSlack = item.slug === "slack";
+  const isResend = item.slug === "resend";
   const connectLabel =
-    demoGoogle ? "Configure Google OAuth" : item.status === "Not Connected" ? "Connect" : "Reconnect";
+    isResend
+      ? "Configure Instructions"
+      : demoGoogle
+        ? "Configure Google OAuth"
+        : item.status === "Not Connected"
+          ? "Connect"
+          : "Reconnect";
   const isTelegram = item.slug === "telegram";
   const account =
     item.connectedEmail ?? item.accountName ?? (item.metadata?.workspaceName as string | undefined) ?? undefined;
@@ -129,12 +138,27 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
         ) : null}
         {item.slug === "smtp" ? (
           <>
+            <p className="rounded-md border border-amber-500/35 bg-amber-500/5 p-2 text-xs text-muted-foreground">
+              SMTP may be blocked by Railway. Resend is recommended for production email delivery.
+            </p>
             <Field label="SMTP host" value={(item.metadata?.host as string | undefined) ?? "—"} />
             <Field label="Port" value={item.metadata?.port != null ? String(item.metadata.port) : "—"} />
             <Field label="From email" value={(item.metadata?.from as string | undefined) ?? "—"} />
             {item.metadata?.smtpPasswordSaved === true ? (
               <Field label="App password" value="Saved securely" />
             ) : null}
+          </>
+        ) : null}
+        {isResend ? (
+          <>
+            <Field
+              label="API key configured"
+              value={item.metadata?.apiKeyConfigured === true ? "true" : "false"}
+            />
+            <Field
+              label="From email configured"
+              value={item.metadata?.fromEmailConfigured === true ? "true" : "false"}
+            />
           </>
         ) : null}
         {isTelegram ? (
@@ -166,14 +190,22 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
 
         <div className="flex flex-wrap gap-2 pt-2">
           <Button variant="default" size="sm" onClick={onConnect} disabled={isBusy(pending, item.slug, "connect")}>
-            {isTelegram ? "Configure Telegram" : isSlack ? "Configure Slack" : connectLabel}
+            {isResend
+              ? "Configure Instructions"
+              : isTelegram
+                ? "Configure Telegram"
+                : isSlack
+                  ? "Configure Slack"
+                  : connectLabel}
           </Button>
           <Button variant="secondary" size="sm" onClick={onTest} disabled={isBusy(pending, item.slug, "test")}>
-            {isTelegram ? "Test Telegram" : isSlack ? "Send Test Message" : "Test"}
+            {isResend ? "Test Resend" : isTelegram ? "Test Telegram" : isSlack ? "Send Test Message" : "Test"}
           </Button>
-          <Button variant="outline" size="sm" onClick={onDisconnect} disabled={isBusy(pending, item.slug, "disconnect")}>
-            Disconnect
-          </Button>
+          {!isResend ? (
+            <Button variant="outline" size="sm" onClick={onDisconnect} disabled={isBusy(pending, item.slug, "disconnect")}>
+              Disconnect
+            </Button>
+          ) : null}
         </div>
       </CardContent>
     </Card>

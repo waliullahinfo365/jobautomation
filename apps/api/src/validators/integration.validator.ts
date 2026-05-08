@@ -18,3 +18,9 @@ export const integrationConnectBodySchema = z.object({
 });
 
 export type IntegrationConnectBody = z.infer<typeof integrationConnectBodySchema>;
+
+export const resendTestBodySchema = z.object({
+  to: z.string().email().optional(),
+});
+
+export type ResendTestBody = z.infer<typeof resendTestBodySchema>;

@@ -72,6 +72,25 @@ export const testSlack = asyncHandler(async (req: Request, res) => {
   return successResponse(res, result, "Slack test complete");
 });
 
+export const getResendStatus = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const status = await integrationService.getResendEnvStatus({ tenantId });
+  return successResponse(res, status, "Resend status");
+});
+
+export const testResend = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const userId = req.user?.id ?? "system";
+  const body = (req.body ?? {}) as { to?: string };
+  const result = await integrationService.testResendNotification({
+    tenantId,
+    userId,
+    to: typeof body.to === "string" ? body.to : undefined,
+    userEmail: typeof req.user?.email === "string" ? req.user.email : undefined,
+  });
+  return successResponse(res, result, "Resend test complete");
+});
+
 export const gmailReplyWebhook = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const isValid = verifyGmailWebhookStub(req.body);

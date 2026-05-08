@@ -30,9 +30,15 @@ export function useIntegrationsApi(options?: { fallbackToMock?: boolean }) {
   });
   const telegramTestMutation = useApiMutation((_payload: Record<string, unknown>) => api.testTelegram());
 
+  const resendStatusQuery = useApiQuery(() => api.getResendStatus(), {
+    fallbackToMock: options?.fallbackToMock,
+    mockResourceName: "resendIntegrationStatus",
+  });
+  const testResendMutation = useApiMutation((payload: { to?: string }) => api.testResend(payload));
+
   const refetchAll = useCallback(async () => {
-    await Promise.all([listQuery.refetch(), healthQuery.refetch()]);
-  }, [listQuery.refetch, healthQuery.refetch]);
+    await Promise.all([listQuery.refetch(), healthQuery.refetch(), resendStatusQuery.refetch()]);
+  }, [listQuery.refetch, healthQuery.refetch, resendStatusQuery.refetch]);
 
   return {
     integrations: listQuery.data,
@@ -56,5 +62,9 @@ export function useIntegrationsApi(options?: { fallbackToMock?: boolean }) {
     telegramStatusLoading: telegramStatusQuery.loading,
     testTelegram: telegramTestMutation.mutate,
     testTelegramLoading: telegramTestMutation.loading,
+    resendStatus: resendStatusQuery.data,
+    resendStatusLoading: resendStatusQuery.loading,
+    testResend: testResendMutation.mutate,
+    testResendLoading: testResendMutation.loading,
   };
 }

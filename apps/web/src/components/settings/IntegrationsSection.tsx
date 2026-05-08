@@ -178,6 +178,8 @@ export function IntegrationsSection() {
     isUsingFallback,
     integrationsLoading,
     integrationsError,
+    resendStatus,
+    testResend,
   } = useIntegrationsApi({ fallbackToMock: true });
 
   const aiApi = useAiApi();
@@ -247,9 +249,38 @@ export function IntegrationsSection() {
           },
         };
       }
+      if (i.slug === "resend" && resendStatus) {
+        return {
+          ...i,
+          ...local,
+          lastTest: (resendStatus.lastTest as IntegrationTestResult | undefined) ?? lt,
+          status: (
+            resendStatus.status === "connected"
+              ? "Connected"
+              : resendStatus.status === "needs_attention"
+                ? "Needs Attention"
+                : "Not Connected"
+          ) as IntegrationListItem["status"],
+          syncStatus:
+            resendStatus.status === "connected"
+              ? "Resend API"
+              : resendStatus.status === "needs_attention"
+                ? "Needs attention"
+                : "Not configured",
+          errorMessage:
+            resendStatus.status === "not_configured"
+              ? "Add RESEND_API_KEY and RESEND_FROM_EMAIL to the API environment."
+              : undefined,
+          metadata: {
+            ...(i.metadata ?? {}),
+            apiKeyConfigured: resendStatus.apiKeyConfigured,
+            fromEmailConfigured: resendStatus.fromEmailConfigured,
+          },
+        };
+      }
       return { ...i, ...local, lastTest: lt };
     });
-  }, [integrations, localBySlug, lastTestBySlug, telegramStatus]);
+  }, [integrations, localBySlug, lastTestBySlug, telegramStatus, resendStatus]);
 
   const healthSummary = useMemo(() => {
     if (health) return health;
@@ -317,6 +348,22 @@ export function IntegrationsSection() {
         await refetch();
       } catch (e) {
         showError(e instanceof Error ? e.message : "Telegram test failed");
+      } finally {
+        setPending(null);
+      }
+      return;
+    }
+    if (slug === "resend") {
+      try {
+        setPending({ slug, action: "test" });
+        const result = await testResend({});
+        setLastTestBySlug((o) => ({ ...o, [slug]: result }));
+        if (result.status === "Success") showSuccess(result.message);
+        else if (result.status === "Warning") showInfo(result.message);
+        else showError(result.message);
+        await refetch();
+      } catch (e) {
+        showError(e instanceof Error ? e.message : "Resend test failed");
       } finally {
         setPending(null);
       }

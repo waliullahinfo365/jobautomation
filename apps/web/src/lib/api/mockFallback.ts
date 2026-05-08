@@ -14,7 +14,7 @@ import {
   mockWeeklyReport,
   mockWeeklyReportPreview,
 } from "@/data/mockReports";
-import { mockBillingSettings, mockIntegrationListItems, mockIntegrationsHealth } from "@/data/mockSettings";
+import { mockBillingSettings, mockIntegrationListItems, mockIntegrationsHealth, mockResendIntegrationStatus } from "@/data/mockSettings";
 import type { AutomationLog } from "@/types/automation";
 import { ApiError } from "./client";
 
@@ -76,6 +76,8 @@ export function getMockFallback(resourceName: string): unknown {
       return mockIntegrationListItems;
     case "integrationsHealth":
       return mockIntegrationsHealth;
+    case "resendIntegrationStatus":
+      return mockResendIntegrationStatus;
     default:
       return null;
   }

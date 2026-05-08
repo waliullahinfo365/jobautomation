@@ -5,8 +5,10 @@ import {
   getIntegrationHealth,
   gmailReplyTest,
   gmailReplyWebhook,
+  getResendStatus,
   getTelegramStatus,
   listIntegrations,
+  testResend,
   testSlack,
   testTelegram,
   testIntegration,
@@ -14,7 +16,11 @@ import {
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams } from "../middleware/validate.middleware";
 import { replyTestBodySchema } from "../validators/application-workflow.validator";
-import { integrationConnectBodySchema, integrationProviderParamSchema } from "../validators/integration.validator";
+import {
+  integrationConnectBodySchema,
+  integrationProviderParamSchema,
+  resendTestBodySchema,
+} from "../validators/integration.validator";
 
 export const integrationRoutes = Router();
 
@@ -23,6 +29,13 @@ integrationRoutes.get("/health", requirePermission("integrations.read"), getInte
 integrationRoutes.get("/telegram/status", requirePermission("integrations.read"), getTelegramStatus);
 integrationRoutes.post("/telegram/test", requirePermission("integrations.connect"), testTelegram);
 integrationRoutes.post("/slack/test", requirePermission("integrations.connect"), testSlack);
+integrationRoutes.get("/resend/status", requirePermission("integrations.read"), getResendStatus);
+integrationRoutes.post(
+  "/resend/test",
+  requirePermission("integrations.connect"),
+  validateBody(resendTestBodySchema),
+  testResend
+);
 integrationRoutes.post(
   "/:provider/connect",
   requirePermission("integrations.connect"),

@@ -79,11 +79,21 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
     provider: "SMTP",
     slug: "smtp",
     purpose:
-      "Optional email delivery for reports, digests, and reminders. Telegram and Slack are primary; SMTP is only used when configured.",
+      "Legacy SMTP (often blocked by Railway). Prefer Resend for production; SMTP is optional when Resend is not configured.",
     requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder"],
     status: "Disabled",
     scopes: [],
     metadata: { stub: true },
+  },
+  {
+    provider: "Resend",
+    slug: "resend",
+    purpose:
+      "Email API delivery for reports, digests, and reminders. Recommended for Railway production.",
+    requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder", "deadline-alert"],
+    status: "Not Connected",
+    scopes: [],
+    metadata: { apiKeyConfigured: false, fromEmailConfigured: false },
   },
   {
     provider: "Notion Legacy",
@@ -130,6 +140,14 @@ export const mockIntegrationsHealth: IntegrationHealthSummary = mockIntegrationL
   },
   { connected: 0, needsAttention: 0, notConnected: 0, expired: 0, disabled: 0 }
 );
+
+/** Fallback for GET /integrations/resend/status when API is offline. */
+export const mockResendIntegrationStatus = {
+  configured: false,
+  apiKeyConfigured: false,
+  fromEmailConfigured: false,
+  status: "not_configured" as const,
+};
 
 export const mockProfileSettings: ProfileSettings = {
   name: "Wali Ullah",

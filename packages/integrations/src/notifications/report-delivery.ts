@@ -1,5 +1,6 @@
 import type { SmtpOutboundCredentials } from "../smtp/mail";
-import { sendSmtpMail } from "../smtp/mail";
+import { isResendConfigured } from "../email/send-report-email";
+import { sendEmail } from "../email/send-email";
 import { sendSlackNotification, sendTelegramNotification } from "./notification.service";
 import type { NotificationEvent } from "./notification.service";
 
@@ -40,7 +41,7 @@ export type DeliverReportNotificationsResult = {
 };
 
 /**
- * Telegram first for user alerts; Slack optional team copy; SMTP optional when integration connected.
+ * Telegram first for user alerts; Slack optional team copy; email via Resend (env) or SMTP when configured.
  * Generation must not throw when delivery fails — callers log warnings separately.
  */
 export async function deliverReportNotifications(input: DeliverReportNotificationsInput): Promise<DeliverReportNotificationsResult> {
@@ -94,28 +95,26 @@ export async function deliverReportNotifications(input: DeliverReportNotificatio
 
   const email: ProviderDeliveryMeta = {
     attempted: false,
-    configured: Boolean(input.smtpOutbound),
+    configured: isResendConfigured() || Boolean(input.smtpOutbound),
     success: false,
   };
-  if (input.smtpOutbound && input.email?.to) {
+  if (input.email?.to) {
     email.attempted = true;
-    try {
-      await sendSmtpMail({
-        ...input.smtpOutbound,
-        to: input.email.to,
-        subject: input.title,
-        html: input.email.html,
-        text: input.email.text,
-      });
-      email.success = true;
-      email.message = "Delivered via SMTP.";
-    } catch (e) {
-      email.message = e instanceof Error ? e.message.slice(0, 280) : "SMTP send failed.";
-    }
-  } else if (!input.smtpOutbound) {
-    email.message = input.smtpIntegrationConnected
+    const outcome = await sendEmail({
+      to: input.email.to,
+      subject: input.title,
+      html: input.email.html,
+      text: input.email.text,
+      smtpOutbound: input.smtpOutbound,
+    });
+    email.success = outcome.success;
+    email.message = outcome.message;
+  } else if (!email.configured) {
+    email.message = input.smtpIntegrationConnected && !isResendConfigured()
       ? "SMTP settings incomplete (host, credentials, or from address)."
-      : "SMTP integration not configured.";
+      : "Resend/SMTP not configured.";
+  } else {
+    email.message = "No recipient address for email delivery.";
   }
 
   const anySent = telegram.success || slack.success || email.success;

@@ -79,3 +79,22 @@ export function getTelegramStatus(): Promise<TelegramIntegrationStatus> {
 export function testTelegram(): Promise<IntegrationTestResult> {
   return apiFetch<IntegrationTestResult>("/integrations/telegram/test", { method: "POST", body: {} });
 }
+
+export type ResendIntegrationStatus = {
+  configured: boolean;
+  apiKeyConfigured: boolean;
+  fromEmailConfigured: boolean;
+  status: "connected" | "not_configured" | "needs_attention";
+  lastTest?: IntegrationTestResult;
+};
+
+export function getResendStatus(): Promise<ResendIntegrationStatus> {
+  return apiFetch<ResendIntegrationStatus>("/integrations/resend/status");
+}
+
+export function testResend(body?: { to?: string }): Promise<IntegrationTestResult> {
+  return apiFetch<IntegrationTestResult>("/integrations/resend/test", {
+    method: "POST",
+    body: body ?? {},
+  });
+}

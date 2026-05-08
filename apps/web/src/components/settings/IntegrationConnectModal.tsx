@@ -107,6 +107,7 @@ export function IntegrationConnectModal({
     if (providerSlug === "smtp") return "Save SMTP Settings";
     if (providerSlug === "slack") return "Send Test Message";
     if (providerSlug === "telegram") return "Configure Telegram";
+    if (providerSlug === "resend") return "Done";
     if (providerSlug === "notion-legacy") return "Save Legacy Import Config";
     return "Save";
   }, [providerSlug, googleOAuthEnabled]);
@@ -172,6 +173,11 @@ export function IntegrationConnectModal({
     }
     if (providerSlug === "telegram") {
       await onSubmit({ config: {} });
+      return;
+    }
+    if (providerSlug === "resend") {
+      await onSubmit({ config: {} });
+      return;
     }
   }
 
@@ -251,8 +257,8 @@ export function IntegrationConnectModal({
           {providerSlug === "smtp" && (
             <>
               <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-                SMTP is optional. Telegram and Slack are primary. SMTP is used only if you want email delivery for
-                reports, daily digests, weekly reports, and reminders.
+                SMTP may be blocked by Railway (connection timeouts). Resend is recommended for production email delivery.
+                Telegram and Slack stay primary; SMTP is used only when Resend is not configured and valid SMTP credentials are saved.
               </p>
               <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-xs text-muted-foreground">
                 <p className="font-medium text-foreground">Gmail / Google Workspace</p>
@@ -321,6 +327,25 @@ export function IntegrationConnectModal({
                   placeholder="JobFlow"
                   autoComplete="off"
                 />
+              </div>
+            </>
+          )}
+
+          {providerSlug === "resend" && (
+            <>
+              <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                Resend is configured with API environment variables on the server. Never paste your Resend API key into this UI.
+              </p>
+              <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Configure (Railway / API host)</p>
+                <ol className="mt-2 list-inside list-decimal space-y-1">
+                  <li>
+                    Set <span className="font-mono text-[11px]">RESEND_API_KEY</span> and{" "}
+                    <span className="font-mono text-[11px]">RESEND_FROM_EMAIL</span> on the API service.
+                  </li>
+                  <li>Verify your sending domain in the Resend dashboard.</li>
+                  <li>Use “Test Resend” on the integration card to send a test email.</li>
+                </ol>
               </div>
             </>
           )}

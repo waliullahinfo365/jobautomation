@@ -12,6 +12,7 @@
       "google-drive/*": ["dist/google-drive/*"],
       "google-calendar/*": ["dist/google-calendar/*"],
       "smtp/*": ["dist/smtp/*"],
+      "email/*": ["dist/email/*"],
       "notifications/*": ["dist/notifications/*"],
       "notion-legacy/*": ["dist/notion-legacy/*"]
     }
@@ -56,6 +57,12 @@
       "require": "./dist/smtp/*.js",
       "import": "./dist/smtp/*.js",
       "default": "./dist/smtp/*.js"
+    },
+    "./email/*": {
+      "types": "./dist/email/*.d.ts",
+      "require": "./dist/email/*.js",
+      "import": "./dist/email/*.js",
+      "default": "./dist/email/*.js"
     },
     "./notifications/*": {
       "types": "./dist/notifications/*.d.ts",
