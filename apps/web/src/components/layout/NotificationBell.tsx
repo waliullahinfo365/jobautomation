@@ -9,6 +9,7 @@ import type { InAppNotificationDto } from "@/lib/api/notifications.api";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications.api";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 
 function resolveActionHref(n: InAppNotificationDto): string {
   if (n.actionUrl?.startsWith("/")) return n.actionUrl;
@@ -17,17 +18,18 @@ function resolveActionHref(n: InAppNotificationDto): string {
   return "/automation";
 }
 
-function actionLabel(n: InAppNotificationDto): string {
-  if (n.moduleKey === "report-delivery") return "Open reports";
-  if (n.moduleKey === "pdf-export") return "Open reports";
-  if (n.relatedRecordType === "Job") return "Open job";
-  return "View logs";
-}
-
 export function NotificationBell() {
+  const { t } = useTranslation();
   const { listQuery, countQuery, refetch } = useNotificationsApi();
   const count = typeof countQuery.data?.count === "number" ? countQuery.data.count : 0;
   const items = Array.isArray(listQuery.data) ? listQuery.data : [];
+
+  function actionLabelFor(n: InAppNotificationDto): string {
+    if (n.moduleKey === "report-delivery") return t("notifications.openReports");
+    if (n.moduleKey === "pdf-export") return t("notifications.openReports");
+    if (n.relatedRecordType === "Job") return t("notifications.openJob");
+    return t("notifications.viewLogs");
+  }
 
   const handleMarkOne = async (id: string) => {
     await markNotificationRead(id);
@@ -45,7 +47,7 @@ export function NotificationBell() {
         <button
           type="button"
           className="relative grid h-[34px] w-[34px] place-items-center rounded-[var(--r-sm)] border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-2)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]"
-          aria-label="Notifications"
+          aria-label={t("notifications.title")}
           onClick={() => void refetch()}
         >
           <NotificationIcon size={15} />
@@ -58,15 +60,15 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[380px] max-h-[min(70vh,440px)] overflow-hidden overflow-y-auto p-0">
         <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-3 py-2">
-          <span className="text-[13px] font-semibold text-[var(--text-1)]">Notifications</span>
+          <span className="text-[13px] font-semibold text-[var(--text-1)]">{t("notifications.title")}</span>
           <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => void handleMarkAll()}>
-            Mark all read
+            {t("notifications.markAllRead")}
           </Button>
         </div>
         {listQuery.loading && !items.length ? (
-          <div className="px-3 py-6 text-center text-sm text-[var(--text-3)]">Loading…</div>
+          <div className="px-3 py-6 text-center text-sm text-[var(--text-3)]">{t("notifications.loading")}</div>
         ) : items.length === 0 ? (
-          <div className="px-3 py-6 text-center text-sm text-[var(--text-3)]">No notifications yet.</div>
+          <div className="px-3 py-6 text-center text-sm text-[var(--text-3)]">{t("notifications.none")}</div>
         ) : (
           <ul className="divide-y divide-[var(--border-subtle)]">
             {items.map((n) => (
@@ -86,7 +88,7 @@ export function NotificationBell() {
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={resolveActionHref(n)} className="text-[11px] font-medium text-[var(--accent-hi)] hover:underline">
-                      {actionLabel(n)}
+                      {actionLabelFor(n)}
                     </Link>
                     {!n.read ? (
                       <button
@@ -94,7 +96,7 @@ export function NotificationBell() {
                         className="text-[11px] font-medium text-[var(--text-2)] hover:underline"
                         onClick={() => void handleMarkOne(n.id)}
                       >
-                        Mark read
+                        {t("notifications.markRead")}
                       </button>
                     ) : null}
                   </div>

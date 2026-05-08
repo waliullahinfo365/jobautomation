@@ -4,6 +4,7 @@ import Link from "next/link";
 import { HealthCheckIcon, PlusIcon, SparkleIcon } from "@/components/icons";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 
 interface DashboardHeroProps {
@@ -11,21 +12,27 @@ interface DashboardHeroProps {
 }
 
 export function DashboardHero({ showMockIndicator }: DashboardHeroProps) {
+  const { t, locale } = useTranslation();
+
   return (
     <section className="jf-hero relative mb-4 sm:mb-5">
       <div className="relative z-[1] min-w-0 max-w-[760px]">
         <div className="mb-3 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-[var(--accent-ring)] bg-[var(--accent-bg)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-hi)] sm:mb-4 sm:text-[11.5px]">
           <SparkleIcon size={12} className="shrink-0 text-[var(--accent-hi)]" />
           <span className="jf-chip-dot" />
-          Live Automation Dashboard
+          {t("dashboard.chip")}
         </div>
         <h1 className="font-display text-[22px] font-bold leading-[1.12] tracking-[-0.022em] text-[var(--text-1)] sm:text-[26px] md:text-[28px] lg:text-[30px]">
-          Your application{" "}
-          <em className="font-serif text-[var(--accent-hi)] not-italic">control center</em>
+          {locale === "en" ? (
+            <>
+              Your application{" "}
+              <em className="font-serif text-[var(--accent-hi)] not-italic">control center</em>
+            </>
+          ) : (
+            t("dashboard.heroTitle")
+          )}
         </h1>
-        <p className="mt-2.5 max-w-[580px] text-[13px] leading-[1.55] text-[var(--text-3)] sm:text-[14px]">
-          Monitor job opportunities, application health, and automation performance in one disciplined view.
-        </p>
+        <p className="mt-2.5 max-w-[580px] text-[13px] leading-[1.55] text-[var(--text-3)] sm:text-[14px]">{t("dashboard.subtitle")}</p>
       </div>
       <div className="relative z-[1] flex w-full min-w-0 shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
         {showMockIndicator ? (
@@ -39,7 +46,7 @@ export function DashboardHero({ showMockIndicator }: DashboardHeroProps) {
           className="h-[40px] w-full justify-center border-[var(--border-default)] bg-[var(--surface-2)] text-[13px] font-semibold text-[var(--text-1)] hover:bg-[var(--surface-3)] sm:h-[38px] sm:w-auto"
         >
           <HealthCheckIcon size={16} className="mr-2" />
-          Run Health Check
+          {t("dashboard.runHealthCheck")}
         </Button>
         <Link
           href="/jobs"
@@ -49,7 +56,7 @@ export function DashboardHero({ showMockIndicator }: DashboardHeroProps) {
           )}
         >
           <PlusIcon size={14} className="mr-2" />
-          Add Job
+          {t("dashboard.addJob")}
         </Link>
       </div>
     </section>

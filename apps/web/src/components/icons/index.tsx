@@ -293,29 +293,29 @@ export const BrandMark = (p: IconProps) => (
 
 export const SIDEBAR_NAV = [
   {
-    section: "Workspace",
+    sectionKey: "navSection.workspace",
     items: [
-      { label: "Dashboard",    icon: DashboardIcon,    href: "/dashboard"   },
-      { label: "Jobs",         icon: JobsIcon,         href: "/jobs",         badge: 12 },
-      { label: "Applications", icon: ApplicationsIcon, href: "/applications" },
-      { label: "Contacts",     icon: ContactsIcon,     href: "/contacts"     },
-      { label: "Interviews",   icon: InterviewsIcon,   href: "/interviews",   badge: 2 },
-      { label: "Documents",    icon: DocumentsIcon,    href: "/documents"    },
+      { labelKey: "nav.dashboard", icon: DashboardIcon, href: "/dashboard" },
+      { labelKey: "nav.jobs", icon: JobsIcon, href: "/jobs", badge: 12 },
+      { labelKey: "nav.applications", icon: ApplicationsIcon, href: "/applications" },
+      { labelKey: "nav.contacts", icon: ContactsIcon, href: "/contacts" },
+      { labelKey: "nav.interviews", icon: InterviewsIcon, href: "/interviews", badge: 2 },
+      { labelKey: "nav.documents", icon: DocumentsIcon, href: "/documents" },
     ],
   },
   {
-    section: "Insights",
+    sectionKey: "navSection.insights",
     items: [
-      { label: "Reports",    icon: ReportsIcon,    href: "/reports"    },
-      { label: "Automation", icon: AutomationIcon, href: "/automation" },
+      { labelKey: "nav.reports", icon: ReportsIcon, href: "/reports" },
+      { labelKey: "nav.automation", icon: AutomationIcon, href: "/automation" },
     ],
   },
   {
-    section: "Account",
+    sectionKey: "navSection.account",
     items: [
-      { label: "Settings",         icon: SettingsIcon, href: "/settings"      },
-      { label: "Demo Walkthrough", icon: DemoIcon,     href: "/demo"          },
-      { label: "System Status",    icon: StatusIcon,   href: "/system-status" },
+      { labelKey: "nav.settings", icon: SettingsIcon, href: "/settings" },
+      { labelKey: "nav.demo", icon: DemoIcon, href: "/demo" },
+      { labelKey: "nav.systemStatus", icon: StatusIcon, href: "/system-status" },
     ],
   },
 ] as const;

@@ -1,6 +1,7 @@
 "use client";
 
 import { LayoutListIcon, PanelsTopLeftIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "table" | "board";
@@ -11,6 +12,8 @@ interface ViewToggleProps {
 }
 
 export function ViewToggle({ value, onChange }: ViewToggleProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="inline-flex items-center rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-1)] p-1">
       <button
@@ -24,7 +27,7 @@ export function ViewToggle({ value, onChange }: ViewToggleProps) {
         )}
       >
         <LayoutListIcon size={16} />
-        Table View
+        {t("jobs.tableView")}
       </button>
       <button
         type="button"
@@ -37,7 +40,7 @@ export function ViewToggle({ value, onChange }: ViewToggleProps) {
         )}
       >
         <PanelsTopLeftIcon size={16} />
-        Board View
+        {t("jobs.boardView")}
       </button>
     </div>
   );

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { AutomationStatusBadge } from "./AutomationStatusBadge";
 import { AutomationCategoryBadge } from "./AutomationCategoryBadge";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface AutomationModuleCardProps {
   module: AutomationModule;
@@ -20,6 +21,7 @@ interface AutomationModuleCardProps {
 }
 
 export function AutomationModuleCard({ module, onView, onToggle, onConfigure }: AutomationModuleCardProps) {
+  const { t } = useTranslation();
   const canToggle = module.status === "Active" || module.status === "Paused";
   const nextStatus: AutomationStatus = module.status === "Active" ? "Paused" : "Active";
   const Icon: ComponentType<IconProps> = AUTOMATION_MODULE_ICONS[module.icon] ?? BotIcon;
@@ -46,30 +48,38 @@ export function AutomationModuleCard({ module, onView, onToggle, onConfigure }: 
 
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-xs text-[var(--text-3)]">
-              <span>Success rate</span>
+              <span>{t("automation.moduleCard.successRate")}</span>
               <span className="font-medium text-[var(--text-2)]">{module.successRate}%</span>
             </div>
             <Progress value={module.successRate} />
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--text-3)]">
-            <span>Total runs: {module.totalRuns}</span>
-            <span>Failed runs: {module.failedRuns}</span>
-            <span>Avg duration: {module.averageDuration}</span>
-            <span>Last run: {module.lastRun ? timeAgo(module.lastRun) : "—"}</span>
+            <span>
+              {t("automation.moduleCard.totalRunsLabel")}: {module.totalRuns}
+            </span>
+            <span>
+              {t("automation.moduleCard.failedRunsLabel")}: {module.failedRuns}
+            </span>
+            <span>
+              {t("automation.moduleCard.avgDuration")}: {module.averageDuration}
+            </span>
+            <span>
+              {t("automation.moduleCard.lastRun")}: {module.lastRun ? timeAgo(module.lastRun) : "—"}
+            </span>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => onView?.(module)}>
               <EyeIcon size={14} className="mr-1" />
-              View Details
+              {t("automation.moduleCard.viewDetails")}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => onConfigure?.(module)}>
-              Configure
+              {t("automation.moduleCard.configure")}
             </Button>
             {canToggle ? (
               <Button size="sm" variant="ghost" onClick={() => onToggle?.(module.id, nextStatus)}>
-                {module.status === "Active" ? "Pause" : "Resume"}
+                {module.status === "Active" ? t("automation.moduleCard.pause") : t("automation.moduleCard.resume")}
               </Button>
             ) : null}
           </div>

@@ -10,6 +10,7 @@ import {
   TrophyIcon,
 } from "@/components/icons";
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
+import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -51,66 +52,74 @@ function MiniBars({ seed }: { seed: number }) {
 }
 
 export function StatsCards({ stats }: StatsCardsProps) {
+  const { t } = useTranslation();
+
   const items = [
     {
-      label: "Total Jobs Tracked",
+      labelKey: "dashboard.stats.totalJobsTracked",
       value: stats.totalJobsTracked,
-      meta: "vs. last week",
+      metaKey: "dashboard.stats.metaVsWeek",
       delta: "+6.4%",
       deltaTone: "up" as const,
       icon: TrackedJobsIcon,
       iconTint: "default" satisfies IconTintKey,
       seed: stats.totalJobsTracked * 7 + 3,
+      showTrend: false,
     },
     {
-      label: "Applications Sent",
+      labelKey: "dashboard.stats.applicationsSent",
       value: stats.applicationsSent,
-      meta: "submitted this week",
+      metaKey: "dashboard.stats.metaSubmittedWeek",
       delta: "+3",
       deltaTone: "up" as const,
       icon: SendIcon,
       iconTint: "violet" satisfies IconTintKey,
       seed: stats.applicationsSent * 11 + 1,
+      showTrend: false,
     },
     {
-      label: "Interviews Scheduled",
+      labelKey: "dashboard.stats.interviewsScheduled",
       value: stats.interviewsScheduled,
-      meta: "upcoming sessions",
+      metaKey: "dashboard.stats.metaUpcoming",
       delta: `${Math.min(stats.interviewsScheduled, 9)}`,
       deltaTone: "neutral" as const,
       icon: CalendarCheckIcon,
       iconTint: "teal" satisfies IconTintKey,
       seed: stats.interviewsScheduled * 5 + 8,
+      showTrend: false,
     },
     {
-      label: "Offers Received",
+      labelKey: "dashboard.stats.offersReceived",
       value: stats.offersReceived,
-      meta: "awaiting decision",
-      delta: stats.offersReceived > 0 ? "Active" : "—",
+      metaKey: "dashboard.stats.metaAwaiting",
+      delta: stats.offersReceived > 0 ? t("dashboard.stats.deltaActive") : "—",
       deltaTone: stats.offersReceived > 0 ? ("up" as const) : ("neutral" as const),
       icon: TrophyIcon,
       iconTint: "emerald" satisfies IconTintKey,
       seed: stats.offersReceived * 13 + 2,
+      showTrend: false,
     },
     {
-      label: "Follow-ups Due",
+      labelKey: "dashboard.stats.followUpsDue",
       value: stats.followUpsDue,
-      meta: stats.followUpsDue === 0 ? "all caught up" : "needs attention",
-      delta: stats.followUpsDue === 0 ? "Clear" : `${stats.followUpsDue}`,
+      metaKey: stats.followUpsDue === 0 ? "dashboard.stats.metaAllCaughtUp" : "dashboard.stats.metaNeedsAttention",
+      delta: stats.followUpsDue === 0 ? t("dashboard.stats.deltaClear") : `${stats.followUpsDue}`,
       deltaTone: stats.followUpsDue === 0 ? ("up" as const) : ("down" as const),
       icon: FollowUpIcon,
       iconTint: "amber" satisfies IconTintKey,
       seed: stats.followUpsDue * 19 + 4,
+      showTrend: false,
     },
     {
-      label: "Automations Active",
+      labelKey: "dashboard.stats.automationsActive",
       value: stats.automationsActive,
-      meta: "avg. success rate",
+      metaKey: "dashboard.stats.metaSuccessRate",
       delta: "92%",
       deltaTone: "up" as const,
       icon: BotIcon,
       iconTint: "default" satisfies IconTintKey,
       seed: stats.automationsActive * 3 + 9,
+      showTrend: true,
     },
   ];
 
@@ -121,14 +130,14 @@ export function StatsCards({ stats }: StatsCardsProps) {
         const stagger = `jf-kpi-stagger-${i + 1}` as const;
         return (
           <motion.article
-            key={item.label}
+            key={item.labelKey}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.05 * i, ease: [0.2, 0.8, 0.2, 1] }}
             className={cn("jf-kpi", stagger)}
           >
             <div className="jf-kpi-head">
-              <div className="jf-kpi-label">{item.label}</div>
+              <div className="jf-kpi-label">{t(item.labelKey)}</div>
               <div className={tint[item.iconTint as IconTintKey]}>
                 <Icon size={14} />
               </div>
@@ -148,7 +157,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
                   item.deltaTone === "neutral" && "jf-kpi-delta--neutral"
                 )}
               >
-                {item.deltaTone === "up" && item.label === "Automations Active" ? (
+                {item.showTrend ? (
                   <>
                     <TrendUpIcon size={10} />
                     {item.delta}
@@ -157,7 +166,7 @@ export function StatsCards({ stats }: StatsCardsProps) {
                   item.delta
                 )}
               </span>
-              <span className="jf-kpi-meta">{item.meta}</span>
+              <span className="jf-kpi-meta">{t(item.metaKey)}</span>
             </div>
           </motion.article>
         );

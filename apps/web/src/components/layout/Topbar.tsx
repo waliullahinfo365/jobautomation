@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ChevronDownIcon, PlusIcon, SearchIcon, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,22 +10,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { clearAuthToken } from "@/lib/api/client";
 import { showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
 
-const flatNav: (SidebarNavItem & { section: string })[] = SIDEBAR_NAV.flatMap((s) =>
-  s.items.map((i) => ({ ...i, section: s.section }))
-);
-
-function crumbForPath(pathname: string): string {
-  const match = flatNav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-  return match?.label ?? "Dashboard";
-}
+const flatNav: SidebarNavItem[] = SIDEBAR_NAV.flatMap((s) => [...s.items]);
 
 export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const title = crumbForPath(pathname);
+  const { t } = useTranslation();
+  const title = useMemo(() => {
+    const match = flatNav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+    return match ? t(match.labelKey) : t("nav.dashboard");
+  }, [pathname, t]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -49,14 +48,14 @@ export function Topbar() {
     } catch {
       /* ignore */
     }
-    showSuccess("Logged out successfully.");
+    showSuccess(t("topbar.loggedOut"));
     router.replace("/login");
   }
 
   return (
     <header className="jf-topbar hidden md:flex">
       <div className="jf-crumb flex items-center gap-2 text-[13px] font-medium text-[var(--text-3)]">
-        <span>Workspace</span>
+        <span>{t("topbar.workspace")}</span>
         <span className="text-[var(--text-5)]">›</span>
         <b className="font-semibold text-[var(--text-1)]">{title}</b>
       </div>
@@ -66,15 +65,16 @@ export function Topbar() {
         <input
           ref={searchRef}
           type="search"
-          placeholder="Search jobs, contacts, reports…"
+          placeholder={t("topbar.searchPlaceholder")}
           className="h-full min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[var(--text-1)] placeholder:text-[var(--text-4)] outline-none"
-          aria-label="Search"
+          aria-label={t("topbar.searchPlaceholder")}
         />
         <span className="inline-flex h-[18px] items-center gap-0.5 rounded border border-[var(--border-subtle)] border-b-2 bg-[var(--surface-4)] px-1.5 font-mono text-[10.5px] font-medium text-[var(--text-3)]">
           ⌘K
         </span>
       </div>
       <div className="flex items-center gap-2">
+        <LanguageSwitcher />
         <NotificationBell />
         <ThemeToggle />
         <Link
@@ -85,7 +85,7 @@ export function Topbar() {
           )}
         >
           <PlusIcon size={14} className="mr-1.5" />
-          New Job
+          {t("topbar.newJob")}
         </Link>
         <DropdownMenu>
           <DropdownMenuTrigger>
@@ -104,16 +104,16 @@ export function Topbar() {
           <DropdownMenuContent>
             <DropdownMenuItem>
               <Link href="/profile" className="block cursor-pointer">
-                Account / Profile
+                {t("topbar.accountProfile")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <Link href="/settings" className="block cursor-pointer">
-                Settings
+                {t("topbar.settings")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleLogout}>
-              Logout
+              {t("topbar.logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

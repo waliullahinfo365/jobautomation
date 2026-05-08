@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { BrandMark, LiveIcon, SIDEBAR_NAV } from "@/components/icons";
 import { useInterviewsApi } from "@/hooks/api/useInterviewsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
+import { useTranslation } from "@/i18n/useTranslation";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { cn } from "@/lib/utils";
 import type { Interview } from "@/types/interview";
@@ -12,6 +13,7 @@ import type { Job } from "@/types/job";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const jobsQ = useJobsApi({ fallbackToMock: true });
   const intQ = useInterviewsApi({ fallbackToMock: true });
   const jobsCount = normalizeListResponse<Job>(jobsQ.list).length;
@@ -31,15 +33,17 @@ export function Sidebar() {
                 Beta
               </span>
             </div>
-            <p className="mt-0.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--text-4)]">Application Automation</p>
+            <p className="mt-0.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--text-4)]">
+              {t("sidebar.applicationAutomation")}
+            </p>
           </div>
         </div>
       </div>
 
       <nav className="jf-nav">
         {SIDEBAR_NAV.map((section) => (
-          <div key={section.section}>
-            <div className="jf-nav-section-title jf-sidebar-collapsed-text">{section.section}</div>
+          <div key={section.sectionKey}>
+            <div className="jf-nav-section-title jf-sidebar-collapsed-text">{t(section.sectionKey)}</div>
             <div className="flex flex-col gap-px">
               {section.items.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -52,7 +56,7 @@ export function Sidebar() {
                 return (
                   <Link key={item.href} href={item.href} className={cn("jf-nav-item", isActive && "is-active")}>
                     <Icon size={16} />
-                    <span className="jf-nav-label flex-1 truncate">{item.label}</span>
+                    <span className="jf-nav-label flex-1 truncate">{t(item.labelKey)}</span>
                     {typeof badge === "number" && badge > 0 ? (
                       <span className="jf-nav-badge jf-sidebar-collapsed-text">{badge}</span>
                     ) : null}
@@ -70,12 +74,12 @@ export function Sidebar() {
             <LiveIcon size={13} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-semibold leading-none text-[var(--text-1)]">System Online</p>
-            <p className="mt-0.5 text-[11px] text-[var(--text-3)]">17 modules · automation health</p>
+            <p className="text-[12.5px] font-semibold leading-none text-[var(--text-1)]">{t("sidebar.systemOnline")}</p>
+            <p className="mt-0.5 text-[11px] text-[var(--text-3)]">{t("sidebar.modulesLine")}</p>
           </div>
           <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[rgba(56,199,147,0.22)] bg-[var(--emerald-bg)] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[var(--emerald)]">
             <span className="jf-live-dot" />
-            Live
+            {t("sidebar.live")}
           </span>
         </div>
         <div className="relative mt-0.5 h-1 overflow-hidden rounded-full bg-[var(--surface-4)]">
@@ -83,9 +87,9 @@ export function Sidebar() {
         </div>
         <div className="mt-2 flex justify-between font-mono text-[10.5px] text-[var(--text-3)]">
           <span>
-            <b className="font-semibold text-[var(--text-1)]">94%</b> healthy
+            <b className="font-semibold text-[var(--text-1)]">94%</b> {t("sidebar.healthy")}
           </span>
-          <span>Queue OK</span>
+          <span>{t("sidebar.queueOk")}</span>
         </div>
       </div>
     </aside>

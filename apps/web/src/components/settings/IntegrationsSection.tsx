@@ -11,6 +11,7 @@ import { getGoogleAuthUrl, testSmtpIntegration } from "@/lib/api/integrations.ap
 import { ApiError, getAuthToken } from "@/lib/api/client";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 import { IntegrationCard } from "./IntegrationCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
 
@@ -166,6 +167,7 @@ function isGoogleSlug(slug: string): boolean {
 export function IntegrationsSection() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useTranslation();
   const {
     integrations,
     health,
@@ -487,10 +489,8 @@ export function IntegrationsSection() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Integrations</h2>
-          <p className="text-sm text-muted-foreground">
-            Connect providers used by automation modules. Demo connections are marked as not live and require OAuth reconnect.
-          </p>
+          <h2 className="text-lg font-semibold tracking-tight">{t("settings.integrationsTitle")}</h2>
+          <p className="text-sm text-muted-foreground">{t("settings.integrationsSubtitle")}</p>
           {integrationsError ? (
             <p className="mt-2 text-sm text-destructive">
               {integrationsError.message}
@@ -503,10 +503,10 @@ export function IntegrationsSection() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <HealthMini label="Connected" value={healthSummary.connected} />
-        <HealthMini label="Needs attention" value={healthSummary.needsAttention} />
-        <HealthMini label="Not connected" value={healthSummary.notConnected} />
-        <HealthMini label="Expired / Disabled" value={healthSummary.expired + healthSummary.disabled} />
+        <HealthMini label={t("integrations.connected")} value={healthSummary.connected} />
+        <HealthMini label={t("integrations.needsAttention")} value={healthSummary.needsAttention} />
+        <HealthMini label={t("integrations.notConnected")} value={healthSummary.notConnected} />
+        <HealthMini label={t("integrations.expiredDisabled")} value={healthSummary.expired + healthSummary.disabled} />
       </div>
 
       {integrationsLoading && !integrations?.length ? (

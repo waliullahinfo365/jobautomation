@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertTriangleIcon,
   BotIcon,
@@ -8,6 +10,7 @@ import {
 } from "@/components/icons";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ReactNode } from "react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface AutomationStatsCardsProps {
   stats: {
@@ -38,14 +41,45 @@ function StatCard({ label, value, helper, icon }: { label: string; value: string
 }
 
 export function AutomationStatsCards({ stats }: AutomationStatsCardsProps) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-      <StatCard label="Total Automations" value={stats.totalAutomations} helper="Configured modules" icon={<BotIcon size={20} />} />
-      <StatCard label="Active Modules" value={stats.activeModules} helper="Currently running" icon={<CheckCircleIcon size={20} />} />
-      <StatCard label="Failed Modules" value={stats.failedModules} helper="Require immediate review" icon={<AlertTriangleIcon size={20} />} />
-      <StatCard label="Needs Setup" value={stats.needsSetup} helper="Pending integrations" icon={<WrenchIcon size={20} />} />
-      <StatCard label="Runs Today" value={stats.runsToday} helper="Across all modules" icon={<PlayCircleIcon size={20} />} />
-      <StatCard label="Average Success Rate" value={`${stats.averageSuccessRate}%`} helper="Rolling 24h average" icon={<GaugeIcon size={20} />} />
+      <StatCard
+        label={t("automation.stats.totalAutomations")}
+        value={stats.totalAutomations}
+        helper={t("automation.stats.totalAutomationsHelper")}
+        icon={<BotIcon size={20} />}
+      />
+      <StatCard
+        label={t("automation.stats.activeModules")}
+        value={stats.activeModules}
+        helper={t("automation.stats.activeModulesHelper")}
+        icon={<CheckCircleIcon size={20} />}
+      />
+      <StatCard
+        label={t("automation.stats.failedModules")}
+        value={stats.failedModules}
+        helper={t("automation.stats.failedModulesHelper")}
+        icon={<AlertTriangleIcon size={20} />}
+      />
+      <StatCard
+        label={t("automation.stats.needsSetup")}
+        value={stats.needsSetup}
+        helper={t("automation.stats.needsSetupHelper")}
+        icon={<WrenchIcon size={20} />}
+      />
+      <StatCard
+        label={t("automation.stats.runsToday")}
+        value={stats.runsToday}
+        helper={t("automation.stats.runsTodayHelper")}
+        icon={<PlayCircleIcon size={20} />}
+      />
+      <StatCard
+        label={t("automation.stats.averageSuccessRate")}
+        value={`${stats.averageSuccessRate}%`}
+        helper={t("automation.stats.averageSuccessRateHelper")}
+        icon={<GaugeIcon size={20} />}
+      />
     </div>
   );
 }

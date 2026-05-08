@@ -24,6 +24,7 @@ import {
 import { useBillingApi } from "@/hooks/api/useBillingApi";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const sections: SettingsSection[] = [
   "Profile",
@@ -36,6 +37,7 @@ const sections: SettingsSection[] = [
 ];
 
 export function SettingsPageClient() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<SettingsSection>("Integrations");
 
@@ -55,10 +57,10 @@ export function SettingsPageClient() {
     <div className="space-y-6">
       <PageHeader
         icon={SettingsIcon}
-        eyebrow="Workspace Settings"
-        title="Settings"
-        description="Manage integrations, automation rules, notifications, and account preferences."
-        actions={<Button>Save Changes</Button>}
+        eyebrow={t("settings.eyebrow")}
+        title={t("settings.title")}
+        description={t("settings.description")}
+        actions={<Button>{t("settings.saveChanges")}</Button>}
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px,1fr]">

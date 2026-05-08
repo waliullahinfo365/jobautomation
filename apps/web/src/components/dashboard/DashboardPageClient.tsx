@@ -11,6 +11,7 @@ import { FollowUpReminders } from "@/components/dashboard/FollowUpReminders";
 import { AutomationLogTable } from "@/components/automation/AutomationLogTable";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { useDashboardOverview } from "@/hooks/api/useDashboardOverview";
+import { useTranslation } from "@/i18n/useTranslation";
 import { mockFollowUpReminders, type FollowUpReminderItem } from "@/data/mockApplications";
 import { automationModules as mockModules } from "@/data/automationModules";
 import type { AutomationLog, AutomationModule } from "@/types/automation";
@@ -60,6 +61,7 @@ function computeFollowUpsDue(applications: Application[]): FollowUpReminderItem[
 }
 
 export function DashboardPageClient() {
+  const { t } = useTranslation();
   const { jobsQuery, applicationsQuery: appsQuery, automationQuery } = useDashboardOverview({ fallbackToMock: true });
 
   const jobs = useMemo((): Job[] => {
@@ -111,7 +113,7 @@ export function DashboardPageClient() {
   if (isInitialLoading) {
     return (
       <div className="section-spacing">
-        <LoadingState title="Loading dashboard..." description="Fetching your jobs and automation data." />
+        <LoadingState title={t("dashboard.loadingTitle")} description={t("dashboard.loadingDesc")} />
       </div>
     );
   }

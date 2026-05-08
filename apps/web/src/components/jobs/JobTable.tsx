@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { Job } from "@/types/job";
 import { JobStatusBadge } from "./JobStatusBadge";
@@ -9,7 +11,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { MoreIcon } from "@/components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { showInfo } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface JobTableProps {
   jobs: Job[];
@@ -19,21 +21,23 @@ interface JobTableProps {
 }
 
 export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft }: JobTableProps) {
+  const { t } = useTranslation();
+
   return (
-    <SectionCard title="Opportunities" description="Track each role with status, priority, and automation context." contentClassName="p-0">
+    <SectionCard title={t("jobs.opportunities")} description={t("jobs.opportunitiesDesc")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Company</TableHead>
-            <TableHead>Position</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead>Salary Range</TableHead>
-            <TableHead>Deadline</TableHead>
-            <TableHead>Date Found</TableHead>
-            <TableHead>Last Updated</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t("jobs.company")}</TableHead>
+            <TableHead>{t("jobs.position")}</TableHead>
+            <TableHead>{t("jobs.source")}</TableHead>
+            <TableHead>{t("jobs.status")}</TableHead>
+            <TableHead>{t("jobs.priority")}</TableHead>
+            <TableHead>{t("jobs.salaryRange")}</TableHead>
+            <TableHead>{t("jobs.deadline")}</TableHead>
+            <TableHead>{t("jobs.dateFound")}</TableHead>
+            <TableHead>{t("jobs.lastUpdated")}</TableHead>
+            <TableHead className="text-right">{t("jobs.actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -45,9 +49,15 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
                   {job.position}
                 </Link>
               </TableCell>
-              <TableCell><Badge variant="outline">{job.source}</Badge></TableCell>
-              <TableCell><JobStatusBadge status={job.status} /></TableCell>
-              <TableCell><JobPriorityBadge priority={job.priority} /></TableCell>
+              <TableCell>
+                <Badge variant="outline">{job.source}</Badge>
+              </TableCell>
+              <TableCell>
+                <JobStatusBadge status={job.status} />
+              </TableCell>
+              <TableCell>
+                <JobPriorityBadge priority={job.priority} />
+              </TableCell>
               <TableCell>{job.salaryRange}</TableCell>
               <TableCell>{job.deadline ? formatDate(job.deadline) : "—"}</TableCell>
               <TableCell>{formatDate(job.dateFound)}</TableCell>
@@ -58,7 +68,7 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
                     href={`/jobs/${job.id}`}
                     className="inline-flex h-8 items-center rounded-[var(--r-sm)] border border-[var(--border-default)] px-3 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
                   >
-                    View
+                    {t("jobs.view")}
                   </Link>
                   <DropdownMenu>
                     <DropdownMenuTrigger>
@@ -69,31 +79,14 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
                     <DropdownMenuContent>
                       {onGenerateResearch && (
                         <DropdownMenuItem onClick={() => onGenerateResearch(job.id)}>
-                          Generate Research
+                          {t("jobs.generateResearch")}
                         </DropdownMenuItem>
                       )}
                       {onGenerateDraft && (
-                        <DropdownMenuItem onClick={() => onGenerateDraft(job.id)}>
-                          Generate Draft
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onGenerateDraft(job.id)}>{t("jobs.generateDraft")}</DropdownMenuItem>
                       )}
                       {onArchive && (
-                        <DropdownMenuItem
-                          className="text-rose-600 focus:text-rose-600"
-                          onClick={() => onArchive(job.id)}
-                        >
-                          Archive
-                        </DropdownMenuItem>
-                      )}
-                      {!onArchive && !onGenerateResearch && !onGenerateDraft && (
-                        <>
-                          <DropdownMenuItem onClick={() => showInfo("Edit action is available in job detail.")}>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => showInfo("Archive action is available in job detail.")}>
-                            Archive
-                          </DropdownMenuItem>
-                        </>
+                        <DropdownMenuItem onClick={() => onArchive(job.id)}>{t("jobs.archive")}</DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>

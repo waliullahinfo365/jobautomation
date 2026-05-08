@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { AutomationCategory, AutomationStatus } from "@/types/automation";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export interface AutomationFilterState {
   query: string;
@@ -21,6 +22,7 @@ interface AutomationFiltersProps {
 }
 
 export function AutomationFilters({ filters, onChange, onClear, aside }: AutomationFiltersProps) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
       {aside ? <div className="mb-3 flex justify-end">{aside}</div> : null}
@@ -29,7 +31,7 @@ export function AutomationFilters({ filters, onChange, onClear, aside }: Automat
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]" />
           <Input
             className="pl-9"
-            placeholder="Search by module name or description"
+            placeholder={t("automation.filter.searchPlaceholder")}
             value={filters.query}
             onChange={(e) => onChange({ ...filters, query: e.target.value })}
           />
@@ -39,11 +41,11 @@ export function AutomationFilters({ filters, onChange, onClear, aside }: Automat
           value={filters.status}
           onChange={(e) => onChange({ ...filters, status: e.target.value as AutomationFilterState["status"] })}
           options={[
-            { label: "All Statuses", value: "All" },
-            { label: "Active", value: "Active" },
-            { label: "Paused", value: "Paused" },
-            { label: "Failed", value: "Failed" },
-            { label: "Needs Setup", value: "Needs Setup" },
+            { label: t("automation.filter.allStatuses"), value: "All" },
+            { label: t("automation.moduleStatus.active"), value: "Active" },
+            { label: t("automation.moduleStatus.paused"), value: "Paused" },
+            { label: t("automation.moduleStatus.failed"), value: "Failed" },
+            { label: t("automation.moduleStatus.needsSetup"), value: "Needs Setup" },
           ]}
         />
 
@@ -53,18 +55,18 @@ export function AutomationFilters({ filters, onChange, onClear, aside }: Automat
             value={filters.category}
             onChange={(e) => onChange({ ...filters, category: e.target.value as AutomationFilterState["category"] })}
             options={[
-              { label: "All Categories", value: "All" },
-              { label: "Intake", value: "Intake" },
-              { label: "Pipeline", value: "Pipeline" },
-              { label: "Documents", value: "Documents" },
-              { label: "Communication", value: "Communication" },
-              { label: "AI Processing", value: "AI Processing" },
-              { label: "Reporting", value: "Reporting" },
-              { label: "Monitoring", value: "Monitoring" },
+              { label: t("automation.filter.allCategories"), value: "All" },
+              { label: t("automation.category.intake"), value: "Intake" },
+              { label: t("automation.category.pipeline"), value: "Pipeline" },
+              { label: t("automation.category.documents"), value: "Documents" },
+              { label: t("automation.category.communication"), value: "Communication" },
+              { label: t("automation.category.aiProcessing"), value: "AI Processing" },
+              { label: t("automation.category.reporting"), value: "Reporting" },
+              { label: t("automation.category.monitoring"), value: "Monitoring" },
             ]}
           />
           <Button variant="outline" onClick={onClear}>
-            Clear
+            {t("automation.filter.clear")}
           </Button>
         </div>
       </div>

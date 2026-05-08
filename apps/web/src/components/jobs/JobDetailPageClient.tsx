@@ -23,6 +23,7 @@ import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeJobForUi } from "@/lib/utils/resource";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import { mockJobs } from "@/data/mockJobs";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { Job } from "@/types/job";
 
 interface JobDetailPageClientProps {
@@ -43,6 +44,7 @@ function profileAiContextCopy(job: Job): string | null {
 }
 
 export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [logAppOpen, setLogAppOpen] = useState(false);
@@ -110,85 +112,85 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         await refetchJob();
         return;
       }
-      showSuccess("No duplicate found.");
+      showSuccess(t("jobDetail.toast.noDuplicate"));
       await refetchJob();
     } catch {
-      showError("Duplicate check failed.");
+      showError(t("jobDetail.toast.duplicateFailed"));
     }
-  }, [id, jobsApi, refetchJob, withLoading]);
+  }, [id, jobsApi, refetchJob, withLoading, t]);
 
   const handleGenerateResearch = useCallback(async () => {
     try {
       const res = await withLoading("research", () => jobsApi.generateResearch({ id, execute: false }));
       if (res.status === "skipped") {
-        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        showInfo(res.message || t("jobDetail.toast.genericQueued"));
         return;
       }
-      showSuccess("Research generation started.");
+      showSuccess(t("jobDetail.toast.researchStarted"));
       startPollingJob();
     } catch {
-      showError("Failed to queue research generation.");
+      showError(t("jobDetail.toast.researchFail"));
     }
-  }, [id, jobsApi, startPollingJob, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading, t]);
 
   const handleGenerateDraft = useCallback(async () => {
     try {
       const res = await withLoading("draft", () => jobsApi.generateDraft({ id, execute: false }));
       if (res.status === "skipped") {
-        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        showInfo(res.message || t("jobDetail.toast.genericQueued"));
         return;
       }
-      showSuccess("Draft generation started.");
+      showSuccess(t("jobDetail.toast.draftStarted"));
       startPollingJob();
     } catch {
-      showError("Failed to queue draft generation.");
+      showError(t("jobDetail.toast.draftFail"));
     }
-  }, [id, jobsApi, startPollingJob, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading, t]);
 
   const handleRunAiProcessing = useCallback(async () => {
     try {
       const res = await withLoading("ai", () => jobsApi.runAiProcessing({ id, options: { mode: "full" } }));
       if (res.status === "skipped") {
-        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        showInfo(res.message || t("jobDetail.toast.genericQueued"));
         return;
       }
-      showSuccess("AI processing started.");
+      showSuccess(t("jobDetail.toast.aiStarted"));
       startPollingJob();
     } catch {
-      showError("Failed to queue AI processing.");
+      showError(t("jobDetail.toast.aiFail"));
     }
-  }, [id, jobsApi, startPollingJob, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading, t]);
 
   const handleProvisionFolders = useCallback(async () => {
     try {
       const res = await withLoading("folders", () => jobsApi.provisionFolders({ id, execute: false }));
       if (res.status === "skipped") {
-        showInfo(res.message || "This action was already queued recently. Please wait a moment.");
+        showInfo(res.message || t("jobDetail.toast.genericQueued"));
         return;
       }
-      showSuccess("Folder provisioning started.");
+      showSuccess(t("jobDetail.toast.foldersStarted"));
       startPollingJob();
     } catch {
-      showError("Failed to queue folder provisioning.");
+      showError(t("jobDetail.toast.foldersFail"));
     }
-  }, [id, jobsApi, startPollingJob, withLoading]);
+  }, [id, jobsApi, startPollingJob, withLoading, t]);
 
   const handleArchive = useCallback(async () => {
     try {
       await withLoading("archive", () => jobsApi.archive(id));
-      showSuccess("Job archived.");
+      showSuccess(t("jobDetail.toast.archived"));
       router.push("/jobs");
     } catch {
-      showError("Failed to archive job.");
+      showError(t("jobDetail.toast.archiveFail"));
     }
-  }, [id, jobsApi, router, withLoading]);
+  }, [id, jobsApi, router, withLoading, t]);
 
   const handleLogApplicationFromJob = useCallback(
     async (form: CreateApplicationFormPayload) => {
       const payload = buildCreateApplicationPayload({ ...form, jobId: form.jobId || id });
       try {
         await applicationsApi.createApplication(payload);
-        showSuccess("Application logged successfully.");
+        showSuccess(t("jobDetail.toast.appLogged"));
         setLogAppOpen(false);
         try {
           await jobsApi.update({ id, payload: { status: "Applied" } });
@@ -199,26 +201,26 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         await applicationsApi.refetch();
       } catch (e) {
         if (shouldUseMockFallback(e)) {
-          showInfo("API offline, added demo application locally.");
+          showInfo(t("jobDetail.toast.offlineApp"));
           setLogAppOpen(false);
         } else {
-          showError(e instanceof ApiError ? e.message : "Failed to log application.");
+          showError(e instanceof ApiError ? e.message : t("jobDetail.toast.appLogFail"));
         }
       }
     },
-    [applicationsApi, id, jobsApi, refetchJob]
+    [applicationsApi, id, jobsApi, refetchJob, t]
   );
 
   if (loading && !job) {
-    return <LoadingState title="Loading job..." description="Fetching job details from the backend." />;
+    return <LoadingState title={t("jobDetail.toast.loadingTitle")} description={t("jobDetail.toast.loadingDesc")} />;
   }
 
   if (!job) {
     return (
       <EmptyState
-        title="Job not found"
-        description="This job does not exist or could not be loaded."
-        actionLabel="Back to Jobs"
+        title={t("jobDetail.toast.notFoundTitle")}
+        description={t("jobDetail.toast.notFoundDesc")}
+        actionLabel={t("jobDetail.backToJobs")}
         onAction={() => router.push("/jobs")}
       />
     );
@@ -230,48 +232,48 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
     <>
       {isUsingFallback && <ApiStatusIndicator usingMock />}
       <ActionButton
-        label="Check Duplicate"
+        label={t("jobDetail.checkDuplicate")}
         loading={actionLoading === "duplicate"}
         disabled={actionDisabled}
         onClick={handleCheckDuplicate}
         variant="outline"
       />
       <ActionButton
-        label="Generate Research"
+        label={t("jobs.generateResearch")}
         loading={actionLoading === "research"}
         disabled={actionDisabled}
         onClick={handleGenerateResearch}
         variant="outline"
       />
       <ActionButton
-        label="Generate Draft"
+        label={t("jobs.generateDraft")}
         loading={actionLoading === "draft"}
         disabled={actionDisabled}
         onClick={handleGenerateDraft}
         variant="secondary"
       />
       <ActionButton
-        label="Run AI Processing"
+        label={t("jobDetail.runAi")}
         loading={actionLoading === "ai"}
         disabled={actionDisabled}
         onClick={handleRunAiProcessing}
       />
       <ActionButton
-        label="Provision Folders"
+        label={t("jobDetail.provisionFolders")}
         loading={actionLoading === "folders"}
         disabled={actionDisabled}
         onClick={handleProvisionFolders}
         variant="outline"
       />
       <ActionButton
-        label="Log Application"
+        label={t("jobDetail.logApplication")}
         loading={applicationsApi.createApplicationLoading}
         disabled={actionDisabled || applicationsApi.createApplicationLoading}
         onClick={() => setLogAppOpen(true)}
         variant="secondary"
       />
       <ActionButton
-        label="Archive"
+        label={t("jobs.archive")}
         loading={actionLoading === "archive"}
         disabled={actionDisabled}
         onClick={handleArchive}
@@ -329,13 +331,13 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         <div className="space-y-6 xl:col-span-2">
           <JobOverviewCard job={job} />
 
-          <SectionCard title="Job Description">
+          <SectionCard title={t("jobDetail.description")}>
             <p className="text-sm leading-6 text-[var(--text-2)]">{job.description}</p>
             {job.aiSummary && (
               <div className="mt-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
                 <div className="mb-1 flex items-center gap-2">
                   <SparklesIcon size={16} className="text-[var(--violet)]" />
-                  <p className="text-sm font-medium text-purple-800">AI Summary</p>
+                  <p className="text-sm font-medium text-purple-800">{t("jobDetail.aiSummary")}</p>
                 </div>
                 <p className="text-sm text-purple-700">{job.aiSummary}</p>
               </div>

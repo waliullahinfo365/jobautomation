@@ -27,6 +27,7 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const initialFilters: AutomationFilterState = {
   query: "",
@@ -35,6 +36,7 @@ const initialFilters: AutomationFilterState = {
 };
 
 export function AutomationPageClient() {
+  const { t } = useTranslation();
   const automationApi = useAutomationApi({ fallbackToMock: true });
 
   const [localModuleOverrides, setLocalModuleOverrides] = useState<Record<string, Partial<AutomationModule>>>({});
@@ -125,82 +127,88 @@ export function AutomationPageClient() {
             description: typeof payload.description === "string" ? payload.description : undefined,
           },
         }));
-        showInfo("API offline, updated module locally.");
+        showInfo(t("automation.toast.offlineLocalUpdate"));
         setConfigureOpen(false);
         return;
       }
       try {
         await automationApi.updateAutomationModule({ moduleKey: key, payload });
-        showSuccess("Automation configuration saved.");
+        showSuccess(t("automation.toast.configSaved"));
         setConfigureOpen(false);
         await automationApi.refetch();
       } catch {
-        showError("Could not save configuration.");
+        showError(t("automation.toast.saveConfigFailed"));
       }
     },
-    [automationApi]
+    [automationApi, t]
   );
 
-  const handleToggleStatus = async (moduleId: string, nextStatus: AutomationStatus) => {
-    const mod = modulesWithLogs.find((m) => m.id === moduleId);
-    if (!mod) return;
+  const handleToggleStatus = useCallback(
+    async (moduleId: string, nextStatus: AutomationStatus) => {
+      const mod = modulesWithLogs.find((m) => m.id === moduleId);
+      if (!mod) return;
 
-    if (automationApi.isUsingFallback) {
-      setLocalModuleOverrides((prev) => ({
-        ...prev,
-        [moduleId]: { ...prev[moduleId], status: nextStatus },
-      }));
-      showInfo("API offline, updated module locally.");
-      return;
-    }
-
-    try {
-      await automationApi.updateAutomationModule({
-        moduleKey: resolveAutomationBackendModuleKey(moduleId),
-        payload: { status: automationUiStatusToBackend(nextStatus) },
-      });
-      showSuccess("Module status updated.");
-      await automationApi.refetch();
-    } catch {
-      showError("Could not update module.");
-    }
-  };
-
-  const handleRunModule = async (module: AutomationModule) => {
-    const moduleKey = resolveAutomationBackendModuleKey(module.id);
-    const payload: Record<string, unknown> = {};
-
-    if (automationApi.isUsingFallback) {
-      showInfo("API offline — Run Now would queue this module when the API is available.");
-      return;
-    }
-
-    try {
-      const res = await automationApi.runAutomationModule({ moduleKey, payload, execute: false });
-      const r = (res && typeof res === "object" ? res : {}) as Record<string, unknown>;
-      const status = String(r.status ?? "").toLowerCase();
-      const message = String(r.message ?? "").toLowerCase();
-      if (status === "completed" || status === "success") {
-        showSuccess("Automation completed.");
-      } else if (
-        status.includes("queued") ||
-        status.includes("pending") ||
-        message.includes("queue") ||
-        message.includes("facade")
-      ) {
-        showInfo(
-          "Automation queued. In the current demo mode, background execution requires workers or inline execution."
-        );
-      } else if (status === "warning" || message.includes("warn")) {
-        showInfo("Automation queued with a warning — check logs for details.");
-      } else {
-        showSuccess(`Automation queued${r.operationId ? ` (run ${String(r.operationId).slice(0, 12)}…)` : ""}.`);
+      if (automationApi.isUsingFallback) {
+        setLocalModuleOverrides((prev) => ({
+          ...prev,
+          [moduleId]: { ...prev[moduleId], status: nextStatus },
+        }));
+        showInfo(t("automation.toast.offlineLocalUpdate"));
+        return;
       }
-      await automationApi.refetch();
-    } catch {
-      showError("Could not queue automation run.");
-    }
-  };
+
+      try {
+        await automationApi.updateAutomationModule({
+          moduleKey: resolveAutomationBackendModuleKey(moduleId),
+          payload: { status: automationUiStatusToBackend(nextStatus) },
+        });
+        showSuccess(t("automation.toast.statusUpdated"));
+        await automationApi.refetch();
+      } catch {
+        showError(t("automation.toast.updateFailed"));
+      }
+    },
+    [automationApi, modulesWithLogs, t]
+  );
+
+  const handleRunModule = useCallback(
+    async (module: AutomationModule) => {
+      const moduleKey = resolveAutomationBackendModuleKey(module.id);
+      const payload: Record<string, unknown> = {};
+
+      if (automationApi.isUsingFallback) {
+        showInfo(t("automation.toast.offlineRunHint"));
+        return;
+      }
+
+      try {
+        const res = await automationApi.runAutomationModule({ moduleKey, payload, execute: false });
+        const r = (res && typeof res === "object" ? res : {}) as Record<string, unknown>;
+        const status = String(r.status ?? "").toLowerCase();
+        const message = String(r.message ?? "").toLowerCase();
+        if (status === "completed" || status === "success") {
+          showSuccess(t("automation.toast.completed"));
+        } else if (
+          status.includes("queued") ||
+          status.includes("pending") ||
+          message.includes("queue") ||
+          message.includes("facade")
+        ) {
+          showInfo(t("automation.toast.queuedDemo"));
+        } else if (status === "warning" || message.includes("warn")) {
+          showInfo(t("automation.toast.queuedWarning"));
+        } else {
+          showSuccess(
+            `${t("automation.toast.queuedPartial")}${r.operationId ? ` (${String(r.operationId).slice(0, 12)}…)` : "."}`
+          );
+        }
+        await automationApi.refetch();
+      } catch {
+        showError(t("automation.toast.queueFailed"));
+      }
+    },
+    [automationApi, t]
+  );
 
   const initialModulesLoading =
     automationApi.modulesQuery.loading && automationApi.modulesQuery.data === undefined;
@@ -208,8 +216,8 @@ export function AutomationPageClient() {
   if (initialModulesLoading) {
     return (
       <LoadingState
-        title="Loading automation"
-        description="Fetching modules and execution logs…"
+        title={t("automation.loadingTitle")}
+        description={t("automation.loadingDesc")}
         className="min-h-[40vh]"
       />
     );
@@ -222,9 +230,9 @@ export function AutomationPageClient() {
   ) {
     return (
       <ErrorState
-        title="Automation unavailable"
+        title={t("automation.errorUnavailable")}
         message={automationApi.error.message}
-        actionLabel="Retry"
+        actionLabel={t("common.tryAgain")}
         onAction={() => void automationApi.refetch()}
       />
     );
@@ -235,9 +243,9 @@ export function AutomationPageClient() {
       <div className="space-y-6">
         <PageHeader
           icon={AutomationIcon}
-          eyebrow="Automation Studio"
-          title="Automation Center"
-          description="Monitor, control, and review every automation module in the job application workflow."
+          eyebrow={t("automation.eyebrow")}
+          title={t("automation.centerTitle")}
+          description={t("automation.centerDescription")}
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2">
               {automationApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
@@ -249,11 +257,11 @@ export function AutomationPageClient() {
                 onClick={() => void automationApi.refetch()}
               >
                 <RefreshIcon size={16} className="mr-1" />
-                Refresh
+                {t("automation.refresh")}
               </Button>
               <Button type="button" onClick={() => openConfigure()}>
                 <SettingsIcon size={16} className="mr-2" />
-                Configure Automation
+                {t("automation.configure")}
               </Button>
             </div>
           }
@@ -264,7 +272,8 @@ export function AutomationPageClient() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <AutomationTabs value={activeTab} onChange={setActiveTab} />
           <p className="text-xs text-[var(--text-3)]">
-            Search and tabs filter the loaded module list{automationApi.isUsingFallback ? " (demo dataset)." : "."}
+            {t("automation.filterHint")}
+            {automationApi.isUsingFallback ? t("automation.filterHintSuffixDemo") : t("automation.filterHintSuffixLive")}
           </p>
         </div>
 
@@ -277,14 +286,14 @@ export function AutomationPageClient() {
 
         {modulesWithLogs.length === 0 ? (
           <EmptyState
-            title="No automation modules"
-            description="Seed automation modules or connect the API to load modules for this workspace."
+            title={t("automation.emptyNoModules")}
+            description={t("automation.emptyNoModulesDesc")}
           />
         ) : filteredModules.length === 0 ? (
           <EmptyState
-            title="No matching modules"
-            description="Adjust filters or clear search."
-            actionLabel="Clear filters"
+            title={t("automation.emptyNoMatch")}
+            description={t("automation.emptyNoMatchDesc")}
+            actionLabel={t("automation.clearFilters")}
             onAction={() => setFilters(initialFilters)}
           />
         ) : (

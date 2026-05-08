@@ -22,6 +22,7 @@ import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 import { AnimatePresence, motion } from "framer-motion";
 
 const initialFilters: ApplicationFilterState = {
@@ -94,6 +95,7 @@ function filterApplications(applications: Application[], filters: ApplicationFil
 }
 
 export function ApplicationsPageClient() {
+  const { t } = useTranslation();
   const applicationsApi = useApplicationsApi({ fallbackToMock: true });
   const integrationsApi = useIntegrationsApi({ fallbackToMock: false });
 
@@ -368,16 +370,16 @@ export function ApplicationsPageClient() {
       <div className="space-y-6">
         <PageHeader
           icon={ApplicationsIcon}
-          eyebrow="Application Workflow"
-          title="Applications"
-          description="Monitor submitted applications, replies, follow-ups, and interview progress."
+          eyebrow={t("applications.eyebrow")}
+          title={t("applications.title")}
+          description={t("applications.description")}
           actions={
             <Button type="button" onClick={() => setIsLogApplicationOpen(true)}>
-              Log Application
+              {t("applications.logApplication")}
             </Button>
           }
         />
-        <LoadingState title="Loading applications..." description="Fetching application pipeline data." />
+        <LoadingState title={t("applications.loadingTitle")} description={t("applications.loadingDesc")} />
       </div>
     );
   }
@@ -390,9 +392,9 @@ export function ApplicationsPageClient() {
       <div className="space-y-6">
         <PageHeader
           icon={ApplicationsIcon}
-          eyebrow="Application Workflow"
-          title="Applications"
-          description="Monitor submitted applications, replies, follow-ups, and interview progress."
+          eyebrow={t("applications.eyebrow")}
+          title={t("applications.title")}
+          description={t("applications.description")}
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -405,7 +407,7 @@ export function ApplicationsPageClient() {
                 Process Due Follow-Ups
               </Button>
               <Button type="button" onClick={() => setIsLogApplicationOpen(true)}>
-                Log Application
+                {t("applications.logApplication")}
               </Button>
             </div>
           }

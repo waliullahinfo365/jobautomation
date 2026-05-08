@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { SearchIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
+import { jobFilterPriorityLabel, jobFilterSourceLabel, jobFilterStatusLabel } from "@/i18n/job-filters";
 
 interface JobFiltersProps {
   filters: JobFiltersType;
@@ -12,14 +14,42 @@ interface JobFiltersProps {
   onClear: () => void;
 }
 
+const STATUSES = [
+  "All",
+  "New",
+  "Research",
+  "Drafting",
+  "Ready to Apply",
+  "Applied",
+  "Interview",
+  "Offer",
+  "Rejected",
+  "Archived",
+] as const satisfies readonly JobFiltersType["status"][];
+
+const PRIORITIES = ["All", "Low", "Medium", "High", "Urgent"] as const satisfies readonly JobFiltersType["priority"][];
+
+const SOURCES = [
+  "All",
+  "Gmail",
+  "LinkedIn",
+  "Indeed",
+  "Company Website",
+  "Referral",
+  "Manual",
+  "Other",
+] as const satisfies readonly JobFiltersType["source"][];
+
 export function JobFilters({ filters, onChange, onClear }: JobFiltersProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="relative xl:col-span-2">
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]" />
           <Input
-            placeholder="Search by company, position, or source"
+            placeholder={t("jobs.searchPlaceholder")}
             className="pl-9"
             value={filters.query ?? ""}
             onChange={(e) => onChange({ ...filters, query: e.target.value })}
@@ -29,50 +59,33 @@ export function JobFilters({ filters, onChange, onClear }: JobFiltersProps) {
         <Select
           value={filters.status ?? "All"}
           onChange={(e) => onChange({ ...filters, status: e.target.value as JobFiltersType["status"] })}
-          options={[
-            { label: "All Statuses", value: "All" },
-            { label: "New", value: "New" },
-            { label: "Research", value: "Research" },
-            { label: "Drafting", value: "Drafting" },
-            { label: "Ready to Apply", value: "Ready to Apply" },
-            { label: "Applied", value: "Applied" },
-            { label: "Interview", value: "Interview" },
-            { label: "Offer", value: "Offer" },
-            { label: "Rejected", value: "Rejected" },
-            { label: "Archived", value: "Archived" },
-          ]}
+          options={STATUSES.map((value) => ({
+            value: String(value),
+            label: jobFilterStatusLabel(value as JobFiltersType["status"], t),
+          }))}
         />
 
         <Select
           value={filters.priority ?? "All"}
           onChange={(e) => onChange({ ...filters, priority: e.target.value as JobFiltersType["priority"] })}
-          options={[
-            { label: "All Priorities", value: "All" },
-            { label: "Low", value: "Low" },
-            { label: "Medium", value: "Medium" },
-            { label: "High", value: "High" },
-            { label: "Urgent", value: "Urgent" },
-          ]}
+          options={PRIORITIES.map((value) => ({
+            value: String(value),
+            label: jobFilterPriorityLabel(value as JobFiltersType["priority"], t),
+          }))}
         />
 
         <div className="flex gap-2">
           <Select
             value={filters.source ?? "All"}
             onChange={(e) => onChange({ ...filters, source: e.target.value as JobFiltersType["source"] })}
-            options={[
-              { label: "All Sources", value: "All" },
-              { label: "Gmail", value: "Gmail" },
-              { label: "LinkedIn", value: "LinkedIn" },
-              { label: "Indeed", value: "Indeed" },
-              { label: "Company Website", value: "Company Website" },
-              { label: "Referral", value: "Referral" },
-              { label: "Manual", value: "Manual" },
-              { label: "Other", value: "Other" },
-            ]}
+            options={SOURCES.map((value) => ({
+              value: String(value),
+              label: jobFilterSourceLabel(value as JobFiltersType["source"], t),
+            }))}
             className="flex-1"
           />
           <Button type="button" variant="outline" onClick={onClear}>
-            Clear
+            {t("jobs.clear")}
           </Button>
         </div>
       </div>

@@ -18,6 +18,7 @@ import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { normalizeJobForUi } from "@/lib/utils/resource";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { Job, JobFilters as JobFiltersType } from "@/types/job";
 
 const initialFilters: JobFiltersType = {
@@ -62,6 +63,7 @@ function buildLocalDemoJob(input: CreateJobFormPayload): Job {
 }
 
 export default function JobsPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<JobFiltersType>(initialFilters);
   const [view, setView] = useState<ViewMode>("table");
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
@@ -96,54 +98,63 @@ export default function JobsPage() {
     });
   }, [jobs, filters]);
 
-  const handleArchive = useCallback(async (id: string) => {
-    try {
-      await jobsApi.archive(id);
-      showSuccess("Job archived successfully.");
-      void jobsApi.refetch();
-    } catch {
-      showError("Failed to archive job. Please try again.");
-    }
-  }, [jobsApi]);
+  const handleArchive = useCallback(
+    async (id: string) => {
+      try {
+        await jobsApi.archive(id);
+        showSuccess(t("jobs.toastArchived"));
+        void jobsApi.refetch();
+      } catch {
+        showError(t("jobs.toastArchiveFailed"));
+      }
+    },
+    [jobsApi, t]
+  );
 
-  const handleGenerateResearch = useCallback(async (id: string) => {
-    try {
-      await jobsApi.generateResearch({ id, execute: false });
-      showSuccess("Research generation queued.");
-    } catch {
-      showError("Failed to queue research generation.");
-    }
-  }, [jobsApi]);
+  const handleGenerateResearch = useCallback(
+    async (id: string) => {
+      try {
+        await jobsApi.generateResearch({ id, execute: false });
+        showSuccess(t("jobs.toastResearchQueued"));
+      } catch {
+        showError(t("jobs.toastResearchFail"));
+      }
+    },
+    [jobsApi, t]
+  );
 
-  const handleGenerateDraft = useCallback(async (id: string) => {
-    try {
-      await jobsApi.generateDraft({ id, execute: false });
-      showSuccess("Draft generation queued.");
-    } catch {
-      showError("Failed to queue draft generation.");
-    }
-  }, [jobsApi]);
+  const handleGenerateDraft = useCallback(
+    async (id: string) => {
+      try {
+        await jobsApi.generateDraft({ id, execute: false });
+        showSuccess(t("jobs.toastDraftQueued"));
+      } catch {
+        showError(t("jobs.toastDraftFail"));
+      }
+    },
+    [jobsApi, t]
+  );
 
   const handleCreateJob = useCallback(
     async (form: CreateJobFormPayload) => {
       const payload = buildCreateJobPayload(form);
       try {
         await jobsApi.createJob(payload);
-        showSuccess("Job created successfully.");
+        showSuccess(t("jobs.toastCreated"));
         setIsAddJobOpen(false);
         await jobsApi.refetch();
       } catch (e) {
         if (shouldUseMockFallback(e)) {
           setLocalJobsOverlay((prev) => [buildLocalDemoJob(form), ...prev]);
-          showInfo("API offline, added demo job locally.");
+          showInfo(t("jobs.toastOfflineDemo"));
           setIsAddJobOpen(false);
           return;
         }
-        const msg = e instanceof ApiError ? e.message : "Failed to create job.";
+        const msg = e instanceof ApiError ? e.message : t("jobs.toastCreateFail");
         showError(msg);
       }
     },
-    [jobsApi]
+    [jobsApi, t]
   );
 
   if (jobsApi.loading && !jobsApi.data) {
@@ -151,16 +162,16 @@ export default function JobsPage() {
       <div className="space-y-6">
         <PageHeader
           icon={JobsIcon}
-          eyebrow="Job Tracker"
-          title="Jobs Pipeline"
-          description="Track every opportunity from intake to offer."
+          eyebrow={t("jobs.eyebrow")}
+          title={t("jobs.title")}
+          description={t("jobs.description")}
           actions={
             <Button type="button" onClick={() => setIsAddJobOpen(true)}>
-              Add Job
+              {t("jobs.addJob")}
             </Button>
           }
         />
-        <LoadingState title="Loading jobs..." description="Fetching your job pipeline from the backend." />
+        <LoadingState title={t("jobs.loadingTitle")} description={t("jobs.loadingDesc")} />
       </div>
     );
   }
@@ -169,14 +180,14 @@ export default function JobsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={JobsIcon}
-        eyebrow="Job Tracker"
-        title="Jobs Pipeline"
-        description="Track every opportunity from intake to offer."
+        eyebrow={t("jobs.eyebrow")}
+        title={t("jobs.title")}
+        description={t("jobs.description")}
         actions={
           <div className="flex items-center gap-2">
             {jobsApi.isUsingFallback && <ApiStatusIndicator usingMock />}
             <Button type="button" onClick={() => setIsAddJobOpen(true)}>
-              Add Job
+              {t("jobs.addJob")}
             </Button>
           </div>
         }
@@ -190,12 +201,12 @@ export default function JobsPage() {
       />
 
       <div className="jf-kpi-grid">
-        <KpiCard label="New Jobs" value={jobs.filter((j) => j.status === "New").length} />
-        <KpiCard label="Ready to Apply" value={jobs.filter((j) => j.status === "Ready to Apply").length} />
-        <KpiCard label="Applications Sent" value={jobs.filter((j) => j.status === "Applied").length} />
-        <KpiCard label="Interviews" value={jobs.filter((j) => j.status === "Interview").length} />
-        <KpiCard label="Offers" value={jobs.filter((j) => j.status === "Offer").length} />
-        <KpiCard label="Rejected" value={jobs.filter((j) => j.status === "Rejected").length} />
+        <KpiCard label={t("jobs.kpiNew")} value={jobs.filter((j) => j.status === "New").length} />
+        <KpiCard label={t("jobs.kpiReady")} value={jobs.filter((j) => j.status === "Ready to Apply").length} />
+        <KpiCard label={t("jobs.kpiApplied")} value={jobs.filter((j) => j.status === "Applied").length} />
+        <KpiCard label={t("jobs.kpiInterviews")} value={jobs.filter((j) => j.status === "Interview").length} />
+        <KpiCard label={t("jobs.kpiOffers")} value={jobs.filter((j) => j.status === "Offer").length} />
+        <KpiCard label={t("jobs.kpiRejected")} value={jobs.filter((j) => j.status === "Rejected").length} />
       </div>
 
       <div className="space-y-4">

@@ -6,13 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { AutomationModule, AutomationStatus } from "@/types/automation";
 import { automationUiStatusToBackend } from "@/lib/utils/resource";
-
-const STATUS_OPTIONS: { label: string; value: AutomationStatus }[] = [
-  { label: "Active", value: "Active" },
-  { label: "Paused", value: "Paused" },
-  { label: "Failed", value: "Failed" },
-  { label: "Needs setup", value: "Needs Setup" },
-];
+import { useTranslation } from "@/i18n/useTranslation";
 
 type Props = {
   open: boolean;
@@ -24,6 +18,18 @@ type Props = {
 };
 
 export function ConfigureAutomationModal({ open, onClose, modules, initialModuleId, onSave, loading }: Props) {
+  const { t } = useTranslation();
+  const statusOptions = useMemo(
+    () =>
+      [
+        { value: "Active" as const, label: t("automation.moduleStatus.active") },
+        { value: "Paused" as const, label: t("automation.moduleStatus.paused") },
+        { value: "Failed" as const, label: t("automation.moduleStatus.failed") },
+        { value: "Needs Setup" as const, label: t("automation.moduleStatus.needsSetup") },
+      ] as const,
+    [t]
+  );
+
   const moduleOptions = useMemo(
     () => modules.map((m) => ({ label: `${m.name} (${m.id})`, value: m.id })),
     [modules]
@@ -78,58 +84,64 @@ export function ConfigureAutomationModal({ open, onClose, modules, initialModule
         aria-labelledby="configure-auto-title"
       >
         <h2 id="configure-auto-title" className="text-lg font-semibold tracking-tight text-[var(--text-1)]">
-          Configure automation
+          {t("automation.configureModal.title")}
         </h2>
-        <p className="mt-1 text-sm text-[var(--text-3)]">
-          Update how this module runs. Changes apply to your workspace on the API.
-        </p>
+        <p className="mt-1 text-sm text-[var(--text-3)]">{t("automation.configureModal.description")}</p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Module</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("automation.configureModal.moduleLabel")}</label>
             <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)} options={moduleOptions} />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Status</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("automation.configureModal.statusLabel")}</label>
             <Select
               value={status}
               onChange={(e) => setStatus(e.target.value as AutomationStatus)}
-              options={STATUS_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+              options={statusOptions.map((o) => ({ label: o.label, value: o.value }))}
             />
           </div>
 
           <label className="flex items-center gap-2 text-sm text-[var(--text-2)]">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-            Module enabled
+            {t("automation.configureModal.moduleEnabled")}
           </label>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Schedule / cron (optional)</label>
-            <Input value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="0 9 * * * or human text" />
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("automation.configureModal.scheduleLabel")}</label>
+            <Input
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+              placeholder={t("automation.configureModal.schedulePlaceholder")}
+            />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Trigger type</label>
-            <Input value={triggerType} onChange={(e) => setTriggerType(e.target.value)} placeholder="Scheduled, Webhook, Manual…" />
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("automation.configureModal.triggerTypeLabel")}</label>
+            <Input
+              value={triggerType}
+              onChange={(e) => setTriggerType(e.target.value)}
+              placeholder={t("automation.configureModal.triggerPlaceholder")}
+            />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Description / notes</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("automation.configureModal.descriptionLabel")}</label>
             <textarea
               className="flex min-h-[88px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What this automation does in your process…"
+              placeholder={t("automation.configureModal.descriptionPlaceholder")}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading || !moduleId}>
-              {loading ? "Saving…" : "Save configuration"}
+              {loading ? t("automation.configureModal.saving") : t("automation.configureModal.saveButton")}
             </Button>
           </div>
         </form>
