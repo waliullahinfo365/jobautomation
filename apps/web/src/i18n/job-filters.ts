@@ -35,6 +35,12 @@ export function jobFilterStatusLabel(value: JobFilters["status"], t: (k: string)
   return key ? t(key) : value;
 }
 
+/** Pipeline status label for arbitrary strings (e.g. related job status on contacts). */
+export function jobPipelineStatusDisplayLabel(status: string, t: (k: string) => string): string {
+  const key = STATUS_TO_KEY[status];
+  return key ? t(key) : status;
+}
+
 export function jobFilterPriorityLabel(value: JobFilters["priority"], t: (k: string) => string): string {
   if (!value || value === "All") return t("jobs.allPriorities");
   const key = PRIORITY_TO_KEY[value];

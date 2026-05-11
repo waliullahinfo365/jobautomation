@@ -1,7 +1,12 @@
+"use client";
+
 import type { ContactRelatedJob } from "@/types/contact";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/useTranslation";
+import { jobPipelineStatusDisplayLabel } from "@/i18n/job-filters";
 
 export function ContactRelatedJobs({ jobs }: { jobs: ContactRelatedJob[] }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       {jobs.map((job) => (
@@ -9,8 +14,10 @@ export function ContactRelatedJobs({ jobs }: { jobs: ContactRelatedJob[] }) {
           <p className="text-sm font-medium text-foreground">{job.company}</p>
           <p className="text-xs text-muted-foreground">{job.position}</p>
           <div className="mt-1 flex items-center justify-between">
-            <Badge variant="default">{job.status}</Badge>
-            <a href="#" className="text-xs text-muted-foreground hover:text-foreground hover:underline">View Job</a>
+            <Badge variant="default">{jobPipelineStatusDisplayLabel(job.status, t)}</Badge>
+            <a href="#" className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+              {t("contacts.relatedJobs.viewJob")}
+            </a>
           </div>
         </div>
       ))}

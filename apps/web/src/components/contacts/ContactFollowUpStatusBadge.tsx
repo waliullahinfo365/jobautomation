@@ -1,5 +1,9 @@
+"use client";
+
 import type { ContactFollowUpStatus } from "@/types/contact";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/useTranslation";
+import { contactFollowUpStatusLabelKey } from "./contact-labels";
 
 const styles: Record<ContactFollowUpStatus, string> = {
   "Not Needed": "bg-[var(--surface-3)] text-[var(--text-2)]",
@@ -10,5 +14,6 @@ const styles: Record<ContactFollowUpStatus, string> = {
 };
 
 export function ContactFollowUpStatusBadge({ status }: { status: ContactFollowUpStatus }) {
-  return <Badge className={styles[status]}>{status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={styles[status]}>{t(contactFollowUpStatusLabelKey(status))}</Badge>;
 }

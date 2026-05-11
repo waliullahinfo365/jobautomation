@@ -1,5 +1,9 @@
+"use client";
+
 import type { ContactRelationship } from "@/types/contact";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/useTranslation";
+import { contactRelationshipLabelKey } from "./contact-labels";
 
 const styles: Record<ContactRelationship, string> = {
   Recruiter: "bg-[var(--accent-bg)] text-[var(--accent-hi)]",
@@ -11,5 +15,6 @@ const styles: Record<ContactRelationship, string> = {
 };
 
 export function ContactRelationshipBadge({ relationship }: { relationship: ContactRelationship }) {
-  return <Badge className={styles[relationship]}>{relationship}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={styles[relationship]}>{t(contactRelationshipLabelKey(relationship))}</Badge>;
 }

@@ -3,58 +3,58 @@
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "types": "./src/index.ts",
   "typesVersions": {
     "*": {
-      "schemas": ["dist/schemas/index.d.ts"],
-      "schemas/*": ["dist/schemas/*"],
-      "constants/*": ["dist/constants/*"],
-      "types/*": ["dist/types/*"],
-      "utils/*": ["dist/utils/*"],
-      "env/*": ["dist/env/*"],
-      "*": ["dist/*"]
+      "schemas": ["./src/schemas/index.ts"],
+      "schemas/*": ["./src/schemas/*.ts"],
+      "constants/*": ["./src/constants/*.ts"],
+      "types/*": ["./src/types/*.ts"],
+      "utils/*": ["./src/utils/*.ts"],
+      "env/*": ["./src/env/*.ts"],
+      "*": ["./src/*.ts"]
     }
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js"
     },
     "./types/*": {
-      "types": "./dist/types/*.d.ts",
+      "types": "./src/types/*.ts",
       "require": "./dist/types/*.js",
       "import": "./dist/types/*.js",
       "default": "./dist/types/*.js"
     },
     "./constants/ai": {
-      "types": "./dist/constants/ai.d.ts",
+      "types": "./src/constants/ai.ts",
       "require": "./dist/constants/ai.js",
       "import": "./dist/constants/ai.js"
     },
     "./constants/*": {
-      "types": "./dist/constants/*.d.ts",
+      "types": "./src/constants/*.ts",
       "require": "./dist/constants/*.js",
       "import": "./dist/constants/*.js"
     },
     "./utils/*": {
-      "types": "./dist/utils/*.d.ts",
+      "types": "./src/utils/*.ts",
       "require": "./dist/utils/*.js",
       "import": "./dist/utils/*.js",
       "default": "./dist/utils/*.js"
     },
     "./schemas": {
-      "types": "./dist/schemas/index.d.ts",
+      "types": "./src/schemas/index.ts",
       "require": "./dist/schemas/index.js",
       "import": "./dist/schemas/index.js"
     },
     "./schemas/*": {
-      "types": "./dist/schemas/*.d.ts",
+      "types": "./src/schemas/*.ts",
       "require": "./dist/schemas/*.js",
       "import": "./dist/schemas/*.js"
     },
     "./env/*": {
-      "types": "./dist/env/*.d.ts",
+      "types": "./src/env/*.ts",
       "require": "./dist/env/*.js",
       "import": "./dist/env/*.js",
       "default": "./dist/env/*.js"

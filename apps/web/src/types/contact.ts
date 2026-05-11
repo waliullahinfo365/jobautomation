@@ -8,7 +8,13 @@ export type ContactRelationship =
 
 export type ContactFollowUpStatus = "Not Needed" | "Scheduled" | "Due Today" | "Overdue" | "Completed";
 
-export type ContactTab = "All Contacts" | "Follow-ups Due" | "Recruiters" | "Referrals" | "Hiring Managers" | "Archived";
+export type ContactTab =
+  | "all"
+  | "followUpsDue"
+  | "recruiters"
+  | "referrals"
+  | "hiringManagers"
+  | "archived";
 
 export interface ContactRelatedJob {
   id: string;

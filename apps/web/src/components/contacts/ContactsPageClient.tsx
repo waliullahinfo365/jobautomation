@@ -23,6 +23,8 @@ import { ContactDetailPanel } from "./ContactDetailPanel";
 import { FollowUpsDueSection } from "./FollowUpsDueSection";
 import { ImportContactsModal } from "./ImportContactsModal";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "@/i18n/useTranslation";
+import { contactRelationshipLabelKey } from "./contact-labels";
 
 const initialFilters: ContactFilterState = {
   query: "",
@@ -30,6 +32,15 @@ const initialFilters: ContactFilterState = {
   followUpStatus: "All",
   relatedJob: "All Jobs",
 };
+
+const CREATE_RELATIONSHIP_OPTIONS: ContactRelationship[] = [
+  "Recruiter",
+  "Hiring Manager",
+  "Referral",
+  "Employee",
+  "Networking",
+  "Other",
+];
 
 function buildLocalContact(input: {
   name: string;
@@ -73,9 +84,10 @@ function buildLocalContact(input: {
 }
 
 export function ContactsPageClient() {
+  const { t } = useTranslation();
   const contactsApi = useContactsApi({ fallbackToMock: true });
 
-  const [tab, setTab] = useState<ContactTab>("All Contacts");
+  const [tab, setTab] = useState<ContactTab>("all");
   const [filters, setFilters] = useState<ContactFilterState>(initialFilters);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -142,15 +154,15 @@ export function ContactsPageClient() {
   const filteredContacts = useMemo(() => {
     return contacts.filter((c) => {
       const matchesTab =
-        tab === "All Contacts"
+        tab === "all"
           ? true
-          : tab === "Follow-ups Due"
+          : tab === "followUpsDue"
             ? c.followUpStatus === "Due Today" || c.followUpStatus === "Overdue"
-            : tab === "Recruiters"
+            : tab === "recruiters"
               ? c.relationship === "Recruiter"
-              : tab === "Referrals"
+              : tab === "referrals"
                 ? c.relationship === "Referral"
-                : tab === "Hiring Managers"
+                : tab === "hiringManagers"
                   ? c.relationship === "Hiring Manager"
                   : c.archived;
 
@@ -180,24 +192,24 @@ export function ContactsPageClient() {
             updatedAt: new Date().toISOString(),
           },
         }));
-        showInfo("API offline, updated demo data locally.");
-        showSuccess("Marked followed up.");
+        showInfo(t("contacts.toast.apiOfflineDemo"));
+        showSuccess(t("contacts.toast.markedFollowedUp"));
         return;
       }
       try {
         await contactsApi.markFollowedUp(contactId);
-        showSuccess("Marked followed up.");
+        showSuccess(t("contacts.toast.markedFollowedUp"));
         await contactsApi.refetch();
       } catch {
-        showError("Failed to update contact.");
+        showError(t("contacts.toast.failedUpdateContact"));
       }
     },
-    [contactsApi]
+    [contactsApi, t]
   );
 
   const submitCreateContact = async () => {
     if (!createForm.name.trim()) {
-      showError("Name is required.");
+      showError(t("contacts.toast.nameRequired"));
       return;
     }
     const body = {
@@ -218,8 +230,8 @@ export function ContactsPageClient() {
         email: createForm.email,
       });
       setLocalNewContacts((prev) => [...prev, row]);
-      showInfo("API offline, updated demo data locally.");
-      showSuccess("Contact added (demo).");
+      showInfo(t("contacts.toast.apiOfflineDemo"));
+      showSuccess(t("contacts.toast.contactAddedDemo"));
       setCreateOpen(false);
       setCreateForm({ name: "", company: "", role: "", relationship: "Recruiter", email: "" });
       return;
@@ -227,12 +239,12 @@ export function ContactsPageClient() {
 
     try {
       await contactsApi.createContact(body);
-      showSuccess("Contact created.");
+      showSuccess(t("contacts.toast.contactCreated"));
       await contactsApi.refetch();
       setCreateOpen(false);
       setCreateForm({ name: "", company: "", role: "", relationship: "Recruiter", email: "" });
     } catch {
-      showError("Could not create contact.");
+      showError(t("contacts.toast.couldNotCreate"));
     }
   };
 
@@ -248,8 +260,8 @@ export function ContactsPageClient() {
         })
       );
       setLocalNewContacts((prev) => [...prev, ...additions]);
-      showInfo("API offline, updated demo data locally.");
-      showSuccess(`Imported ${additions.length} contacts.`);
+      showInfo(t("contacts.toast.apiOfflineDemo"));
+      showSuccess(t("contacts.toast.importedCount").replace("{{count}}", String(additions.length)));
       setImportOpen(false);
       return;
     }
@@ -273,38 +285,40 @@ export function ContactsPageClient() {
       }
     }
     if (imported === 0) {
-      showError("No contacts were imported.");
+      showError(t("contacts.toast.noImported"));
       return;
     }
     await contactsApi.refetch();
-    showSuccess(`Imported ${imported} contacts.`);
+    showSuccess(t("contacts.toast.importedCount").replace("{{count}}", String(imported)));
     setImportOpen(false);
   }
 
   const isInitialLoading = contactsApi.loading && contactsApi.data === undefined;
+
+  const headerActions = (
+    <>
+      <Button variant="outline" type="button" onClick={() => setImportOpen(true)}>
+        <DownloadIcon size={16} className="mr-2" />
+        {t("contacts.importContacts")}
+      </Button>
+      <Button type="button" onClick={() => setCreateOpen(true)}>
+        <PlusIcon size={16} className="mr-2" />
+        {t("contacts.addContact")}
+      </Button>
+    </>
+  );
 
   if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <PageHeader
           icon={ContactsIcon}
-          eyebrow="Network CRM"
-          title="Contacts"
-          description="Manage recruiters, referrals, hiring managers, and networking follow-ups."
-          actions={
-            <>
-              <Button variant="outline" type="button" onClick={() => setImportOpen(true)}>
-                <DownloadIcon size={16} className="mr-2" />
-                Import Contacts
-              </Button>
-              <Button type="button">
-                <PlusIcon size={16} className="mr-2" />
-                Add Contact
-              </Button>
-            </>
-          }
+          eyebrow={t("contacts.pageEyebrow")}
+          title={t("contacts.title")}
+          description={t("contacts.pageDescription")}
+          actions={headerActions}
         />
-        <LoadingState title="Loading contacts..." description="Fetching your network from the backend." />
+        <LoadingState title={t("contacts.loadingTitle")} description={t("contacts.loadingNetworkDesc")} />
       </div>
     );
   }
@@ -312,26 +326,20 @@ export function ContactsPageClient() {
   const emptyAll = contacts.length === 0;
   const emptyFiltered = !emptyAll && filteredContacts.length === 0;
 
+  const relationshipSelectOptions = CREATE_RELATIONSHIP_OPTIONS.map((rel) => ({
+    label: t(contactRelationshipLabelKey(rel)),
+    value: rel,
+  }));
+
   return (
     <>
       <div className="space-y-6">
         <PageHeader
           icon={ContactsIcon}
-          eyebrow="Network CRM"
-          title="Contacts"
-          description="Manage recruiters, referrals, hiring managers, and networking follow-ups."
-          actions={
-            <>
-              <Button variant="outline" type="button" onClick={() => setImportOpen(true)}>
-                <DownloadIcon size={16} className="mr-2" />
-                Import Contacts
-              </Button>
-              <Button type="button" onClick={() => setCreateOpen(true)}>
-                <PlusIcon size={16} className="mr-2" />
-                Add Contact
-              </Button>
-            </>
-          }
+          eyebrow={t("contacts.pageEyebrow")}
+          title={t("contacts.title")}
+          description={t("contacts.pageDescription")}
+          actions={headerActions}
         />
 
         <ContactStatsCards stats={stats} />
@@ -346,19 +354,19 @@ export function ContactsPageClient() {
 
         {emptyAll ? (
           <EmptyState
-            title="No contacts yet"
-            description="Import contacts or add one manually to track follow-ups."
-            actionLabel="Add contact"
+            title={t("contacts.noContactsTitle")}
+            description={t("contacts.noContactsDesc")}
+            actionLabel={t("contacts.addContact")}
             onAction={() => setCreateOpen(true)}
           />
         ) : emptyFiltered ? (
           <EmptyState
-            title="No matching contacts"
-            description="Try another tab or clear filters."
-            actionLabel="Clear filters"
+            title={t("contacts.noMatchingTitle")}
+            description={t("contacts.noMatchingDesc")}
+            actionLabel={t("contacts.clearFilters")}
             onAction={() => setFilters(initialFilters)}
           />
-        ) : tab === "Follow-ups Due" ? (
+        ) : tab === "followUpsDue" ? (
           <FollowUpsDueSection contacts={dueContacts} onMarkDone={(id) => void handleMarkFollowedUp(id)} />
         ) : (
           <ContactsTable
@@ -396,11 +404,11 @@ export function ContactsPageClient() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
             >
-              <h3 className="text-lg font-semibold text-foreground">Add contact</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Creates a tenant-scoped contact via the API.</p>
+              <h3 className="text-lg font-semibold text-foreground">{t("contacts.createModal.title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("contacts.createModal.subtitle")}</p>
               <div className="mt-4 grid gap-3">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Name *
+                  {t("contacts.createModal.nameRequired")}
                   <Input
                     className="mt-1"
                     value={createForm.name}
@@ -408,7 +416,7 @@ export function ContactsPageClient() {
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Company
+                  {t("contacts.createModal.company")}
                   <Input
                     className="mt-1"
                     value={createForm.company}
@@ -416,7 +424,7 @@ export function ContactsPageClient() {
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Role
+                  {t("contacts.createModal.role")}
                   <Input
                     className="mt-1"
                     value={createForm.role}
@@ -424,25 +432,18 @@ export function ContactsPageClient() {
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Relationship
+                  {t("contacts.createModal.relationship")}
                   <Select
                     className="mt-1"
                     value={createForm.relationship}
                     onChange={(e) =>
                       setCreateForm((s) => ({ ...s, relationship: e.target.value as ContactRelationship }))
                     }
-                    options={[
-                      { label: "Recruiter", value: "Recruiter" },
-                      { label: "Hiring Manager", value: "Hiring Manager" },
-                      { label: "Referral", value: "Referral" },
-                      { label: "Employee", value: "Employee" },
-                      { label: "Networking", value: "Networking" },
-                      { label: "Other", value: "Other" },
-                    ]}
+                    options={relationshipSelectOptions}
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Email
+                  {t("contacts.createModal.email")}
                   <Input
                     className="mt-1"
                     type="email"
@@ -453,10 +454,10 @@ export function ContactsPageClient() {
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                  Cancel
+                  {t("contacts.createModal.cancel")}
                 </Button>
                 <Button type="button" onClick={() => void submitCreateContact()}>
-                  Save
+                  {t("contacts.createModal.save")}
                 </Button>
               </div>
             </motion.div>

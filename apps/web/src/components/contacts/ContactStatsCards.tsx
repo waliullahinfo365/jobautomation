@@ -11,6 +11,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
+import { useTranslation } from "@/i18n/useTranslation";
+import { useMemo } from "react";
 
 export function ContactStatsCards({
   stats,
@@ -24,14 +26,55 @@ export function ContactStatsCards({
     interviewsLinked: number;
   };
 }) {
-  const cards = [
-    { label: "Total Contacts", value: stats.totalContacts, helper: "Across all relationship types", icon: <UsersIcon size={20} /> },
-    { label: "Recruiters", value: stats.recruiters, helper: "Active recruiting touchpoints", icon: <UserRoundSearchIcon size={20} /> },
-    { label: "Referrals", value: stats.referrals, helper: "Warm-intro opportunities", icon: <HandshakeIcon size={20} /> },
-    { label: "Follow-ups Due", value: stats.followUpsDue, helper: "Requires action today/overdue", icon: <BellRingIcon size={20} /> },
-    { label: "Active Conversations", value: stats.activeConversations, helper: "Recent replies or threads", icon: <MessageSquareTextIcon size={20} /> },
-    { label: "Interviews Linked", value: stats.interviewsLinked, helper: "Contacts mapped to interview stages", icon: <CalendarCheckIcon size={20} /> },
-  ];
+  const { t } = useTranslation();
+
+  const cards = useMemo(
+    () => [
+      {
+        key: "total",
+        label: t("contacts.stats.totalContacts"),
+        value: stats.totalContacts,
+        helper: t("contacts.stats.totalContactsHelper"),
+        icon: <UsersIcon size={20} />,
+      },
+      {
+        key: "recruiters",
+        label: t("contacts.stats.recruiters"),
+        value: stats.recruiters,
+        helper: t("contacts.stats.recruitersHelper"),
+        icon: <UserRoundSearchIcon size={20} />,
+      },
+      {
+        key: "referrals",
+        label: t("contacts.stats.referrals"),
+        value: stats.referrals,
+        helper: t("contacts.stats.referralsHelper"),
+        icon: <HandshakeIcon size={20} />,
+      },
+      {
+        key: "followUps",
+        label: t("contacts.stats.followUpsDue"),
+        value: stats.followUpsDue,
+        helper: t("contacts.stats.followUpsDueHelper"),
+        icon: <BellRingIcon size={20} />,
+      },
+      {
+        key: "conversations",
+        label: t("contacts.stats.activeConversations"),
+        value: stats.activeConversations,
+        helper: t("contacts.stats.activeConversationsHelper"),
+        icon: <MessageSquareTextIcon size={20} />,
+      },
+      {
+        key: "interviews",
+        label: t("contacts.stats.interviewsLinked"),
+        value: stats.interviewsLinked,
+        helper: t("contacts.stats.interviewsLinkedHelper"),
+        icon: <CalendarCheckIcon size={20} />,
+      },
+    ],
+    [stats, t]
+  );
 
   return (
     <motion.div
@@ -41,7 +84,11 @@ export function ContactStatsCards({
       className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
     >
       {cards.map((card) => (
-        <motion.div key={card.label} variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} transition={{ duration: 0.3 }}>
+        <motion.div
+          key={card.key}
+          variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+          transition={{ duration: 0.3 }}
+        >
           <Card className="hover-lift">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">

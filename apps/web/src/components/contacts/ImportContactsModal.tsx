@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { showError } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type ImportRow = {
   name: string;
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export function ImportContactsModal({ open, onClose, onImport, loading }: Props) {
+  const { t } = useTranslation();
   const [raw, setRaw] = useState("");
 
   if (!open) return null;
@@ -35,7 +37,7 @@ export function ImportContactsModal({ open, onClose, onImport, loading }: Props)
       })
       .filter((r) => r.name.length > 0);
     if (rows.length === 0) {
-      showError("Add at least one valid contact line.");
+      showError(t("contacts.importModal.errorNoLines"));
       return;
     }
     await onImport(rows);
@@ -50,21 +52,21 @@ export function ImportContactsModal({ open, onClose, onImport, loading }: Props)
         role="dialog"
         aria-modal="true"
       >
-        <h2 className="text-lg font-semibold text-[var(--text-1)]">Import contacts</h2>
-        <p className="mt-1 text-sm text-[var(--text-3)]">Paste contacts as: Name, Email, Company, Role</p>
+        <h2 className="text-lg font-semibold text-[var(--text-1)]">{t("contacts.importModal.title")}</h2>
+        <p className="mt-1 text-sm text-[var(--text-3)]">{t("contacts.importModal.hint")}</p>
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
           <textarea
             className="flex min-h-[180px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
-            placeholder={"Jane Doe, jane@acme.com, Acme, Recruiter\nJohn Smith, john@corp.io, Corp, Hiring Manager"}
+            placeholder={t("contacts.importPlaceholder")}
           />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
+              {t("contacts.createModal.cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Importing..." : "Import Contacts"}
+              {loading ? t("contacts.importModal.importing") : t("contacts.importModal.importButton")}
             </Button>
           </div>
         </form>
