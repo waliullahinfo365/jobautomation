@@ -3,6 +3,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PrepStatusBadge } from "./PrepStatusBadge";
 import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { PrepTask } from "@/types/interview";
 
 export function PrepTasksSection({
