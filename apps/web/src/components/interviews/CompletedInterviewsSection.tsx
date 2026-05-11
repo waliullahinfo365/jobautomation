@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { useTranslation } from "@/i18n/useTranslation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
 import type { CompletedInterview } from "@/types/interview";

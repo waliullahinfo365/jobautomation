@@ -2,6 +2,7 @@
 
 import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const TOOLTIP_CONTENT = {
   background: "var(--surface-2, #13171F)",
