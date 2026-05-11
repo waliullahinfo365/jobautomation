@@ -12,15 +12,15 @@ type Props = {
 export function LanguageSwitcher({ compact }: Props) {
   const { locale, setLocale } = useTranslation();
 
-  function chip(code: Locale, label: string) {
+  function chip(code: Locale, label: string, flag: string) {
     const active = locale === code;
     return (
       <button
         type="button"
         onClick={() => setLocale(code)}
         className={cn(
-          "min-h-10 min-w-[44px] rounded-md px-3 text-sm font-semibold transition-colors",
-          compact ? "px-2.5 text-[13px]" : "px-3",
+          "min-h-10 min-w-[44px] rounded-md px-3 text-sm font-semibold transition-colors flex items-center gap-1.5 justify-center",
+          compact ? "px-2.5 text-[13px] gap-1" : "px-3",
           active
             ? "bg-[var(--accent)] text-white shadow-sm"
             : "text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]"
@@ -28,7 +28,8 @@ export function LanguageSwitcher({ compact }: Props) {
         aria-pressed={active}
         aria-label={label}
       >
-        {code.toUpperCase()}
+        <span className="text-lg">{flag}</span>
+        {!compact && <span>{code.toUpperCase()}</span>}
       </button>
     );
   }
@@ -42,8 +43,8 @@ export function LanguageSwitcher({ compact }: Props) {
       role="group"
       aria-label="Language"
     >
-      {chip("de", "Deutsch")}
-      {chip("en", "English")}
+      {chip("de", "Deutsch", "🇩🇪")}
+      {chip("en", "English", "🇬🇧")}
     </div>
   );
 }

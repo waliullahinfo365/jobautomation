@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/i18n/useTranslation";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function EditProfileModal({
   currentProfile,
   onSave,
 }: EditProfileModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState(currentProfile.name);
   const [email, setEmail] = useState(currentProfile.email);
   const [workspaceName, setWorkspaceName] = useState(currentProfile.workspaceName);
@@ -60,43 +62,43 @@ export function EditProfileModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Edit Profile"
-      description="Update your profile information"
+      title={t("modal.editProfile")}
+      description={t("profile.description")}
       size="md"
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">Full Name</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("form.label.name")}</label>
           <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your full name"
+            placeholder={t("form.placeholder.fullName")}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">Email</label>
-          <Input type="email" value={email} disabled placeholder="Email cannot be changed" />
-          <p className="mt-1 text-xs text-[var(--text-3)]">Email changes must be made through account recovery.</p>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("form.label.email")}</label>
+          <Input type="email" value={email} disabled placeholder={t("form.error.emailNotChangeable")} />
+          <p className="mt-1 text-xs text-[var(--text-3)]">{t("profile.documentLanguageNote")}</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">Workspace Name</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("settings.profileLanguage")}</label>
           <Input
             type="text"
             value={workspaceName}
             onChange={(e) => setWorkspaceName(e.target.value)}
-            placeholder="Enter workspace name"
+            placeholder={t("form.placeholder.workspaceName")}
           />
         </div>
 
         <div className="border-t border-[var(--border-default)] pt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Changes"}
+            {isSaving ? "Saving..." : t("common.save")}
           </Button>
         </div>
       </div>

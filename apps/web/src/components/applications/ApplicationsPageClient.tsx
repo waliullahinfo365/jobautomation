@@ -379,7 +379,7 @@ export function ApplicationsPageClient() {
             </Button>
           }
         />
-        <LoadingState title={t("applications.loadingTitle")} description={t("applications.loadingDesc")} />
+        <LoadingState title={t("loading.applications")} description={t("loading.applicationData")} />
       </div>
     );
   }
@@ -423,15 +423,12 @@ export function ApplicationsPageClient() {
         />
 
         {emptyAll ? (
-          <EmptyState
-            title="No applications yet"
-            description="When you track applications, they will appear here with reply and follow-up status."
-          />
+          <EmptyState title={t("empty.noApplications")} description="Log a new application to get started." />
         ) : emptyFiltered ? (
           <EmptyState
-            title="No matching applications"
-            description="Try adjusting filters or search."
-            actionLabel="Clear filters"
+            title={t("empty.noMatchingApplications")}
+            description="Adjust filters or search."
+            actionLabel={t("empty.clearFilters")}
             onAction={() => setFilters(initialFilters)}
           />
         ) : (

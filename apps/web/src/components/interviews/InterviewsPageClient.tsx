@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { InterviewsIcon, PlusIcon, RefreshIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/useTranslation";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -52,6 +53,7 @@ function scheduleDefaultLocal(): string {
 }
 
 export function InterviewsPageClient() {
+  const { t } = useTranslation();
   const interviewsApi = useInterviewsApi({ fallbackToMock: true });
 
   const [tab, setTab] = useState<InterviewTab>("Upcoming");
@@ -282,7 +284,7 @@ export function InterviewsPageClient() {
             </>
           }
         />
-        <LoadingState title="Loading interviews..." description="Fetching interview pipeline data." />
+        <LoadingState title={t("loading.interviews")} description={t("loading.interviewsDesc")} />
       </div>
     );
   }
@@ -300,7 +302,7 @@ export function InterviewsPageClient() {
           description="Track interviews, prep tasks, calendar events, and scheduling automation."
           actions={
             <>
-              <Button variant="outline" type="button" onClick={() => showInfo("Calendar sync will be available after Google OAuth is connected.")}>
+              <Button variant="outline" type="button" onClick={() => showInfo(t("error.calendarSyncNote"))}>
                 <RefreshIcon size={16} className="mr-2" />
                 Sync Calendar
               </Button>
@@ -324,12 +326,12 @@ export function InterviewsPageClient() {
               aside={interviewsApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
             />
             {emptyAll ? (
-              <EmptyState title="No interviews scheduled" description="Schedule an interview or connect your calendar when OAuth is ready." />
+              <EmptyState title={t("empty.noInterviewsScheduled")} description={t("empty.noInterviewsScheduledDesc")} />
             ) : emptyFiltered ? (
               <EmptyState
-                title="No matching interviews"
+                title={t("empty.noMatchingInterviews")}
                 description="Adjust filters or search."
-                actionLabel="Clear filters"
+                actionLabel={t("empty.clearFilters")}
                 onAction={() => setFilters(initialFilters)}
               />
             ) : (
@@ -358,7 +360,7 @@ export function InterviewsPageClient() {
         {tab === "Completed" ? <CompletedInterviewsSection interviews={completedRows} /> : null}
         {tab === "Awaiting Confirmation" ? (
           awaitingItems.length === 0 ? (
-            <EmptyState title="Nothing awaiting confirmation" description="Scheduling threads will appear here." />
+            <EmptyState title={t("empty.nothingAwaitingConfirmation")} description={t("empty.awaitingConfirmationDesc")} />
           ) : (
             <AwaitingConfirmationSection items={awaitingItems} onConfirm={confirmAwaiting} />
           )

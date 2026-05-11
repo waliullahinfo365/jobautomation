@@ -5,6 +5,7 @@ import { CloseIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { Interview } from "@/types/interview";
 import { InterviewTypeBadge } from "./InterviewTypeBadge";
 import { InterviewStatusBadge } from "./InterviewStatusBadge";
@@ -27,6 +28,7 @@ export function InterviewDetailPanel({
   onMarkComplete?: () => void | Promise<void>;
   pendingAction?: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <AnimatePresence>
       {open && interview ? (
@@ -54,21 +56,21 @@ export function InterviewDetailPanel({
             </div>
 
             <div className="space-y-5">
-              <SectionCard title="Interview Details">
+              <SectionCard title={t("interview.detailsTitle")}>
                 <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                  <Info label="Date/time" value={formatDate(interview.dateTime, "MMM d, yyyy HH:mm")} />
-                  <Info label="Duration" value={`${interview.durationMinutes} minutes`} />
-                  <Info label="Interviewer" value={`${interview.interviewerName} (${interview.interviewerRole})`} />
-                  <Info label="Contact email" value={interview.contactEmail} />
-                  <Info label="Meeting link" value={interview.meetingLink} />
-                  <Info label="Location" value={interview.location} />
-                  <Info label="Calendar event ID" value={interview.calendarEventId} />
-                  <Info label="Related job/application" value={`${interview.jobId} / ${interview.applicationId}`} />
+                  <Info label={t("interview.dateTimeLabel")} value={formatDate(interview.dateTime, "MMM d, yyyy HH:mm")} />
+                  <Info label={t("interview.durationLabel")} value={`${interview.durationMinutes} ${t("common.minutesSuffix")}`} />
+                  <Info label={t("interview.interviewerLabel")} value={`${interview.interviewerName} (${interview.interviewerRole})`} />
+                  <Info label={t("interview.contactEmailLabel")} value={interview.contactEmail} />
+                  <Info label={t("interview.meetingLinkLabel")} value={interview.meetingLink} />
+                  <Info label={t("interview.locationLabel")} value={interview.location} />
+                  <Info label={t("interview.calendarEventIdLabel")} value={interview.calendarEventId} />
+                  <Info label={t("interview.relatedJobApplicationLabel")} value={`${interview.jobId} / ${interview.applicationId}`} />
                 </div>
               </SectionCard>
 
               {(onCreateCalendarEvent || onMarkComplete) && (
-                <SectionCard title="Actions">
+                <SectionCard title={t("interview.actionsTitle")}>
                   <div className="flex flex-wrap gap-2">
                     {onCreateCalendarEvent ? (
                       <Button
@@ -78,31 +80,31 @@ export function InterviewDetailPanel({
                         disabled={!!pendingAction}
                         onClick={() => void onCreateCalendarEvent()}
                       >
-                        Create Calendar Event
+                        {t("interview.createCalendarEvent")}
                       </Button>
                     ) : null}
                     {onMarkComplete ? (
                       <Button type="button" size="sm" variant="outline" disabled={!!pendingAction} onClick={() => void onMarkComplete()}>
-                        Mark Complete
+                        {t("button.markComplete")}
                       </Button>
                     ) : null}
                   </div>
                 </SectionCard>
               )}
 
-              <SectionCard title="Prep Checklist">
+              <SectionCard title={t("interview.prepChecklistTitle")}>
                 <InterviewPrepChecklist items={interview.prepChecklist} />
               </SectionCard>
 
-              <SectionCard title="Notes">
+              <SectionCard title={t("interview.notesTitle")}>
                 <div className="space-y-2 text-sm">
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Notes summary:</span> {interview.notesSummary}</p>
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">AI prep summary:</span> {interview.aiPrepSummary}</p>
-                  <p className="rounded-md bg-muted/70 p-2 text-muted-foreground"><span className="font-medium text-foreground">Follow-up preview:</span> {interview.followUpMessagePreview}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">{t("interview.notesSummaryLabel")}</span> {interview.notesSummary}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">{t("interview.aiPrepSummaryLabel")}</span> {interview.aiPrepSummary}</p>
+                  <p className="rounded-md bg-muted/70 p-2 text-muted-foreground"><span className="font-medium text-foreground">{t("interview.followUpPreviewLabel")}</span> {interview.followUpMessagePreview}</p>
                 </div>
               </SectionCard>
 
-              <SectionCard title="Timeline">
+              <SectionCard title={t("interview.timelineTitle")}>
                 <InterviewTimeline events={interview.timeline} />
               </SectionCard>
 

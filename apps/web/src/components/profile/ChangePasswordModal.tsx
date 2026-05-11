@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/i18n/useTranslation";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export function ChangePasswordModal({
   onClose,
   onSave,
 }: ChangePasswordModalProps) {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -77,50 +79,50 @@ export function ChangePasswordModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Change Password"
-      description="Update your account password"
+      title={t("modal.changePassword")}
+      description={t("profile.changePassword")}
       size="md"
     >
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">Current Password</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("form.label.currentPassword")}</label>
           <Input
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            placeholder="Enter current password"
+            placeholder={t("form.placeholder.currentPassword")}
             disabled={isSubmitting}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">New Password</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("form.label.newPassword")}</label>
           <Input
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Enter new password (min 8 characters)"
+            placeholder={t("form.placeholder.newPassword")}
             disabled={isSubmitting}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">Confirm New Password</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("form.label.confirmPassword")}</label>
           <Input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm new password"
+            placeholder={t("form.placeholder.confirmPassword")}
             disabled={isSubmitting}
           />
         </div>
 
         <div className="border-t border-[var(--border-default)] pt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Updating..." : "Update Password"}
+            {isSubmitting ? "Updating..." : t("common.save")}
           </Button>
         </div>
       </div>

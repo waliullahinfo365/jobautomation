@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DocumentsIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
 import { PageHeader } from "@/components/shared/PageHeader";
 import type {
   CoverLetterRecord,
@@ -118,6 +119,7 @@ function toastQueuedPayload(label: string, result: unknown) {
 }
 
 export function DocumentsPageClient() {
+  const { t } = useTranslation();
   const documentsApi = useDocumentsApi({ fallbackToMock: true });
   const jobsApi = useJobsApi({ fallbackToMock: true });
 
@@ -382,7 +384,7 @@ export function DocumentsPageClient() {
             </Button>
           }
         />
-        <LoadingState title="Loading documents..." description="Fetching document library from the backend." />
+        <LoadingState title={t("loading.documents")} description={t("loading.documentsDesc")} />
       </div>
     );
   }
@@ -419,12 +421,12 @@ export function DocumentsPageClient() {
             aside={documentsApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
           />
           {emptyAll ? (
-            <EmptyState title="No documents" description="Documents from the API will appear here." />
+            <EmptyState title={t("empty.noDocuments")} description={t("empty.noDocumentsDesc")} />
           ) : emptyFiltered ? (
             <EmptyState
-              title="No matching documents"
+              title={t("empty.noMatchingDocuments")}
               description="Try another filter."
-              actionLabel="Clear filters"
+              actionLabel={t("empty.clearFilters")}
               onAction={() => setFilters(initialFilters)}
             />
           ) : (

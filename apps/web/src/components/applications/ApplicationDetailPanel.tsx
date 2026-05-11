@@ -1,6 +1,7 @@
 "use client";
 
 import { CloseIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { Application } from "@/types/application";
 import { ApplicationStatusBadge } from "./ApplicationStatusBadge";
 import { ResponseStatusBadge } from "./ResponseStatusBadge";
@@ -33,6 +34,7 @@ export function ApplicationDetailPanel({
   onSimulateReply,
   pendingAction,
 }: ApplicationDetailPanelProps) {
+  const { t } = useTranslation();
   return (
     <AnimatePresence>
       {open && application ? (
@@ -67,43 +69,43 @@ export function ApplicationDetailPanel({
         </div>
 
         <div className="space-y-5">
-          <SectionCard title="Application Summary">
+          <SectionCard title={t("application.summaryTitle")}>
             <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-              <Info label="Source" value={application.source} />
-              <Info label="Date Found" value={formatDate(application.dateFound)} />
-              <Info label="Date Applied" value={application.dateApplied ? formatDate(application.dateApplied) : "—"} />
-              <Info label="Follow-up Date" value={application.followUpDate ? formatDate(application.followUpDate) : "—"} />
-              <Info label="Contact Email" value={application.contactEmail} />
+              <Info label={t("table.header.source")} value={application.source} />
+              <Info label={t("table.header.dateFound")} value={formatDate(application.dateFound)} />
+              <Info label={t("table.header.dateApplied")} value={application.dateApplied ? formatDate(application.dateApplied) : "—"} />
+              <Info label={t("application.followUpDateLabel")} value={application.followUpDate ? formatDate(application.followUpDate) : "—"} />
+              <Info label={t("application.contactEmailLabel")} value={application.contactEmail} />
               <Info
-                label="Job URL"
+                label={t("table.header.job")}
                 value={
                   <a href={application.jobUrl} target="_blank" rel="noreferrer" className="text-[var(--text-2)] hover:underline">
-                    Open posting
+                    {t("application.openPosting")}
                   </a>
                 }
               />
             </div>
           </SectionCard>
 
-          <SectionCard title="Email & Reply Status">
+          <SectionCard title={t("application.emailReplyStatusTitle")}>
             <div className="space-y-2 text-sm">
-              <Info label="Last Email Subject" value={application.lastEmailSubject || "—"} />
-              <Info label="Last Reply Snippet" value={application.lastReplySnippet || "—"} />
-              <Info label="Response Detected" value={application.responseDetected ? "Yes" : "No"} />
-              <Info label="AI Classification" value={application.aiClassification} />
+              <Info label={t("application.lastEmailSubjectLabel")} value={application.lastEmailSubject || "—"} />
+              <Info label={t("application.lastReplySnippetLabel")} value={application.lastReplySnippet || "—"} />
+              <Info label={t("application.responseDetectedLabel")} value={application.responseDetected ? t("common.yes") : t("common.no")} />
+              <Info label={t("application.aiClassificationLabel")} value={application.aiClassification} />
             </div>
           </SectionCard>
 
-          <SectionCard title="Follow-up Info">
+          <SectionCard title={t("application.followUpInfoTitle")}>
             <div className="space-y-2 text-sm">
-              <Info label="Follow-up Message Preview" value={application.followUpMessagePreview || "—"} />
-              <Info label="Reminder Status" value={application.reminderStatus} />
-              <Info label="Reminder Sent Date" value={application.reminderSentDate ? formatDate(application.reminderSentDate) : "—"} />
+              <Info label={t("application.followUpMessagePreviewLabel")} value={application.followUpMessagePreview || "—"} />
+              <Info label={t("application.reminderStatusLabel")} value={application.reminderStatus} />
+              <Info label={t("application.reminderSentDateLabel")} value={application.reminderSentDate ? formatDate(application.reminderSentDate) : "—"} />
             </div>
           </SectionCard>
 
           {(onMarkApplied || onScheduleFollowUp || onMarkFollowUpSent || onSimulateReply) && (
-            <SectionCard title="Actions">
+            <SectionCard title={t("application.actionsTitle")}>
               <div className="flex flex-wrap gap-2">
                 {onMarkApplied ? (
                   <Button
@@ -113,33 +115,33 @@ export function ApplicationDetailPanel({
                     disabled={!!pendingAction}
                     onClick={() => void onMarkApplied()}
                   >
-                    Mark Applied
+                    {t("button.markApplied")}
                   </Button>
                 ) : null}
                 {onScheduleFollowUp ? (
                   <Button type="button" size="sm" variant="outline" disabled={!!pendingAction} onClick={() => void onScheduleFollowUp()}>
-                    Schedule Follow-Up
+                    {t("button.scheduleFollowUp")}
                   </Button>
                 ) : null}
                 {onMarkFollowUpSent ? (
                   <Button type="button" size="sm" variant="outline" disabled={!!pendingAction} onClick={() => void onMarkFollowUpSent()}>
-                    Mark Follow-Up Sent
+                    {t("button.markFollowUpSent")}
                   </Button>
                 ) : null}
                 {onSimulateReply ? (
                   <Button type="button" size="sm" variant="ghost" disabled={!!pendingAction} onClick={() => void onSimulateReply()}>
-                    Simulate Reply
+                    {t("button.simulateReply")}
                   </Button>
                 ) : null}
               </div>
             </SectionCard>
           )}
 
-          <SectionCard title="Timeline">
+          <SectionCard title={t("application.timelineTitle")}>
             <ApplicationTimeline timeline={application.timeline} />
           </SectionCard>
 
-          <SectionCard title="Automation Log">
+          <SectionCard title={t("application.automationLogTitle")}>
             <ApplicationAutomationLogList logs={application.automationLogs} />
           </SectionCard>
         </div>
