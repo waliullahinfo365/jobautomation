@@ -22,15 +22,16 @@ const BAR_FILLS = [
 ] as const;
 
 export function WeeklyApplicationTrendChart({ data }: { data: { day: string; applications: number }[] }) {
-  if (!data.length) {
+  const { t } = useTranslation();
+  if (!data || data.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Weekly Application Trend</CardTitle>
-          <CardDescription>Applications submitted by day in current week.</CardDescription>
+          <CardTitle>{t("reports.weeklyApplicationTrend")}</CardTitle>
+          <CardDescription>{t("reports.applicationsSubmittedByDay")}</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[300px] items-center justify-center text-sm text-[var(--text-3)]">
-          No applications logged this week yet.
+          {t("reports.noApplicationsThisWeek")}
         </CardContent>
       </Card>
     );
@@ -39,7 +40,7 @@ export function WeeklyApplicationTrendChart({ data }: { data: { day: string; app
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Weekly Application Trend</CardTitle>
+        <CardTitle>{t("reports.weeklyApplicationTrend")}</CardTitle>
         <CardDescription>Applications submitted by day in current week.</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">

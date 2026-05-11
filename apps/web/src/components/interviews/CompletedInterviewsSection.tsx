@@ -5,19 +5,20 @@ import { formatDate } from "@/lib/utils";
 import type { CompletedInterview } from "@/types/interview";
 
 export function CompletedInterviewsSection({ interviews }: { interviews: CompletedInterview[] }) {
+  const { t } = useTranslation();
   return (
-    <SectionCard title="Completed Interviews" description="Track outcomes and follow-up status." contentClassName="p-0">
+    <SectionCard title={t("interviews.completedInterviews")} description={t("interviews.trackOutcomesAndFollowUpStatus")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Company</TableHead>
-            <TableHead>Position</TableHead>
-            <TableHead>Interview Type</TableHead>
-            <TableHead>Completed Date</TableHead>
-            <TableHead>Outcome</TableHead>
-            <TableHead>Notes Summary</TableHead>
-            <TableHead>Follow-up Sent</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>{t("interviews.company")}</TableHead>
+            <TableHead>{t("interviews.position")}</TableHead>
+            <TableHead>{t("interviews.interviewType")}</TableHead>
+            <TableHead>{t("interviews.completedDate")}</TableHead>
+            <TableHead>{t("interviews.outcome")}</TableHead>
+            <TableHead>{t("interviews.notesSummary")}</TableHead>
+            <TableHead>{t("interviews.followUpSent")}</TableHead>
+            <TableHead className="text-right">{t("interviews.action")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -29,8 +30,8 @@ export function CompletedInterviewsSection({ interviews }: { interviews: Complet
               <TableCell>{formatDate(iv.completedDate, "MMM d, yyyy")}</TableCell>
               <TableCell>{iv.outcome}</TableCell>
               <TableCell className="max-w-[280px] truncate">{iv.notesSummary}</TableCell>
-              <TableCell>{iv.followUpSent ? "Yes" : "No"}</TableCell>
-              <TableCell className="text-right"><Button size="sm" variant="ghost">View Notes</Button></TableCell>
+              <TableCell>{iv.followUpSent ? t("interviews.yes") : t("interviews.no")}</TableCell>
+              <TableCell className="text-right"><Button size="sm" variant="ghost">{t("interviews.viewNotes")}</Button></TableCell>
             </TableRow>
           ))}
         </TableBody>

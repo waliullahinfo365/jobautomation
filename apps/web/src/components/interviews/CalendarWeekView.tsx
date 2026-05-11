@@ -24,7 +24,7 @@ export function CalendarWeekView({ interviews }: { interviews: Interview[] }) {
             <p className="mb-2 text-sm font-semibold text-foreground">{day.name}</p>
             <div className="space-y-2">
               {day.items.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No events</p>
+                <p className="text-xs text-muted-foreground">{t("interviews.noEvents")}</p>
               ) : (
                 day.items.map((iv) => (
                   <MotionCard key={iv.id} className="p-2">

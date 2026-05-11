@@ -26,10 +26,11 @@ const DOT = {
 const ACTIVE_DOT = { r: 5, fill: "var(--accent-hi, #8499FF)", stroke: "var(--text-1, #ECEEF2)" } as const;
 
 export function ResponseRateTrendChart({ data }: { data: { day: string; rate: number }[] }) {
+  const { t } = useTranslation();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Response Rate Trend</CardTitle>
+        <CardTitle>{t("reports.responseRateTrend")}</CardTitle>
         <CardDescription>Daily response-rate movement for the week.</CardDescription>
       </CardHeader>
       <CardContent className="h-[260px]">

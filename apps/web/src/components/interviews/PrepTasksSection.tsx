@@ -12,8 +12,9 @@ export function PrepTasksSection({
   tasks: PrepTask[];
   onMarkDone: (taskId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <SectionCard title="Prep Tasks" description="Prioritized prep checklist for upcoming rounds." contentClassName="p-0">
+    <SectionCard title={t("interviews.prepTasks")} description={t("interviews.prioritizedPrepChecklist")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>

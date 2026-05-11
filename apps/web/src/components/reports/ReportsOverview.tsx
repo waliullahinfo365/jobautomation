@@ -3,6 +3,7 @@ import { ReportHistoryTable } from "./ReportHistoryTable";
 import { WeeklyApplicationTrendChart } from "./WeeklyApplicationTrendChart";
 import { StatusBreakdownChart } from "./StatusBreakdownChart";
 import type { ChartDataPoint, ReportHistoryRecord } from "@/types/report";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 interface ReportsOverviewProps {
   summary: {
@@ -19,19 +20,20 @@ interface ReportsOverviewProps {
 }
 
 export function ReportsOverview({ summary, weeklyTrendData, statusBreakdownData, history }: ReportsOverviewProps) {
+  const { t } = useTranslation();
   const stats = [
-    ["Applications this week", summary.applicationsThisWeek],
-    ["Replies this week", summary.repliesThisWeek],
-    ["Interviews this week", summary.interviewsThisWeek],
-    ["Offers this week", summary.offersThisWeek],
-    ["Rejection rate", `${summary.rejectionRate}%`],
-    ["Follow-ups due", summary.followUpsDue],
+    [t("reports.applicationsSent"), summary.applicationsThisWeek],
+    [t("reports.repliesReceived"), summary.repliesThisWeek],
+    [t("reports.interviewsScheduled"), summary.interviewsThisWeek],
+    [t("reports.offersReceived"), summary.offersThisWeek],
+    [t("common.rejectionRate"), `${summary.rejectionRate}%`],
+    [t("reports.followUpsDue"), summary.followUpsDue],
   ];
 
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><CardTitle>Performance Summary</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("reports.performanceSummary")}</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {stats.map(([label, value]) => (
             <div key={String(label)} className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">

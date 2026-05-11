@@ -3,6 +3,7 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChartDataPoint } from "@/types/report";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 const TOOLTIP_CONTENT = {
   background: "var(--surface-2, #13171F)",
@@ -20,15 +21,16 @@ const SLICE_FILLS = [
 ] as const;
 
 export function StatusBreakdownChart({ data }: { data: ChartDataPoint[] }) {
-  if (!data.length || data.every((d) => Number(d.value) <= 0)) {
+  const { t } = useTranslation();
+  if (!data || data.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Status Breakdown</CardTitle>
-          <CardDescription>Pipeline status distribution from live applications (when available).</CardDescription>
+          <CardTitle>{t("reports.statusBreakdown")}</CardTitle>
+          <CardDescription>{t("reports.pipelineStatusDistribution")}</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[300px] items-center justify-center text-sm text-[var(--text-3)]">
-          No status data yet — apply to roles this week to populate this chart.
+          {t("reports.noStatusDataYet")}
         </CardContent>
       </Card>
     );
@@ -37,7 +39,7 @@ export function StatusBreakdownChart({ data }: { data: ChartDataPoint[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Status Breakdown</CardTitle>
+        <CardTitle>{t("reports.statusBreakdown")}</CardTitle>
         <CardDescription>Current pipeline status distribution.</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
