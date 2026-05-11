@@ -7,7 +7,7 @@
 - Automation jobs execute in tenant context and log by tenant.
 - Billing plan controls feature limits and automation throughput.
 
-## Billing and enforcement (stub)jhdjehjeh
+## Billing and enforcement (stub)khan
 
 - Each tenant has `billing.planKey`, nested billing fields, `limits` (caps), and `usage` (counters). Legacy top-level `plan` and `billingStatus` remain for backward compatibility.
 - Plan definitions and limit keys live in `packages/shared` (`PLAN_DEFINITIONS`, `SubscriptionPlanKey`).
