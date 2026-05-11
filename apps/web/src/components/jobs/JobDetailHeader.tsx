@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import type { Job } from "@/types/job";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { JobPriorityBadge } from "./JobPriorityBadge";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 interface JobDetailHeaderProps {
   job: Job;
@@ -11,6 +12,7 @@ interface JobDetailHeaderProps {
 }
 
 export function JobDetailHeader({ job, renderActions }: JobDetailHeaderProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-2)] p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -25,10 +27,10 @@ export function JobDetailHeader({ job, renderActions }: JobDetailHeaderProps) {
         <div className="flex flex-wrap gap-2">
           {renderActions ?? (
             <>
-              <Button variant="outline">Edit Job</Button>
-              <Button variant="secondary">Generate Draft</Button>
-              <Button>Mark Applied</Button>
-              <Button variant="outline">Archive</Button>
+              <Button variant="outline">{t("jobs.editJob")}</Button>
+              <Button variant="secondary">{t("jobs.generateDraft")}</Button>
+              <Button>{t("jobs.markApplied")}</Button>
+              <Button variant="outline">{t("jobs.archive")}</Button>
             </>
           )}
         </div>

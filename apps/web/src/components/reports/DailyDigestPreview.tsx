@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DailyDigestData } from "@/types/report";
 import { ReportStatusBadge } from "./ReportStatusBadge";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 export function DailyDigestPreview({
   digest,
@@ -16,12 +17,13 @@ export function DailyDigestPreview({
   previewLoading?: boolean;
   sendLoading?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Daily Digest Preview</CardTitle>
+            <CardTitle>{t("reports.dailyDigestPreview")}</CardTitle>
             <CardDescription>{digest.date}</CardDescription>
           </div>
           <ReportStatusBadge status={digest.deliveryStatus} />
@@ -29,16 +31,16 @@ export function DailyDigestPreview({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <Metric label="New jobs" value={digest.newJobsDetected} />
-          <Metric label="Applications sent" value={digest.applicationsSent} />
-          <Metric label="Follow-ups due" value={digest.followUpsDue} />
-          <Metric label="Replies received" value={digest.repliesReceived} />
-          <Metric label="Deadlines approaching" value={digest.deadlinesApproaching} />
-          <Metric label="Interviews scheduled" value={digest.interviewsScheduled} />
-          <Metric label="Failed automations" value={digest.failedAutomations} />
+          <Metric label={t("reports.newJobs")} value={digest.newJobsDetected} />
+          <Metric label={t("reports.applicationsSent")} value={digest.applicationsSent} />
+          <Metric label={t("reports.followUpsDue")} value={digest.followUpsDue} />
+          <Metric label={t("reports.repliesReceived")} value={digest.repliesReceived} />
+          <Metric label={t("reports.deadlinesApproaching")} value={digest.deadlinesApproaching} />
+          <Metric label={t("reports.interviewsScheduled")} value={digest.interviewsScheduled} />
+          <Metric label={t("reports.failedAutomations")} value={digest.failedAutomations} />
         </div>
         <div>
-          <p className="text-sm font-medium text-[var(--text-1)]">Recommended actions</p>
+          <p className="text-sm font-medium text-[var(--text-1)]">{t("reports.recommendedActions")}</p>
           <ul className="mt-2 space-y-1 text-sm text-[var(--text-2)]">
             {digest.recommendedActions.map((action) => (
               <li key={action}>- {action}</li>
@@ -46,16 +48,16 @@ export function DailyDigestPreview({
           </ul>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3 text-sm">
-          <Meta label="Recipient Email" value={digest.recipientEmail} />
-          <Meta label="Last Sent Time" value={digest.lastSentTime} />
-          <Meta label="Next Scheduled" value={digest.nextScheduledTime} />
+          <Meta label={t("reports.recipientEmail")} value={digest.recipientEmail} />
+          <Meta label={t("reports.lastSentTime")} value={digest.lastSentTime} />
+          <Meta label={t("reports.nextScheduledTime")} value={digest.nextScheduledTime} />
         </div>
         <div className="flex gap-2">
           <Button variant="outline" type="button" disabled={previewLoading} onClick={() => onPreviewDigest?.()}>
-            {previewLoading ? "Generating…" : "Preview Digest"}
+            {previewLoading ? t("reports.generating") : t("reports.previewDigest")}
           </Button>
           <Button variant="secondary" type="button" disabled={sendLoading} onClick={() => onSendTest?.()}>
-            {sendLoading ? "Sending…" : "Send Test"}
+            {sendLoading ? t("reports.generating") : t("reports.sendTestDigest")}
           </Button>
         </div>
       </CardContent>

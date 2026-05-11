@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { InterviewTypeBadge } from "./InterviewTypeBadge";
 import { InterviewStatusBadge } from "./InterviewStatusBadge";
 import { PrepStatusBadge } from "./PrepStatusBadge";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 interface InterviewCardProps {
   interview: Interview;
@@ -19,6 +20,7 @@ interface InterviewCardProps {
 }
 
 export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCardProps) {
+  const { t } = useTranslation();
   return (
     <MotionCard className="hover-lift p-4">
       <div className="flex items-start justify-between gap-3">
@@ -38,7 +40,7 @@ export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCa
           <CalendarDaysIcon size={14} /> {formatDate(interview.dateTime, "MMM d, yyyy HH:mm")}
         </span>
         <span className="flex items-center gap-1">
-          <Clock3Icon size={14} /> {interview.durationMinutes} min
+          <Clock3Icon size={14} /> {interview.durationMinutes} {t("common.minutesSuffix")}
         </span>
         <span className="flex items-center gap-1">
           <User2Icon size={14} /> {interview.interviewerName}
@@ -52,9 +54,9 @@ export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCa
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={() => onView(interview)}>View</Button>
-        <Button size="sm" variant="secondary" onClick={() => onMarkComplete(interview.id)}>Mark Complete</Button>
-        <Button size="sm" variant="ghost">Reschedule</Button>
+        <Button size="sm" variant="outline" onClick={() => onView(interview)}>{t("button.view")}</Button>
+        <Button size="sm" variant="secondary" onClick={() => onMarkComplete(interview.id)}>{t("button.markComplete")}</Button>
+        <Button size="sm" variant="ghost">{t("button.reschedule")}</Button>
         <Button size="sm" variant="ghost">
           Open Meeting
           <ExternalLinkIcon size={14} className="ml-1" />
