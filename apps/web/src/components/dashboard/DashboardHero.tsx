@@ -12,7 +12,7 @@ interface DashboardHeroProps {
 }
 
 export function DashboardHero({ showMockIndicator }: DashboardHeroProps) {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <section className="jf-hero relative mb-4 sm:mb-5">
@@ -23,14 +23,7 @@ export function DashboardHero({ showMockIndicator }: DashboardHeroProps) {
           {t("dashboard.chip")}
         </div>
         <h1 className="font-display text-[22px] font-bold leading-[1.12] tracking-[-0.022em] text-[var(--text-1)] sm:text-[26px] md:text-[28px] lg:text-[30px]">
-          {locale === "en" ? (
-            <>
-              Your application{" "}
-              <em className="font-serif text-[var(--accent-hi)] not-italic">control center</em>
-            </>
-          ) : (
-            t("dashboard.heroTitle")
-          )}
+          {t("dashboard.heroTitle")}
         </h1>
         <p className="mt-2.5 max-w-[580px] text-[13px] leading-[1.55] text-[var(--text-3)] sm:text-[14px]">{t("dashboard.subtitle")}</p>
       </div>

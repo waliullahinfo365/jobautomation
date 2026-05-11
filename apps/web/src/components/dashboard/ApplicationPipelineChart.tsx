@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { PipelineIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface PipelineDataPoint {
   status: string;
@@ -20,6 +21,20 @@ interface PipelineDataPoint {
 
 interface ApplicationPipelineChartProps {
   data: PipelineDataPoint[];
+}
+
+function pipelineStageSlug(status: string): string {
+  const map: Record<string, string> = {
+    New: "new",
+    Research: "research",
+    Drafting: "drafting",
+    "Ready to Apply": "readyToApply",
+    Applied: "applied",
+    Interview: "interview",
+    Offer: "offer",
+    Rejected: "rejected",
+  };
+  return map[status] ?? status.toLowerCase().replace(/\s+/g, "");
 }
 
 function useNarrowChart() {
@@ -35,7 +50,12 @@ function useNarrowChart() {
   );
 }
 
+function replaceCount(template: string, count: number): string {
+  return template.replace("{{count}}", String(count));
+}
+
 export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps) {
+  const { t } = useTranslation();
   const narrow = useNarrowChart();
   const total = data.reduce((acc, item) => acc + item.count, 0);
   const maxCount = Math.max(...data.map((d) => d.count), 1);
@@ -48,6 +68,11 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
     ? { top: 8, right: 2, left: -12, bottom: 8 }
     : { top: 10, right: 8, left: 4, bottom: 4 };
 
+  const stageLabel = (status: string) => {
+    const slug = pipelineStageSlug(status);
+    return t(`dashboard.pipelineStages.${slug}`);
+  };
+
   return (
     <article className="jf-panel min-w-0">
       <div className="jf-panel-head">
@@ -56,28 +81,25 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
             <PipelineIcon size={18} />
           </div>
           <div className="min-w-0">
-            <h3 className="jf-panel-title">Application Pipeline</h3>
-            <p className="jf-panel-sub">Distribution of jobs across each stage</p>
+            <h3 className="jf-panel-title">{t("dashboard.pipeline.title")}</h3>
+            <p className="jf-panel-sub">{t("dashboard.pipeline.subtitle")}</p>
           </div>
         </div>
         <div className="jf-panel-tags">
           <span className="jf-tag jf-tag--accent">
-            <span className="jf-tag-num">{total}</span> tracked
+            <span className="jf-tag-num">{total}</span> {t("dashboard.pipeline.tracked")}
           </span>
           <span className="jf-tag">
             <span
               className="h-1.5 w-1.5 rounded-full bg-[var(--accent-hi)] shadow-[0_0_8px_var(--accent-hi)]"
               aria-hidden
             />
-            Live
+            {t("dashboard.pipeline.liveBadge")}
           </span>
         </div>
       </div>
 
-      <div
-        className="w-full touch-pan-x"
-        style={{ minHeight: narrow ? 220 : 280 }}
-      >
+      <div className="w-full touch-pan-x" style={{ minHeight: narrow ? 220 : 280 }}>
         <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart data={data} margin={chartMargins}>
             <defs>
@@ -90,22 +112,17 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
                 <stop offset="100%" stopColor="#38C793" stopOpacity={0.9} />
               </linearGradient>
             </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke="var(--border-subtle)"
-            />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
             <XAxis
               dataKey="status"
               interval={0}
               height={narrow ? 56 : 36}
+              tickFormatter={(value) => stageLabel(String(value))}
               tick={{
                 fontSize: narrow ? 9 : 11,
                 fill: "var(--text-2)",
                 fontFamily: "var(--font-ui), ui-sans-serif, system-ui, sans-serif",
-                ...(narrow
-                  ? { angle: -42, textAnchor: "end" as const, dy: 6 }
-                  : {}),
+                ...(narrow ? { angle: -42, textAnchor: "end" as const, dy: 6 } : {}),
               }}
               tickLine={false}
               axisLine={false}
@@ -123,22 +140,28 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
             />
             <Tooltip
               cursor={{ fill: "var(--accent-bg)" }}
-              contentStyle={{
-                borderRadius: "12px",
-                border: "1px solid var(--border-default)",
-                background: "var(--surface-2)",
-                color: "var(--text-1)",
-                fontSize: "12px",
-                boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const count = Number(payload[0]?.value ?? 0);
+                return (
+                  <div
+                    style={{
+                      borderRadius: "12px",
+                      border: "1px solid var(--border-default)",
+                      background: "var(--surface-2)",
+                      color: "var(--text-1)",
+                      fontSize: "12px",
+                      boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
+                      padding: "8px 12px",
+                    }}
+                  >
+                    <p style={{ color: "var(--text-2)", marginBottom: 4 }}>{stageLabel(String(label))}</p>
+                    <p style={{ fontWeight: 600 }}>{replaceCount(t("dashboard.pipeline.tooltipLabel"), count)}</p>
+                  </div>
+                );
               }}
-              labelStyle={{ color: "var(--text-2)" }}
             />
-            <Bar
-              dataKey="count"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={narrow ? 22 : 34}
-              animationDuration={700}
-            >
+            <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={narrow ? 22 : 34} animationDuration={700}>
               {data.map((entry) => {
                 const isOffer = entry.status === "Offer";
                 const opacity = isOffer
@@ -159,24 +182,24 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
 
       <div className="jf-pipe-foot">
         <div>
-          <div className="jf-pipe-stat-label">Conversion</div>
+          <div className="jf-pipe-stat-label uppercase">{t("dashboard.pipeline.footerConversion")}</div>
           <div className="jf-pipe-stat-val">
             {conversionPct}%
-            <small>applied → interview</small>
+            <small>{t("dashboard.pipeline.footerAppliedToInterview")}</small>
           </div>
         </div>
         <div>
-          <div className="jf-pipe-stat-label">Avg. velocity</div>
+          <div className="jf-pipe-stat-label uppercase">{t("dashboard.pipeline.footerAvgVelocity")}</div>
           <div className="jf-pipe-stat-val">
             3.2d
-            <small>stage to stage</small>
+            <small>{t("dashboard.pipeline.footerStageToStage")}</small>
           </div>
         </div>
         <div>
-          <div className="jf-pipe-stat-label">Synced</div>
+          <div className="jf-pipe-stat-label uppercase">{t("dashboard.pipeline.footerSynced")}</div>
           <div className="jf-pipe-stat-val">
-            Live
-            <small>from pipeline</small>
+            {t("dashboard.pipeline.liveBadge")}
+            <small>{t("dashboard.pipeline.footerFromPipeline")}</small>
           </div>
         </div>
       </div>

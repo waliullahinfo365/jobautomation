@@ -15,15 +15,17 @@ const JOB_STATUS_COLORS: Record<JobStatus, string> = {
 };
 
 interface JobStatusBadgeProps {
-  status:     JobStatus;
+  status: JobStatus;
   className?: string;
+  /** Localized label; defaults to raw `status` when omitted. */
+  label?: string;
 }
 
-export function JobStatusBadge({ status, className }: JobStatusBadgeProps) {
+export function JobStatusBadge({ status, className, label }: JobStatusBadgeProps) {
   return (
     <Badge className={cn("inline-flex items-center gap-1.5", JOB_STATUS_COLORS[status], className)}>
       <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {status}
+      {label ?? status}
     </Badge>
   );
 }
