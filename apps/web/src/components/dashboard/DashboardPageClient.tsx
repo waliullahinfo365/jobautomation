@@ -140,7 +140,7 @@ export function DashboardPageClient() {
 
       <AutomationHealth modules={modules} />
 
-      <AutomationLogTable logs={automationLogs} variant="dashboard" />
+      <AutomationLogTable logs={automationLogs} />
     </div>
   );
 }

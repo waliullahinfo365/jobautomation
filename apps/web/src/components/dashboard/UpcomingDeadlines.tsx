@@ -1,38 +1,32 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRightIcon, DeadlineIcon } from "@/components/icons";
 import type { JobSummary } from "@/types/job";
-import { isOverdue } from "@/lib/utils";
+import { formatDate, isOverdue } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "@/i18n/useTranslation";
-import { formatDateLongLocale } from "@/lib/format-date-locale";
 
 interface UpcomingDeadlinesProps {
   jobs: JobSummary[];
 }
 
-function getUrgencyKey(deadline: string | Date, now: Date): "today" | "tomorrow" | "thisWeek" | "later" {
+function getUrgency(deadline: string | Date, now: Date): "Today" | "Tomorrow" | "This Week" | "Later" {
   const d = new Date(deadline);
   const ms = d.getTime() - now.getTime();
   const days = Math.floor(ms / (1000 * 60 * 60 * 24));
-  if (days <= 0) return "today";
-  if (days === 1) return "tomorrow";
-  if (days <= 7) return "thisWeek";
-  return "later";
+  if (days <= 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  if (days <= 7) return "This Week";
+  return "Later";
 }
 
-function deadlineMonthDay(deadline: string | Date, locale: "de" | "en") {
-  const d = new Date(deadline);
-  if (Number.isNaN(d.getTime())) return { m: "—", d: "—" };
-  const loc = locale === "de" ? "de-DE" : "en-US";
-  const m = new Intl.DateTimeFormat(loc, { month: "short" }).format(d);
-  const day = String(d.getDate()).padStart(2, "0");
-  return { m, d: day };
+function deadlineParts(deadline: string | Date) {
+  const dt = new Date(deadline);
+  return {
+    m: dt.toLocaleString("en-US", { month: "short" }),
+    d: String(dt.getDate()).padStart(2, "0"),
+  };
 }
 
 export function UpcomingDeadlines({ jobs }: UpcomingDeadlinesProps) {
-  const { t, locale } = useTranslation();
   const withDeadlines = jobs.filter((j) => j.deadline);
   const now = new Date();
 
@@ -44,8 +38,8 @@ export function UpcomingDeadlines({ jobs }: UpcomingDeadlinesProps) {
             <DeadlineIcon size={18} />
           </div>
           <div className="min-w-0">
-            <h3 className="jf-panel-title">{t("dashboard.deadlines.title")}</h3>
-            <p className="jf-panel-sub">{t("dashboard.deadlines.subtitle")}</p>
+            <h3 className="jf-panel-title">Upcoming Deadlines</h3>
+            <p className="jf-panel-sub">Time-sensitive applications and interviews</p>
           </div>
         </div>
       </div>
@@ -55,10 +49,12 @@ export function UpcomingDeadlines({ jobs }: UpcomingDeadlinesProps) {
           <div className="jf-empty-icon">
             <DeadlineIcon size={22} />
           </div>
-          <div className="jf-empty-title">{t("dashboard.deadlines.emptyTitle")}</div>
-          <p className="jf-empty-sub">{t("dashboard.deadlines.emptyBody")}</p>
+          <div className="jf-empty-title">You&apos;re all clear</div>
+          <p className="jf-empty-sub">
+            No deadlines on the horizon. We&apos;ll surface them here the moment something needs your attention.
+          </p>
           <Link href="/settings" className="jf-empty-cta">
-            {t("dashboard.deadlines.configureReminders")}
+            Configure reminders
             <ArrowRightIcon size={14} />
           </Link>
         </div>
@@ -66,28 +62,23 @@ export function UpcomingDeadlines({ jobs }: UpcomingDeadlinesProps) {
         <div className="jf-deadlines">
           {withDeadlines.map((job) => {
             const overdue = job.deadline ? isOverdue(job.deadline) : false;
-            const urgency = job.deadline ? getUrgencyKey(job.deadline, now) : "later";
-            const parts = job.deadline ? deadlineMonthDay(job.deadline, locale) : { m: "—", d: "—" };
+            const urgency = job.deadline ? getUrgency(job.deadline, now) : "Later";
+            const parts = job.deadline ? deadlineParts(job.deadline) : { m: "—", d: "—" };
 
             const tagClass =
-              overdue || urgency === "today"
+              overdue || urgency === "Today"
                 ? "jf-dl-tag--urgent"
-                : urgency === "tomorrow" || urgency === "thisWeek"
+                : urgency === "Tomorrow" || urgency === "This Week"
                   ? "jf-dl-tag--soon"
                   : "jf-dl-tag--later";
 
             const tagLabel = overdue
-              ? t("dashboard.deadlines.tagUrgent")
-              : urgency === "today"
-                ? t("dashboard.deadlines.urgencyToday")
-                : urgency === "tomorrow" || urgency === "thisWeek"
-                  ? t("dashboard.deadlines.tagSoon")
-                  : t("dashboard.deadlines.tagOnTrack");
-
-            const deadlineLine = job.deadline
-              ? ` · ${formatDateLongLocale(job.deadline, locale)}`
-              : "";
-            const overdueSuffix = overdue ? ` · ${t("dashboard.deadlines.overdue")}` : "";
+              ? "Urgent"
+              : urgency === "Today"
+                ? "Today"
+                : urgency === "Tomorrow" || urgency === "This Week"
+                  ? "Soon"
+                  : "On track";
 
             return (
               <Link key={job._id} href={`/jobs/${job._id}`} className="jf-dl-row">
@@ -99,13 +90,11 @@ export function UpcomingDeadlines({ jobs }: UpcomingDeadlinesProps) {
                   <div className="jf-dl-title">{job.title}</div>
                   <div className="jf-dl-meta">
                     {job.company}
-                    {deadlineLine}
-                    {overdueSuffix}
+                    {job.deadline ? ` · ${formatDate(job.deadline)}` : ""}
+                    {overdue ? " · Overdue" : ""}
                   </div>
                 </div>
-                <span className={cn("jf-dl-tag", tagClass)}>
-                  {tagLabel}
-                </span>
+                <span className={cn("jf-dl-tag", tagClass)}>{tagLabel}</span>
               </Link>
             );
           })}
