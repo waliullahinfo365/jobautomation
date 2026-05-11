@@ -3,21 +3,23 @@ import type { Job } from "@/types/job";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { formatDate } from "@/lib/utils";
 import { ExternalLinkIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 interface JobOverviewCardProps {
   job: Job;
 }
 
 export function JobOverviewCard({ job }: JobOverviewCardProps) {
+  const { t } = useTranslation();
   return (
-    <SectionCard title="Job Overview">
+    <SectionCard title={t("jobs.jobOverview")}>
       <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-        <OverviewItem label="Company" value={job.company} />
-        <OverviewItem label="Position" value={job.position} />
-        <OverviewItem label="Location" value={`${job.location}${job.remote ? " (Remote)" : ""}`} />
-        <OverviewItem label="Source" value={job.source} />
+        <OverviewItem label={t("jobs.company")} value={job.company} />
+        <OverviewItem label={t("jobs.position")} value={job.position} />
+        <OverviewItem label={t("jobs.location")} value={`${job.location}${job.remote ? ` (${t("jobs.remote")})` : ""}`} />
+        <OverviewItem label={t("jobs.source")} value={job.source} />
         <OverviewItem
-          label="Job URL"
+          label={t("jobs.jobUrl")}
           value={
             <a
               href={job.jobUrl}
@@ -25,29 +27,29 @@ export function JobOverviewCard({ job }: JobOverviewCardProps) {
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-[var(--text-2)] hover:underline"
             >
-              Open Posting <ExternalLinkIcon size={14} />
+              {t("jobs.openPosting")} <ExternalLinkIcon size={14} />
             </a>
           }
         />
-        <OverviewItem label="Salary Range" value={job.salaryRange} />
-        <OverviewItem label="Deadline" value={job.deadline ? formatDate(job.deadline) : "—"} />
-        <OverviewItem label="Date Found" value={formatDate(job.dateFound)} />
-        <OverviewItem label="Date Applied" value={job.dateApplied ? formatDate(job.dateApplied) : "—"} />
-        <OverviewItem label="Contact Email" value={job.contactEmail ?? "—"} />
+        <OverviewItem label={t("jobs.salaryRange")} value={job.salaryRange} />
+        <OverviewItem label={t("jobs.deadline")} value={job.deadline ? formatDate(job.deadline) : "—"} />
+        <OverviewItem label={t("jobs.dateFound")} value={formatDate(job.dateFound)} />
+        <OverviewItem label={t("jobs.dateApplied")} value={job.dateApplied ? formatDate(job.dateApplied) : "—"} />
+        <OverviewItem label={t("jobs.contactEmail")} value={job.contactEmail ?? "—"} />
         <OverviewItem
-          label="Open Drive Job Folder"
+          label={t("jobs.openDriveJobFolder")}
           value={job.driveFolderLink ? <ExternalLink href={job.driveFolderLink} /> : "—"}
         />
         <OverviewItem
-          label="Open Research Folder"
+          label={t("jobs.openResearchFolder")}
           value={job.researchFolderLink ? <ExternalLink href={job.researchFolderLink} /> : "—"}
         />
         <OverviewItem
-          label="Open Cover Letter Folder"
+          label={t("jobs.openCoverLetterFolder")}
           value={job.coverLetterFolderLink ? <ExternalLink href={job.coverLetterFolderLink} /> : "—"}
         />
         <OverviewItem
-          label="Open AI Draft Google Doc"
+          label={t("jobs.openAiDraftGoogleDoc")}
           value={job.aiDraftDocUrl ? <ExternalLink href={job.aiDraftDocUrl} /> : "—"}
         />
       </div>

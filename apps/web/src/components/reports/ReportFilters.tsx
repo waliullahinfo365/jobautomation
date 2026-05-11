@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { ReportStatus, ReportType } from "@/types/report";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 export interface ReportFilterState {
   query: string;
@@ -25,6 +26,7 @@ export function ReportFilters({
   onClear: () => void;
   aside?: ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
       {aside ? <div className="mb-3 flex justify-end">{aside}</div> : null}
@@ -33,7 +35,7 @@ export function ReportFilters({
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]" />
           <Input
             className="pl-9"
-            placeholder="Search by report name"
+            placeholder={t("reports.searchByReportName")}
             value={filters.query}
             onChange={(e) => onChange({ ...filters, query: e.target.value })}
           />

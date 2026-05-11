@@ -5,6 +5,7 @@ import { ReportStatusBadge } from "./ReportStatusBadge";
 import { ReportTypeBadge } from "./ReportTypeBadge";
 import { formatDate } from "@/lib/utils";
 import type { ReportHistoryRecord } from "@/types/report";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 function deliveryLabel(record: ReportHistoryRecord): string {
   if (record.deliveryOutcome === "Delivery warning") return "Delivery warning";
@@ -29,19 +30,20 @@ export function ReportHistoryTable({
   onSendTest?: (record: ReportHistoryRecord) => void;
   busyId?: string | null;
 }) {
+  const { t } = useTranslation();
   return (
-    <SectionCard title="Report History" description="All generated and scheduled reports." contentClassName="p-0">
+    <SectionCard title={t("reports.reportHistory")} description={t("reports.allGeneratedAndScheduledReports")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Report Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Generated At</TableHead>
-            <TableHead>Sent To</TableHead>
-            <TableHead>Outcome</TableHead>
-            <TableHead>Method</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>{t("reports.reportName")}</TableHead>
+            <TableHead>{t("reports.type")}</TableHead>
+            <TableHead>{t("reports.status")}</TableHead>
+            <TableHead>{t("reports.generatedAt")}</TableHead>
+            <TableHead>{t("reports.sentTo")}</TableHead>
+            <TableHead>{t("reports.outcome")}</TableHead>
+            <TableHead>{t("reports.method")}</TableHead>
+            <TableHead className="text-right">{t("reports.export")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
