@@ -3,75 +3,77 @@
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "types": "./src/index.ts",
   "typesVersions": {
     "*": {
-      "ai/anthropic-messages": ["dist/ai/anthropic-messages.d.ts"],
-      "ai/*": ["dist/ai/*"],
-      "gmail/*": ["dist/gmail/*"],
-      "google-drive/*": ["dist/google-drive/*"],
-      "google-calendar/*": ["dist/google-calendar/*"],
-      "smtp/*": ["dist/smtp/*"],
-      "email/*": ["dist/email/*"],
-      "notifications/*": ["dist/notifications/*"],
-      "notion-legacy/*": ["dist/notion-legacy/*"]
+      "ai/anthropic-messages": ["./src/ai/anthropic-messages.ts"],
+      "ai/*": ["./src/ai/*.ts"],
+      "gmail/*": ["./src/gmail/*.ts"],
+      "google-drive/*": ["./src/google-drive/*.ts"],
+      "google-calendar/*": ["./src/google-calendar/*.ts"],
+      "smtp/*": ["./src/smtp/*.ts"],
+      "email/*": ["./src/email/*.ts"],
+      "notifications/*": ["./src/notifications/*.ts"],
+      "notion-legacy/*": ["./src/notion-legacy/*.ts"]
     }
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./ai/anthropic-messages": {
-      "types": "./dist/ai/anthropic-messages.d.ts",
+      "types": "./src/ai/anthropic-messages.ts",
+      "require": "./dist/ai/anthropic-messages.js",
+      "import": "./dist/ai/anthropic-messages.js",
       "default": "./dist/ai/anthropic-messages.js"
     },
     "./ai/*": {
-      "types": "./dist/ai/*.d.ts",
+      "types": "./src/ai/*.ts",
       "require": "./dist/ai/*.js",
       "import": "./dist/ai/*.js",
       "default": "./dist/ai/*.js"
     },
     "./gmail/*": {
-      "types": "./dist/gmail/*.d.ts",
+      "types": "./src/gmail/*.ts",
       "require": "./dist/gmail/*.js",
       "import": "./dist/gmail/*.js",
       "default": "./dist/gmail/*.js"
     },
     "./google-drive/*": {
-      "types": "./dist/google-drive/*.d.ts",
+      "types": "./src/google-drive/*.ts",
       "require": "./dist/google-drive/*.js",
       "import": "./dist/google-drive/*.js",
       "default": "./dist/google-drive/*.js"
     },
     "./google-calendar/*": {
-      "types": "./dist/google-calendar/*.d.ts",
+      "types": "./src/google-calendar/*.ts",
       "require": "./dist/google-calendar/*.js",
       "import": "./dist/google-calendar/*.js",
       "default": "./dist/google-calendar/*.js"
     },
     "./smtp/*": {
-      "types": "./dist/smtp/*.d.ts",
+      "types": "./src/smtp/*.ts",
       "require": "./dist/smtp/*.js",
       "import": "./dist/smtp/*.js",
       "default": "./dist/smtp/*.js"
     },
     "./email/*": {
-      "types": "./dist/email/*.d.ts",
+      "types": "./src/email/*.ts",
       "require": "./dist/email/*.js",
       "import": "./dist/email/*.js",
       "default": "./dist/email/*.js"
     },
     "./notifications/*": {
-      "types": "./dist/notifications/*.d.ts",
+      "types": "./src/notifications/*.ts",
       "require": "./dist/notifications/*.js",
       "import": "./dist/notifications/*.js",
       "default": "./dist/notifications/*.js"
     },
     "./notion-legacy/*": {
-      "types": "./dist/notion-legacy/*.d.ts",
+      "types": "./src/notion-legacy/*.ts",
       "require": "./dist/notion-legacy/*.js",
       "import": "./dist/notion-legacy/*.js",
       "default": "./dist/notion-legacy/*.js"

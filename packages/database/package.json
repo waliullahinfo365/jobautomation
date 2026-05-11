@@ -3,29 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "types": "./src/index.ts",
   "typesVersions": {
     "*": {
-      "models": ["dist/models/index.d.ts"],
-      "models/*": ["dist/models/*"],
-      "seed/*": ["dist/seed/*"]
+      "models": ["./src/models/index.ts"],
+      "models/*": ["./src/models/*.ts"],
+      "seed/*": ["./src/seed/*.ts"]
     }
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./models": {
-      "types": "./dist/models/index.d.ts",
+      "types": "./src/models/index.ts",
       "require": "./dist/models/index.js",
       "import": "./dist/models/index.js",
       "default": "./dist/models/index.js"
     },
     "./seed/seedAutomationModules": {
-      "types": "./dist/seed/seedAutomationModules.d.ts",
+      "types": "./src/seed/seedAutomationModules.ts",
       "require": "./dist/seed/seedAutomationModules.js",
       "import": "./dist/seed/seedAutomationModules.js",
       "default": "./dist/seed/seedAutomationModules.js"
