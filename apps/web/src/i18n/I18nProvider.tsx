@@ -66,3 +66,7 @@ export function useI18n(): I18nContextValue {
   if (!ctx) throw new Error("useI18n must be used within I18nProvider");
   return ctx;
 }
+
+export function useTranslation(): I18nContextValue {
+  return useI18n();
+}
