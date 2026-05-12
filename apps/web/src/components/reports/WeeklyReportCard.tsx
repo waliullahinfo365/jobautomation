@@ -11,33 +11,39 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { WeeklyPerformanceReport } from "@/types/report";
-import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 interface WeeklyReportCardProps {
   report: WeeklyPerformanceReport;
 }
 
 export function WeeklyReportCard({ report }: WeeklyReportCardProps) {
+  const { t, locale } = useTranslation();
+  const fmtDate = (d: string | Date) =>
+    new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-US", {
+      year: "numeric", month: "short", day: "numeric",
+    }).format(typeof d === "string" ? new Date(d) : d);
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
           <BarChart3Icon size={16} className="text-[var(--text-3)]" />
           <CardTitle className="text-sm">
-            Weekly Report · {formatDate(report.weekStart)} – {formatDate(report.weekEnd)}
+            {t("reports.weeklyCard.title")} · {fmtDate(report.weekStart)} – {fmtDate(report.weekEnd)}
           </CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         <div className="mb-5 grid grid-cols-3 gap-3">
           {[
-            { label: "Jobs Added", value: report.jobsAdded },
-            { label: "Applications", value: report.applicationsSubmitted },
-            { label: "Interviews", value: report.interviewsScheduled },
-            { label: "Offers", value: report.offersReceived },
-            { label: "Rejections", value: report.rejections },
-            { label: "Response Rate", value: `${report.responseRate}%` },
+            { label: t("reports.weeklyCard.jobsAdded"), value: report.jobsAdded },
+            { label: t("reports.weeklyCard.applications"), value: report.applicationsSubmitted },
+            { label: t("reports.weeklyCard.interviews"), value: report.interviewsScheduled },
+            { label: t("reports.weeklyCard.offers"), value: report.offersReceived },
+            { label: t("reports.weeklyCard.rejections"), value: report.rejections },
+            { label: t("reports.weeklyCard.responseRate"), value: `${report.responseRate}%` },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-lg bg-[var(--surface-2)] px-3 py-2">
               <p className="text-xs text-[var(--text-3)]">{label}</p>

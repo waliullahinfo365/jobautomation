@@ -8,15 +8,17 @@ import {
 } from "@/components/icons";
 import { Card, CardContent } from "@/components/ui/card";
 import type { ReportStats } from "@/types/report";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 export function ReportStatsCards({ stats }: { stats: ReportStats }) {
+  const { t } = useTranslation();
   const items = [
-    { label: "Reports Generated", value: stats.reportsGenerated, helper: "Total generated this month", icon: <FileBarChart2Icon size={20} /> },
-    { label: "Daily Digests Sent", value: stats.dailyDigestsSent, helper: "Delivered daily summaries", icon: <NewspaperIcon size={20} /> },
-    { label: "Weekly Reports Sent", value: stats.weeklyReportsSent, helper: "Weekly performance mailouts", icon: <CalendarDaysIcon size={20} /> },
-    { label: "PDF Exports", value: stats.pdfExports, helper: "Documents exported to PDF", icon: <FileTextIcon size={20} /> },
-    { label: "Success Rate", value: `${stats.successRate}%`, helper: "Report generation success", icon: <GaugeIcon size={20} /> },
-    { label: "Last Report", value: stats.lastReport, helper: "Most recent generation", icon: <Clock3Icon size={20} /> },
+    { label: t("reports.reportsGenerated"), value: stats.reportsGenerated, helper: t("reports.stats.totalGeneratedThisMonth"), icon: <FileBarChart2Icon size={20} /> },
+    { label: t("reports.dailyDigestsSent"), value: stats.dailyDigestsSent, helper: t("reports.stats.deliveredDailySummaries"), icon: <NewspaperIcon size={20} /> },
+    { label: t("reports.weeklyReportsSent"), value: stats.weeklyReportsSent, helper: t("reports.stats.weeklyPerformanceMailouts"), icon: <CalendarDaysIcon size={20} /> },
+    { label: t("reports.pdfExports"), value: stats.pdfExports, helper: t("reports.stats.documentsExportedToPdf"), icon: <FileTextIcon size={20} /> },
+    { label: t("reports.successRate"), value: `${stats.successRate}%`, helper: t("reports.stats.reportGenerationSuccess"), icon: <GaugeIcon size={20} /> },
+    { label: t("reports.lastReport"), value: stats.lastReport, helper: t("reports.stats.mostRecentGeneration"), icon: <Clock3Icon size={20} /> },
   ];
 
   return (

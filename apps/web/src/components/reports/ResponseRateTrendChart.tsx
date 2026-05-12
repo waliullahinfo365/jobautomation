@@ -32,7 +32,7 @@ export function ResponseRateTrendChart({ data }: { data: { day: string; rate: nu
     <Card>
       <CardHeader>
         <CardTitle>{t("reports.responseRateTrend")}</CardTitle>
-        <CardDescription>Daily response-rate movement for the week.</CardDescription>
+        <CardDescription>{t("reports.chart.dailyResponseRateMovement")}</CardDescription>
       </CardHeader>
       <CardContent className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">

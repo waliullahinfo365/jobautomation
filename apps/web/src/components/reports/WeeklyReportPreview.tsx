@@ -4,6 +4,7 @@ import type { WeeklyReportData } from "@/types/report";
 import { ApplicationsBySourceChart } from "./ApplicationsBySourceChart";
 import { ResponseRateTrendChart } from "./ResponseRateTrendChart";
 import { PipelineConversionChart } from "./PipelineConversionChart";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 export function WeeklyReportPreview({
   report,
@@ -18,25 +19,26 @@ export function WeeklyReportPreview({
   previewLoading?: boolean;
   sendLoading?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Weekly Performance Preview</CardTitle>
+          <CardTitle>{t("reports.weekly.title")}</CardTitle>
           <CardDescription>{report.weekRange}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <Metric label="Total jobs found" value={report.totalJobsFound} />
-            <Metric label="Applications submitted" value={report.applicationsSubmitted} />
-            <Metric label="Response rate" value={`${report.responseRate}%`} />
-            <Metric label="Interview conversion" value={`${report.interviewConversionRate}%`} />
-            <Metric label="Offers received" value={report.offersReceived} />
+            <Metric label={t("reports.weekly.totalJobsFound")} value={report.totalJobsFound} />
+            <Metric label={t("reports.weekly.applicationsSubmitted")} value={report.applicationsSubmitted} />
+            <Metric label={t("reports.weekly.responseRate")} value={`${report.responseRate}%`} />
+            <Metric label={t("reports.weekly.interviewConversion")} value={`${report.interviewConversionRate}%`} />
+            <Metric label={t("reports.weekly.offersReceived")} value={report.offersReceived} />
           </div>
-          <List title="Top Sources" items={report.topSources.map((s) => `${s.source}: ${s.count}`)} />
-          <List title="Best Performing Categories" items={report.bestPerformingCategories} />
-          <List title="Bottlenecks / Recommendations" items={report.bottlenecks} />
-          <List title="Next Week Focus" items={report.nextWeekFocus} />
+          <List title={t("reports.weekly.topSources")} items={report.topSources.map((s) => `${s.source}: ${s.count}`)} />
+          <List title={t("reports.weekly.bestPerformingCategories")} items={report.bestPerformingCategories} />
+          <List title={t("reports.weekly.bottlenecks")} items={report.bottlenecks} />
+          <List title={t("reports.weekly.nextWeekFocus")} items={report.nextWeekFocus} />
         </CardContent>
       </Card>
 
@@ -50,12 +52,12 @@ export function WeeklyReportPreview({
         <div className="flex flex-wrap justify-end gap-2">
           {onPreviewWeekly ? (
             <Button type="button" variant="outline" disabled={previewLoading} onClick={() => onPreviewWeekly()}>
-              {previewLoading ? "Generating…" : "Preview Weekly Report"}
+              {previewLoading ? t("reports.generating") : t("reports.weekly.previewWeeklyReport")}
             </Button>
           ) : null}
           {onSendTest ? (
             <Button type="button" variant="secondary" disabled={sendLoading} onClick={() => onSendTest()}>
-              {sendLoading ? "Sending…" : "Send Test"}
+              {sendLoading ? t("reports.weekly.sending") : t("reports.sendTest")}
             </Button>
           ) : null}
         </div>

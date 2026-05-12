@@ -42,7 +42,7 @@ export function WeeklyApplicationTrendChart({ data }: { data: { day: string; app
     <Card>
       <CardHeader>
         <CardTitle>{t("reports.weeklyApplicationTrend")}</CardTitle>
-        <CardDescription>Applications submitted by day in current week.</CardDescription>
+        <CardDescription>{t("reports.chart.applicationsSubmittedByDay")}</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">

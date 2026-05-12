@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 const TOOLTIP_CONTENT = {
   background: "var(--surface-2, #13171F)",
@@ -22,11 +23,12 @@ const BAR_FILLS = [
 ] as const;
 
 export function PipelineConversionChart({ data }: { data: { stage: string; conversion: number }[] }) {
+  const { t } = useTranslation();
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pipeline Conversion</CardTitle>
-        <CardDescription>Conversion percentages by stage.</CardDescription>
+        <CardTitle>{t("reports.chart.pipelineConversion")}</CardTitle>
+        <CardDescription>{t("reports.chart.conversionByStage")}</CardDescription>
       </CardHeader>
       <CardContent className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">

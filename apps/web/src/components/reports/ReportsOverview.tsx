@@ -22,12 +22,12 @@ interface ReportsOverviewProps {
 export function ReportsOverview({ summary, weeklyTrendData, statusBreakdownData, history }: ReportsOverviewProps) {
   const { t } = useTranslation();
   const stats = [
-    [t("reports.applicationsSent"), summary.applicationsThisWeek],
-    [t("reports.repliesReceived"), summary.repliesThisWeek],
-    [t("reports.interviewsScheduled"), summary.interviewsThisWeek],
-    [t("reports.offersReceived"), summary.offersThisWeek],
-    [t("common.rejectionRate"), `${summary.rejectionRate}%`],
-    [t("reports.followUpsDue"), summary.followUpsDue],
+    [t("reports.overview.applicationsThisWeek"), summary.applicationsThisWeek],
+    [t("reports.overview.repliesThisWeek"), summary.repliesThisWeek],
+    [t("reports.overview.interviewsThisWeek"), summary.interviewsThisWeek],
+    [t("reports.overview.offersThisWeek"), summary.offersThisWeek],
+    [t("reports.overview.rejectionRate"), `${summary.rejectionRate}%`],
+    [t("reports.overview.followupsDue"), summary.followUpsDue],
   ];
 
   return (

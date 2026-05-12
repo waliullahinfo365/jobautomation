@@ -44,22 +44,22 @@ export function ReportFilters({
           value={filters.type}
           onChange={(e) => onChange({ ...filters, type: e.target.value as ReportFilterState["type"] })}
           options={[
-            { label: "All Types", value: "All" },
-            { label: "Daily Digest", value: "Daily Digest" },
-            { label: "Weekly Performance", value: "Weekly Performance" },
-            { label: "PDF Export", value: "PDF Export" },
-            { label: "Manual Report", value: "Manual Report" },
+            { label: t("reports.filters.allTypes"), value: "All" },
+            { label: t("reports.reportType.dailyDigest"), value: "Daily Digest" },
+            { label: t("reports.reportType.weeklyPerformance"), value: "Weekly Performance" },
+            { label: t("reports.reportType.pdfExport"), value: "PDF Export" },
+            { label: t("reports.filters.manualReport"), value: "Manual Report" },
           ]}
         />
         <Select
           value={filters.status}
           onChange={(e) => onChange({ ...filters, status: e.target.value as ReportFilterState["status"] })}
           options={[
-            { label: "All Statuses", value: "All" },
-            { label: "Sent", value: "Sent" },
-            { label: "Generated", value: "Generated" },
-            { label: "Failed", value: "Failed" },
-            { label: "Scheduled", value: "Scheduled" },
+            { label: t("reports.filters.allStatuses"), value: "All" },
+            { label: t("reports.reportStatus.sent"), value: "Sent" },
+            { label: t("reports.reportStatus.generated"), value: "Generated" },
+            { label: t("reports.reportStatus.failed"), value: "Failed" },
+            { label: t("reports.filters.scheduled"), value: "Scheduled" },
           ]}
         />
         <div className="flex gap-2">
@@ -68,13 +68,13 @@ export function ReportFilters({
             value={filters.dateRange}
             onChange={(e) => onChange({ ...filters, dateRange: e.target.value as ReportFilterState["dateRange"] })}
             options={[
-              { label: "All Dates", value: "All Dates" },
-              { label: "Last 7 Days", value: "Last 7 Days" },
-              { label: "Last 30 Days", value: "Last 30 Days" },
+              { label: t("reports.filters.allDates"), value: "All Dates" },
+              { label: t("reports.filters.last7Days"), value: "Last 7 Days" },
+              { label: t("reports.filters.last30Days"), value: "Last 30 Days" },
             ]}
           />
           <Button variant="outline" onClick={onClear}>
-            Clear
+            {t("reports.filters.clear")}
           </Button>
         </div>
       </div>

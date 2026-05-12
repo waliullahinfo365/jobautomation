@@ -45,6 +45,7 @@ import { getReport } from "@/lib/api/reports.api";
 import { getDocument } from "@/lib/api/documents.api";
 import { API_URL } from "@/config/env";
 import { isPublicFileUrl } from "@/lib/utils/is-public-file-url";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 const initialFilters: ReportFilterState = {
   query: "",
@@ -118,19 +119,21 @@ type ReportDetailModal = {
   contentMissing?: boolean;
 };
 
-function toastReportGenerationSuccess(res: unknown) {
-  const r = (res && typeof res === "object" ? res : {}) as Record<string, unknown>;
-  const status = String(r.status ?? "").toLowerCase();
-  const message = String(r.message ?? "").toLowerCase();
-  if (status.includes("queued") || message.includes("queued")) {
-    showInfo("Report generation started. It will appear in history after the worker finishes.");
-    return;
-  }
-  const reportId = String(r.reportId ?? r.id ?? "—");
-  showSuccess(`Report generated successfully. Report ID: ${reportId}`);
-}
-
 export function ReportsPageClient() {
+  const { t } = useTranslation();
+
+  function toastReportGenerationSuccess(res: unknown) {
+    const r = (res && typeof res === "object" ? res : {}) as Record<string, unknown>;
+    const status = String(r.status ?? "").toLowerCase();
+    const message = String(r.message ?? "").toLowerCase();
+    if (status.includes("queued") || message.includes("queued")) {
+      showInfo(t("reports.toast.generationQueued"));
+      return;
+    }
+    const reportId = String(r.reportId ?? r.id ?? "—");
+    showSuccess(t("reports.toast.generationSuccess").replace("{id}", reportId));
+  }
+
   const reportsApi = useReportsApi({ fallbackToMock: false });
   const documentsApi = useDocumentsApi({ fallbackToMock: false });
   const [tab, setTab] = useState<ReportTab>("Overview");
@@ -168,9 +171,9 @@ export function ReportsPageClient() {
   const summaryPayload = reportsApi.summaryQuery.data as Record<string, unknown> | undefined;
 
   const weeklyTrendFromSummary = useMemo(() => {
-    const t = summaryPayload?.weeklyApplicationTrend;
-    if (!Array.isArray(t)) return [] as { day: string; applications: number }[];
-    return t as { day: string; applications: number }[];
+    const trend = summaryPayload?.weeklyApplicationTrend;
+    if (!Array.isArray(trend)) return [] as { day: string; applications: number }[];
+    return trend as { day: string; applications: number }[];
   }, [summaryPayload]);
 
   const statusBreakdownFromSummary = useMemo(() => {
@@ -285,7 +288,7 @@ export function ReportsPageClient() {
     try {
       await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
     } catch {
-      showError("Could not refresh reports.");
+      showError(t("reports.toast.refreshFailed"));
     } finally {
       setRefreshing(false);
     }
@@ -297,7 +300,7 @@ export function ReportsPageClient() {
       toastReportGenerationSuccess(res);
       await reportsApi.refetch();
     } catch {
-      showError("Could not queue report generation.");
+      showError(t("reports.toast.generateFailed"));
     }
   };
 
@@ -311,17 +314,17 @@ export function ReportsPageClient() {
       const googleHint =
         /Google Docs scope missing|Gmail send scope missing|Missing OAuth scope|Google delivery failed \(403\)/i.test(msg);
       if (previewOnly) {
-        showInfo("No notification provider configured. Report preview saved only.");
+        showInfo(t("reports.toast.noProviderConfigured"));
       } else if (deliveryWarning || googleHint) {
-        showInfo(msg || "Delivery completed with warnings; open the report for channel details.");
+        showInfo(msg || t("reports.toast.deliveryWithWarnings"));
       } else {
-        showSuccess(msg || "Report test delivery completed.");
+        showSuccess(msg || t("reports.toast.testDeliveryCompleted"));
       }
       invalidateApiCache("/notifications");
       invalidateApiCache("/automation");
       await reportsApi.refetch();
     } catch {
-      showError("Send test failed.");
+      showError(t("reports.toast.sendTestFailed"));
     } finally {
       setBusyRowId(null);
     }
@@ -338,7 +341,7 @@ export function ReportsPageClient() {
             ? row.summaryText
             : "";
       const contentMissing = !markdown.trim();
-      const content = contentMissing ? "Report content is missing. Regenerate this report." : markdown;
+      const content = contentMissing ? t("reports.modal.reportContentMissing") : markdown;
       const googleDocUrlRaw = typeof data.googleDocUrl === "string" ? data.googleDocUrl : undefined;
       const pdfUrlRaw = typeof row.pdfUrl === "string" ? row.pdfUrl : undefined;
       const googleDocUrl =
@@ -389,27 +392,27 @@ export function ReportsPageClient() {
         contentMissing,
       });
     } catch {
-      showError("Could not open report.");
+      showError(t("reports.toast.couldNotOpenReport"));
     }
   };
 
   const handleSendTestDailyDigest = async () => {
     try {
       await reportsApi.sendDailyDigestTest({});
-      showInfo("Daily digest test queued. Delivery outcome will appear on the report row and in Automation Logs.");
+      showInfo(t("reports.toast.dailyDigestTestQueued"));
       await reportsApi.refetch();
     } catch {
-      showError("Send test failed.");
+      showError(t("reports.toast.sendTestFailed"));
     }
   };
 
   const handleSendTestWeekly = async () => {
     try {
       await reportsApi.sendWeeklyReportTest({});
-      showInfo("Weekly report test queued. Delivery outcome will appear on the report row and in Automation Logs.");
+      showInfo(t("reports.toast.weeklyTestQueued"));
       await reportsApi.refetch();
     } catch {
-      showError("Send test failed.");
+      showError(t("reports.toast.sendTestFailed"));
     }
   };
 
@@ -418,11 +421,11 @@ export function ReportsPageClient() {
       const data = (await reportsApi.previewDailyDigest({})) as Record<string, unknown>;
       const markdown = typeof data.markdown === "string" ? data.markdown : String(data.summary ?? "");
       setMarkdownPreview({
-        title: "Daily Digest Preview",
-        body: markdown.trim() ? markdown : "Digest preview unavailable.",
+        title: t("reports.daily.title"),
+        body: markdown.trim() ? markdown : t("reports.toast.digestPreviewUnavailable"),
       });
     } catch {
-      showError("Could not generate preview.");
+      showError(t("reports.toast.couldNotGeneratePreview"));
     }
   };
 
@@ -431,11 +434,11 @@ export function ReportsPageClient() {
       const data = (await reportsApi.previewWeeklyReport({})) as Record<string, unknown>;
       const markdown = typeof data.markdown === "string" ? data.markdown : String(data.summary ?? "");
       setMarkdownPreview({
-        title: "Weekly Report Preview",
-        body: markdown.trim() ? markdown : "Weekly preview unavailable.",
+        title: t("reports.weekly.title"),
+        body: markdown.trim() ? markdown : t("reports.toast.weeklyPreviewUnavailable"),
       });
     } catch {
-      showError("Could not generate preview.");
+      showError(t("reports.toast.couldNotGeneratePreview"));
     }
   };
 
@@ -456,7 +459,7 @@ export function ReportsPageClient() {
             ? doc.contentText
             : typeof meta.textExportContent === "string"
               ? meta.textExportContent
-              : "No text content available.";
+              : t("reports.modal.noTextContent");
         setSelectedReport({
           title: record.documentName,
           content: text,
@@ -464,11 +467,11 @@ export function ReportsPageClient() {
           documentId: record.documentId,
           pdfUnavailableNotice:
             record.textPreviewAvailable || !record.exportPublicUrl
-              ? "PDF provider is not configured. Text export is available."
+              ? t("reports.modal.pdfProviderNotConfigured")
               : undefined,
         });
       } catch {
-        showError("Could not open export source.");
+        showError(t("reports.toast.couldNotOpenExport"));
       }
       return;
     }
@@ -487,18 +490,18 @@ export function ReportsPageClient() {
 
   const handleExportAgain = async (record: PDFExportRecord) => {
     if (!record.documentId) {
-      showInfo("Report-based rows cannot be re-exported from this action yet. Open the report or connect PDF export for documents.");
+      showInfo(t("reports.toast.reportBasedNoReExport"));
       return;
     }
     try {
       setBusyRowId(record.id);
       const res = await reportsApi.queuePdfExport({ documentId: record.documentId });
       const msg = String((res as Record<string, unknown>).message ?? "");
-      showInfo(msg || "PDF export queued.");
+      showInfo(msg || t("reports.toast.pdfExportQueued"));
       invalidateApiCache("/notifications");
       await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
     } catch {
-      showError("Could not queue PDF export.");
+      showError(t("reports.toast.pdfExportFailed"));
     } finally {
       setBusyRowId(null);
     }
@@ -506,19 +509,19 @@ export function ReportsPageClient() {
 
   const handleRegenerateFromModal = async () => {
     if (!selectedReport?.reportId || !selectedReport.reportTypeLabel) return;
-    const t =
+    const reportType =
       selectedReport.reportTypeLabel === "Daily Digest"
         ? "daily-digest"
         : selectedReport.reportTypeLabel === "Weekly Performance"
           ? "weekly-report"
           : "weekly-report";
     try {
-      await reportsApi.generateReport({ type: t, force: true, send: false });
-      showSuccess("Report regeneration queued.");
+      await reportsApi.generateReport({ type: reportType, force: true, send: false });
+      showSuccess(t("reports.toast.regenerationQueued"));
       setSelectedReport(null);
       await reportsApi.refetch();
     } catch {
-      showError("Could not queue report regeneration.");
+      showError(t("reports.toast.regenerationFailed"));
     }
   };
 
@@ -527,12 +530,12 @@ export function ReportsPageClient() {
     try {
       const res = await reportsApi.queuePdfExport({ documentId: selectedReport.documentId });
       const msg = String((res as Record<string, unknown>).message ?? "");
-      showInfo(msg || "PDF export queued.");
+      showInfo(msg || t("reports.toast.pdfExportQueued"));
       invalidateApiCache("/notifications");
       await Promise.all([reportsApi.refetch(), documentsApi.refetch()]);
       setSelectedReport(null);
     } catch {
-      showError("Could not queue PDF export.");
+      showError(t("reports.toast.pdfExportFailed"));
     }
   };
 
@@ -550,20 +553,20 @@ export function ReportsPageClient() {
   const handleCopyModalContent = async () => {
     if (!selectedReport) return;
     await navigator.clipboard.writeText(selectedReport.content);
-    showSuccess("Copied to clipboard.");
+    showSuccess(t("reports.toast.copiedToClipboard"));
   };
 
   const initialListLoading = reportsApi.listQuery.loading && reportsApi.listQuery.data === undefined;
   if (initialListLoading) {
     return (
-      <LoadingState title="Loading reports" description="Fetching report history and analytics…" className="min-h-[40vh]" />
+      <LoadingState title={t("reports.loading")} description={t("reports.loading")} className="min-h-[40vh]" />
     );
   }
 
   if (reportsApi.error && reportsApi.listQuery.data === undefined && !reportsApi.isUsingFallback) {
     return (
       <ErrorState
-        title="Reports unavailable"
+        title={t("reports.noReports")}
         message={reportsApi.error.message}
         actionLabel="Retry"
         onAction={() => void reportsApi.refetch()}
@@ -584,9 +587,9 @@ export function ReportsPageClient() {
     <div className="space-y-6">
       <PageHeader
         icon={ReportsIcon}
-        eyebrow="Insights & Reports"
-        title="Reports"
-        description="Review daily digests, weekly performance reports, and exported documents."
+        eyebrow={t("reports.eyebrow")}
+        title={t("reports.title")}
+        description={t("reports.description")}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {reportsApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
@@ -598,10 +601,10 @@ export function ReportsPageClient() {
               onClick={() => void refetchAll()}
             >
               <RefreshIcon size={16} className="mr-1" />
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing ? t("reports.refreshing") : t("reports.refresh")}
             </Button>
             <Button type="button" onClick={() => void handleGenerateReport()} disabled={genBusy}>
-              {reportsApi.mutations.generateLoading ? "Starting…" : "Generate Report"}
+              {reportsApi.mutations.generateLoading ? t("reports.starting") : t("reports.generateReport")}
             </Button>
           </div>
         }
@@ -642,8 +645,8 @@ export function ReportsPageClient() {
       {tab === "PDF Exports" ? (
         pdfRecords.length === 0 ? (
           <EmptyState
-            title="No PDF exports yet"
-            description="Generate documents or reports, run PDF export from a document row, or connect Google Drive for automated exports."
+            title={t("reports.empty.noPdfExports")}
+            description={t("reports.empty.noPdfExportsDesc")}
           />
         ) : (
           <PDFExportsTable
@@ -665,14 +668,14 @@ export function ReportsPageClient() {
           />
           {mergedHistory.length === 0 ? (
             <EmptyState
-              title="No report history yet"
-              description="Generate a report or wait for the next scheduled run."
+              title={t("reports.empty.noHistory")}
+              description={t("reports.empty.noHistoryDesc")}
             />
           ) : filteredHistory.length === 0 ? (
             <EmptyState
-              title="No matching reports"
-              description="Adjust filters or clear the search query."
-              actionLabel="Clear filters"
+              title={t("reports.empty.noMatching")}
+              description={t("reports.empty.noMatchingDesc")}
+              actionLabel={t("reports.empty.clearFilters")}
               onAction={() => setFilters(initialFilters)}
             />
           ) : (
@@ -686,7 +689,7 @@ export function ReportsPageClient() {
         </div>
       ) : null}
 
-      <Modal isOpen={Boolean(selectedReport)} onClose={() => setSelectedReport(null)} title={selectedReport?.title ?? "Report"} size="lg">
+      <Modal isOpen={Boolean(selectedReport)} onClose={() => setSelectedReport(null)} title={selectedReport?.title ?? t("reports.reportType.weeklyReport")} size="lg">
         <div className="space-y-3">
           {(selectedReport?.deliveryWarning ||
             selectedReport?.previewOnly ||
@@ -694,10 +697,10 @@ export function ReportsPageClient() {
             Boolean(selectedReport?.googleDeliveryHint)) &&
           !selectedReport?.pdfUnavailableNotice ? (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-[var(--text-2)]">
-              <p className="font-medium text-amber-200">Delivery details</p>
+              <p className="font-medium text-amber-200">{t("reports.modal.deliveryDetails")}</p>
               {selectedReport?.previewOnly ? (
                 <p className="mt-1 text-xs">
-                  No external notification provider delivered successfully. The report is still saved in the dashboard.
+                  {t("reports.modal.noExternalProvider")}
                 </p>
               ) : null}
               {selectedReport?.googleDeliveryHint ? (
@@ -712,7 +715,7 @@ export function ReportsPageClient() {
               !selectedReport?.providerSummary &&
               !selectedReport?.googleDeliveryHint &&
               !selectedReport?.previewOnly ? (
-                <p className="mt-1 text-xs">Delivery warning: provider not configured or channel returned an error.</p>
+                <p className="mt-1 text-xs">{t("reports.modal.deliveryWarningGeneric")}</p>
               ) : null}
             </div>
           ) : null}
@@ -731,10 +734,10 @@ export function ReportsPageClient() {
           <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap text-sm text-[var(--text-2)]">{selectedReport?.content}</pre>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => void handleCopyModalContent()}>
-              Copy
+              {t("reports.modal.copy")}
             </Button>
             <Button type="button" variant="secondary" onClick={handleDownloadTxt}>
-              Download .txt
+              {t("reports.modal.downloadTxt")}
             </Button>
             {selectedReport?.documentId ? (
               <Button
@@ -743,12 +746,12 @@ export function ReportsPageClient() {
                 disabled={reportsApi.mutations.queuePdfLoading}
                 onClick={() => void handleExportPdfFromModal()}
               >
-                {reportsApi.mutations.queuePdfLoading ? "Queueing…" : "Export to PDF"}
+                {reportsApi.mutations.queuePdfLoading ? t("reports.modal.queueing") : t("reports.modal.exportToPdf")}
               </Button>
             ) : null}
             {selectedReport?.contentMissing && selectedReport.reportId ? (
               <Button type="button" variant="default" onClick={() => void handleRegenerateFromModal()}>
-                Regenerate report
+                {t("reports.modal.regenerateReport")}
               </Button>
             ) : null}
             {selectedReport?.googleDocUrl && isPublicFileUrl(selectedReport.googleDocUrl, API_URL) ? (
@@ -758,7 +761,7 @@ export function ReportsPageClient() {
                 rel="noopener noreferrer"
                 className={cn(buttonVariants({ variant: "outline" }))}
               >
-                Open in Google Drive
+                {t("reports.modal.openInGoogleDrive")}
               </a>
             ) : null}
             {selectedReport?.pdfUrl && isPublicFileUrl(selectedReport.pdfUrl, API_URL) ? (
@@ -768,14 +771,14 @@ export function ReportsPageClient() {
                 rel="noopener noreferrer"
                 className={cn(buttonVariants({ variant: "outline" }))}
               >
-                Open PDF
+                {t("reports.modal.openPdf")}
               </a>
             ) : null}
           </div>
         </div>
       </Modal>
 
-      <Modal isOpen={Boolean(markdownPreview)} onClose={() => setMarkdownPreview(null)} title={markdownPreview?.title ?? "Preview"} size="lg">
+      <Modal isOpen={Boolean(markdownPreview)} onClose={() => setMarkdownPreview(null)} title={markdownPreview?.title ?? t("reports.previewText")} size="lg">
         <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap text-sm text-[var(--text-2)]">{markdownPreview?.body}</pre>
       </Modal>
     </div>

@@ -40,7 +40,7 @@ export function StatusBreakdownChart({ data }: { data: ChartDataPoint[] }) {
     <Card>
       <CardHeader>
         <CardTitle>{t("reports.statusBreakdown")}</CardTitle>
-        <CardDescription>Current pipeline status distribution.</CardDescription>
+        <CardDescription>{t("reports.chart.currentPipelineDistribution")}</CardDescription>
       </CardHeader>
       <CardContent className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
