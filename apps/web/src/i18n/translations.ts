@@ -154,8 +154,78 @@ export const messages: Record<
         lastRun: "Letzte Ausführung",
         details: "Details",
         configure: "Konfigurieren",
+        fallbackTitle: "Automatisierungsmodul",
+        fallbackDescription: "Status des Automatisierungsmoduls.",
       },
       automationModules: {
+        jobIntake: {
+          title: "Stellenimport & Analyse",
+          description: "Eingehende Stellenbenachrichtigungen in strukturierte Stellendatensätze umwandeln.",
+        },
+        duplicateProtection: {
+          title: "Duplikatschutz",
+          description: "Doppelte Stellenanzeigen automatisch erkennen und blockieren.",
+        },
+        researchDocument: {
+          title: "Recherche-Dokument",
+          description: "Unternehmens- und Rollenrecherchen mit KI erstellen.",
+        },
+        aiProcessing: {
+          title: "KI-Verarbeitung",
+          description: "KI-Pipeline für Analyse, Extraktion und Zusammenfassung.",
+        },
+        googleDriveFolders: {
+          title: "Google-Drive-Ordner",
+          description: "Stellenordner in Google Drive für Bewerbungsunterlagen erstellen.",
+        },
+        cvRouting: {
+          title: "Lebenslauf-Zuordnung",
+          description: "Lebenslauf-Dateien automatisch in die passenden Drive-Ordner verschieben.",
+        },
+        interviewScheduling: {
+          title: "Interview-Planung",
+          description: "Kalendertermine und Vorbereitungsaufgaben für Vorstellungsgespräche erstellen.",
+        },
+        replyDetection: {
+          title: "Antwort-Erkennung",
+          description: "Recruiter-Antworten klassifizieren und Pipeline-Status aktualisieren.",
+        },
+        followUpReminders: {
+          title: "Nachfass-Erinnerungen",
+          description: "Erinnerungen erstellen, wenn Nachfassaktionen fällig sind.",
+        },
+        deadlineAlerts: {
+          title: "Fristen-Benachrichtigungen",
+          description: "Stellen mit bald ablaufenden Fristen hervorheben.",
+        },
+        lifecycleMonitoring: {
+          title: "Lebenszyklus-Überwachung",
+          description: "Langlaufende Bewerbungsprozesse auf Verzögerungen prüfen.",
+        },
+        dailyDigest: {
+          title: "Tageszusammenfassung",
+          description: "Tägliche Zusammenfassung von Fortschritt und Nachfassaktionen senden.",
+        },
+        weeklyReport: {
+          title: "Wochenbericht",
+          description: "Wöchentliche Leistungs- und Pipeline-Analyse erstellen.",
+        },
+        pdfExport: {
+          title: "PDF-Export",
+          description: "Recherchen und Anschreiben als PDF oder Google Doc exportieren.",
+        },
+        offerTracking: {
+          title: "Angebotsverfolgung",
+          description: "Angebotsphasen, Fristen und nächste Schritte verfolgen.",
+        },
+        networkFollowUp: {
+          title: "Netzwerk-Nachfassung",
+          description: "Erinnerungen für Nachfassaktionen bei Netzwerk-Kontakten erstellen.",
+        },
+        appliedStatus: {
+          title: "Bewerbungsstatus",
+          description: "Versandte Bewerbungen und Automatisierungsstatus verfolgen.",
+        },
         "offer-tracking-automation": {
           title: "Angebotsverfolgung",
           description: "Verfolgt Angebotsphase, Fristen und nächste Schritte.",
@@ -2595,8 +2665,78 @@ export const messages: Record<
         lastRun: "Last run",
         details: "Details",
         configure: "Configure",
+        fallbackTitle: "Automation module",
+        fallbackDescription: "Automation module status.",
       },
       automationModules: {
+        jobIntake: {
+          title: "Job intake & parsing",
+          description: "Normalize inbound alerts into structured job records.",
+        },
+        duplicateProtection: {
+          title: "Duplicate protection",
+          description: "Fingerprint and block duplicate listings automatically.",
+        },
+        researchDocument: {
+          title: "Research document",
+          description: "Generate company and role research briefs with AI.",
+        },
+        aiProcessing: {
+          title: "AI processing",
+          description: "End-to-end AI pipeline for parsing and summarization.",
+        },
+        googleDriveFolders: {
+          title: "Google Drive folders",
+          description: "Provision job folders in Drive for application assets.",
+        },
+        cvRouting: {
+          title: "CV routing",
+          description: "Route CV artifacts into the correct Drive folders.",
+        },
+        interviewScheduling: {
+          title: "Interview scheduling",
+          description: "Create calendar events and prep tasks for interviews.",
+        },
+        replyDetection: {
+          title: "Reply detection",
+          description: "Classify recruiter replies and update pipeline stages.",
+        },
+        followUpReminders: {
+          title: "Follow-up reminders",
+          description: "Schedule nudges when follow-ups are due.",
+        },
+        deadlineAlerts: {
+          title: "Deadline alerts",
+          description: "Surface roles with upcoming close dates.",
+        },
+        lifecycleMonitoring: {
+          title: "Lifecycle monitoring",
+          description: "Watch long-running application lifecycles for drift.",
+        },
+        dailyDigest: {
+          title: "Daily digest",
+          description: "Send a daily summary of progress and follow-ups.",
+        },
+        weeklyReport: {
+          title: "Weekly report",
+          description: "Generate weekly performance and pipeline analytics.",
+        },
+        pdfExport: {
+          title: "PDF export",
+          description: "Export research and cover letters as PDF or Google Docs.",
+        },
+        offerTracking: {
+          title: "Offer tracking",
+          description: "Track offer stages, deadlines, and next actions.",
+        },
+        networkFollowUp: {
+          title: "Network follow-up",
+          description: "Remind you to follow up on warm networking contacts.",
+        },
+        appliedStatus: {
+          title: "Applied status",
+          description: "Track application send and applied automation health.",
+        },
         "offer-tracking-automation": {
           title: "Offer tracking",
           description: "Track offer stage, deadlines, and next actions.",

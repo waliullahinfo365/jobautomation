@@ -21,6 +21,96 @@ interface AutomationModuleCardProps {
   onConfigure?: (module: AutomationModule) => void;
 }
 
+const AUTOMATION_MODULE_TRANSLATION_KEYS: Record<string, string> = {
+  "job-intake": "jobIntake",
+  "job-intake-engine": "jobIntake",
+  "duplicate-protection": "duplicateProtection",
+  "duplicate-protection-engine": "duplicateProtection",
+  "research-document": "researchDocument",
+  "research-stage-document-generation": "researchDocument",
+  "ai-processing": "aiProcessing",
+  "ai-processing-engine": "aiProcessing",
+  "folder-automation": "googleDriveFolders",
+  "folder-subfolder-automation": "googleDriveFolders",
+  "google-drive-folders": "googleDriveFolders",
+  "cv-routing": "cvRouting",
+  "cv-file-routing": "cvRouting",
+  "cv-file-routing-automation": "cvRouting",
+  "interview-scheduling": "interviewScheduling",
+  "interview-scheduling-automation": "interviewScheduling",
+  "email-reply-detection": "replyDetection",
+  "reply-detection": "replyDetection",
+  "follow-up-reminder": "followUpReminders",
+  "follow-up-reminder-engine": "followUpReminders",
+  "follow-up-reminders": "followUpReminders",
+  "deadline-alert": "deadlineAlerts",
+  "deadline-alert-system": "deadlineAlerts",
+  "deadline-alerts": "deadlineAlerts",
+  "lifecycle-monitoring": "lifecycleMonitoring",
+  "daily-digest": "dailyDigest",
+  "daily-status-digest": "dailyDigest",
+  "weekly-report": "weeklyReport",
+  "weekly-performance-report": "weeklyReport",
+  "pdf-export": "pdfExport",
+  "document-pdf-export-automation": "pdfExport",
+  "offer-tracking": "offerTracking",
+  "offer-tracking-automation": "offerTracking",
+  "network-follow-up": "networkFollowUp",
+  "network-follow-up-automation": "networkFollowUp",
+  "applied-status": "appliedStatus",
+  "applied-status-automation": "appliedStatus",
+};
+
+function normalizeAutomationModuleKey(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", "-")
+    .replaceAll("&", "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getAutomationModuleText(module: AutomationModule, t: (key: string) => string) {
+  const source = module as AutomationModule & {
+    key?: string;
+    slug?: string;
+    module?: string;
+    label?: string;
+  };
+  const candidates = [
+    source.key,
+    module.id,
+    source.slug,
+    source.module,
+    module.name,
+  ].map(normalizeAutomationModuleKey);
+
+  const translationKey = candidates
+    .map((candidate) => AUTOMATION_MODULE_TRANSLATION_KEYS[candidate])
+    .find(Boolean);
+
+  if (!translationKey) {
+    return {
+      title: module.name || source.label || t("dashboard.automationHealth.fallbackTitle"),
+      description: module.description || t("dashboard.automationHealth.fallbackDescription"),
+    };
+  }
+
+  const titleKey = `dashboard.automationModules.${translationKey}.title`;
+  const descriptionKey = `dashboard.automationModules.${translationKey}.description`;
+  const title = t(titleKey);
+  const description = t(descriptionKey);
+
+  return {
+    title: title === titleKey ? module.name || source.label || t("dashboard.automationHealth.fallbackTitle") : title,
+    description:
+      description === descriptionKey
+        ? module.description || t("dashboard.automationHealth.fallbackDescription")
+        : description,
+  };
+}
+
 export function AutomationModuleCard({ module, variant = "default", onView, onToggle, onConfigure }: AutomationModuleCardProps) {
   const { t, locale } = useTranslation();
   const canToggle = module.status === "Active" || module.status === "Paused";
@@ -28,12 +118,9 @@ export function AutomationModuleCard({ module, variant = "default", onView, onTo
   const Icon: ComponentType<IconProps> = AUTOMATION_MODULE_ICONS[module.icon] ?? BotIcon;
 
   const isDash = variant === "dashboard";
-  const displayName = isDash
-    ? (t(`dashboard.automationModules.${module.id}.title`) || module.name)
-    : module.name;
-  const displayDesc = isDash
-    ? (t(`dashboard.automationModules.${module.id}.description`) || module.description)
-    : module.description;
+  const dashboardText = getAutomationModuleText(module, t);
+  const displayName = isDash ? dashboardText.title : module.name;
+  const displayDesc = isDash ? dashboardText.description : module.description;
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
 
   return (
