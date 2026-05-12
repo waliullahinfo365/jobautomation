@@ -224,8 +224,8 @@ export function DocumentsPageClient() {
           status: "Exported",
           lastUpdated: new Date().toISOString(),
         });
-        showInfo("API offline, updated demo data locally.");
-        showSuccess("PDF export recorded (demo).");
+        showInfo(t("documents.toast.offlineDemo"));
+        showSuccess(t("documents.toast.pdfExportRecorded"));
         return;
       }
       try {
@@ -233,7 +233,7 @@ export function DocumentsPageClient() {
         toastQueuedPayload("PDF export", result);
         await documentsApi.refetch();
       } catch {
-        showError("PDF export failed.");
+        showError(t("documents.toast.pdfExportFailed"));
       }
     } finally {
       setPendingAction(null);
@@ -244,7 +244,7 @@ export function DocumentsPageClient() {
     const id = getResourceId(record);
     const jobId = resolveJobIdForDoc(record);
     if (!jobId) {
-      showError("Select a related job first.");
+      showError(t("documents.toast.selectRelatedJob"));
       return;
     }
     setPendingAction(`route-${id}`);
@@ -255,8 +255,8 @@ export function DocumentsPageClient() {
           storageLocation: `${record.storageLocation} → routed`,
           lastUpdated: new Date().toISOString(),
         });
-        showInfo("API offline, updated demo data locally.");
-        showSuccess("CV routed (demo).");
+        showInfo(t("documents.toast.offlineDemo"));
+        showSuccess(t("documents.toast.cvRouted"));
         return;
       }
       try {
@@ -264,7 +264,7 @@ export function DocumentsPageClient() {
         toastQueuedPayload("CV routing", result);
         await documentsApi.refetch();
       } catch {
-        showError("CV routing failed.");
+        showError(t("documents.toast.cvRoutingFailed"));
       }
     } finally {
       setPendingAction(null);
@@ -276,20 +276,20 @@ export function DocumentsPageClient() {
       window.open(record.storageUrl, "_blank", "noopener,noreferrer");
       return;
     }
-    showInfo("Open folder will be available after Google Drive storage is connected.");
+    showInfo(t("documents.toast.openFolderNote"));
   };
 
   const handleProvisionFolder = async () => {
     const jobId = firstJobId;
     if (!jobId) {
-      showError("No job available to provision a folder.");
+      showError(t("documents.toast.noJobForProvision"));
       return;
     }
     setPendingAction("provision");
     try {
       if (jobsApi.isUsingFallback) {
-        showInfo("API offline, updated demo data locally.");
-        showSuccess("Folder provision queued (demo).");
+        showInfo(t("documents.toast.offlineDemo"));
+        showSuccess(t("documents.toast.folderProvisionQueued"));
         setFolderActivity((prev) => [
           {
             id: `fa_local_${Date.now()}`,
@@ -307,7 +307,7 @@ export function DocumentsPageClient() {
         const result = await jobsApi.provisionFolders({ id: jobId, execute: false });
         toastQueuedPayload("Folder provision", result);
       } catch {
-        showError("Folder provision failed.");
+        showError(t("documents.toast.folderProvisionFailed"));
       }
     } finally {
       setPendingAction(null);
@@ -341,8 +341,8 @@ export function DocumentsPageClient() {
         },
         ...prev,
       ]);
-      showInfo("API offline, updated demo data locally.");
-      showSuccess("Document record created. File storage upload will be connected next.");
+      showInfo(t("documents.toast.offlineDemo"));
+      showSuccess(t("documents.toast.documentRecordCreated"));
       setUploadOpen(false);
       return;
     }
@@ -360,11 +360,11 @@ export function DocumentsPageClient() {
         notes: payload.notes,
         metadata: !payload.jobId ? { workspaceLibrary: true } : undefined,
       });
-      showSuccess("Document record created. File storage upload will be connected next.");
+      showSuccess(t("documents.toast.documentRecordCreated"));
       setUploadOpen(false);
       await documentsApi.refetch();
     } catch {
-      showError("Could not create document record.");
+      showError(t("documents.toast.couldNotCreateRecord"));
     }
   }
 
@@ -375,16 +375,16 @@ export function DocumentsPageClient() {
       <div className="space-y-6">
         <PageHeader
           icon={DocumentsIcon}
-          eyebrow="Document Vault"
-          title="Documents"
-          description="Manage CVs, cover letters, research documents, folders, and PDF exports."
+          eyebrow={t("documents.eyebrow")}
+          title={t("documents.title")}
+          description={t("documents.description")}
           actions={
             <Button type="button" onClick={() => setUploadOpen(true)}>
-              Upload Document
+              {t("documents.actions.uploadDocument")}
             </Button>
           }
         />
-        <LoadingState title={t("loading.documents")} description={t("loading.documentsDesc")} />
+        <LoadingState title={t("documents.loadingTitle")} description={t("documents.loadingDesc")} />
       </div>
     );
   }
@@ -396,10 +396,14 @@ export function DocumentsPageClient() {
     <div className="space-y-6">
       <PageHeader
         icon={DocumentsIcon}
-        eyebrow="Document Vault"
-        title="Documents"
-        description="Manage CVs, cover letters, research documents, folders, and PDF exports."
-        actions={<Button type="button" onClick={() => setUploadOpen(true)}>Upload Document</Button>}
+        eyebrow={t("documents.eyebrow")}
+        title={t("documents.title")}
+        description={t("documents.description")}
+        actions={
+          <Button type="button" onClick={() => setUploadOpen(true)}>
+            {t("documents.actions.uploadDocument")}
+          </Button>
+        }
       />
 
       <UploadDocumentModal
@@ -421,12 +425,12 @@ export function DocumentsPageClient() {
             aside={documentsApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
           />
           {emptyAll ? (
-            <EmptyState title={t("empty.noDocuments")} description={t("empty.noDocumentsDesc")} />
+            <EmptyState title={t("documents.empty.noDocuments")} description={t("documents.empty.noDocumentsDesc")} />
           ) : emptyFiltered ? (
             <EmptyState
-              title={t("empty.noMatchingDocuments")}
-              description="Try another filter."
-              actionLabel={t("empty.clearFilters")}
+              title={t("documents.empty.noMatching")}
+              description={t("documents.empty.noMatchingDesc")}
+              actionLabel={t("documents.filters.clear")}
               onAction={() => setFilters(initialFilters)}
             />
           ) : (

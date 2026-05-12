@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertTriangleIcon,
   BookOpenTextIcon,
@@ -7,6 +9,7 @@ import {
   FilesIcon,
 } from "@/components/icons";
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function DocumentStatsCards({
   stats,
@@ -20,13 +23,15 @@ export function DocumentStatsCards({
     failedExports: number;
   };
 }) {
+  const { t } = useTranslation();
+
   const items = [
-    { label: "Total Documents", value: stats.totalDocuments, helper: "Across all document types", icon: <FilesIcon size={20} /> },
-    { label: "CV Versions", value: stats.cvVersions, helper: "Role-specific CV library", icon: <FileBadge2Icon size={20} /> },
-    { label: "Cover Letters", value: stats.coverLetters, helper: "Tailored role drafts", icon: <FileTextIcon size={20} /> },
-    { label: "Research Docs", value: stats.researchDocs, helper: "Company research files", icon: <BookOpenTextIcon size={20} /> },
-    { label: "PDF Exports", value: stats.pdfExports, helper: "Export automation output", icon: <FileOutputIcon size={20} /> },
-    { label: "Failed Exports", value: stats.failedExports, helper: "Needs retry/review", icon: <AlertTriangleIcon size={20} /> },
+    { label: t("documents.stats.totalDocuments"), value: stats.totalDocuments, helper: t("documents.stats.acrossAllDocumentTypes"), icon: <FilesIcon size={20} /> },
+    { label: t("documents.stats.cvVersions"), value: stats.cvVersions, helper: t("documents.stats.roleSpecificCvLibrary"), icon: <FileBadge2Icon size={20} /> },
+    { label: t("documents.stats.coverLetters"), value: stats.coverLetters, helper: t("documents.stats.tailoredRoleDrafts"), icon: <FileTextIcon size={20} /> },
+    { label: t("documents.stats.researchDocs"), value: stats.researchDocs, helper: t("documents.stats.companyResearchFiles"), icon: <BookOpenTextIcon size={20} /> },
+    { label: t("documents.stats.pdfExports"), value: stats.pdfExports, helper: t("documents.stats.exportAutomationOutput"), icon: <FileOutputIcon size={20} /> },
+    { label: t("documents.stats.failedExports"), value: stats.failedExports, helper: t("documents.stats.needsRetryReview"), icon: <AlertTriangleIcon size={20} /> },
   ];
 
   return (

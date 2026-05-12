@@ -1,6 +1,9 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import type { DocumentStatus } from "@/types/document";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const colors: Record<DocumentStatus, string> = {
   Draft: "bg-[var(--amber-bg)] text-[var(--amber)]",
@@ -11,11 +14,21 @@ const colors: Record<DocumentStatus, string> = {
   Archived: "bg-[var(--surface-3)] text-[var(--text-2)]",
 };
 
+const STATUS_KEY: Record<DocumentStatus, string> = {
+  Draft: "documents.documentStatus.draft",
+  Ready: "documents.documentStatus.ready",
+  Exported: "documents.documentStatus.exported",
+  Failed: "documents.documentStatus.failed",
+  "Needs Review": "documents.documentStatus.needsReview",
+  Archived: "documents.documentStatus.archived",
+};
+
 interface DocumentStatusBadgeProps {
-  status:     DocumentStatus;
+  status: DocumentStatus;
   className?: string;
 }
 
 export function DocumentStatusBadge({ status, className }: DocumentStatusBadgeProps) {
-  return <Badge className={cn(colors[status], className)}>{status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={cn(colors[status], className)}>{t(STATUS_KEY[status])}</Badge>;
 }

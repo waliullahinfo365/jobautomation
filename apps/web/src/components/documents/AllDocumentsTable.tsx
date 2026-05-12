@@ -1,9 +1,11 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { DocumentTypeBadge } from "./DocumentTypeBadge";
-import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { DocumentRecord } from "@/types/document";
 
 export function AllDocumentsTable({
@@ -17,19 +19,23 @@ export function AllDocumentsTable({
   onRouteCv?: (record: DocumentRecord) => void | Promise<void>;
   onOpenFolder?: (record: DocumentRecord) => void | Promise<void>;
 }) {
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
-    <SectionCard title="All Documents" description="All document assets across jobs and automations." contentClassName="p-0">
+    <SectionCard title={t("documents.all.title")} description={t("documents.all.subtitle")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>File Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Related Job</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Storage Location</TableHead>
-            <TableHead>Last Updated</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t("documents.table.fileName")}</TableHead>
+            <TableHead>{t("documents.table.type")}</TableHead>
+            <TableHead>{t("documents.table.relatedJob")}</TableHead>
+            <TableHead>{t("documents.table.company")}</TableHead>
+            <TableHead>{t("documents.table.status")}</TableHead>
+            <TableHead>{t("documents.table.storageLocation")}</TableHead>
+            <TableHead>{t("documents.table.lastUpdated")}</TableHead>
+            <TableHead className="text-right">{t("documents.table.actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -45,11 +51,11 @@ export function AllDocumentsTable({
                 <DocumentStatusBadge status={record.status} />
               </TableCell>
               <TableCell className="max-w-xs truncate text-[var(--text-2)]">{record.storageLocation}</TableCell>
-              <TableCell>{formatDate(record.lastUpdated, "MMM d, yyyy HH:mm")}</TableCell>
+              <TableCell>{dateFmt.format(new Date(record.lastUpdated))}</TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex flex-wrap justify-end gap-2">
                   <Button size="sm" variant="outline" type="button">
-                    View
+                    {t("documents.actions.view")}
                   </Button>
                   <Button
                     size="sm"
@@ -57,15 +63,15 @@ export function AllDocumentsTable({
                     type="button"
                     onClick={() => void onExportPdf?.(record)}
                   >
-                    Export PDF
+                    {t("documents.actions.exportPdf")}
                   </Button>
                   {record.type === "CV" ? (
                     <Button size="sm" variant="outline" type="button" onClick={() => void onRouteCv?.(record)}>
-                      Route CV
+                      {t("documents.actions.routeCv")}
                     </Button>
                   ) : null}
                   <Button size="sm" variant="ghost" type="button" onClick={() => void onOpenFolder?.(record)}>
-                    Open Folder
+                    {t("documents.actions.openFolder")}
                   </Button>
                 </div>
               </TableCell>

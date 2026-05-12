@@ -1,13 +1,19 @@
+"use client";
+
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { ResearchDocumentRecord } from "@/types/document";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
-import { formatDate } from "@/lib/utils";
 
 export function ResearchDocsSection({ records }: { records: ResearchDocumentRecord[] }) {
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
-    <SectionCard title="Research Documents" description="AI-generated and manually refined research notes.">
+    <SectionCard title={t("documents.research.title")} description={t("documents.research.subtitle")}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {records.map((r) => (
           <Card key={r.id}>
@@ -20,10 +26,10 @@ export function ResearchDocsSection({ records }: { records: ResearchDocumentReco
                 <DocumentStatusBadge status={r.researchStatus} />
               </div>
               <p className="text-sm text-[var(--text-2)]">{r.aiSummarySnippet}</p>
-              <p className="text-xs text-[var(--text-3)]">Created {formatDate(r.createdAt, "MMM d, yyyy HH:mm")}</p>
+              <p className="text-xs text-[var(--text-3)]">{t("documents.research.created")} {dateFmt.format(new Date(r.createdAt))}</p>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline">View Research</Button>
-                <Button size="sm" variant="secondary">Update</Button>
+                <Button size="sm" variant="outline">{t("documents.actions.viewResearch")}</Button>
+                <Button size="sm" variant="secondary">{t("documents.actions.update")}</Button>
               </div>
             </CardContent>
           </Card>

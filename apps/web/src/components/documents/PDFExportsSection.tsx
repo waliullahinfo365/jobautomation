@@ -1,10 +1,12 @@
+"use client";
+
 import { SectionCard } from "@/components/shared/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { PDFExportRecord } from "@/types/document";
 import { ReportStatusBadge } from "@/components/reports/ReportStatusBadge";
 import { DocumentTypeBadge } from "./DocumentTypeBadge";
-import { formatDate } from "@/lib/utils";
 
 export function PDFExportsSection({
   records,
@@ -13,18 +15,22 @@ export function PDFExportsSection({
   records: PDFExportRecord[];
   onPreviewText?: (record: PDFExportRecord) => void;
 }) {
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
-    <SectionCard title="PDF Exports" description="PDF generation and export queue status." contentClassName="p-0">
+    <SectionCard title={t("documents.pdfExports.title")} description={t("documents.pdfExports.subtitle")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Document Name</TableHead>
-            <TableHead>Source Type</TableHead>
-            <TableHead>Related Job</TableHead>
-            <TableHead>Export Status</TableHead>
-            <TableHead>Created At</TableHead>
-            <TableHead>Export</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>{t("documents.pdfExports.documentName")}</TableHead>
+            <TableHead>{t("documents.pdfExports.sourceType")}</TableHead>
+            <TableHead>{t("documents.pdfExports.relatedJob")}</TableHead>
+            <TableHead>{t("documents.pdfExports.exportStatus")}</TableHead>
+            <TableHead>{t("documents.pdfExports.createdAt")}</TableHead>
+            <TableHead>{t("documents.pdfExports.export")}</TableHead>
+            <TableHead className="text-right">{t("documents.pdfExports.action")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -38,7 +44,7 @@ export function PDFExportsSection({
               <TableCell>
                 <ReportStatusBadge status={r.exportStatus} />
               </TableCell>
-              <TableCell>{formatDate(r.createdAt, "MMM d, yyyy HH:mm")}</TableCell>
+              <TableCell>{dateFmt.format(new Date(r.createdAt))}</TableCell>
               <TableCell>
                 {r.exportPublicUrl ? (
                   <button
@@ -46,7 +52,7 @@ export function PDFExportsSection({
                     className="text-[var(--text-2)] underline hover:no-underline"
                     onClick={() => window.open(r.exportPublicUrl, "_blank", "noopener,noreferrer")}
                   >
-                    Open PDF
+                    {t("documents.actions.openPdf")}
                   </button>
                 ) : r.textPreviewAvailable && onPreviewText ? (
                   <button
@@ -54,17 +60,17 @@ export function PDFExportsSection({
                     className="text-[var(--text-2)] underline hover:no-underline"
                     onClick={() => onPreviewText?.(r)}
                   >
-                    Preview Text
+                    {t("documents.actions.previewText")}
                   </button>
                 ) : r.textPreviewAvailable ? (
-                  <span className="text-muted-foreground text-sm">Text export — open document</span>
+                  <span className="text-muted-foreground text-sm">{t("documents.pdfExports.textExportNote")}</span>
                 ) : (
-                  <span className="text-muted-foreground">Pending</span>
+                  <span className="text-muted-foreground">{t("documents.pdfExports.pending")}</span>
                 )}
               </TableCell>
               <TableCell className="text-right">
                 <Button size="sm" variant="secondary">
-                  Export Again
+                  {t("documents.actions.exportAgain")}
                 </Button>
               </TableCell>
             </TableRow>
