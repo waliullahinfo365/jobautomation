@@ -19,8 +19,8 @@ export const messages: Record<
       account: "Konto",
     },
     nav: {
-      dashboard: "Dashboard",
-      jobs: "Jobs",
+      dashboard: "Übersicht",
+      jobs: "Stellen",
       applications: "Bewerbungen",
       contacts: "Kontakte",
       interviews: "Vorstellungsgespräche",
