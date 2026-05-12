@@ -1,25 +1,47 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { useTranslation } from "@/i18n/useTranslation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate } from "@/lib/utils";
-import type { CompletedInterview } from "@/types/interview";
+import type { CompletedInterview, InterviewType, InterviewOutcome } from "@/types/interview";
+
+const TYPE_KEY: Record<InterviewType, string> = {
+  "Recruiter Screen": "interviews.interviewType.recruiterScreen",
+  Technical: "interviews.interviewType.technical",
+  Behavioral: "interviews.interviewType.behavioral",
+  "Hiring Manager": "interviews.interviewType.hiringManager",
+  Panel: "interviews.interviewType.panel",
+  "Final Round": "interviews.interviewType.finalRound",
+  "Offer Discussion": "interviews.interviewType.offerDiscussion",
+};
+
+const OUTCOME_KEY: Record<string, string> = {
+  "Waiting Feedback": "interviews.outcome.waitingFeedback",
+  Positive: "interviews.outcome.positive",
+  Negative: "interviews.outcome.negative",
+  Offer: "interviews.outcome.offer",
+  Rejected: "interviews.outcome.rejected",
+};
 
 export function CompletedInterviewsSection({ interviews }: { interviews: CompletedInterview[] }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric" });
+
   return (
-    <SectionCard title={t("interviews.completedInterviews")} description={t("interviews.trackOutcomesAndFollowUpStatus")} contentClassName="p-0">
+    <SectionCard title={t("interviews.completed.title")} description={t("interviews.completed.subtitle")} contentClassName="p-0">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{t("interviews.company")}</TableHead>
-            <TableHead>{t("interviews.position")}</TableHead>
-            <TableHead>{t("interviews.interviewType")}</TableHead>
-            <TableHead>{t("interviews.completedDate")}</TableHead>
-            <TableHead>{t("interviews.outcome")}</TableHead>
-            <TableHead>{t("interviews.notesSummary")}</TableHead>
-            <TableHead>{t("interviews.followUpSent")}</TableHead>
-            <TableHead className="text-right">{t("interviews.action")}</TableHead>
+            <TableHead>{t("interviews.completed.company")}</TableHead>
+            <TableHead>{t("interviews.completed.position")}</TableHead>
+            <TableHead>{t("interviews.completed.interviewType")}</TableHead>
+            <TableHead>{t("interviews.completed.completedDate")}</TableHead>
+            <TableHead>{t("interviews.completed.outcome")}</TableHead>
+            <TableHead>{t("interviews.completed.notesSummary")}</TableHead>
+            <TableHead>{t("interviews.completed.followupSent")}</TableHead>
+            <TableHead className="text-right">{t("interviews.completed.action")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -27,12 +49,12 @@ export function CompletedInterviewsSection({ interviews }: { interviews: Complet
             <TableRow key={iv.id}>
               <TableCell className="font-medium">{iv.company}</TableCell>
               <TableCell>{iv.position}</TableCell>
-              <TableCell>{iv.interviewType}</TableCell>
-              <TableCell>{formatDate(iv.completedDate, "MMM d, yyyy")}</TableCell>
-              <TableCell>{iv.outcome}</TableCell>
+              <TableCell>{t(TYPE_KEY[iv.interviewType as InterviewType] ?? iv.interviewType)}</TableCell>
+              <TableCell>{dateFmt.format(new Date(iv.completedDate))}</TableCell>
+              <TableCell>{t(OUTCOME_KEY[iv.outcome as string] ?? iv.outcome)}</TableCell>
               <TableCell className="max-w-[280px] truncate">{iv.notesSummary}</TableCell>
-              <TableCell>{iv.followUpSent ? t("interviews.yes") : t("interviews.no")}</TableCell>
-              <TableCell className="text-right"><Button size="sm" variant="ghost">{t("interviews.viewNotes")}</Button></TableCell>
+              <TableCell>{iv.followUpSent ? t("interviews.completed.yes") : t("interviews.completed.no")}</TableCell>
+              <TableCell className="text-right"><Button size="sm" variant="ghost">{t("interviews.completed.showNotes")}</Button></TableCell>
             </TableRow>
           ))}
         </TableBody>

@@ -1,4 +1,7 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { InterviewType } from "@/types/interview";
 
 const styles: Record<InterviewType, string> = {
@@ -18,6 +21,17 @@ const styles: Record<InterviewType, string> = {
     "bg-[var(--emerald-bg)] text-[var(--emerald)] border border-[rgba(56,199,147,0.18)]",
 };
 
+const TYPE_KEY: Record<InterviewType, string> = {
+  "Recruiter Screen": "interviews.interviewType.recruiterScreen",
+  Technical: "interviews.interviewType.technical",
+  Behavioral: "interviews.interviewType.behavioral",
+  "Hiring Manager": "interviews.interviewType.hiringManager",
+  Panel: "interviews.interviewType.panel",
+  "Final Round": "interviews.interviewType.finalRound",
+  "Offer Discussion": "interviews.interviewType.offerDiscussion",
+};
+
 export function InterviewTypeBadge({ type }: { type: InterviewType }) {
-  return <Badge className={styles[type]}>{type}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={styles[type]}>{t(TYPE_KEY[type])}</Badge>;
 }

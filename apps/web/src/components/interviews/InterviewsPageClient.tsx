@@ -179,16 +179,16 @@ export function InterviewsPageClient() {
   const handleMarkComplete = async (id: string) => {
     if (interviewsApi.isUsingFallback) {
       patchFallback(id, { status: "Completed" });
-      showInfo("API offline, updated demo data locally.");
-      showSuccess("Interview marked complete.");
+      showInfo(t("interviews.toast.offlineDemo"));
+      showSuccess(t("interviews.toast.markedComplete"));
       return;
     }
     try {
       await interviewsApi.markComplete(id);
-      showSuccess("Interview marked complete.");
+      showSuccess(t("interviews.toast.markedComplete"));
       await interviewsApi.refetch();
     } catch {
-      showError("Could not mark interview complete.");
+      showError(t("interviews.toast.couldNotMarkComplete"));
     }
   };
 
@@ -200,8 +200,8 @@ export function InterviewsPageClient() {
           calendarStatus: "Synced",
           calendarEventId: `cal_stub_${Date.now()}`,
         });
-        showInfo("API offline, updated demo data locally.");
-        showSuccess("Calendar event created (demo).");
+        showInfo(t("interviews.toast.offlineDemo"));
+        showSuccess(t("interviews.toast.calendarEventCreated"));
         return;
       }
       try {
@@ -209,7 +209,7 @@ export function InterviewsPageClient() {
         toastQueuedPayload("Calendar event", result);
         await interviewsApi.refetch();
       } catch {
-        showError("Could not queue calendar event.");
+        showError(t("interviews.toast.couldNotQueueCalendar"));
       }
     } finally {
       setPendingAction(null);
@@ -218,14 +218,14 @@ export function InterviewsPageClient() {
 
   const handleScheduleInterviewSubmit = async () => {
     if (!scheduleForm.company.trim() || !scheduleForm.position.trim()) {
-      showError("Company and position are required.");
+      showError(t("interviews.schedule.companyAndPositionRequired"));
       return;
     }
     const dateTime = new Date(scheduleForm.dateTimeLocal).toISOString();
     setScheduleOpen(false);
     if (interviewsApi.isUsingFallback) {
-      showInfo("API offline, updated demo data locally.");
-      showSuccess("Interview scheduled (demo only — API unavailable).");
+      showInfo(t("interviews.toast.offlineDemo"));
+      showSuccess(t("interviews.toast.scheduledDemo"));
       return;
     }
     try {
@@ -239,7 +239,7 @@ export function InterviewsPageClient() {
         status: "Scheduled",
         prepStatus: "Not Started",
       });
-      showSuccess("Interview scheduled.");
+      showSuccess(t("interviews.toast.scheduled"));
       await interviewsApi.refetch();
       setScheduleForm({
         company: "",
@@ -249,7 +249,7 @@ export function InterviewsPageClient() {
         contactEmail: "",
       });
     } catch {
-      showError("Could not create interview.");
+      showError(t("interviews.toast.couldNotCreate"));
     }
   };
 
@@ -268,23 +268,23 @@ export function InterviewsPageClient() {
       <div className="space-y-6">
         <PageHeader
           icon={InterviewsIcon}
-          eyebrow="Interview Scheduler"
-          title="Interviews"
-          description="Track interviews, prep tasks, calendar events, and scheduling automation."
+          eyebrow={t("interviews.eyebrow")}
+          title={t("interviews.title")}
+          description={t("interviews.description")}
           actions={
             <>
               <Button variant="outline" type="button">
                 <RefreshIcon size={16} className="mr-2" />
-                Sync Calendar
+                {t("interviews.syncCalendar")}
               </Button>
               <Button type="button">
                 <PlusIcon size={16} className="mr-2" />
-                Schedule Interview
+                {t("interviews.scheduleInterview")}
               </Button>
             </>
           }
         />
-        <LoadingState title={t("loading.interviews")} description={t("loading.interviewsDesc")} />
+        <LoadingState title={t("interviews.loadingTitle")} description={t("interviews.loadingDesc")} />
       </div>
     );
   }
@@ -297,18 +297,18 @@ export function InterviewsPageClient() {
       <div className="space-y-6">
         <PageHeader
           icon={InterviewsIcon}
-          eyebrow="Interview Scheduler"
-          title="Interviews"
-          description="Track interviews, prep tasks, calendar events, and scheduling automation."
+          eyebrow={t("interviews.eyebrow")}
+          title={t("interviews.title")}
+          description={t("interviews.description")}
           actions={
             <>
               <Button variant="outline" type="button" onClick={() => showInfo(t("error.calendarSyncNote"))}>
                 <RefreshIcon size={16} className="mr-2" />
-                Sync Calendar
+                {t("interviews.syncCalendar")}
               </Button>
               <Button type="button" onClick={() => setScheduleOpen(true)}>
                 <PlusIcon size={16} className="mr-2" />
-                Schedule Interview
+                {t("interviews.scheduleInterview")}
               </Button>
             </>
           }
@@ -329,8 +329,8 @@ export function InterviewsPageClient() {
               <EmptyState title={t("empty.noInterviewsScheduled")} description={t("empty.noInterviewsScheduledDesc")} />
             ) : emptyFiltered ? (
               <EmptyState
-                title={t("empty.noMatchingInterviews")}
-                description="Adjust filters or search."
+                title={t("interviews.empty.noMatching")}
+                description={t("interviews.empty.adjustFilters")}
                 actionLabel={t("empty.clearFilters")}
                 onAction={() => setFilters(initialFilters)}
               />
@@ -360,7 +360,7 @@ export function InterviewsPageClient() {
         {tab === "Completed" ? <CompletedInterviewsSection interviews={completedRows} /> : null}
         {tab === "Awaiting Confirmation" ? (
           awaitingItems.length === 0 ? (
-            <EmptyState title={t("empty.nothingAwaitingConfirmation")} description={t("empty.awaitingConfirmationDesc")} />
+            <EmptyState title={t("interviews.empty.noAwaitingConfirmation")} description={t("interviews.empty.awaitingConfirmationBody")} />
           ) : (
             <AwaitingConfirmationSection items={awaitingItems} onConfirm={confirmAwaiting} />
           )
@@ -397,11 +397,11 @@ export function InterviewsPageClient() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
             >
-              <h3 className="text-lg font-semibold text-foreground">Schedule interview</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Creates an interview via the API.</p>
+              <h3 className="text-lg font-semibold text-foreground">{t("interviews.schedule.title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("interviews.schedule.subtitle")}</p>
               <div className="mt-4 grid gap-3">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Company *
+                  {t("interviews.schedule.company")}
                   <Input
                     className="mt-1"
                     value={scheduleForm.company}
@@ -409,7 +409,7 @@ export function InterviewsPageClient() {
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Position *
+                  {t("interviews.schedule.position")}
                   <Input
                     className="mt-1"
                     value={scheduleForm.position}
@@ -417,7 +417,7 @@ export function InterviewsPageClient() {
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Interview type
+                  {t("interviews.schedule.interviewType")}
                   <Select
                     className="mt-1"
                     value={scheduleForm.interviewType}
@@ -425,18 +425,18 @@ export function InterviewsPageClient() {
                       setScheduleForm((s) => ({ ...s, interviewType: e.target.value as Interview["interviewType"] }))
                     }
                     options={[
-                      { label: "Recruiter Screen", value: "Recruiter Screen" },
-                      { label: "Technical", value: "Technical" },
-                      { label: "Behavioral", value: "Behavioral" },
-                      { label: "Hiring Manager", value: "Hiring Manager" },
-                      { label: "Panel", value: "Panel" },
-                      { label: "Final Round", value: "Final Round" },
-                      { label: "Offer Discussion", value: "Offer Discussion" },
+                      { label: t("interviews.interviewType.recruiterScreen"), value: "Recruiter Screen" },
+                      { label: t("interviews.interviewType.technical"), value: "Technical" },
+                      { label: t("interviews.interviewType.behavioral"), value: "Behavioral" },
+                      { label: t("interviews.interviewType.hiringManager"), value: "Hiring Manager" },
+                      { label: t("interviews.interviewType.panel"), value: "Panel" },
+                      { label: t("interviews.interviewType.finalRound"), value: "Final Round" },
+                      { label: t("interviews.interviewType.offerDiscussion"), value: "Offer Discussion" },
                     ]}
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Date & time
+                  {t("interviews.schedule.dateAndTime")}
                   <Input
                     className="mt-1"
                     type="datetime-local"
@@ -445,7 +445,7 @@ export function InterviewsPageClient() {
                   />
                 </label>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Contact email
+                  {t("interviews.schedule.contactEmail")}
                   <Input
                     className="mt-1"
                     type="email"
@@ -456,10 +456,10 @@ export function InterviewsPageClient() {
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setScheduleOpen(false)}>
-                  Cancel
+                  {t("interviews.schedule.cancel")}
                 </Button>
                 <Button type="button" onClick={() => void handleScheduleInterviewSubmit()}>
-                  Schedule
+                  {t("interviews.schedule.confirm")}
                 </Button>
               </div>
             </motion.div>

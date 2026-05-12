@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { CloseIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
-import { formatDate } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { Interview } from "@/types/interview";
 import { InterviewTypeBadge } from "./InterviewTypeBadge";
@@ -28,7 +27,10 @@ export function InterviewDetailPanel({
   onMarkComplete?: () => void | Promise<void>;
   pendingAction?: string | null;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
     <AnimatePresence>
       {open && interview ? (
@@ -58,7 +60,7 @@ export function InterviewDetailPanel({
             <div className="space-y-5">
               <SectionCard title={t("interview.detailsTitle")}>
                 <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                  <Info label={t("interview.dateTimeLabel")} value={formatDate(interview.dateTime, "MMM d, yyyy HH:mm")} />
+                  <Info label={t("interview.dateTimeLabel")} value={dateFmt.format(new Date(interview.dateTime))} />
                   <Info label={t("interview.durationLabel")} value={`${interview.durationMinutes} ${t("common.minutesSuffix")}`} />
                   <Info label={t("interview.interviewerLabel")} value={`${interview.interviewerName} (${interview.interviewerRole})`} />
                   <Info label={t("interview.contactEmailLabel")} value={interview.contactEmail} />

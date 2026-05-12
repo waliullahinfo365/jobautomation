@@ -1,5 +1,7 @@
+"use client";
+
 import { CheckCircleIcon, CircleDotIcon } from "@/components/icons";
-import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { InterviewTimelineEvent } from "@/types/interview";
 
 interface InterviewTimelineProps {
@@ -7,6 +9,10 @@ interface InterviewTimelineProps {
 }
 
 export function InterviewTimeline({ events }: InterviewTimelineProps) {
+  const { locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
     <div className="space-y-0">
       {events.map((event, i) => (
@@ -22,7 +28,7 @@ export function InterviewTimeline({ events }: InterviewTimelineProps) {
           <div className="pb-4">
             <p className="text-sm font-medium text-[var(--text-1)]">{event.title}</p>
             <p className="text-xs text-[var(--text-3)]">{event.detail}</p>
-            <p className="mt-1 text-xs text-[var(--text-4)]">{formatDate(event.timestamp, "MMM d, yyyy HH:mm")}</p>
+            <p className="mt-1 text-xs text-[var(--text-4)]">{dateFmt.format(new Date(event.timestamp))}</p>
           </div>
         </div>
       ))}

@@ -1,17 +1,18 @@
+"use client";
+
 import {
   CalendarDaysIcon,
   Clock3Icon,
   ExternalLinkIcon,
   User2Icon,
 } from "@/components/icons";
-import { formatDate } from "@/lib/utils";
 import type { Interview } from "@/types/interview";
 import { MotionCard } from "@/components/shared/MotionCard";
 import { Button } from "@/components/ui/button";
 import { InterviewTypeBadge } from "./InterviewTypeBadge";
 import { InterviewStatusBadge } from "./InterviewStatusBadge";
 import { PrepStatusBadge } from "./PrepStatusBadge";
-import { useTranslation } from "@/i18n/I18nProvider";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface InterviewCardProps {
   interview: Interview;
@@ -20,7 +21,10 @@ interface InterviewCardProps {
 }
 
 export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCardProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+  const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
   return (
     <MotionCard className="hover-lift p-4">
       <div className="flex items-start justify-between gap-3">
@@ -37,7 +41,7 @@ export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCa
 
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          <CalendarDaysIcon size={14} /> {formatDate(interview.dateTime, "MMM d, yyyy HH:mm")}
+          <CalendarDaysIcon size={14} /> {dateFmt.format(new Date(interview.dateTime))}
         </span>
         <span className="flex items-center gap-1">
           <Clock3Icon size={14} /> {interview.durationMinutes} {t("common.minutesSuffix")}
@@ -48,9 +52,9 @@ export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCa
       </div>
 
       <div className="mt-3 rounded-lg bg-muted/70 p-2 text-xs text-muted-foreground">
-        Contact: {interview.contactEmail}
+        {t("interviews.card.contact")}: {interview.contactEmail}
         <br />
-        Link: {interview.meetingLink}
+        {t("interviews.card.link")}: {interview.meetingLink}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -58,7 +62,7 @@ export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCa
         <Button size="sm" variant="secondary" onClick={() => onMarkComplete(interview.id)}>{t("button.markComplete")}</Button>
         <Button size="sm" variant="ghost">{t("button.reschedule")}</Button>
         <Button size="sm" variant="ghost">
-          Open Meeting
+          {t("interviews.card.openMeeting")}
           <ExternalLinkIcon size={14} className="ml-1" />
         </Button>
       </div>

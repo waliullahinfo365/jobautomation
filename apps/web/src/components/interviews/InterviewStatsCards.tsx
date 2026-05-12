@@ -11,6 +11,7 @@ import {
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnimatedCounter } from "@/components/shared/AnimatedCounter";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function InterviewStatsCards({
   stats,
@@ -24,13 +25,15 @@ export function InterviewStatsCards({
     calendarSynced: number;
   };
 }) {
+  const { t } = useTranslation();
+
   const cards = [
-    { label: "Total Interviews", value: stats.totalInterviews, helper: "Across all pipeline stages", icon: <CalendarDaysIcon size={20} /> },
-    { label: "This Week", value: stats.thisWeek, helper: "Upcoming in next 7 days", icon: <CalendarClockIcon size={20} /> },
-    { label: "Awaiting Confirmation", value: stats.awaitingConfirmation, helper: "Needs response to lock slot", icon: <Clock3Icon size={20} /> },
-    { label: "Prep Tasks Due", value: stats.prepTasksDue, helper: "Not started or overdue", icon: <ClipboardCheckIcon size={20} /> },
-    { label: "Completed Interviews", value: stats.completedInterviews, helper: "Finished interview rounds", icon: <CalendarCheckIcon size={20} /> },
-    { label: "Calendar Synced", value: stats.calendarSynced, helper: "Synced events in calendar", icon: <Link2Icon size={20} /> },
+    { label: t("interviews.stats.totalInterviews"), value: stats.totalInterviews, helper: t("interviews.stats.acrossPipelineStages"), icon: <CalendarDaysIcon size={20} /> },
+    { label: t("interviews.stats.thisWeek"), value: stats.thisWeek, helper: t("interviews.stats.upcomingNext7Days"), icon: <CalendarClockIcon size={20} /> },
+    { label: t("interviews.stats.awaitingConfirmation"), value: stats.awaitingConfirmation, helper: t("interviews.stats.needsResponseToLockSlot"), icon: <Clock3Icon size={20} /> },
+    { label: t("interviews.stats.prepTasksDue"), value: stats.prepTasksDue, helper: t("interviews.stats.notStartedOrOverdue"), icon: <ClipboardCheckIcon size={20} /> },
+    { label: t("interviews.stats.completedInterviews"), value: stats.completedInterviews, helper: t("interviews.stats.finishedInterviewRounds"), icon: <CalendarCheckIcon size={20} /> },
+    { label: t("interviews.stats.calendarSynced"), value: stats.calendarSynced, helper: t("interviews.stats.syncedEventsInCalendar"), icon: <Link2Icon size={20} /> },
   ];
 
   return (

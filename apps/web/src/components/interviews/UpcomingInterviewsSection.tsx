@@ -1,4 +1,7 @@
+"use client";
+
 import { SectionCard } from "@/components/shared/SectionCard";
+import { useTranslation } from "@/i18n/useTranslation";
 import type { Interview } from "@/types/interview";
 import { InterviewCard } from "./InterviewCard";
 
@@ -11,10 +14,11 @@ export function UpcomingInterviewsSection({
   onView: (interview: Interview) => void;
   onMarkComplete: (interviewId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <SectionCard
-      title="Upcoming Interviews"
-      description="Track scheduling details, prep readiness, and quick actions."
+      title={t("interviews.upcoming.title")}
+      description={t("interviews.upcoming.subtitle")}
       contentClassName="space-y-3"
     >
       {interviews.map((interview) => (
