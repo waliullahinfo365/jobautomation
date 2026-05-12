@@ -6,7 +6,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+
 import { friendlyAutomationLogMessage } from "@/lib/automationLogMessaging";
 import { AutomationLogDetailModal } from "./AutomationLogDetailModal";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -25,8 +25,15 @@ function logStatusLabel(status: AutomationLogStatus, t: (key: string) => string)
 }
 
 export function AutomationLogsTable({ logs }: { logs: AutomationLog[] }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
   const [detailLog, setDetailLog] = useState<AutomationLog | null>(null);
+
+  function fmtTime(d: string | Date) {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (Number.isNaN(dt.getTime())) return "—";
+    return new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(dt);
+  }
 
   return (
     <>
@@ -53,7 +60,7 @@ export function AutomationLogsTable({ logs }: { logs: AutomationLog[] }) {
                 const displayMessage = friendlyAutomationLogMessage(log.technicalMessage ?? log.message);
                 return (
                   <TableRow key={log.id}>
-                    <TableCell>{formatDate(log.createdAt, "MMM d, HH:mm")}</TableCell>
+                    <TableCell>{fmtTime(log.createdAt)}</TableCell>
                     <TableCell className="font-medium">{log.moduleName}</TableCell>
                     <TableCell>
                       <Badge variant={log.status === "Success" ? "success" : log.status === "Warning" ? "warning" : "danger"}>

@@ -1,8 +1,10 @@
+"use client";
+
 import { ContactsIcon, FollowUpIcon } from "@/components/icons";
 import type { FollowUpReminderItem } from "@/data/mockApplications";
-import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface FollowUpRemindersProps {
   reminders: FollowUpReminderItem[];
@@ -14,12 +16,27 @@ const statusClass: Record<FollowUpReminderItem["reminderStatus"], string> = {
   Overdue: "bg-[var(--rose-bg)] text-[var(--rose)]",
 };
 
+const STATUS_KEY_MAP: Record<FollowUpReminderItem["reminderStatus"], string> = {
+  "Due Today": "dashboard.followUpReminders.dueToday",
+  Scheduled: "dashboard.followUpReminders.scheduled",
+  Overdue: "dashboard.followUpReminders.overdue",
+};
+
 export function FollowUpReminders({ reminders }: FollowUpRemindersProps) {
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+
+  function fmtDate(d: string | Date) {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (Number.isNaN(dt.getTime())) return "—";
+    return new Intl.DateTimeFormat(bcp47, { day: "numeric", month: "short", year: "numeric" }).format(dt);
+  }
+
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0">
         <FollowUpIcon size={16} className="text-[var(--text-3)]" />
-        <CardTitle>Follow-up Reminders</CardTitle>
+        <CardTitle>{t("dashboard.followUpReminders.title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
         {reminders.map((item) => (
@@ -32,9 +49,9 @@ export function FollowUpReminders({ reminders }: FollowUpRemindersProps) {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-[var(--text-3)]">{formatDate(item.followUpDate)}</p>
+              <p className="text-xs text-[var(--text-3)]">{fmtDate(item.followUpDate)}</p>
               <Badge className={`mt-1 ${statusClass[item.reminderStatus]}`}>
-                {item.reminderStatus}
+                {t(STATUS_KEY_MAP[item.reminderStatus])}
               </Badge>
             </div>
           </div>

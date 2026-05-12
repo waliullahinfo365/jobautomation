@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { PipelineIcon } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface PipelineDataPoint {
   status: string;
@@ -21,6 +22,17 @@ interface PipelineDataPoint {
 interface ApplicationPipelineChartProps {
   data: PipelineDataPoint[];
 }
+
+const STAGE_KEY_MAP: Record<string, string> = {
+  New: "new",
+  Research: "research",
+  Drafting: "drafting",
+  "Ready to Apply": "readyToApply",
+  Applied: "applied",
+  Interview: "interview",
+  Offer: "offer",
+  Rejected: "rejected",
+};
 
 function useNarrowChart() {
   const query = "(max-width: 767px)";
@@ -36,6 +48,7 @@ function useNarrowChart() {
 }
 
 export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps) {
+  const { t } = useTranslation();
   const narrow = useNarrowChart();
   const total = data.reduce((acc, item) => acc + item.count, 0);
   const maxCount = Math.max(...data.map((d) => d.count), 1);
@@ -48,6 +61,11 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
     ? { top: 8, right: 2, left: -12, bottom: 8 }
     : { top: 10, right: 8, left: 4, bottom: 4 };
 
+  function stageLabel(status: string): string {
+    const key = STAGE_KEY_MAP[status];
+    return key ? t(`dashboard.pipelineStages.${key}`) : status;
+  }
+
   return (
     <article className="jf-panel min-w-0">
       <div className="jf-panel-head">
@@ -56,20 +74,20 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
             <PipelineIcon size={18} />
           </div>
           <div className="min-w-0">
-            <h3 className="jf-panel-title">Application Pipeline</h3>
-            <p className="jf-panel-sub">Distribution of jobs across each stage</p>
+            <h3 className="jf-panel-title">{t("dashboard.pipeline.title")}</h3>
+            <p className="jf-panel-sub">{t("dashboard.pipeline.subtitle")}</p>
           </div>
         </div>
         <div className="jf-panel-tags">
           <span className="jf-tag jf-tag--accent">
-            <span className="jf-tag-num">{total}</span> tracked
+            <span className="jf-tag-num">{total}</span> {t("dashboard.pipeline.tracked")}
           </span>
           <span className="jf-tag">
             <span
               className="h-1.5 w-1.5 rounded-full bg-[var(--accent-hi)] shadow-[0_0_8px_var(--accent-hi)]"
               aria-hidden
             />
-            Live
+            {t("dashboard.pipeline.live")}
           </span>
         </div>
       </div>
@@ -99,6 +117,7 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
               dataKey="status"
               interval={0}
               height={narrow ? 56 : 36}
+              tickFormatter={(v: string) => stageLabel(v)}
               tick={{
                 fontSize: narrow ? 9 : 11,
                 fill: "var(--text-2)",
@@ -132,6 +151,7 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
                 boxShadow: "0 12px 24px rgba(0,0,0,0.35)",
               }}
               labelStyle={{ color: "var(--text-2)" }}
+              labelFormatter={(v: string) => stageLabel(v)}
             />
             <Bar
               dataKey="count"
@@ -159,24 +179,24 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
 
       <div className="jf-pipe-foot">
         <div>
-          <div className="jf-pipe-stat-label">Conversion</div>
+          <div className="jf-pipe-stat-label">{t("dashboard.pipeline.conversion")}</div>
           <div className="jf-pipe-stat-val">
             {conversionPct}%
-            <small>applied → interview</small>
+            <small>{t("dashboard.pipeline.appliedToInterview")}</small>
           </div>
         </div>
         <div>
-          <div className="jf-pipe-stat-label">Avg. velocity</div>
+          <div className="jf-pipe-stat-label">{t("dashboard.pipeline.avgVelocity")}</div>
           <div className="jf-pipe-stat-val">
             3.2d
-            <small>stage to stage</small>
+            <small>{t("dashboard.pipeline.stageToStage")}</small>
           </div>
         </div>
         <div>
-          <div className="jf-pipe-stat-label">Synced</div>
+          <div className="jf-pipe-stat-label">{t("dashboard.pipeline.synced")}</div>
           <div className="jf-pipe-stat-val">
-            Live
-            <small>from pipeline</small>
+            {t("dashboard.pipeline.live")}
+            <small>{t("dashboard.pipeline.fromPipeline")}</small>
           </div>
         </div>
       </div>
