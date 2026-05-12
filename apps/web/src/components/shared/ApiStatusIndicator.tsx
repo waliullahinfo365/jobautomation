@@ -5,7 +5,15 @@ import { API_URL } from "@/config/env";
 
 type Status = "connected" | "mock" | "offline";
 
-export function ApiStatusIndicator({ usingMock }: { usingMock?: boolean }) {
+type ApiStatusLabels = Partial<Record<Status, string>>;
+
+export function ApiStatusIndicator({
+  usingMock,
+  labels,
+}: {
+  usingMock?: boolean;
+  labels?: ApiStatusLabels;
+}) {
   const [status, setStatus] = useState<Status>(usingMock ? "mock" : "offline");
 
   useEffect(() => {
@@ -30,10 +38,10 @@ export function ApiStatusIndicator({ usingMock }: { usingMock?: boolean }) {
 
   const copy =
     status === "connected"
-      ? { text: "API Connected", className: "bg-emerald-100 text-emerald-700" }
+      ? { text: labels?.connected ?? "API Connected", className: "bg-emerald-100 text-emerald-700" }
       : status === "mock"
-        ? { text: "Using Mock Data", className: "bg-amber-100 text-amber-700" }
-        : { text: "API Offline", className: "bg-rose-100 text-rose-700" };
+        ? { text: labels?.mock ?? "Using Mock Data", className: "bg-amber-100 text-amber-700" }
+        : { text: labels?.offline ?? "API Offline", className: "bg-rose-100 text-rose-700" };
 
   return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${copy.className}`}>{copy.text}</span>;
 }
