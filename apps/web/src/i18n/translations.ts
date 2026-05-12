@@ -622,6 +622,55 @@ export const messages: Record<
         security: "Sicherheit",
         billing: "Abrechnung (Platzhalter)",
       },
+      automationRules: {
+        duplicateDetection: {
+          title: "Regel zur Duplikaterkennung",
+          matchByCompanyPositionUrl: "Abgleich nach Unternehmen + Position + URL",
+          mode: {
+            strict: "Streng",
+            balanced: "Ausgewogen",
+            loose: "Locker",
+          },
+        },
+        followUp: {
+          title: "Regel für Nachfass-Erinnerungen",
+          daysAfterApply: "Tage nach Bewerbung",
+          time: "Erinnerungszeit",
+          autoMarkSent: "Erinnerung automatisch als gesendet markieren",
+        },
+        deadline: {
+          title: "Regel für Fristwarnungen",
+          daysBeforeDeadline: "Tage vor Ablauf der Frist",
+          activeJobsOnly: "Nur aktive Jobs einbeziehen",
+        },
+        lifecycle: {
+          title: "Regel zur Lebenszyklusüberwachung",
+          staleAfterDays: "Veraltet nach Tagen",
+          criticalAfterDays: "Kritisch nach Tagen",
+        },
+        dailyDigest: {
+          title: "Regel für tägliche Zusammenfassung",
+          sendDailyDigest: "Tägliche Zusammenfassung senden",
+          time: "Uhrzeit der Zusammenfassung",
+        },
+        weeklyReport: {
+          title: "Regel für Wochenbericht",
+          sendWeeklyReport: "Wochenbericht senden",
+          day: "Berichtstag",
+          time: "Berichtszeit",
+        },
+        days: {
+          monday: "Montag",
+          tuesday: "Dienstag",
+          wednesday: "Mittwoch",
+          thursday: "Donnerstag",
+          friday: "Freitag",
+          saturday: "Samstag",
+          sunday: "Sonntag",
+        },
+        saveSuccess: "Automatisierungsregeln gespeichert.",
+        saveFailed: "Automatisierungsregeln konnten nicht gespeichert werden.",
+      },
     },
     integrations: {
       connected: "Verbunden",
@@ -2684,6 +2733,55 @@ export const messages: Record<
         dataStorage: "Data & Storage",
         security: "Security",
         billing: "Billing Placeholder",
+      },
+      automationRules: {
+        duplicateDetection: {
+          title: "Duplicate Detection Rule",
+          matchByCompanyPositionUrl: "Match by company + position + URL",
+          mode: {
+            strict: "Strict",
+            balanced: "Balanced",
+            loose: "Loose",
+          },
+        },
+        followUp: {
+          title: "Follow-up Reminder Rule",
+          daysAfterApply: "Days after application",
+          time: "Reminder time",
+          autoMarkSent: "Auto-mark reminder sent",
+        },
+        deadline: {
+          title: "Deadline Alert Rule",
+          daysBeforeDeadline: "Days before deadline",
+          activeJobsOnly: "Include only active jobs",
+        },
+        lifecycle: {
+          title: "Lifecycle Monitoring Rule",
+          staleAfterDays: "Stale after days",
+          criticalAfterDays: "Critical after days",
+        },
+        dailyDigest: {
+          title: "Daily Digest Rule",
+          sendDailyDigest: "Send daily digest",
+          time: "Digest time",
+        },
+        weeklyReport: {
+          title: "Weekly Report Rule",
+          sendWeeklyReport: "Send weekly report",
+          day: "Report day",
+          time: "Report time",
+        },
+        days: {
+          monday: "Monday",
+          tuesday: "Tuesday",
+          wednesday: "Wednesday",
+          thursday: "Thursday",
+          friday: "Friday",
+          saturday: "Saturday",
+          sunday: "Sunday",
+        },
+        saveSuccess: "Automation rules saved.",
+        saveFailed: "Failed to save automation rules.",
       },
     },
     integrations: {
