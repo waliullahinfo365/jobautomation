@@ -118,7 +118,7 @@ export function MobileNav() {
 
               <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-[var(--border-default)] px-3 py-2">
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-[var(--text-3)]">{t("common.theme")}</p>
+                  <p className="text-xs font-medium text-[var(--text-3)]">{t("common.design")}</p>
                   <p className="truncate text-sm text-[var(--text-1)]">
                     {isDark ? t("common.darkMode") : t("common.lightMode")}
                   </p>
@@ -130,15 +130,6 @@ export function MobileNav() {
                 <p className="mb-2 text-xs font-medium text-[var(--text-3)]">{t("common.language")}</p>
                 <LanguageSwitcher />
               </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3 min-h-[40px] w-full justify-center border-rose-500/40 text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
-                onClick={handleLogout}
-              >
-                {t("common.logout")}
-              </Button>
             </div>
 
             <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
@@ -164,6 +155,17 @@ export function MobileNav() {
                 );
               })}
             </ul>
+
+            <div className="mt-auto border-t border-[var(--border-default)] pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-[44px] w-full justify-center border-rose-500/40 text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
+                onClick={handleLogout}
+              >
+                {t("common.logout")}
+              </Button>
+            </div>
           </nav>
         </div>
       )}
