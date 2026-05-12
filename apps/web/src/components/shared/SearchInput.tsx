@@ -3,6 +3,7 @@
 import { CloseIcon, SearchIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface SearchInputProps {
   placeholder?: string;
@@ -12,6 +13,7 @@ interface SearchInputProps {
 }
 
 export function SearchInput({ placeholder = "Search…", value, onChange, className }: SearchInputProps) {
+  const { t } = useTranslation();
   const [internal, setInternal] = useState(value ?? "");
   const current = value !== undefined ? value : internal;
 
@@ -35,7 +37,7 @@ export function SearchInput({ placeholder = "Search…", value, onChange, classN
           type="button"
           onClick={() => handleChange("")}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          aria-label="Clear search"
+          aria-label={t("common.clearSearch")}
         >
           <CloseIcon size={14} />
         </button>

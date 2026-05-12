@@ -568,7 +568,7 @@ export function ReportsPageClient() {
       <ErrorState
         title={t("reports.noReports")}
         message={reportsApi.error.message}
-        actionLabel="Retry"
+        actionLabel={t("common.retry")}
         onAction={() => void reportsApi.refetch()}
       />
     );

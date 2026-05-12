@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { APP_NAME } from "@/lib/constants";
 import { LoginBackground } from "@/components/auth/LoginBackground";
+import { LoginFooterCopy, LoginHeaderCopy } from "@/components/auth/AuthPageCopy";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { ZapIcon } from "@/components/icons";
 
@@ -18,19 +18,14 @@ export default function LoginPage() {
               <ZapIcon size={24} className="text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold">{APP_NAME}</h1>
-            <p className="text-sm text-muted-foreground">Sign in to your account</p>
+            <LoginHeaderCopy />
           </div>
 
           <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
             <LoginForm />
           </div>
 
-          <p className="text-center text-xs text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
+          <LoginFooterCopy />
         </div>
       </main>
     </>

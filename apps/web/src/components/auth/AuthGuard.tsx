@@ -5,8 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { me } from "@/lib/api/auth.api";
 import { ApiError, clearAuthToken, getAuthToken } from "@/lib/api/client";
 import { LoadingState } from "@/components/shared/LoadingState";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
@@ -41,7 +43,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="mx-auto w-full max-w-[1480px] p-6">
-        <LoadingState title="Checking your session..." description="Verifying account access for this workspace." />
+        <LoadingState title={t("loading.session")} description={t("loading.sessionDesc")} />
       </div>
     );
   }

@@ -3,14 +3,17 @@ import type { Document } from "@/types/document";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { formatDate } from "@/lib/utils";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface DocumentListProps {
   documents: Document[];
 }
 
 export function DocumentList({ documents }: DocumentListProps) {
+  const { t } = useTranslation();
+
   return (
-    <SectionCard title="Document List" contentClassName="p-0">
+    <SectionCard title={t("section.documentList")} contentClassName="p-0">
       <div className="divide-y divide-[var(--border-default)]">
         {documents.map((doc) => (
           <div key={doc._id} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-2)]/80">

@@ -10,7 +10,7 @@ type Props = {
 };
 
 export function LanguageSwitcher({ compact }: Props) {
-  const { locale, setLocale } = useTranslation();
+  const { locale, setLocale, t } = useTranslation();
 
   function chip(code: Locale, label: string, flag: string) {
     const active = locale === code;
@@ -41,7 +41,7 @@ export function LanguageSwitcher({ compact }: Props) {
         compact && "shrink-0"
       )}
       role="group"
-      aria-label="Language"
+      aria-label={t("language.label")}
     >
       {chip("de", "Deutsch", "🇩🇪")}
       {chip("en", "English", "🇬🇧")}

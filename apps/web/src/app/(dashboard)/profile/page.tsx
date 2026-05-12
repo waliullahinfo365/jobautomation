@@ -9,6 +9,7 @@ import { SettingsIcon } from "@/components/icons";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { ChangePasswordModal } from "@/components/profile/ChangePasswordModal";
 import { me } from "@/lib/api/auth.api";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type ProfileState = {
   name: string;
@@ -27,6 +28,7 @@ const FALLBACK_PROFILE: ProfileState = {
 };
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileState>(FALLBACK_PROFILE);
   const [loading, setLoading] = useState(true);
@@ -63,37 +65,36 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <PageHeader
         icon={SettingsIcon}
-        eyebrow="Account"
-        title="Account / Profile"
-        description="Review your account details and workspace membership."
+        eyebrow={t("profile.eyebrow")}
+        title={t("profile.title")}
+        description={t("profile.description")}
       />
 
-      <SectionCard title="Profile details">
+      <SectionCard title={t("profile.details")}>
         <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-          <InfoRow label="User name" value={loading ? "Loading..." : profile.name} />
-          <InfoRow label="Email" value={loading ? "Loading..." : profile.email} />
-          <InfoRow label="Workspace name" value={loading ? "Loading..." : profile.workspaceName} />
-          <InfoRow label="Role" value={loading ? "Loading..." : profile.role} />
-          <InfoRow label="Account status" value={loading ? "Loading..." : profile.status} />
+          <InfoRow label={t("profile.userName")} value={loading ? t("common.loading") : profile.name} />
+          <InfoRow label={t("profile.email")} value={loading ? t("common.loading") : profile.email} />
+          <InfoRow label={t("profile.workspaceName")} value={loading ? t("common.loading") : profile.workspaceName} />
+          <InfoRow label={t("profile.role")} value={loading ? t("common.loading") : profile.role} />
+          <InfoRow label={t("profile.accountStatus")} value={loading ? t("common.loading") : profile.status} />
         </div>
       </SectionCard>
 
-      <SectionCard title="Connected integrations summary">
+      <SectionCard title={t("profile.integrationsSummary")}>
         <p className="text-sm text-[var(--text-2)]">
-          Integration summary will be expanded here with account-level visibility across Gmail, Drive, Calendar, AI, and
-          communication modules.
+          {t("profile.integrationsPlaceholder")}
         </p>
       </SectionCard>
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={() => setIsEditProfileOpen(true)}>
-          Edit Profile
+          {t("profile.editProfile")}
         </Button>
         <Button type="button" variant="outline" onClick={() => setIsChangePasswordOpen(true)}>
-          Change Password
+          {t("profile.changePassword")}
         </Button>
         <Button type="button" variant="secondary" onClick={() => router.push("/settings")}>
-          Back to Settings
+          {t("profile.backToSettings")}
         </Button>
       </div>
 

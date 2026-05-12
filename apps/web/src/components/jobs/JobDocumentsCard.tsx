@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { FileTextIcon } from "@/components/icons";
 import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface JobDocumentsCardProps {
   documents: JobDocument[];
@@ -21,13 +22,14 @@ function documentSubtitle(doc: JobDocument): string {
 }
 
 export function JobDocumentsCard({ documents }: JobDocumentsCardProps) {
+  const { t } = useTranslation();
   const [viewDoc, setViewDoc] = useState<JobDocument | null>(null);
 
   return (
     <>
-      <SectionCard title="Documents">
+      <SectionCard title={t("nav.documents")}>
         {documents.length === 0 ? (
-          <p className="text-sm text-[var(--text-3)]">No documents generated yet.</p>
+          <p className="text-sm text-[var(--text-3)]">{t("jobs.documentsCard.noneGenerated")}</p>
         ) : (
           <div className="space-y-2">
             {documents.map((doc) => (
@@ -64,11 +66,11 @@ export function JobDocumentsCard({ documents }: JobDocumentsCardProps) {
                       rel="noreferrer"
                       className="rounded-md border border-[var(--border-default)] px-2.5 py-1 text-xs font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
                     >
-                      Open
+                      {t("common.open")}
                     </a>
                   ) : null}
                   <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => setViewDoc(doc)}>
-                    View
+                    {t("common.view")}
                   </Button>
                 </div>
               </div>
@@ -96,7 +98,7 @@ export function JobDocumentsCard({ documents }: JobDocumentsCardProps) {
                 …
               </pre>
             ) : (
-              <p className="text-sm text-[var(--text-3)]">No text content is available for this document.</p>
+              <p className="text-sm text-[var(--text-3)]">{t("jobs.documentsCard.noTextContent")}</p>
             )}
           </div>
         ) : null}

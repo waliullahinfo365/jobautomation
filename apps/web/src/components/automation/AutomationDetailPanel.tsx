@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/utils";
 import { friendlyAutomationLogMessage } from "@/lib/automationLogMessaging";
 import { Badge } from "@/components/ui/badge";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface AutomationDetailPanelProps {
   module: AutomationModule | null;
@@ -21,6 +22,7 @@ interface AutomationDetailPanelProps {
 }
 
 export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigure }: AutomationDetailPanelProps) {
+  const { t } = useTranslation();
   return (
     <AnimatePresence>
       {open && module ? (
@@ -54,20 +56,20 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
         </div>
 
         <div className="space-y-5">
-          <SectionCard title="Health Metrics">
+          <SectionCard title={t("automation.detail.healthMetrics")}>
             <AutomationHealthMetrics module={module} />
           </SectionCard>
 
-          <SectionCard title="Trigger Info">
+          <SectionCard title={t("section.triggerInfo")}>
             <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-              <Info label="Trigger Type" value={module.triggerType} />
-              <Info label="Trigger Source" value={module.triggerSource} />
-              <Info label="Schedule" value={module.schedule} />
-              <Info label="Input Source" value={module.inputSource} />
+              <Info label={t("automation.detail.triggerType")} value={module.triggerType} />
+              <Info label={t("automation.detail.triggerSource")} value={module.triggerSource} />
+              <Info label={t("automation.detail.schedule")} value={module.schedule} />
+              <Info label={t("automation.detail.inputSource")} value={module.inputSource} />
             </div>
           </SectionCard>
 
-          <SectionCard title="Actions Performed">
+          <SectionCard title={t("automation.detail.actionsPerformed")}>
             <div className="space-y-2">
               {module.actions.map((action) => (
                 <div key={action.id} className="rounded-lg border border-[var(--border-default)] p-3">
@@ -78,44 +80,46 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
             </div>
           </SectionCard>
 
-          <SectionCard title="Recent Logs">
+          <SectionCard title={t("automation.detail.recentLogs")}>
             <div className="space-y-2">
               {module.recentLogs?.length ? (
                 module.recentLogs.map((log) => (
                   <div key={log.id} className="rounded-lg border border-[var(--border-default)] p-3">
                     <div className="mb-1 flex items-center justify-between">
                       <Badge variant={log.status === "Success" ? "success" : log.status === "Warning" ? "warning" : "danger"}>
-                        {log.status}
+                        {translateLogStatus(log.status, t)}
                       </Badge>
                       <span className="text-xs text-[var(--text-4)]">{formatDate(log.createdAt, "MMM d, HH:mm")}</span>
                     </div>
                     <p className="text-sm text-[var(--text-2)]">
                       {friendlyAutomationLogMessage(log.technicalMessage ?? log.message)}
                     </p>
-                    <p className="text-xs text-[var(--text-3)]">Related: {log.relatedRecord} • Duration: {log.duration}</p>
+                    <p className="text-xs text-[var(--text-3)]">
+                      {t("automation.detail.related")}: {log.relatedRecord} • {t("table.header.duration")}: {log.duration}
+                    </p>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-[var(--text-3)]">No recent logs for this module.</p>
+                <p className="text-sm text-[var(--text-3)]">{t("automation.detail.noRecentLogs")}</p>
               )}
             </div>
           </SectionCard>
 
-          <SectionCard title="Configuration Preview">
+          <SectionCard title={t("automation.detail.configurationPreview")}>
             <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-              <Info label="Connected Account" value={module.configuration.connectedAccount} />
-              <Info label="Environment" value={module.configuration.environment} />
-              <Info label="Retry Policy" value={module.configuration.retryPolicy} />
-              <Info label="Error Handling" value={module.configuration.errorHandling} />
+              <Info label={t("integration.connectedAccount")} value={module.configuration.connectedAccount} />
+              <Info label={t("automation.detail.environment")} value={module.configuration.environment} />
+              <Info label={t("section.retryPolicy")} value={module.configuration.retryPolicy} />
+              <Info label={t("section.errorHandling")} value={module.configuration.errorHandling} />
             </div>
           </SectionCard>
 
           <div className="flex flex-wrap gap-2 border-t border-[var(--border-default)] pt-5">
             <Button type="button" variant="default" onClick={() => module && onRun?.(module)}>
-              Run Now
+              {t("automation.actions.runNow")}
             </Button>
             <Button type="button" variant="outline" onClick={() => module && onConfigure?.(module)}>
-              Configure
+              {t("integrations.configure")}
             </Button>
           </div>
         </div>
@@ -124,6 +128,13 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
       ) : null}
     </AnimatePresence>
   );
+}
+
+function translateLogStatus(status: string, t: (key: string) => string) {
+  if (status === "Success") return t("status.success");
+  if (status === "Warning") return t("status.warning");
+  if (status === "Failed") return t("status.failed");
+  return status;
 }
 
 function Info({ label, value }: { label: string; value: string }) {

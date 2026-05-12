@@ -31,7 +31,7 @@ export function MobileNav() {
             type="button"
             onClick={() => setOpen(true)}
             className="grid h-10 min-h-[40px] min-w-[40px] place-items-center rounded-md text-[var(--text-2)]"
-            aria-label="Open menu"
+            aria-label={t("common.openMenu")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
               <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />

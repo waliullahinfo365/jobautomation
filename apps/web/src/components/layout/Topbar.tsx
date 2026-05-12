@@ -92,12 +92,12 @@ export function Topbar() {
             <button
               type="button"
               className="jf-avatar-btn flex h-[34px] items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] pl-1 pr-1 transition-colors hover:bg-[var(--surface-3)]"
-              aria-label="Account menu"
+              aria-label={t("topbar.accountMenu")}
             >
               <Avatar className="h-[26px] w-[26px] border-0 bg-gradient-to-br from-[#4FC2D8] to-[#637CFF] text-[10.5px] font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]">
                 <AvatarFallback className="bg-transparent text-white">WU</AvatarFallback>
               </Avatar>
-              <span className="jf-avatar-name text-[12.5px] font-semibold text-[var(--text-1)]">You</span>
+              <span className="jf-avatar-name text-[12.5px] font-semibold text-[var(--text-1)]">{t("topbar.you")}</span>
               <ChevronDownIcon size={12} className="mr-1 text-[var(--text-3)]" />
             </button>
           </DropdownMenuTrigger>

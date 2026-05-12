@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthApi } from "@/hooks/api/useAuthApi";
 import { getAuthToken } from "@/lib/api/client";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function RegisterForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { register, loading, error, clearError } = useAuthApi();
   const [name, setName] = useState("");
@@ -46,13 +48,13 @@ export function RegisterForm() {
       ) : null}
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="name">
-          Full name
+          {t("auth.fullName")}
         </label>
         <Input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="workspace">
-          Workspace name
+          {t("form.label.workspaceName")}
         </label>
         <Input
           id="workspace"
@@ -64,7 +66,7 @@ export function RegisterForm() {
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="email">
-          Email
+          {t("form.label.email")}
         </label>
         <Input
           id="email"
@@ -78,13 +80,13 @@ export function RegisterForm() {
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="password">
-          Password
+          {t("auth.password")}
         </label>
         <Input
           id="password"
           type="password"
           autoComplete="new-password"
-          placeholder="At least 8 characters"
+          placeholder={t("form.helper.passwordMinLength")}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -92,7 +94,7 @@ export function RegisterForm() {
         />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating account…" : "Create Account"}
+        {loading ? t("auth.creatingAccount") : t("auth.createAccount")}
       </Button>
     </form>
   );

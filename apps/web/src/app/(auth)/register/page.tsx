@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { APP_NAME } from "@/lib/constants";
+import { RegisterFooterCopy, RegisterHeaderCopy } from "@/components/auth/AuthPageCopy";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { ZapIcon } from "@/components/icons";
 
@@ -15,19 +15,14 @@ export default function RegisterPage() {
             <ZapIcon size={24} className="text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold">{APP_NAME}</h1>
-          <p className="text-sm text-muted-foreground">Create your workspace</p>
+          <RegisterHeaderCopy />
         </div>
 
         <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
           <RegisterForm />
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
+        <RegisterFooterCopy />
       </div>
     </div>
   );

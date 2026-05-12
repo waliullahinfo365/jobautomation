@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import type { CreateJobFormPayload } from "@/lib/api/jobs.api";
 import type { JobPriority, JobSource, JobStatus } from "@/types/job";
 import { showError } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const SOURCES: { label: string; value: JobSource }[] = [
   { label: "LinkedIn", value: "LinkedIn" },
@@ -44,7 +45,36 @@ type Props = {
   loading?: boolean;
 };
 
+function sourceKey(value: JobSource) {
+  const map: Record<JobSource, string> = {
+    Gmail: "gmail",
+    LinkedIn: "linkedin",
+    Indeed: "indeed",
+    "Company Website": "companyWebsite",
+    Referral: "referral",
+    Manual: "manual",
+    Other: "other",
+  };
+  return map[value];
+}
+
+function statusKey(value: JobStatus) {
+  const map: Record<JobStatus, string> = {
+    New: "new",
+    Research: "research",
+    Drafting: "drafting",
+    "Ready to Apply": "readyToApply",
+    Applied: "applied",
+    Interview: "interview",
+    Offer: "offer",
+    Rejected: "rejected",
+    Archived: "archived",
+  };
+  return map[value];
+}
+
 export function AddJobModal({ open, onClose, onSubmit, loading }: Props) {
+  const { t } = useTranslation();
   const [company, setCompany] = useState("");
   const [position, setPosition] = useState("");
   const [source, setSource] = useState<JobSource>("Manual");
@@ -77,16 +107,16 @@ export function AddJobModal({ open, onClose, onSubmit, loading }: Props) {
     const c = company.trim();
     const p = position.trim();
     if (!c) {
-      showError("Company name is required.");
+      showError(t("jobs.addModal.companyRequired"));
       return;
     }
     if (!p) {
-      showError("Position / job title is required.");
+      showError(t("jobs.addModal.positionRequired"));
       return;
     }
     const u = jobUrl.trim();
     if (u && !u.startsWith("http://") && !u.startsWith("https://")) {
-      showError("Job URL must start with http:// or https://");
+      showError(t("jobs.addModal.urlInvalid"));
       return;
     }
     await onSubmit({
@@ -113,79 +143,79 @@ export function AddJobModal({ open, onClose, onSubmit, loading }: Props) {
         aria-labelledby="add-job-title"
       >
         <h2 id="add-job-title" className="text-lg font-semibold tracking-tight text-[var(--text-1)]">
-          Add job
+          {t("jobs.addModal.title")}
         </h2>
-        <p className="mt-1 text-sm text-[var(--text-3)]">Create a new opportunity in your pipeline.</p>
+        <p className="mt-1 text-sm text-[var(--text-3)]">{t("jobs.addModal.description")}</p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Company name *</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.addModal.companyName")} *</label>
             <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Acme Corp" required />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Position / job title *</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.addModal.positionTitle")} *</label>
             <Input value={position} onChange={(e) => setPosition(e.target.value)} placeholder="Senior Engineer" required />
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Source</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.source")}</label>
               <Select
                 value={source}
                 onChange={(e) => setSource(e.target.value as JobSource)}
-                options={SOURCES.map((o) => ({ label: o.label, value: o.value }))}
+                options={SOURCES.map((o) => ({ label: t(`jobs.sourceKind.${sourceKey(o.value)}`), value: o.value }))}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Status</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.status")}</label>
               <Select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as JobStatus)}
-                options={STATUSES.map((o) => ({ label: o.label, value: o.value }))}
+                options={STATUSES.map((o) => ({ label: t(`jobs.pipeline.${statusKey(o.value)}`), value: o.value }))}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Priority</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.priority")}</label>
               <Select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as JobPriority)}
-                options={PRIORITIES.map((o) => ({ label: o.label, value: o.value }))}
+                options={PRIORITIES.map((o) => ({ label: t(`jobs.priorityLevel.${o.value.toLowerCase()}`), value: o.value }))}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Location</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.location")}</label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Remote / City" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Job URL</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.jobUrl")}</label>
             <Input value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} placeholder="https://…" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Salary range</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.salaryRange")}</label>
             <Input value={salaryRange} onChange={(e) => setSalaryRange(e.target.value)} placeholder="$120k – $150k" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Deadline</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobs.deadline")}</label>
             <Input value={deadline} onChange={(e) => setDeadline(e.target.value)} type="date" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Description</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("jobDetail.description")}</label>
             <textarea
               className="flex min-h-[100px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Notes, stack, team size…"
+              placeholder={t("form.placeholder.notes")}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create Job"}
+              {loading ? t("jobs.addModal.creating") : t("jobs.addModal.create")}
             </Button>
           </div>
         </form>

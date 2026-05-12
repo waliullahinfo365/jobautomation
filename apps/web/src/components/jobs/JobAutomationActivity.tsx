@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { normalizeAutomationLogForUi } from "@/lib/utils/resource";
 import { AutomationLogDetailModal } from "@/components/automation/AutomationLogDetailModal";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface JobAutomationActivityProps {
   logs: JobAutomationLog[];
@@ -40,6 +41,7 @@ function toDetailModalLog(row: JobAutomationLog): AutomationLog | null {
 }
 
 export function JobAutomationActivity({ logs }: JobAutomationActivityProps) {
+  const { t } = useTranslation();
   const [openLog, setOpenLog] = useState<AutomationLog | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -47,16 +49,16 @@ export function JobAutomationActivity({ logs }: JobAutomationActivityProps) {
 
   return (
     <>
-      <SectionCard title="Automation Activity">
+      <SectionCard title={t("section.automationActivity")}>
         {latest.length === 0 ? (
-          <p className="text-sm text-[var(--text-3)]">No automation runs recorded for this job yet.</p>
+          <p className="text-sm text-[var(--text-3)]">{t("jobs.automation.noRuns")}</p>
         ) : (
           <div className="space-y-2">
             {latest.map((log) => (
               <div key={log.id} className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <p className="text-sm font-medium text-[var(--text-1)]">{log.event}</p>
-                  <Badge variant={toneMap[log.status]}>{log.status}</Badge>
+                  <Badge variant={toneMap[log.status]}>{t(`status.${log.status === "error" ? "failed" : log.status}`)}</Badge>
                 </div>
                 <p className="line-clamp-2 text-xs text-[var(--text-3)]">{log.detail}</p>
                 {log.error ? (
@@ -79,7 +81,7 @@ export function JobAutomationActivity({ logs }: JobAutomationActivityProps) {
                       }
                     }}
                   >
-                    View
+                    {t("common.view")}
                   </Button>
                 </div>
               </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function Modal({
   size = "md",
   closeOnBackdropClick = true,
 }: ModalProps) {
+  const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function Modal({
             <button
               onClick={onClose}
               className="text-[var(--text-3)] hover:text-[var(--text-1)]"
-              aria-label="Close modal"
+              aria-label={t("common.closeModal")}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -39,16 +39,16 @@ export function ProfileSection({ profile, onChange }: ProfileSectionProps) {
           <Avatar>
             <AvatarFallback>{profile.avatarInitials}</AvatarFallback>
           </Avatar>
-          <p className="text-sm text-[var(--text-2)]">Avatar placeholder</p>
+          <p className="text-sm text-[var(--text-2)]">{t("profile.avatarPlaceholder")}</p>
         </div>
-        <Input value={profile.name} onChange={(e) => onChange({ ...profile, name: e.target.value })} placeholder="Name" />
-        <Input value={profile.email} onChange={(e) => onChange({ ...profile, email: e.target.value })} placeholder="Email" />
+        <Input value={profile.name} onChange={(e) => onChange({ ...profile, name: e.target.value })} placeholder={t("form.label.name")} />
+        <Input value={profile.email} onChange={(e) => onChange({ ...profile, email: e.target.value })} placeholder={t("form.label.email")} />
         <Input
           value={profile.workspaceName}
           onChange={(e) => onChange({ ...profile, workspaceName: e.target.value })}
-          placeholder="Workspace name"
+          placeholder={t("form.label.workspaceName")}
         />
-        <Input value={profile.role} onChange={(e) => onChange({ ...profile, role: e.target.value })} placeholder="Role" />
+        <Input value={profile.role} onChange={(e) => onChange({ ...profile, role: e.target.value })} placeholder={t("form.label.role")} />
         <Select
           value={profile.timezone}
           onChange={(e) => onChange({ ...profile, timezone: e.target.value })}

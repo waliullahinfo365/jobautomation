@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthApi } from "@/hooks/api/useAuthApi";
 import { getAuthToken } from "@/lib/api/client";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function LoginForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { login, loading, error, clearError } = useAuthApi();
   const [email, setEmail] = useState("");
@@ -44,7 +46,7 @@ export function LoginForm() {
       ) : null}
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="email">
-          Email
+          {t("form.label.email")}
         </label>
         <Input
           id="email"
@@ -58,7 +60,7 @@ export function LoginForm() {
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="password">
-          Password
+          {t("auth.password")}
         </label>
         <Input
           id="password"
@@ -72,7 +74,7 @@ export function LoginForm() {
         />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing in…" : "Sign In"}
+        {loading ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
     </form>
   );
