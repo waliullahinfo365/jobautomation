@@ -31,6 +31,7 @@ import { useIntegrationsApi } from "@/hooks/api/useIntegrationsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { useInterviewsApi } from "@/hooks/api/useInterviewsApi";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 import {
   ActivityIcon,
   ArrowRightIcon,
@@ -183,7 +184,18 @@ function statusIcon(status: DemoStepStatus) {
   }
 }
 
+function formatStepStatus(status: DemoStepStatus, t: (key: string) => string) {
+  const keyByStatus: Record<DemoStepStatus, string> = {
+    "Not Started": "demo.status.notStarted",
+    Running: "demo.status.inProgress",
+    Completed: "demo.status.completed",
+    Failed: "demo.status.failed",
+  };
+  return t(keyByStatus[status]);
+}
+
 export function DemoWalkthroughClient() {
+  const { t } = useTranslation();
   const jobsApiHook = useJobsApi({ fallbackToMock: true });
   const applicationsApiHook = useApplicationsApi({ fallbackToMock: true });
   const interviewsApiHook = useInterviewsApi({ fallbackToMock: true });
@@ -255,7 +267,7 @@ export function DemoWalkthroughClient() {
           case "duplicate": {
             const jid = job?.id ?? job?._id;
             if (!jid) {
-              fail("No job available — open Jobs or enable mock fallback.");
+              fail(t("demo.error.noJobOpenJobs"));
               break;
             }
             const res = await jobsApi.checkDuplicate(jid);
@@ -265,7 +277,7 @@ export function DemoWalkthroughClient() {
           case "research": {
             const jid = job?.id ?? job?._id;
             if (!jid) {
-              fail("No job available for research.");
+              fail(t("demo.error.noJobResearch"));
               break;
             }
             try {
@@ -280,7 +292,7 @@ export function DemoWalkthroughClient() {
           case "draft": {
             const jid = job?.id ?? job?._id;
             if (!jid) {
-              fail("No job available for draft.");
+              fail(t("demo.error.noJobDraft"));
               break;
             }
             try {
@@ -295,7 +307,7 @@ export function DemoWalkthroughClient() {
           case "applied": {
             const aid = application?.id ?? application?._id;
             if (!aid) {
-              fail("No application available.");
+              fail(t("demo.error.noApplication"));
               break;
             }
             const res = await applicationsApi.markApplied(aid, {});
@@ -310,7 +322,7 @@ export function DemoWalkthroughClient() {
           }
           case "reply": {
             if (!application) {
-              fail("No application for reply simulation.");
+              fail(t("demo.error.noApplicationReply"));
               break;
             }
             const res = await integrationsApi.replyTest(buildDemoReplyPayload(application));
@@ -321,7 +333,7 @@ export function DemoWalkthroughClient() {
           case "calendar": {
             const iid = interview?.id ?? interview?._id;
             if (!iid) {
-              fail("No interview available.");
+              fail(t("demo.error.noInterview"));
               break;
             }
             try {
@@ -336,7 +348,7 @@ export function DemoWalkthroughClient() {
           case "pdf": {
             const did = document?.id ?? document?._id;
             if (!did) {
-              fail("No document available.");
+              fail(t("demo.error.noDocument"));
               break;
             }
             try {
@@ -369,10 +381,10 @@ export function DemoWalkthroughClient() {
             break;
           }
           default:
-            fail("Unknown step.");
+            fail(t("demo.error.unknownStep"));
         }
       } catch (err) {
-        fail(err instanceof Error ? err.message : "Step failed");
+        fail(err instanceof Error ? err.message : t("demo.error.stepFailed"));
       }
     },
     [
@@ -384,6 +396,7 @@ export function DemoWalkthroughClient() {
       job,
       jobsApiHook,
       applicationsApiHook,
+      t,
     ]
   );
 
@@ -392,9 +405,12 @@ export function DemoWalkthroughClient() {
     setResetLoading(true);
     try {
       const summary = await resetDemoData();
-      showSuccess("Demo data refreshed.");
+      showSuccess(t("demo.toast.dataRefreshed"));
       setResetBanner(
-        `Reset complete — jobs: ${summary.jobs}, applications: ${summary.applications}, logs: ${summary.automationLogs}.`
+        t("demo.resetComplete")
+          .replace("{{jobs}}", String(summary.jobs))
+          .replace("{{applications}}", String(summary.applications))
+          .replace("{{logs}}", String(summary.automationLogs))
       );
       void jobsApiHook.refetch?.();
       void applicationsApiHook.refetch?.();
@@ -402,7 +418,7 @@ export function DemoWalkthroughClient() {
       void documentsApiHook.refetch?.();
       void integrationsApiHook.refetch();
     } catch (e) {
-      const msg = "Demo reset requires the API.";
+      const msg = t("demo.error.resetRequiresApi");
       showError(msg);
       setResetBanner(msg);
     } finally {
@@ -415,14 +431,14 @@ export function DemoWalkthroughClient() {
       case "duplicate":
       case "research":
       case "draft":
-        return job ? null : "Add a job or use seeded demo data.";
+        return job ? null : t("demo.error.addJobOrSeeded");
       case "applied":
       case "reply":
-        return application ? null : "No application in list.";
+        return application ? null : t("demo.error.noApplicationInList");
       case "calendar":
-        return interview ? null : "No interview in list.";
+        return interview ? null : t("demo.error.noInterviewInList");
       case "pdf":
-        return document ? null : "No document in list.";
+        return document ? null : t("demo.error.noDocumentInList");
       default:
         return null;
     }
@@ -432,9 +448,9 @@ export function DemoWalkthroughClient() {
     <div className="space-y-8">
       <PageHeader
         icon={DemoIcon}
-        eyebrow="Product Tour"
-        title="Demo Walkthrough"
-        description="Investor-ready checklist — each step exercises a live API with mock-safe fallbacks when the API is offline."
+        eyebrow={t("demo.eyebrow")}
+        title={t("demo.title")}
+        description={t("demo.pageDescription")}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
@@ -442,7 +458,7 @@ export function DemoWalkthroughClient() {
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "inline-flex gap-2")}
             >
               <ActivityIcon size={16} />
-              System Status
+              {t("demo.systemStatus")}
             </Link>
             <Button
               variant="secondary"
@@ -452,7 +468,7 @@ export function DemoWalkthroughClient() {
               onClick={() => void handleReset()}
             >
               {resetLoading ? <LoaderIcon size={16} /> : <RotateCcwIcon size={16} />}
-              Reset Demo Data
+              {t("demo.resetDemoData")}
             </Button>
           </div>
         }
@@ -471,14 +487,13 @@ export function DemoWalkthroughClient() {
               <SparklesIcon size={24} className="text-[var(--amber)]" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Guided narrative</h2>
+              <h2 className="text-lg font-semibold">{t("demo.guidedNarrative")}</h2>
               <p className="mt-1 max-w-2xl text-sm text-slate-300">
-                Run steps in order for a clean story. Missing entities disable only the steps that need them — the rest
-                still run against your workspace or mock bundle.
+                {t("demo.guidedNarrativeDescription")}
               </p>
             </div>
           </div>
-          <Badge className="shrink-0 border-white/20 bg-white/10 text-white">Demo mode</Badge>
+          <Badge className="shrink-0 border-white/20 bg-white/10 text-white">{t("demo.demoMode")}</Badge>
         </div>
       </MotionCard>
 
@@ -506,13 +521,15 @@ export function DemoWalkthroughClient() {
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <CardTitle className="text-base font-semibold">
-                        {step.order}. {step.title}
+                        {step.order}. {t(`demo.steps.${step.id}.title`)}
                       </CardTitle>
                       <Badge variant="outline" className="text-[10px] font-normal">
-                        {st}
+                        {formatStepStatus(st, t)}
                       </Badge>
                     </div>
-                    <CardDescription className="text-sm leading-relaxed">{step.description}</CardDescription>
+                    <CardDescription className="text-sm leading-relaxed">
+                      {t(`demo.steps.${step.id}.description`)}
+                    </CardDescription>
                     {disabledReason ? (
                       <p className="text-xs text-amber-600 dark:text-amber-400">{disabledReason}</p>
                     ) : null}
@@ -525,7 +542,7 @@ export function DemoWalkthroughClient() {
                       onClick={() => void runStep(step.id)}
                     >
                       {st === "Running" ? <LoaderIcon size={16} /> : <PlayIcon size={16} />}
-                      Run step
+                      {t("demo.runStep")}
                     </Button>
                     <Link
                       href={step.linkHref}
@@ -534,7 +551,7 @@ export function DemoWalkthroughClient() {
                         "gap-1 text-muted-foreground"
                       )}
                     >
-                      {step.linkLabel}
+                      {t(`demo.link.${step.linkLabel}`)}
                       <ArrowRightIcon size={14} />
                     </Link>
                   </div>
@@ -552,7 +569,7 @@ export function DemoWalkthroughClient() {
                       {result.error ?? result.preview}
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs text-muted-foreground">Result preview appears after you run the step.</p>
+                    <p className="mt-2 text-xs text-muted-foreground">{t("demo.resultPreviewEmpty")}</p>
                   )}
                 </CardContent>
               </Card>
