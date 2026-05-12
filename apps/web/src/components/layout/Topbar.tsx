@@ -1,16 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
 import { ChevronDownIcon, PlusIcon, SearchIcon, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { clearAuthToken } from "@/lib/api/client";
-import { showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
+import { useLogoutAction } from "@/hooks/useLogoutAction";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
@@ -19,8 +18,8 @@ const flatNav: SidebarNavItem[] = SIDEBAR_NAV.flatMap((s) => [...s.items]);
 
 export function Topbar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useTranslation();
+  const handleLogout = useLogoutAction();
   const title = useMemo(() => {
     const match = flatNav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
     return match ? t(match.labelKey) : t("nav.dashboard");
@@ -37,20 +36,6 @@ export function Topbar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  function handleLogout() {
-    clearAuthToken();
-    try {
-      localStorage.removeItem("tenantId");
-      localStorage.removeItem("userId");
-      sessionStorage.removeItem("tenantId");
-      sessionStorage.removeItem("userId");
-    } catch {
-      /* ignore */
-    }
-    showSuccess(t("topbar.loggedOut"));
-    router.replace("/login");
-  }
 
   return (
     <header className="jf-topbar hidden md:flex">
