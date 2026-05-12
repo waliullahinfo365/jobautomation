@@ -11,44 +11,7 @@ import { normalizeJobForUi, getResourceId } from "@/lib/utils/resource";
 import { showError } from "@/lib/ui/toast";
 import type { Job } from "@/types/job";
 import type { ApplicationStatus, FollowUpStatus, ResponseStatus } from "@/types/application";
-
-const SOURCES = [
-  { label: "LinkedIn", value: "LinkedIn" },
-  { label: "Indeed", value: "Indeed" },
-  { label: "Company Website", value: "Company Website" },
-  { label: "Referral", value: "Referral" },
-  { label: "Gmail", value: "Gmail" },
-  { label: "Manual", value: "Manual" },
-  { label: "Other", value: "Other" },
-] as const;
-
-const APP_STATUSES: { label: string; value: ApplicationStatus }[] = [
-  { label: "Drafted", value: "Drafted" },
-  { label: "Ready", value: "Ready" },
-  { label: "Applied", value: "Applied" },
-  { label: "Follow-Up Due", value: "Follow-Up Due" },
-  { label: "Replied", value: "Replied" },
-  { label: "Interview", value: "Interview" },
-  { label: "Offer", value: "Offer" },
-  { label: "Rejected", value: "Rejected" },
-  { label: "Archived", value: "Archived" },
-];
-
-const RESPONSE_STATUSES: { label: string; value: ResponseStatus }[] = [
-  { label: "Awaiting response", value: "No Response" },
-  { label: "Positive reply", value: "Positive Reply" },
-  { label: "Negative reply", value: "Negative Reply" },
-  { label: "Auto reply", value: "Auto Reply" },
-  { label: "Needs review", value: "Needs Review" },
-];
-
-const FOLLOW_UP: { label: string; value: FollowUpStatus }[] = [
-  { label: "Not scheduled", value: "Not Needed" },
-  { label: "Scheduled", value: "Scheduled" },
-  { label: "Due today", value: "Due Today" },
-  { label: "Overdue", value: "Overdue" },
-  { label: "Sent", value: "Sent" },
-];
+import { useTranslation } from "@/i18n/useTranslation";
 
 function todayDateInput(): string {
   const d = new Date();
@@ -61,9 +24,7 @@ type Props = {
   onClose: () => void;
   onSubmit: (payload: CreateApplicationFormPayload) => Promise<void>;
   loading?: boolean;
-  /** When set, related job is fixed and hidden from picker (job detail page). */
   fixedJobId?: string | null;
-  /** Prefill when opening from a job row or detail. */
   initialJob?: Job | null;
 };
 
@@ -75,6 +36,7 @@ export function LogApplicationModal({
   fixedJobId,
   initialJob,
 }: Props) {
+  const { t } = useTranslation();
   const jobsApi = useJobsApi({ fallbackToMock: true });
   const jobs = useMemo(() => {
     const raw = normalizeListResponse<unknown>(jobsApi.data);
@@ -111,8 +73,46 @@ export function LogApplicationModal({
   }, [open, initialJob, fixedJobId]);
 
   const jobOptions = useMemo(() => {
-    return [{ label: "No linked job", value: "" }, ...jobs.map((j) => ({ label: `${j.company} — ${j.position}`, value: getResourceId(j) }))];
-  }, [jobs]);
+    return [{ label: t("applications.logModal.noLinkedJob"), value: "" }, ...jobs.map((j) => ({ label: `${j.company} — ${j.position}`, value: getResourceId(j) }))];
+  }, [jobs, t]);
+
+  const sourceOptions = useMemo(() => [
+    { label: t("applications.source.linkedin"), value: "LinkedIn" },
+    { label: t("applications.source.indeed"), value: "Indeed" },
+    { label: t("applications.source.companyWebsite"), value: "Company Website" },
+    { label: t("applications.source.referral"), value: "Referral" },
+    { label: t("applications.source.gmail"), value: "Gmail" },
+    { label: t("applications.source.manual"), value: "Manual" },
+    { label: t("applications.source.other"), value: "Other" },
+  ], [t]);
+
+  const appStatusOptions = useMemo(() => [
+    { label: t("applications.applicationStatus.drafted"), value: "Drafted" },
+    { label: t("applications.applicationStatus.ready"), value: "Ready" },
+    { label: t("applications.applicationStatus.applied"), value: "Applied" },
+    { label: t("applications.applicationStatus.followUpDue"), value: "Follow-Up Due" },
+    { label: t("applications.applicationStatus.replied"), value: "Replied" },
+    { label: t("applications.applicationStatus.interview"), value: "Interview" },
+    { label: t("applications.applicationStatus.offer"), value: "Offer" },
+    { label: t("applications.applicationStatus.rejected"), value: "Rejected" },
+    { label: t("applications.applicationStatus.archived"), value: "Archived" },
+  ], [t]);
+
+  const responseOptions = useMemo(() => [
+    { label: t("applications.responseStatus.awaitingResponse"), value: "No Response" },
+    { label: t("applications.responseStatus.positiveReply"), value: "Positive Reply" },
+    { label: t("applications.responseStatus.negativeReply"), value: "Negative Reply" },
+    { label: t("applications.responseStatus.autoReply"), value: "Auto Reply" },
+    { label: t("applications.responseStatus.needsReview"), value: "Needs Review" },
+  ], [t]);
+
+  const followUpOptions = useMemo(() => [
+    { label: t("applications.followUpStatus.notScheduled"), value: "Not Needed" },
+    { label: t("applications.followUpStatus.scheduled"), value: "Scheduled" },
+    { label: t("applications.followUpStatus.dueToday"), value: "Due Today" },
+    { label: t("applications.followUpStatus.overdue"), value: "Overdue" },
+    { label: t("applications.followUpStatus.sent"), value: "Sent" },
+  ], [t]);
 
   function applyJobSelection(selectedId: string) {
     setJobId(selectedId);
@@ -132,16 +132,16 @@ export function LogApplicationModal({
     const c = company.trim();
     const p = position.trim();
     if (!c) {
-      showError("Company is required.");
+      showError(t("applications.logModal.companyRequired"));
       return;
     }
     if (!p) {
-      showError("Position is required.");
+      showError(t("applications.logModal.positionRequired"));
       return;
     }
     const u = jobUrl.trim();
     if (u && !u.startsWith("http://") && !u.startsWith("https://")) {
-      showError("Job URL must start with http:// or https://");
+      showError(t("applications.logModal.invalidUrl"));
       return;
     }
     const effectiveJobId = fixedJobId?.trim() || jobId.trim() || undefined;
@@ -172,96 +172,96 @@ export function LogApplicationModal({
         aria-labelledby="log-app-title"
       >
         <h2 id="log-app-title" className="text-lg font-semibold tracking-tight text-[var(--text-1)]">
-          Log application
+          {t("applications.logModal.title")}
         </h2>
-        <p className="mt-1 text-sm text-[var(--text-3)]">Record an application and track replies and follow-ups.</p>
+        <p className="mt-1 text-sm text-[var(--text-3)]">{t("applications.logModal.subtitle")}</p>
 
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-5 space-y-4">
           {showJobPicker ? (
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Related job</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.relatedJob")}</label>
               <Select value={jobId} onChange={(e) => applyJobSelection(e.target.value)} options={jobOptions} />
               {jobs.length === 0 ? (
-                <p className="text-xs text-[var(--text-3)]">No jobs loaded — you can still log an application without a link.</p>
+                <p className="text-xs text-[var(--text-3)]">{t("applications.logModal.noJobsLoaded")}</p>
               ) : null}
             </div>
           ) : (
             <p className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-3)] px-3 py-2 text-xs text-[var(--text-3)]">
-              Linked to current job
+              {t("applications.logModal.linkedToCurrent")}
             </p>
           )}
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Company *</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.company")}</label>
             <Input value={company} onChange={(e) => setCompany(e.target.value)} required />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Position *</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.position")}</label>
             <Input value={position} onChange={(e) => setPosition(e.target.value)} required />
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Source</label>
-              <Select value={source} onChange={(e) => setSource(e.target.value)} options={[...SOURCES]} />
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.source")}</label>
+              <Select value={source} onChange={(e) => setSource(e.target.value)} options={sourceOptions} />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Applied date</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.appliedDate")}</label>
               <Input type="date" value={appliedDate} onChange={(e) => setAppliedDate(e.target.value)} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Application status</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.applicationStatus")}</label>
               <Select
                 value={applicationStatus}
                 onChange={(e) => setApplicationStatus(e.target.value as ApplicationStatus)}
-                options={APP_STATUSES.map((o) => ({ label: o.label, value: o.value }))}
+                options={appStatusOptions}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Response</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.response")}</label>
               <Select
                 value={responseStatus}
                 onChange={(e) => setResponseStatus(e.target.value as ResponseStatus)}
-                options={RESPONSE_STATUSES.map((o) => ({ label: o.label, value: o.value }))}
+                options={responseOptions}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-[var(--text-3)]">Follow-up</label>
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.followUp")}</label>
               <Select
                 value={followUpStatus}
                 onChange={(e) => setFollowUpStatus(e.target.value as FollowUpStatus)}
-                options={FOLLOW_UP.map((o) => ({ label: o.label, value: o.value }))}
+                options={followUpOptions}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Contact email</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.contactEmail")}</label>
             <Input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} type="email" placeholder="recruiter@company.com" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Job URL</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.jobUrl")}</label>
             <Input value={jobUrl} onChange={(e) => setJobUrl(e.target.value)} placeholder="https://…" />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">Notes</label>
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("applications.logModal.notes")}</label>
             <textarea
               className="flex min-h-[88px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Cover letter sent, referral name, etc."
+              placeholder={t("applications.logModal.notesPlaceholder")}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Cancel
+              {t("applications.logModal.cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Saving…" : "Log application"}
+              {loading ? t("applications.logModal.saving") : t("applications.logModal.submit")}
             </Button>
           </div>
         </form>

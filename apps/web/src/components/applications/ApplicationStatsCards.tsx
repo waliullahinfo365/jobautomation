@@ -1,3 +1,5 @@
+"use client";
+
 import {
   BellRingIcon,
   Clock3Icon,
@@ -6,6 +8,7 @@ import {
   InterviewsIcon,
   ReplyIcon,
 } from "@/components/icons";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface ApplicationStatsCardsProps {
   stats: {
@@ -32,42 +35,44 @@ function StatCard({ label, value, hint, icon }: { label: string; value: number; 
 }
 
 export function ApplicationStatsCards({ stats }: ApplicationStatsCardsProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="jf-kpi-grid">
       <StatCard
-        label="Total Applications"
+        label={t("applications.totalApplications")}
         value={stats.totalApplications}
-        hint="Across all active sources"
+        hint={t("applications.acrossAllActiveSources")}
         icon={<FileTextIcon size={14} />}
       />
       <StatCard
-        label="Awaiting Response"
+        label={t("applications.awaitingResponse")}
         value={stats.awaitingResponse}
-        hint="No recruiter reply yet"
+        hint={t("applications.noRecruiterReplyYet")}
         icon={<Clock3Icon size={14} />}
       />
       <StatCard
-        label="Replies Received"
+        label={t("applications.repliesReceived")}
         value={stats.repliesReceived}
-        hint="Detected by reply engine"
+        hint={t("applications.detectedByReplyEngine")}
         icon={<ReplyIcon size={14} />}
       />
       <StatCard
-        label="Interviews Scheduled"
+        label={t("applications.interviewsScheduled")}
         value={stats.interviewsScheduled}
-        hint="Upcoming interview loops"
+        hint={t("applications.upcomingInterviewLoops")}
         icon={<InterviewsIcon size={14} />}
       />
       <StatCard
-        label="Follow-ups Due"
+        label={t("applications.followUpsDue")}
         value={stats.followUpsDue}
-        hint="Requires manual action today"
+        hint={t("applications.requiresManualActionToday")}
         icon={<BellRingIcon size={14} />}
       />
       <StatCard
-        label="Offers"
+        label={t("applications.offers")}
         value={stats.offers}
-        hint="Current offer-stage applications"
+        hint={t("applications.currentOfferStage")}
         icon={<HandCoinsIcon size={14} />}
       />
     </div>

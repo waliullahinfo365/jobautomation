@@ -1,6 +1,9 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ApplicationStatus } from "@/types/application";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const STATUS_STYLES: Record<ApplicationStatus, string> = {
   Drafted:
@@ -23,6 +26,19 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
     "bg-[var(--surface-3)] text-[var(--text-4)] border border-[var(--border-default)]",
 };
 
+const STATUS_KEY: Record<ApplicationStatus, string> = {
+  Drafted: "applications.applicationStatus.drafted",
+  Ready: "applications.applicationStatus.ready",
+  Applied: "applications.applicationStatus.applied",
+  "Follow-Up Due": "applications.applicationStatus.followUpDue",
+  Replied: "applications.applicationStatus.replied",
+  Interview: "applications.applicationStatus.interview",
+  Offer: "applications.applicationStatus.offer",
+  Rejected: "applications.applicationStatus.rejected",
+  Archived: "applications.applicationStatus.archived",
+};
+
 export function ApplicationStatusBadge({ status, className }: { status: ApplicationStatus; className?: string }) {
-  return <Badge className={cn(STATUS_STYLES[status], className)}>{status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={cn(STATUS_STYLES[status], className)}>{t(STATUS_KEY[status])}</Badge>;
 }

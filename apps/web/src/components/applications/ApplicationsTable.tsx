@@ -8,7 +8,7 @@ import { ResponseStatusBadge } from "./ResponseStatusBadge";
 import { FollowUpStatusBadge } from "./FollowUpStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface ApplicationsTableProps {
   applications: Application[];
@@ -16,26 +16,42 @@ interface ApplicationsTableProps {
   onMarkFollowUpSent: (id: string) => void;
 }
 
+const AUTOMATION_KEY: Record<string, string> = {
+  Healthy: "applications.automationStatus.healthy",
+  Warning: "applications.automationStatus.warning",
+  Failed: "applications.automationStatus.failed",
+  Running: "applications.automationStatus.running",
+};
+
 export function ApplicationsTable({ applications, onView, onMarkFollowUpSent }: ApplicationsTableProps) {
+  const { t, locale } = useTranslation();
+  const bcp47 = locale === "de" ? "de-DE" : "en-US";
+
+  function fmtDate(d: string | Date) {
+    const dt = typeof d === "string" ? new Date(d) : d;
+    if (Number.isNaN(dt.getTime())) return "—";
+    return new Intl.DateTimeFormat(bcp47, { day: "numeric", month: "long", year: "numeric" }).format(dt);
+  }
+
   return (
     <SectionCard
-      title="Applications"
-      description="Submitted and active applications with reply/follow-up tracking."
+      title={t("applications.table.title")}
+      description={t("applications.table.subtitle")}
       contentClassName="p-0"
     >
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Company</TableHead>
-            <TableHead>Position</TableHead>
-            <TableHead>Application Status</TableHead>
-            <TableHead>Response Status</TableHead>
-            <TableHead>Follow-up Status</TableHead>
-            <TableHead>Date Applied</TableHead>
-            <TableHead>Follow-up Date</TableHead>
-            <TableHead>Contact Email</TableHead>
-            <TableHead>Automation</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead>{t("applications.table.company")}</TableHead>
+            <TableHead>{t("applications.table.position")}</TableHead>
+            <TableHead>{t("applications.table.applicationStatus")}</TableHead>
+            <TableHead>{t("applications.table.responseStatus")}</TableHead>
+            <TableHead>{t("applications.table.followupStatus")}</TableHead>
+            <TableHead>{t("applications.table.dateApplied")}</TableHead>
+            <TableHead>{t("applications.table.followupDate")}</TableHead>
+            <TableHead>{t("applications.table.contactEmail")}</TableHead>
+            <TableHead>{t("applications.table.automation")}</TableHead>
+            <TableHead className="text-right">{t("applications.table.actions")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -46,8 +62,8 @@ export function ApplicationsTable({ applications, onView, onMarkFollowUpSent }: 
               <TableCell><ApplicationStatusBadge status={app.applicationStatus} /></TableCell>
               <TableCell><ResponseStatusBadge status={app.responseStatus} /></TableCell>
               <TableCell><FollowUpStatusBadge status={app.followUpStatus} /></TableCell>
-              <TableCell>{app.dateApplied ? formatDate(app.dateApplied) : "—"}</TableCell>
-              <TableCell>{app.followUpDate ? formatDate(app.followUpDate) : "—"}</TableCell>
+              <TableCell>{app.dateApplied ? fmtDate(app.dateApplied) : "—"}</TableCell>
+              <TableCell>{app.followUpDate ? fmtDate(app.followUpDate) : "—"}</TableCell>
               <TableCell className="text-[var(--text-2)]">{app.contactEmail}</TableCell>
               <TableCell>
                 <Badge
@@ -59,19 +75,21 @@ export function ApplicationsTable({ applications, onView, onMarkFollowUpSent }: 
                       : "danger"
                   }
                 >
-                  {app.automationHealth}
+                  {AUTOMATION_KEY[app.automationHealth]
+                    ? t(AUTOMATION_KEY[app.automationHealth])
+                    : app.automationHealth}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <div className="inline-flex flex-wrap items-center justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => onView(app)}>
-                    View
+                    {t("applications.table.view")}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => onMarkFollowUpSent(app.id)}>
-                    Mark Follow-Up Sent
+                    {t("applications.table.markFollowupSent")}
                   </Button>
                   <Button variant="ghost" size="sm">
-                    Open Email
+                    {t("applications.table.openEmail")}
                   </Button>
                 </div>
               </TableCell>

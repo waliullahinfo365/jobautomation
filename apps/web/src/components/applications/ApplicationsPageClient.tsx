@@ -176,7 +176,7 @@ export function ApplicationsPageClient() {
       const { apiFn, fallbackPatch, successMessage, id } = opts;
       if (applicationsApi.isUsingFallback) {
         setFallbackEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...fallbackPatch(id) } }));
-        showInfo("API offline, updated demo data locally.");
+        showInfo(t("applications.toast.offlineDemo"));
         showSuccess(successMessage);
         return;
       }
@@ -185,10 +185,10 @@ export function ApplicationsPageClient() {
         showSuccess(successMessage);
         await applicationsApi.refetch();
       } catch {
-        showError("Action failed. Please try again.");
+        showError(t("applications.toast.actionFailed"));
       }
     },
-    [applicationsApi]
+    [applicationsApi, t]
   );
 
   const handleView = (application: Application) => {
@@ -210,7 +210,7 @@ export function ApplicationsPageClient() {
         reminderSentDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }),
-      successMessage: "Follow-up marked as sent.",
+      successMessage: t("applications.toast.followUpSent"),
     });
   };
 
@@ -227,7 +227,7 @@ export function ApplicationsPageClient() {
           dateApplied: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }),
-        successMessage: "Application marked as applied.",
+        successMessage: t("applications.toast.markedApplied"),
       });
     } finally {
       setPendingAction(null);
@@ -263,7 +263,7 @@ export function ApplicationsPageClient() {
           followUpMessagePreview: scheduleMessage.trim() || selectedApplication.followUpMessagePreview,
           updatedAt: new Date().toISOString(),
         }),
-        successMessage: "Follow-up scheduled.",
+        successMessage: t("applications.toast.followUpScheduled"),
       });
     } finally {
       setPendingAction(null);
@@ -274,7 +274,7 @@ export function ApplicationsPageClient() {
     setPendingAction("processDue");
     try {
       if (applicationsApi.isUsingFallback) {
-        showInfo("API offline, updated demo data locally.");
+        showInfo(t("applications.toast.offlineDemo"));
         for (const app of applications) {
           if (app.followUpStatus === "Due Today" || app.followUpStatus === "Overdue") {
             patchFallbackById(getResourceId(app), {
@@ -284,7 +284,7 @@ export function ApplicationsPageClient() {
             });
           }
         }
-        showSuccess("Processed due follow-ups (demo).");
+        showSuccess(t("applications.toast.processedDueDemo"));
         return;
       }
       try {
@@ -300,7 +300,7 @@ export function ApplicationsPageClient() {
         showSuccess(msg);
         await applicationsApi.refetch();
       } catch {
-        showError("Could not process due follow-ups.");
+        showError(t("applications.toast.couldNotProcess"));
       }
     } finally {
       setPendingAction(null);
@@ -312,20 +312,20 @@ export function ApplicationsPageClient() {
       const payload = buildCreateApplicationPayload(form);
       try {
         await applicationsApi.createApplication(payload);
-        showSuccess("Application logged successfully.");
+        showSuccess(t("applications.toast.applicationLogged"));
         setIsLogApplicationOpen(false);
         await applicationsApi.refetch();
       } catch (e) {
         if (shouldUseMockFallback(e)) {
           setLocalApplicationsOverlay((prev) => [buildLocalDemoApplication(form), ...prev]);
-          showInfo("API offline, added demo application locally.");
+          showInfo(t("applications.toast.offlineAppAdded"));
           setIsLogApplicationOpen(false);
         } else {
-          showError(e instanceof ApiError ? e.message : "Failed to log application.");
+          showError(e instanceof ApiError ? e.message : t("applications.toast.failedLogApp"));
         }
       }
     },
-    [applicationsApi]
+    [applicationsApi, t]
   );
 
   const handleSimulateReply = async (app: Application) => {
@@ -347,16 +347,16 @@ export function ApplicationsPageClient() {
           lastReplySnippet: payload.bodyText.slice(0, 80),
           updatedAt: new Date().toISOString(),
         });
-        showInfo("API offline, updated demo data locally.");
-        showSuccess("Simulated reply applied to demo data.");
+        showInfo(t("applications.toast.offlineDemo"));
+        showSuccess(t("applications.toast.replySimulated"));
         return;
       }
       try {
         await integrationsApi.replyTest(payload);
-        showSuccess("Reply test processed.");
+        showSuccess(t("applications.toast.replyTestProcessed"));
         await applicationsApi.refetch();
       } catch {
-        showError("Reply test failed.");
+        showError(t("applications.toast.actionFailed"));
       }
     } finally {
       setPendingAction(null);
@@ -404,7 +404,7 @@ export function ApplicationsPageClient() {
                 disabled={!!pendingAction}
                 onClick={() => void handleProcessDueFollowUps()}
               >
-                Process Due Follow-Ups
+                {t("applications.processDueFollowups")}
               </Button>
               <Button type="button" onClick={() => setIsLogApplicationOpen(true)}>
                 {t("applications.logApplication")}
@@ -423,11 +423,14 @@ export function ApplicationsPageClient() {
         />
 
         {emptyAll ? (
-          <EmptyState title={t("empty.noApplications")} description="Log a new application to get started." />
+          <EmptyState
+            title={t("applications.empty.title")}
+            description={t("applications.empty.description")}
+          />
         ) : emptyFiltered ? (
           <EmptyState
-            title={t("empty.noMatchingApplications")}
-            description="Adjust filters or search."
+            title={t("applications.empty.noMatch")}
+            description={t("applications.empty.adjustFilters")}
             actionLabel={t("empty.clearFilters")}
             onAction={() => setFilters(initialFilters)}
           />
@@ -476,11 +479,11 @@ export function ApplicationsPageClient() {
               exit={{ scale: 0.96, opacity: 0 }}
               className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
             >
-              <h3 className="text-lg font-semibold text-foreground">Schedule follow-up</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Pick a date for the next touchpoint.</p>
+              <h3 className="text-lg font-semibold text-foreground">{t("applications.schedule.title")}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t("applications.schedule.subtitle")}</p>
               <div className="mt-4 space-y-3">
                 <label className="block text-xs font-medium text-muted-foreground">
-                  Follow-up date
+                  {t("applications.schedule.dateLabel")}
                   <Input
                     className="mt-1"
                     type="datetime-local"
@@ -489,21 +492,21 @@ export function ApplicationsPageClient() {
                   />
                 </label>
                 <label className="block text-xs font-medium text-muted-foreground">
-                  Message (optional)
+                  {t("applications.schedule.messageLabel")}
                   <Input
                     className="mt-1"
                     value={scheduleMessage}
                     onChange={(e) => setScheduleMessage(e.target.value)}
-                    placeholder="Short reminder note"
+                    placeholder={t("applications.schedule.messagePlaceholder")}
                   />
                 </label>
               </div>
               <div className="mt-6 flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setScheduleOpen(false)}>
-                  Cancel
+                  {t("applications.schedule.cancel")}
                 </Button>
                 <Button type="button" onClick={() => void confirmScheduleFollowUp()}>
-                  Schedule
+                  {t("applications.schedule.confirm")}
                 </Button>
               </div>
             </motion.div>

@@ -1,6 +1,9 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ResponseStatus } from "@/types/application";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const RESPONSE_STYLES: Record<ResponseStatus, string> = {
   "No Response":
@@ -15,6 +18,15 @@ const RESPONSE_STYLES: Record<ResponseStatus, string> = {
     "bg-[var(--amber-bg)] text-[var(--amber)] border border-[rgba(229,162,59,0.18)]",
 };
 
+const RESPONSE_KEY: Record<ResponseStatus, string> = {
+  "No Response": "applications.responseStatus.noResponse",
+  "Positive Reply": "applications.responseStatus.positiveReply",
+  "Negative Reply": "applications.responseStatus.negativeReply",
+  "Auto Reply": "applications.responseStatus.autoReply",
+  "Needs Review": "applications.responseStatus.needsReview",
+};
+
 export function ResponseStatusBadge({ status, className }: { status: ResponseStatus; className?: string }) {
-  return <Badge className={cn(RESPONSE_STYLES[status], className)}>{status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={cn(RESPONSE_STYLES[status], className)}>{t(RESPONSE_KEY[status])}</Badge>;
 }

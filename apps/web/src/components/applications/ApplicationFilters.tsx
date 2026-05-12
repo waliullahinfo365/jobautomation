@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import type { ApplicationStatus, FollowUpStatus, ResponseStatus } from "@/types/application";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export interface ApplicationFilterState {
   query: string;
@@ -19,11 +20,12 @@ interface ApplicationFiltersProps {
   filters: ApplicationFilterState;
   onChange: (filters: ApplicationFilterState) => void;
   onClear: () => void;
-  /** e.g. API / mock status chip */
   aside?: ReactNode;
 }
 
 export function ApplicationFilters({ filters, onChange, onClear, aside }: ApplicationFiltersProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
       {aside ? (
@@ -34,7 +36,7 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
           <SearchIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]" />
           <Input
             className="pl-9"
-            placeholder="Search by company, position, or contact email"
+            placeholder={t("applications.filters.searchPlaceholder")}
             value={filters.query}
             onChange={(e) => onChange({ ...filters, query: e.target.value })}
           />
@@ -44,16 +46,16 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
           value={filters.applicationStatus}
           onChange={(e) => onChange({ ...filters, applicationStatus: e.target.value as ApplicationFilterState["applicationStatus"] })}
           options={[
-            { label: "All Application Statuses", value: "All" },
-            { label: "Drafted", value: "Drafted" },
-            { label: "Ready", value: "Ready" },
-            { label: "Applied", value: "Applied" },
-            { label: "Follow-Up Due", value: "Follow-Up Due" },
-            { label: "Replied", value: "Replied" },
-            { label: "Interview", value: "Interview" },
-            { label: "Offer", value: "Offer" },
-            { label: "Rejected", value: "Rejected" },
-            { label: "Archived", value: "Archived" },
+            { label: t("applications.filters.allApplicationStatuses"), value: "All" },
+            { label: t("applications.applicationStatus.drafted"), value: "Drafted" },
+            { label: t("applications.applicationStatus.ready"), value: "Ready" },
+            { label: t("applications.applicationStatus.applied"), value: "Applied" },
+            { label: t("applications.applicationStatus.followUpDue"), value: "Follow-Up Due" },
+            { label: t("applications.applicationStatus.replied"), value: "Replied" },
+            { label: t("applications.applicationStatus.interview"), value: "Interview" },
+            { label: t("applications.applicationStatus.offer"), value: "Offer" },
+            { label: t("applications.applicationStatus.rejected"), value: "Rejected" },
+            { label: t("applications.applicationStatus.archived"), value: "Archived" },
           ]}
         />
 
@@ -61,12 +63,12 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
           value={filters.responseStatus}
           onChange={(e) => onChange({ ...filters, responseStatus: e.target.value as ApplicationFilterState["responseStatus"] })}
           options={[
-            { label: "All Response Statuses", value: "All" },
-            { label: "No Response", value: "No Response" },
-            { label: "Positive Reply", value: "Positive Reply" },
-            { label: "Negative Reply", value: "Negative Reply" },
-            { label: "Auto Reply", value: "Auto Reply" },
-            { label: "Needs Review", value: "Needs Review" },
+            { label: t("applications.filters.allResponseStatuses"), value: "All" },
+            { label: t("applications.responseStatus.noResponse"), value: "No Response" },
+            { label: t("applications.responseStatus.positiveReply"), value: "Positive Reply" },
+            { label: t("applications.responseStatus.negativeReply"), value: "Negative Reply" },
+            { label: t("applications.responseStatus.autoReply"), value: "Auto Reply" },
+            { label: t("applications.responseStatus.needsReview"), value: "Needs Review" },
           ]}
         />
 
@@ -74,12 +76,12 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
           value={filters.followUpStatus}
           onChange={(e) => onChange({ ...filters, followUpStatus: e.target.value as ApplicationFilterState["followUpStatus"] })}
           options={[
-            { label: "All Follow-Up Statuses", value: "All" },
-            { label: "Not Needed", value: "Not Needed" },
-            { label: "Scheduled", value: "Scheduled" },
-            { label: "Due Today", value: "Due Today" },
-            { label: "Overdue", value: "Overdue" },
-            { label: "Sent", value: "Sent" },
+            { label: t("applications.filters.allFollowupStatuses"), value: "All" },
+            { label: t("applications.followUpStatus.notNeeded"), value: "Not Needed" },
+            { label: t("applications.followUpStatus.scheduled"), value: "Scheduled" },
+            { label: t("applications.followUpStatus.dueToday"), value: "Due Today" },
+            { label: t("applications.followUpStatus.overdue"), value: "Overdue" },
+            { label: t("applications.followUpStatus.sent"), value: "Sent" },
           ]}
         />
 
@@ -89,13 +91,13 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
             value={filters.dateRange}
             onChange={(e) => onChange({ ...filters, dateRange: e.target.value as ApplicationFilterState["dateRange"] })}
             options={[
-              { label: "All Dates", value: "All Dates" },
-              { label: "Last 7 Days", value: "Last 7 Days" },
-              { label: "Last 30 Days", value: "Last 30 Days" },
+              { label: t("applications.filters.allDates"), value: "All Dates" },
+              { label: t("applications.filters.last7Days"), value: "Last 7 Days" },
+              { label: t("applications.filters.last30Days"), value: "Last 30 Days" },
             ]}
           />
           <Button variant="outline" onClick={onClear}>
-            Clear
+            {t("applications.filters.clear")}
           </Button>
         </div>
       </div>

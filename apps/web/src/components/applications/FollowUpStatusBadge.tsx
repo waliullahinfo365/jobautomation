@@ -1,6 +1,9 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { FollowUpStatus } from "@/types/application";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const FOLLOWUP_STYLES: Record<FollowUpStatus, string> = {
   "Not Needed":
@@ -15,6 +18,15 @@ const FOLLOWUP_STYLES: Record<FollowUpStatus, string> = {
     "bg-[var(--emerald-bg)] text-[var(--emerald)] border border-[rgba(56,199,147,0.18)]",
 };
 
+const FOLLOWUP_KEY: Record<FollowUpStatus, string> = {
+  "Not Needed": "applications.followUpStatus.notNeeded",
+  Scheduled: "applications.followUpStatus.scheduled",
+  "Due Today": "applications.followUpStatus.dueToday",
+  Overdue: "applications.followUpStatus.overdue",
+  Sent: "applications.followUpStatus.sent",
+};
+
 export function FollowUpStatusBadge({ status, className }: { status: FollowUpStatus; className?: string }) {
-  return <Badge className={cn(FOLLOWUP_STYLES[status], className)}>{status}</Badge>;
+  const { t } = useTranslation();
+  return <Badge className={cn(FOLLOWUP_STYLES[status], className)}>{t(FOLLOWUP_KEY[status])}</Badge>;
 }
