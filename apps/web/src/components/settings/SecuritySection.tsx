@@ -1,30 +1,51 @@
+"use client";
+
 import { useState } from "react";
-import type { SecuritySettings } from "@/types/settings";
 import { SettingSectionCard } from "./SettingSectionCard";
 import { Button } from "@/components/ui/button";
 import { ChangePasswordModal } from "@/components/profile/ChangePasswordModal";
 import { SecuritySettingsModal } from "./SecuritySettingsModal";
+import { useTranslation } from "@/i18n/useTranslation";
 
-export function SecuritySection({ security }: { security: SecuritySettings }) {
+export function SecuritySection() {
+  const { t } = useTranslation();
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <>
-      <SettingSectionCard title="Security" description="Security controls are placeholders in this UI phase.">
+      <SettingSectionCard
+        title={t("settings.security.title")}
+        description={t("settings.security.description")}
+      >
         <div className="space-y-2 text-sm">
-          <Field label="Password" value={security.passwordStatus} />
-          <Field label="Two-factor authentication" value={security.twoFactorStatus} />
-          <Field label="Active sessions" value={security.activeSessions} />
-          <Field label="API keys" value={security.apiKeysStatus} />
-          <Field label="Audit logs" value={security.auditLogsStatus} />
+          <Field
+            label={t("settings.security.password")}
+            value={t("settings.security.passwordLastUpdated")}
+          />
+          <Field
+            label={t("settings.security.twoFactor")}
+            value={t("settings.security.twoFactorDisabled")}
+          />
+          <Field
+            label={t("settings.security.activeSessions")}
+            value={t("settings.security.activeSessionsValue")}
+          />
+          <Field
+            label={t("settings.security.apiKeys")}
+            value={t("settings.security.noApiKeys")}
+          />
+          <Field
+            label={t("settings.security.auditLogs")}
+            value={t("settings.security.auditLogsAvailable")}
+          />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setIsPasswordOpen(true)}>
-            Manage Password
+            {t("settings.security.managePassword")}
           </Button>
           <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
-            Manage Settings
+            {t("settings.security.manageSettings")}
           </Button>
         </div>
       </SettingSectionCard>

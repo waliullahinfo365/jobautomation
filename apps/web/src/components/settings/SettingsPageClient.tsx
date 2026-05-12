@@ -18,7 +18,6 @@ import {
   mockAutomationRules,
   mockNotificationPreferences,
   mockProfileSettings,
-  mockSecuritySettings,
 } from "@/data/mockSettings";
 import { useBillingApi } from "@/hooks/api/useBillingApi";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
@@ -72,7 +71,7 @@ export function SettingsPageClient() {
           {activeSection === "Automation Rules" ? <AutomationRulesSection rules={rules} onChange={setRules} /> : null}
           {activeSection === "Notifications" ? <NotificationsSection preferences={notifications} onChange={setNotifications} /> : null}
           {activeSection === "Data & Storage" ? <DataStorageSection /> : null}
-          {activeSection === "Security" ? <SecuritySection security={mockSecuritySettings} /> : null}
+          {activeSection === "Security" ? <SecuritySection /> : null}
           {activeSection === "Billing Placeholder" ? (
             <BillingSection
               billing={(billing.plan.data as any) ?? {}}
