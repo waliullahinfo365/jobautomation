@@ -209,11 +209,11 @@ export function IntegrationsSection() {
     const providerSlug = searchParams.get("provider");
     const err = searchParams.get("error");
     if (integration === "connected") {
-      showSuccess(providerSlug ? `Integration connected: ${providerSlug}` : "Integration connected");
+      showSuccess(providerSlug ? t("integrations.toast.integrationConnectedWithProvider").replace("{provider}", providerSlug) : t("integrations.toast.integrationConnected"));
       void refetch();
       router.replace("/settings", { scroll: false });
     } else if (integration === "error" || err) {
-      showError(err ?? "Integration connection failed");
+      showError(err ?? t("integrations.toast.connectionFailed"));
       void refetch();
       router.replace("/settings", { scroll: false });
     }
@@ -303,15 +303,15 @@ export function IntegrationsSection() {
         delete n[slug];
         return n;
       });
-      showSuccess("Integration saved.");
+      showSuccess(t("integrations.toast.integrationSaved"));
       setModalSlug(null);
     } catch (e) {
       if (shouldUseMockFallback(e)) {
         setLocalBySlug((o) => ({ ...o, [slug]: buildLocalConnectPatch(slug, body) }));
-        showInfo("API offline, updated demo integration locally.");
+        showInfo(t("integrations.toast.apiOfflineUpdatedLocally"));
         setModalSlug(null);
       } else {
-        showError(e instanceof Error ? e.message : "Failed to save integration");
+        showError(e instanceof Error ? e.message : t("integrations.toast.failedToSave"));
       }
     } finally {
       setPending(null);
@@ -325,14 +325,14 @@ export function IntegrationsSection() {
       try {
         setPending({ slug, action: "test" });
         const r = await aiApi.testAi({ provider: slug === "openai" ? "OpenAI" : "Claude" });
-        showSuccess(r.summary?.slice(0, 120) ?? "AI test OK");
+        showSuccess(r.summary?.slice(0, 120) ?? t("integrations.toast.aiTestOk"));
         void aiApi.refetchUsage();
         await refetch();
       } catch (e) {
         if (shouldUseMockFallback(e)) {
-          showInfo("API offline — AI test skipped.");
+          showInfo(t("integrations.toast.apiOfflineAiTestSkipped"));
         } else {
-          showError(e instanceof Error ? e.message : "AI test failed");
+          showError(e instanceof Error ? e.message : t("integrations.toast.aiTestFailed"));
         }
       } finally {
         setPending(null);
@@ -349,7 +349,7 @@ export function IntegrationsSection() {
         else showError(result.message);
         await refetch();
       } catch (e) {
-        showError(e instanceof Error ? e.message : "Telegram test failed");
+        showError(e instanceof Error ? e.message : t("integrations.toast.telegramTestFailed"));
       } finally {
         setPending(null);
       }
@@ -365,7 +365,7 @@ export function IntegrationsSection() {
         else showError(result.message);
         await refetch();
       } catch (e) {
-        showError(e instanceof Error ? e.message : "Resend test failed");
+        showError(e instanceof Error ? e.message : t("integrations.toast.resendTestFailed"));
       } finally {
         setPending(null);
       }
@@ -382,7 +382,7 @@ export function IntegrationsSection() {
         await refetch();
       } catch (e) {
         const detail =
-          e instanceof ApiError ? e.message : e instanceof Error ? e.message : "SMTP test failed";
+          e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("integrations.toast.smtpTestFailed");
         showError(detail);
       } finally {
         setPending(null);
@@ -407,7 +407,7 @@ export function IntegrationsSection() {
         else showError(r.message);
       } else {
         const detail =
-          e instanceof ApiError ? e.message : e instanceof Error ? e.message : "Test failed";
+          e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("integrations.toast.testFailed");
         showError(detail);
       }
     } finally {
@@ -430,13 +430,13 @@ export function IntegrationsSection() {
         delete n[slug];
         return n;
       });
-      showSuccess("Integration disconnected.");
+      showSuccess(t("integrations.toast.integrationDisconnected"));
     } catch (e) {
       if (shouldUseMockFallback(e)) {
         setLocalBySlug((o) => ({ ...o, [slug]: buildLocalDisconnectPatch() }));
-        showInfo("API offline, updated demo integration locally.");
+        showInfo(t("integrations.toast.apiOfflineUpdatedLocally"));
       } else {
-        showError(e instanceof Error ? e.message : "Disconnect failed");
+        showError(e instanceof Error ? e.message : t("integrations.toast.disconnectFailed"));
       }
     } finally {
       setPending(null);
@@ -480,7 +480,7 @@ export function IntegrationsSection() {
         const msg = e instanceof Error ? e.message : "failed";
         console.warn("[Google OAuth]", msg);
       }
-      showError("Could not start Google OAuth. Check API env and Google redirect URI.");
+      showError(t("integrations.toast.couldNotStartGoogleOAuth"));
       setGoogleConnectLoadingSlug(null);
     }
   }
@@ -495,7 +495,7 @@ export function IntegrationsSection() {
             <p className="mt-2 text-sm text-destructive">
               {integrationsError.message}
               {" · "}
-              showing offline demo data where configured.
+              {t("integrations.showingOfflineDemo")}
             </p>
           ) : null}
         </div>
@@ -510,7 +510,7 @@ export function IntegrationsSection() {
       </div>
 
       {integrationsLoading && !integrations?.length ? (
-        <p className="text-sm text-muted-foreground">Loading integrations…</p>
+        <p className="text-sm text-muted-foreground">{t("integrations.loading")}</p>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -563,9 +563,9 @@ export function IntegrationsSection() {
 
       <ConfirmDialog
         open={disconnectSlug !== null}
-        title="Disconnect integration?"
-        description="This removes the stored stub connection for this workspace. You can reconnect anytime."
-        confirmLabel="Disconnect"
+        title={t("integrations.confirm.disconnectTitle")}
+        description={t("integrations.confirm.disconnectDescription")}
+        confirmLabel={t("integrations.confirm.disconnectConfirm")}
         variant="destructive"
         onCancel={() => setDisconnectSlug(null)}
         onConfirm={() => {

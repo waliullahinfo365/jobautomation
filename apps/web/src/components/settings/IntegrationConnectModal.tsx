@@ -4,6 +4,7 @@ import { AI_MODEL_OPTIONS } from "@/constants/aiModels";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "@/i18n/I18nProvider";
 
 type Props = {
   open: boolean;
@@ -99,18 +100,20 @@ export function IntegrationConnectModal({
     setNotionWorkspace("Legacy Teamspace");
   }, [open, providerSlug, initialEmail, initialAccountName, initialSmtp]);
 
+  const { t } = useTranslation();
+
   const primaryLabel = useMemo(() => {
-    if (!providerSlug) return "Save";
+    if (!providerSlug) return t("integrations.modal.save");
     if (providerSlug === "gmail" || providerSlug === "google-drive" || providerSlug === "google-calendar")
-      return googleOAuthEnabled === false ? "Configure Google OAuth" : "Connect with Google";
-    if (providerSlug === "openai" || providerSlug === "claude") return "Save Demo Config";
-    if (providerSlug === "smtp") return "Save SMTP Settings";
-    if (providerSlug === "slack") return "Send Test Message";
-    if (providerSlug === "telegram") return "Configure Telegram";
-    if (providerSlug === "resend") return "Done";
-    if (providerSlug === "notion-legacy") return "Save Legacy Import Config";
-    return "Save";
-  }, [providerSlug, googleOAuthEnabled]);
+      return googleOAuthEnabled === false ? t("integrations.actions.configureGoogleOAuth") : t("integrations.modal.connectWithGoogle");
+    if (providerSlug === "openai" || providerSlug === "claude") return t("integrations.modal.saveDemoConfig");
+    if (providerSlug === "smtp") return t("integrations.modal.saveSmtpSettings");
+    if (providerSlug === "slack") return t("integrations.actions.sendTestMessage");
+    if (providerSlug === "telegram") return t("integrations.actions.configureTelegram");
+    if (providerSlug === "resend") return t("integrations.modal.done");
+    if (providerSlug === "notion-legacy") return t("integrations.modal.saveLegacyImportConfig");
+    return t("integrations.modal.save");
+  }, [providerSlug, googleOAuthEnabled, t]);
 
   if (!open || !providerSlug) return null;
 
@@ -185,7 +188,7 @@ export function IntegrationConnectModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className="relative z-50 w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
-        <h2 className="text-lg font-semibold">Connect integration</h2>
+        <h2 className="text-lg font-semibold">{t("integrations.modal.title")}</h2>
         <p className="mt-1 text-sm text-muted-foreground capitalize">{providerSlug.replace(/-/g, " ")}</p>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
@@ -195,8 +198,8 @@ export function IntegrationConnectModal({
                 {googleOAuthWarning
                   ? googleOAuthWarning
                   : showLiveGoogleOAuthCopy
-                  ? "Connect your Google account securely using OAuth. You will be redirected to Google to approve access."
-                  : "OAuth will be connected in production. This demo stores a stub connection only—no Google API calls are made."}
+                  ? t("integrations.modal.googleOAuthLiveCopy")
+                  : t("integrations.modal.googleOAuthDemoCopy")}
               </p>
               {onGoogleConnect ? (
                 <Button
@@ -206,19 +209,19 @@ export function IntegrationConnectModal({
                   disabled={loading || googleConnectLoading}
                 >
                   {googleConnectLoading
-                    ? "Opening Google…"
+                    ? t("integrations.modal.openingGoogle")
                     : googleOAuthEnabled === false
-                      ? "Configure Google OAuth"
-                      : "Connect with Google"}
+                      ? t("integrations.actions.configureGoogleOAuth")
+                      : t("integrations.modal.connectWithGoogle")}
                 </Button>
               ) : null}
-              <p className="text-center text-xs text-muted-foreground">or use offline demo</p>
+              <p className="text-center text-xs text-muted-foreground">{t("integrations.modal.orUseOfflineDemo")}</p>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Connected email</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.connectedEmail")}</p>
                 <Input value={connectedEmail} onChange={(e) => setConnectedEmail(e.target.value)} placeholder="you@company.com" type="email" />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Account name</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.accountName")}</p>
                 <Input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Primary workspace" />
               </div>
             </>
@@ -227,10 +230,10 @@ export function IntegrationConnectModal({
           {(providerSlug === "openai" || providerSlug === "claude") && (
             <>
               <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                API keys are masked after save and never shown again in full.
+                {t("integrations.modal.apiKeysMaskedWarning")}
               </p>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Model</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.labels.model")}</p>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={model}
@@ -245,10 +248,10 @@ export function IntegrationConnectModal({
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={fallbackToStub} onChange={(e) => setFallbackToStub(e.target.checked)} />
-                Prefer deterministic stub (no external AI call)
+                {t("integrations.modal.preferDeterministicStub")}
               </label>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">API key</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.labels.apiKey")}</p>
                 <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." type="password" autoComplete="off" />
               </div>
             </>
@@ -257,11 +260,10 @@ export function IntegrationConnectModal({
           {providerSlug === "smtp" && (
             <>
               <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-                SMTP may be blocked by Railway (connection timeouts). Resend is recommended for production email delivery.
-                Telegram and Slack stay primary; SMTP is used only when Resend is not configured and valid SMTP credentials are saved.
+                {t("integrations.modal.smtpWarning")}
               </p>
               <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">Gmail / Google Workspace</p>
+                <p className="font-medium text-foreground">{t("integrations.modal.gmailWorkspaceTitle")}</p>
                 <ul className="mt-2 list-inside list-disc space-y-1">
                   <li>Host: smtp.gmail.com</li>
                   <li>Port: 587</li>
@@ -272,7 +274,7 @@ export function IntegrationConnectModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Host</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.smtpHost")}</p>
                   <Input
                     value={host}
                     onChange={(e) => setHost(e.target.value)}
@@ -281,16 +283,16 @@ export function IntegrationConnectModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Port</p>
+                  <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.smtpPort")}</p>
                   <Input value={port} onChange={(e) => setPort(e.target.value)} placeholder="587" autoComplete="off" />
                 </div>
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={secure} onChange={(e) => setSecure(e.target.checked)} />
-                Secure TLS
+                {t("integrations.modal.secureTls")}
               </label>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Username</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.username")}</p>
                 <Input
                   value={smtpUser}
                   onChange={(e) => setSmtpUser(e.target.value)}
@@ -300,17 +302,17 @@ export function IntegrationConnectModal({
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Password / App Password</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.passwordAppPassword")}</p>
                 <Input
                   value={smtpPass}
                   onChange={(e) => setSmtpPass(e.target.value)}
-                  placeholder="Leave blank to keep saved password"
+                  placeholder={t("integrations.modal.passwordKeepSaved")}
                   type="password"
                   autoComplete="new-password"
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">From email</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.fromEmail")}</p>
                 <Input
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
@@ -320,7 +322,7 @@ export function IntegrationConnectModal({
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">From name</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.fromName")}</p>
                 <Input
                   value={fromName}
                   onChange={(e) => setFromName(e.target.value)}
@@ -334,17 +336,14 @@ export function IntegrationConnectModal({
           {providerSlug === "resend" && (
             <>
               <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-                Resend is configured with API environment variables on the server. Never paste your Resend API key into this UI.
+                {t("integrations.modal.resendConfigInfo")}
               </p>
               <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">Configure (Railway / API host)</p>
+                <p className="font-medium text-foreground">{t("integrations.modal.resendConfigTitle")}</p>
                 <ol className="mt-2 list-inside list-decimal space-y-1">
-                  <li>
-                    Set <span className="font-mono text-[11px]">RESEND_API_KEY</span> and{" "}
-                    <span className="font-mono text-[11px]">RESEND_FROM_EMAIL</span> on the API service.
-                  </li>
-                  <li>Verify your sending domain in the Resend dashboard.</li>
-                  <li>Use “Test Resend” on the integration card to send a test email.</li>
+                  <li>{t("integrations.modal.resendStep1")}</li>
+                  <li>{t("integrations.modal.resendStep2")}</li>
+                  <li>{t("integrations.modal.resendStep3")}</li>
                 </ol>
               </div>
             </>
@@ -353,14 +352,14 @@ export function IntegrationConnectModal({
           {providerSlug === "slack" && (
             <>
               <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                Slack alerts are configured through the SLACK_WEBHOOK_URL environment variable in Railway.
+                {t("integrations.modal.slackInfo")}
               </p>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Connection type</p>
-                <p className="text-sm">Incoming Webhook</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.connectionType")}</p>
+                <p className="text-sm">{t("integrations.status.incomingWebhook")}</p>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Channel</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.channel")}</p>
                 <Input
                   value={channelName}
                   onChange={(e) => setChannelName(e.target.value)}
@@ -373,11 +372,11 @@ export function IntegrationConnectModal({
           {providerSlug === "notion-legacy" && (
             <>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Database name</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.databaseName")}</p>
                 <Input value={databaseName} onChange={(e) => setDatabaseName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Workspace name</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.workspaceName")}</p>
                 <Input value={notionWorkspace} onChange={(e) => setNotionWorkspace(e.target.value)} />
               </div>
             </>
@@ -385,7 +384,7 @@ export function IntegrationConnectModal({
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading || googleConnectLoading}>
-              Cancel
+              {t("integrations.modal.cancel")}
             </Button>
             <Button type="submit" disabled={loading || googleConnectLoading}>
               {primaryLabel}
