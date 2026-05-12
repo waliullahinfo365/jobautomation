@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { showInfo, showError } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 interface DeleteWorkspaceConfirmModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export function DeleteWorkspaceConfirmModal({
   isOpen,
   onClose,
 }: DeleteWorkspaceConfirmModalProps) {
+  const { t } = useTranslation();
   const [confirmText, setConfirmText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -22,7 +24,7 @@ export function DeleteWorkspaceConfirmModal({
 
   const handleDelete = async () => {
     if (!isConfirmed) {
-      showError("Please type DELETE to confirm.");
+      showError(t("settings.dataStorage.deleteModal.confirmError"));
       return;
     }
 
@@ -31,7 +33,7 @@ export function DeleteWorkspaceConfirmModal({
       // Simulate delete operation
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      showInfo("Workspace deletion is disabled in this demo environment.");
+      showInfo(t("settings.dataStorage.deleteModal.disabledMsg"));
       handleReset();
       onClose();
     } finally {
@@ -52,46 +54,49 @@ export function DeleteWorkspaceConfirmModal({
     <Modal
       isOpen={isOpen}
       onClose={handleCancel}
-      title="Delete Workspace"
-      description="This action cannot be undone"
+      title={t("settings.dataStorage.deleteModal.title")}
+      description={t("settings.dataStorage.deleteModal.description")}
       size="md"
     >
       <div className="space-y-4">
         <div className="bg-red-900/20 border border-red-900/30 rounded-lg p-4">
-          <p className="text-sm text-red-200 font-medium">⚠️ Warning</p>
+          <p className="text-sm text-red-200 font-medium">
+            {t("settings.dataStorage.deleteModal.warningLabel")}
+          </p>
           <p className="text-sm text-[var(--text-2)] mt-2">
-            This will permanently delete the workspace and all associated data including jobs, applications, contacts,
-            documents, and all automation settings. This action cannot be reversed.
+            {t("settings.dataStorage.deleteModal.warningBody")}
           </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[var(--text-2)] mb-2">
-            Type DELETE to confirm
+            {t("settings.dataStorage.deleteModal.typeDeleteLabel")}
           </label>
           <Input
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
-            placeholder="Type DELETE"
+            placeholder={t("settings.dataStorage.deleteModal.typeDeletePlaceholder")}
             disabled={isProcessing}
             className="text-red-400"
           />
           <p className="mt-1 text-xs text-[var(--text-3)]">
-            This is a demo environment. Workspace deletion is disabled.
+            {t("settings.dataStorage.deleteModal.demoNotice")}
           </p>
         </div>
 
         <div className="border-t border-[var(--border-default)] pt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={isProcessing}>
-            Cancel
+            {t("settings.dataStorage.deleteModal.cancel")}
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
             disabled={!isConfirmed || isProcessing}
           >
-            {isProcessing ? "Processing..." : "Delete Workspace"}
+            {isProcessing
+              ? t("settings.dataStorage.deleteModal.processing")
+              : t("settings.dataStorage.deleteModal.deleteBtn")}
           </Button>
         </div>
       </div>

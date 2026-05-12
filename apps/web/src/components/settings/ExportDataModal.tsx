@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 type ExportType = "jobs" | "applications" | "contacts" | "documents" | "full";
 
@@ -16,6 +17,7 @@ export function ExportDataModal({
   isOpen,
   onClose,
 }: ExportDataModalProps) {
+  const { t } = useTranslation();
   const [selectedType, setSelectedType] = useState<ExportType>("jobs");
   const [isExporting, setIsExporting] = useState(false);
 
@@ -38,10 +40,10 @@ export function ExportDataModal({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      showSuccess("Export file generated and downloaded.");
+      showSuccess(t("settings.dataStorage.exportModal.successMsg"));
       onClose();
     } catch (error) {
-      showError("Failed to generate export file.");
+      showError(t("settings.dataStorage.exportModal.errorMsg"));
     } finally {
       setIsExporting(false);
     }
@@ -51,13 +53,15 @@ export function ExportDataModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Export Data"
-      description="Choose what data to export"
+      title={t("settings.dataStorage.exportModal.title")}
+      description={t("settings.dataStorage.exportModal.description")}
       size="md"
     >
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-3">Export Type</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-3">
+            {t("settings.dataStorage.exportModal.exportType")}
+          </label>
 
           {(["jobs", "applications", "contacts", "documents", "full"] as const).map((type) => (
             <label key={type} className="flex items-center gap-3 p-3 border border-[var(--border-default)] rounded-lg cursor-pointer hover:bg-[var(--surface-3)] transition-colors">
@@ -77,17 +81,19 @@ export function ExportDataModal({
         <div className="bg-[var(--surface-3)] rounded-lg p-3 text-xs text-[var(--text-3)]">
           <p>
             {selectedType === "full"
-              ? "Exports all jobs, applications, contacts, documents, and workspace metadata."
-              : `Exports all ${selectedType} records from your workspace.`}
+              ? t("settings.dataStorage.exportModal.fullExportDesc")
+              : t("settings.dataStorage.exportModal.partialExportDesc").replace("{{type}}", selectedType)}
           </p>
         </div>
 
         <div className="border-t border-[var(--border-default)] pt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={isExporting}>
-            Cancel
+            {t("settings.dataStorage.exportModal.cancel")}
           </Button>
           <Button onClick={handleGenerateExport} disabled={isExporting}>
-            {isExporting ? "Generating..." : "Generate Export"}
+            {isExporting
+              ? t("settings.dataStorage.exportModal.generating")
+              : t("settings.dataStorage.exportModal.generate")}
           </Button>
         </div>
       </div>

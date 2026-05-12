@@ -1,29 +1,47 @@
+"use client";
+
 import { useState } from "react";
-import type { StorageSettings } from "@/types/settings";
 import { SettingSectionCard } from "./SettingSectionCard";
 import { Button } from "@/components/ui/button";
 import { ExportDataModal } from "./ExportDataModal";
 import { DeleteWorkspaceConfirmModal } from "./DeleteWorkspaceConfirmModal";
+import { useTranslation } from "@/i18n/useTranslation";
 
-export function DataStorageSection({ storage }: { storage: StorageSettings }) {
+export function DataStorageSection() {
+  const { t } = useTranslation();
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   return (
     <>
-      <SettingSectionCard title="Data & Storage" description="Storage and retention placeholders for the production setup.">
+      <SettingSectionCard
+        title={t("settings.dataStorage.title")}
+        description={t("settings.dataStorage.description")}
+      >
         <div className="space-y-2 text-sm">
-          <Field label="Database" value={storage.database} />
-          <Field label="File Storage" value={storage.fileStorage} />
-          <Field label="PDF Exports Folder" value={storage.pdfExportsFolder} />
-          <Field label="Data Retention" value={storage.dataRetention} />
+          <Field
+            label={t("settings.dataStorage.database")}
+            value={t("settings.dataStorage.databaseValue")}
+          />
+          <Field
+            label={t("settings.dataStorage.fileStorage")}
+            value={t("settings.dataStorage.fileStorageValue")}
+          />
+          <Field
+            label={t("settings.dataStorage.pdfExportsFolder")}
+            value={t("settings.dataStorage.pdfExportsFolderValue")}
+          />
+          <Field
+            label={t("settings.dataStorage.dataRetention")}
+            value={t("settings.dataStorage.dataRetentionValue")}
+          />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setIsExportOpen(true)}>
-            Export Data
+            {t("settings.dataStorage.exportData")}
           </Button>
           <Button variant="destructive" onClick={() => setIsDeleteOpen(true)}>
-            Delete Workspace
+            {t("settings.dataStorage.deleteWorkspace")}
           </Button>
         </div>
       </SettingSectionCard>
