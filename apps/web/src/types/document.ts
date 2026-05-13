@@ -9,10 +9,13 @@ export type DocumentTab =
 export type DocumentType =
   | "CV"
   | "Cover Letter"
+  | "Cover Letter Template"
   | "Research Document"
   | "PDF Export"
   | "Job Folder"
-  | "Email Template";
+  | "Email Template"
+  | "Supporting Document"
+  | "AI Draft";
 
 export type DocumentStatus = "Draft" | "Ready" | "Exported" | "Failed" | "Needs Review" | "Archived";
 
@@ -38,6 +41,12 @@ export interface DocumentRecord {
   pdfUrl?: string;
   /** CV routing status from API */
   routingStatus?: "Not Started" | "Queued" | "Completed" | "Failed";
+  profileDocumentType?: "cv_resume" | "cover_letter_template" | "supporting_document";
+  isActiveProfileDocument?: boolean;
+  driveFileLink?: string;
+  driveFileId?: string;
+  extractionStatus?: "Provided" | "Failed" | "Not Required";
+  extractionError?: string;
 }
 
 export interface CVVersion {

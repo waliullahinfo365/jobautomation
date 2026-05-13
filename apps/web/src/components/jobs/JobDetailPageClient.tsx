@@ -331,6 +331,39 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         <div className="space-y-6 xl:col-span-2">
           <JobOverviewCard job={job} />
 
+          <SectionCard title="Application Materials">
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium text-[var(--text-3)]">Source CV used</p>
+                <p className="mt-1 text-[var(--text-1)]">{job.sourceCvFileName ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[var(--text-3)]">Template used</p>
+                <p className="mt-1 text-[var(--text-1)]">{job.coverLetterTemplateFileName ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[var(--text-3)]">Generated cover letter</p>
+                {job.generatedCoverLetterLink ? (
+                  <a className="mt-1 inline-flex text-[var(--violet)] underline underline-offset-2" href={job.generatedCoverLetterLink} target="_blank" rel="noreferrer">
+                    Open cover letter
+                  </a>
+                ) : (
+                  <p className="mt-1 text-[var(--text-1)]">—</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-medium text-[var(--text-3)]">Research document</p>
+                {job.researchDocumentLink ? (
+                  <a className="mt-1 inline-flex text-[var(--violet)] underline underline-offset-2" href={job.researchDocumentLink} target="_blank" rel="noreferrer">
+                    Open research
+                  </a>
+                ) : (
+                  <p className="mt-1 text-[var(--text-1)]">—</p>
+                )}
+              </div>
+            </div>
+          </SectionCard>
+
           <SectionCard title={t("jobDetail.description")}>
             <p className="text-sm leading-6 text-[var(--text-2)]">{job.description}</p>
             {job.aiSummary && (

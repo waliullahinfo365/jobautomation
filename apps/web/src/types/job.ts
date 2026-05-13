@@ -90,6 +90,14 @@ export interface Job {
   applicationProofFolderLink?: string;
   interviewPrepFolderLink?: string;
   aiDraftDocUrl?: string;
+  sourceCvDocumentId?: string;
+  sourceCvFileName?: string;
+  coverLetterTemplateDocumentId?: string;
+  coverLetterTemplateFileName?: string;
+  generatedCoverLetterDocumentId?: string;
+  generatedCoverLetterLink?: string;
+  researchDocumentId?: string;
+  researchDocumentLink?: string;
 
   documents: JobDocument[];
   timeline: JobTimelineEvent[];

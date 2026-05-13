@@ -7,7 +7,8 @@
   "typesVersions": {
     "*": {
       "queue": ["./src/queues/automation.queue.ts"],
-      "processors/folder-automation": ["./src/processors/folder-automation.processor.ts"]
+      "processors/folder-automation": ["./src/processors/folder-automation.processor.ts"],
+      "processors/document-upload": ["./src/processors/document-upload.processor.ts"]
     }
   },
   "exports": {
@@ -28,6 +29,12 @@
       "require": "./dist/processors/folder-automation.processor.js",
       "import": "./dist/processors/folder-automation.processor.js",
       "default": "./dist/processors/folder-automation.processor.js"
+    },
+    "./processors/document-upload": {
+      "types": "./src/processors/document-upload.processor.ts",
+      "require": "./dist/processors/document-upload.processor.js",
+      "import": "./dist/processors/document-upload.processor.js",
+      "default": "./dist/processors/document-upload.processor.js"
     }
   },
   "scripts": {

@@ -13,11 +13,13 @@ export function AllDocumentsTable({
   onExportPdf,
   onRouteCv,
   onOpenFolder,
+  onSetActive,
 }: {
   records: DocumentRecord[];
   onExportPdf?: (record: DocumentRecord) => void | Promise<void>;
   onRouteCv?: (record: DocumentRecord) => void | Promise<void>;
   onOpenFolder?: (record: DocumentRecord) => void | Promise<void>;
+  onSetActive?: (record: DocumentRecord) => void | Promise<void>;
 }) {
   const { t, locale } = useTranslation();
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
@@ -68,6 +70,11 @@ export function AllDocumentsTable({
                   {record.type === "CV" ? (
                     <Button size="sm" variant="outline" type="button" onClick={() => void onRouteCv?.(record)}>
                       {t("documents.actions.routeCv")}
+                    </Button>
+                  ) : null}
+                  {record.type === "CV" || record.type === "Cover Letter Template" ? (
+                    <Button size="sm" variant="outline" type="button" onClick={() => void onSetActive?.(record)}>
+                      {record.isActiveProfileDocument ? "Active" : "Set as Active"}
                     </Button>
                   ) : null}
                   <Button size="sm" variant="ghost" type="button" onClick={() => void onOpenFolder?.(record)}>

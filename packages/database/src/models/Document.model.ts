@@ -6,7 +6,7 @@ const DocumentSchema = new Schema(
     jobId: String,
     applicationId: String,
     fileName: { type: String, required: true },
-    type: { type: String, enum: ["CV", "Cover Letter", "Research", "Portfolio", "Other"], required: true },
+    type: { type: String, enum: ["CV", "Cover Letter", "Research", "Portfolio", "Other", "cv_resume", "cover_letter_template", "supporting_document", "ai_draft", "pdf_export"], required: true },
     status: { type: String, enum: ["Draft", "Ready", "Sent", "Archived"], required: true },
     documentKind: { type: String, enum: ["Research", "Cover Letter", "CV", "PDF Export", "Other"], default: "Other" },
     contentText: String,
@@ -45,6 +45,11 @@ const DocumentSchema = new Schema(
     pdfExportError: String,
     version: { type: Number, default: 1 },
     aiGenerated: { type: Boolean, default: false },
+    profileDocumentType: { type: String, enum: ["cv_resume", "cover_letter_template", "supporting_document"] },
+    isActiveProfileDocument: { type: Boolean, default: false },
+    sourceFileName: String,
+    extractionStatus: { type: String, enum: ["Provided", "Failed", "Not Required"] },
+    extractionError: String,
     metadata: { type: Schema.Types.Mixed, default: {} },
   }),
   { timestamps: true }
@@ -52,6 +57,7 @@ const DocumentSchema = new Schema(
 
 applyBaseIndexes(DocumentSchema, true); // adds tenantId, createdAt:-1, tenantId+status
 DocumentSchema.index({ tenantId: 1, type: 1 });
+DocumentSchema.index({ tenantId: 1, profileDocumentType: 1, isActiveProfileDocument: 1 });
 DocumentSchema.index({ jobId: 1 });
 DocumentSchema.index({ applicationId: 1 });
 // tenantId+status index is already added by applyBaseIndexes

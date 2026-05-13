@@ -1848,7 +1848,10 @@ export const messages: Record<
       documentType: {
         cv: "Lebenslauf",
         coverLetter: "Anschreiben",
+        coverLetterTemplate: "Anschreiben-Vorlage",
         researchDocument: "Recherchedokument",
+        supportingDocument: "Unterstützendes Dokument",
+        aiDraft: "KI-Entwurf",
         emailTemplate: "E-Mail-Vorlage",
         pdfExport: "PDF-Export",
         jobFolder: "Job-Ordner",
@@ -4366,7 +4369,10 @@ export const messages: Record<
       documentType: {
         cv: "CV",
         coverLetter: "Cover Letter",
+        coverLetterTemplate: "Cover Letter Template",
         researchDocument: "Research Document",
+        supportingDocument: "Supporting Document",
+        aiDraft: "AI Draft",
         emailTemplate: "Email Template",
         pdfExport: "PDF Export",
         jobFolder: "Job Folder",

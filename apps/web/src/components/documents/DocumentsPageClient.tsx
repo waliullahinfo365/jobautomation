@@ -189,6 +189,17 @@ export function DocumentsPageClient() {
     return cvs.map((d, i) => toCVVersion(d, i, cvDefaultId));
   }, [documents, cvDefaultId]);
 
+  const activeCv = useMemo(
+    () => documents.find((d) => d.profileDocumentType === "cv_resume" && d.isActiveProfileDocument) ?? documents.find((d) => d.type === "CV"),
+    [documents],
+  );
+  const activeTemplate = useMemo(
+    () =>
+      documents.find((d) => d.profileDocumentType === "cover_letter_template" && d.isActiveProfileDocument) ??
+      documents.find((d) => d.type === "Cover Letter Template"),
+    [documents],
+  );
+
   const coverRows = useMemo(
     () => documents.filter((d) => d.type === "Cover Letter").map(toCoverLetterRecord),
     [documents]
@@ -279,6 +290,42 @@ export function DocumentsPageClient() {
     showInfo(t("documents.toast.openFolderNote"));
   };
 
+  const handleSetActive = async (record: DocumentRecord) => {
+    const id = getResourceId(record);
+    const profileDocumentType =
+      record.profileDocumentType ||
+      (record.type === "CV" ? "cv_resume" : record.type === "Cover Letter Template" ? "cover_letter_template" : undefined);
+    if (!profileDocumentType) return;
+    setPendingAction(`active-${id}`);
+    try {
+      if (documentsApi.isUsingFallback) {
+        setFallbackEdits((prev) => {
+          const next = { ...prev };
+          for (const doc of documents) {
+            if (
+              doc.profileDocumentType === profileDocumentType ||
+              (profileDocumentType === "cv_resume" && doc.type === "CV") ||
+              (profileDocumentType === "cover_letter_template" && doc.type === "Cover Letter Template")
+            ) {
+              next[doc.id] = { ...next[doc.id], isActiveProfileDocument: false };
+            }
+          }
+          next[id] = { ...next[id], isActiveProfileDocument: true, profileDocumentType };
+          return next;
+        });
+        showSuccess(t("documents.toast.documentRecordCreated"));
+        return;
+      }
+      await documentsApi.updateDocument({ id, payload: { isActiveProfileDocument: true, profileDocumentType } });
+      await documentsApi.refetch();
+      showSuccess(t("documents.toast.documentRecordCreated"));
+    } catch {
+      showError(t("documents.toast.couldNotCreateRecord"));
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const handleProvisionFolder = async () => {
     const jobId = firstJobId;
     if (!jobId) {
@@ -316,10 +363,12 @@ export function DocumentsPageClient() {
 
   async function handleCreateDocumentRecord(payload: UploadPayload) {
     const docTypeMap: Record<string, string> = {
-      CV: "CV",
+      CV: "cv_resume",
       "Cover Letter": "Cover Letter",
+      "Cover Letter Template": "cover_letter_template",
       Research: "Research",
-      Portfolio: "Portfolio",
+      "Supporting Document": "supporting_document",
+      Portfolio: "supporting_document",
       Other: "Other",
     };
     if (documentsApi.isUsingFallback) {
@@ -330,7 +379,16 @@ export function DocumentsPageClient() {
           id,
           _id: id,
           fileName: payload.fileName,
-          type: payload.type === "Research" ? "Research Document" : payload.type === "Other" ? "Email Template" : (payload.type as DocumentRecord["type"]),
+          type:
+            payload.type === "Research"
+              ? "Research Document"
+              : payload.type === "Cover Letter Template"
+                ? "Cover Letter Template"
+                : payload.type === "Supporting Document" || payload.type === "Portfolio"
+                  ? "Supporting Document"
+                  : payload.type === "Other"
+                    ? "Email Template"
+                    : (payload.type as DocumentRecord["type"]),
           relatedJob: job ? `${job.company} / ${job.position}` : "—",
           company: job?.company ?? "",
           position: job?.position ?? "",
@@ -349,16 +407,22 @@ export function DocumentsPageClient() {
     try {
       const ids = getTenantUserIdsForApi();
       const apiType = docTypeMap[payload.type] ?? "Other";
+      const profileDocumentType =
+        apiType === "cv_resume" || apiType === "cover_letter_template" || apiType === "supporting_document"
+          ? apiType
+          : undefined;
       await documentsApi.createDocument({
         ...ids,
         fileName: payload.fileName,
         type: apiType,
-        documentKind: apiType === "CV" ? "CV" : apiType === "Cover Letter" ? "Cover Letter" : "Other",
+        documentKind: apiType === "cv_resume" ? "CV" : apiType === "cover_letter_template" ? "Cover Letter" : "Other",
         status: "Draft",
         jobId: payload.jobId,
         contentText: payload.contentText,
         notes: payload.notes,
-        metadata: !payload.jobId ? { workspaceLibrary: true } : undefined,
+        profileDocumentType,
+        sourceFileName: payload.fileName,
+        metadata: !payload.jobId ? { workspaceLibrary: true, profileDocumentType } : undefined,
       });
       showSuccess(t("documents.toast.documentRecordCreated"));
       setUploadOpen(false);
@@ -413,6 +477,37 @@ export function DocumentsPageClient() {
         loading={documentsApi.mutations.createLoading}
       />
 
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Active CV / Resume</p>
+          <p className="mt-2 truncate text-sm font-semibold text-[var(--text-1)]">{activeCv?.fileName ?? "—"}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" type="button" onClick={() => setUploadOpen(true)}>
+              Upload New Version
+            </Button>
+            {activeCv ? (
+              <Button size="sm" variant="ghost" type="button" onClick={() => handleOpenFolder(activeCv)}>
+                Download/Open in Drive
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className="rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Active Cover Letter Template</p>
+          <p className="mt-2 truncate text-sm font-semibold text-[var(--text-1)]">{activeTemplate?.fileName ?? "—"}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" type="button" onClick={() => setUploadOpen(true)}>
+              Upload New Version
+            </Button>
+            {activeTemplate ? (
+              <Button size="sm" variant="ghost" type="button" onClick={() => handleOpenFolder(activeTemplate)}>
+                Download/Open in Drive
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <DocumentStatsCards stats={stats} />
       <DocumentTabs value={tab} onChange={setTab} />
 
@@ -439,6 +534,7 @@ export function DocumentsPageClient() {
               onExportPdf={(r) => void handleExportPdf(r)}
               onRouteCv={(r) => void handleRouteCv(r)}
               onOpenFolder={(r) => handleOpenFolder(r)}
+              onSetActive={(r) => void handleSetActive(r)}
             />
           )}
         </div>

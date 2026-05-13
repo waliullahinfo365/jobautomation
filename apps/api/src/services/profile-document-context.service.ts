@@ -11,15 +11,23 @@ const notAiGenerated = { aiGenerated: { $ne: true } };
 async function latestWorkspaceDoc(
   tenantId: string,
   userId: string,
-  type: "CV" | "Cover Letter"
+  type: "CV" | "Cover Letter",
+  profileDocumentType: "cv_resume" | "cover_letter_template"
 ): Promise<{ contentText?: string } | null> {
-  const base = { tenantId, type, ...workspaceJobFilter, ...notAiGenerated };
-  let doc: unknown = await DocumentModel.findOne({ ...base, createdBy: userId })
+  const activeBase = { tenantId, profileDocumentType, isActiveProfileDocument: true, ...workspaceJobFilter, ...notAiGenerated };
+  const legacyBase = { tenantId, type, ...workspaceJobFilter, ...notAiGenerated };
+  let doc: unknown = await DocumentModel.findOne({ ...activeBase, createdBy: userId })
     .sort({ updatedAt: -1 })
     .select("contentText")
     .lean();
   if (!doc) {
-    doc = await DocumentModel.findOne(base).sort({ updatedAt: -1 }).select("contentText").lean();
+    doc = await DocumentModel.findOne(activeBase).sort({ updatedAt: -1 }).select("contentText").lean();
+  }
+  if (!doc) {
+    doc = await DocumentModel.findOne({ ...legacyBase, createdBy: userId }).sort({ updatedAt: -1 }).select("contentText").lean();
+  }
+  if (!doc) {
+    doc = await DocumentModel.findOne(legacyBase).sort({ updatedAt: -1 }).select("contentText").lean();
   }
   return doc as { contentText?: string } | null;
 }
@@ -29,8 +37,8 @@ export async function getProfileDocumentContextFlags(
   userId: string
 ): Promise<{ hasCvContent: boolean; hasCoverLetterContent: boolean }> {
   const [cv, cl] = await Promise.all([
-    latestWorkspaceDoc(tenantId, userId, "CV"),
-    latestWorkspaceDoc(tenantId, userId, "Cover Letter"),
+    latestWorkspaceDoc(tenantId, userId, "CV", "cv_resume"),
+    latestWorkspaceDoc(tenantId, userId, "Cover Letter", "cover_letter_template"),
   ]);
   const cvText = typeof cv?.contentText === "string" ? cv.contentText.trim() : "";
   const clText = typeof cl?.contentText === "string" ? cl.contentText.trim() : "";

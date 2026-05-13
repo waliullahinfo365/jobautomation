@@ -244,6 +244,14 @@ export function normalizeJobForUi(raw: unknown): Job {
     applicationProofFolderLink: (j.applicationProofFolderLink as string | undefined),
     interviewPrepFolderLink: (j.interviewPrepFolderLink as string | undefined),
     aiDraftDocUrl: (j.aiDraftDocUrl as string | undefined),
+    sourceCvDocumentId: (j.sourceCvDocumentId as string | undefined),
+    sourceCvFileName: (j.sourceCvFileName as string | undefined),
+    coverLetterTemplateDocumentId: (j.coverLetterTemplateDocumentId as string | undefined),
+    coverLetterTemplateFileName: (j.coverLetterTemplateFileName as string | undefined),
+    generatedCoverLetterDocumentId: (j.generatedCoverLetterDocumentId as string | undefined),
+    generatedCoverLetterLink: (j.generatedCoverLetterLink as string | undefined),
+    researchDocumentId: (j.researchDocumentId as string | undefined),
+    researchDocumentLink: (j.researchDocumentLink as string | undefined),
     documents,
     timeline: ((j.timeline ?? []) as JobTimelineEvent[]),
     automationLogs,
@@ -434,18 +442,26 @@ export function normalizeInterviewsForUi(raw: unknown[]): Interview[] {
 
 function mapBackendDocTypeToUi(t: string): DocumentType {
   switch (t) {
+    case "cv_resume":
     case "CV":
       return "CV";
+    case "cover_letter_template":
+      return "Cover Letter Template";
     case "Cover Letter":
       return "Cover Letter";
     case "Research":
       return "Research Document";
     case "Portfolio":
-      return "Research Document";
+    case "supporting_document":
+      return "Supporting Document";
+    case "ai_draft":
+      return "AI Draft";
+    case "pdf_export":
+      return "PDF Export";
     case "Other":
       return "Email Template";
     default:
-      return "CV";
+      return "Email Template";
   }
 }
 
@@ -512,7 +528,11 @@ export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
   const pdfUrl = rawPdfUrl && isPublicFileUrl(rawPdfUrl, API_URL) ? rawPdfUrl : undefined;
   const rawStorageUrl = d.storageUrl ? String(d.storageUrl) : undefined;
   const storageUrl =
-    rawStorageUrl && isPublicFileUrl(rawStorageUrl, API_URL) ? rawStorageUrl : undefined;
+    rawStorageUrl && isPublicFileUrl(rawStorageUrl, API_URL)
+      ? rawStorageUrl
+      : typeof d.driveFileLink === "string" && isPublicFileUrl(String(d.driveFileLink), API_URL)
+        ? String(d.driveFileLink)
+        : undefined;
   if (
     !pdfExportStatus &&
     (meta.textExportAvailable === true ||
@@ -541,6 +561,12 @@ export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
     pdfExportStatus,
     pdfUrl,
     routingStatus,
+    profileDocumentType: d.profileDocumentType as DocumentRecord["profileDocumentType"],
+    isActiveProfileDocument: Boolean(d.isActiveProfileDocument),
+    driveFileLink: typeof d.driveFileLink === "string" ? d.driveFileLink : undefined,
+    driveFileId: typeof d.driveFileId === "string" ? d.driveFileId : undefined,
+    extractionStatus: d.extractionStatus as DocumentRecord["extractionStatus"],
+    extractionError: typeof d.extractionError === "string" ? d.extractionError : undefined,
   };
 }
 

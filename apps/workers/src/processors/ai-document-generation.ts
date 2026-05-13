@@ -423,6 +423,8 @@ export async function createResearchDocument(input: {
       aiProcessingCompletedAt: new Date(),
       researchGenerated: true,
       lastAiRunAt: new Date(),
+      researchDocumentId: toId(doc._id),
+      researchDocumentLink: driveRoute.ok ? driveRoute.googleDocUrl : undefined,
     });
   } catch (e) {
     logger.warn({ err: e, jobId: ctx.jobId }, "job status update after research failed (document saved)");
@@ -499,8 +501,39 @@ export async function createCoverLetterDocument(input: {
   const logModule = input.logModuleKey ?? "ai-processing";
   const ctx = await loadJobContext(input);
   const profile = await loadWorkspaceProfileForPrompt(ctx.tenantId, ctx.userId);
+  if (!profile.cvText) {
+    const message = "Master CV is missing. Upload a CV before generating tailored cover letters.";
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: logModule,
+      status: "Warning",
+      message,
+      operationId: ctx.operationId,
+      relatedRecordType: "Job",
+      relatedRecordId: ctx.jobId,
+      metadata: { source: "worker:cover-letter", missingProfileDocument: "cv_resume" },
+    });
+    await JobModel.findByIdAndUpdate(ctx.jobId, {
+      aiProcessingStatus: "Failed",
+      aiProcessingError: message,
+      aiProcessingCompletedAt: new Date(),
+    });
+    throw new Error(message);
+  }
   const profileBlock = formatProfileContextBlock(profile);
   const title = sanitizeTitle(`Cover Letter — ${ctx.company} — ${ctx.position}`);
+  if (!profile.coverLetterStyleText) {
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: logModule,
+      status: "Warning",
+      message: "Cover letter template missing. Generated using default structure.",
+      operationId: ctx.operationId,
+      relatedRecordType: "Job",
+      relatedRecordId: ctx.jobId,
+      metadata: { source: "worker:cover-letter", missingProfileDocument: "cover_letter_template" },
+    });
+  }
 
   const prompt = [
     "Write a professional cover letter in plain text.",
@@ -518,7 +551,8 @@ export async function createCoverLetterDocument(input: {
     `Position: ${ctx.position}`,
     `Location: ${ctx.location ?? "Not specified"}`,
     `Job description: ${ctx.description ?? "Not provided"}`,
-    ...(profileBlock ? ["", profileBlock] : ["", "(No workspace CV uploaded — write a generic letter without specific employment claims.)"]),
+    "",
+    profileBlock,
   ].join("\n");
 
   const fallbackText = profile.cvText
@@ -562,6 +596,10 @@ export async function createCoverLetterDocument(input: {
       model: generated.model,
       generatedAt: new Date().toISOString(),
       usedWorkspaceProfile: Boolean(profile.cvText || profile.coverLetterStyleText),
+      sourceCvDocumentId: profile.cvDocumentId,
+      sourceCvFileName: profile.cvFileName,
+      coverLetterTemplateDocumentId: profile.coverLetterTemplateDocumentId,
+      coverLetterTemplateFileName: profile.coverLetterTemplateFileName,
       fallbackReason: generated.fallbackReason,
       ...(generated.claudeFailureSummary ? { claudeErrorSummary: generated.claudeFailureSummary } : {}),
     },
@@ -615,6 +653,12 @@ export async function createCoverLetterDocument(input: {
       await JobModel.findByIdAndUpdate(ctx.jobId, {
         aiDraftDocId: draftCopy.googleDocId,
         aiDraftDocUrl: draftCopy.googleDocUrl,
+        generatedCoverLetterDocumentId: toId(doc._id),
+        generatedCoverLetterLink: coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : draftCopy.googleDocUrl,
+        sourceCvDocumentId: profile.cvDocumentId,
+        sourceCvFileName: profile.cvFileName,
+        coverLetterTemplateDocumentId: profile.coverLetterTemplateDocumentId,
+        coverLetterTemplateFileName: profile.coverLetterTemplateFileName,
       });
     }
   } else {
@@ -635,6 +679,12 @@ export async function createCoverLetterDocument(input: {
       aiProcessingCompletedAt: new Date(),
       draftGenerated: true,
       lastAiRunAt: new Date(),
+      sourceCvDocumentId: profile.cvDocumentId,
+      sourceCvFileName: profile.cvFileName,
+      coverLetterTemplateDocumentId: profile.coverLetterTemplateDocumentId,
+      coverLetterTemplateFileName: profile.coverLetterTemplateFileName,
+      generatedCoverLetterDocumentId: toId(doc._id),
+      generatedCoverLetterLink: coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : draftCopy.ok ? draftCopy.googleDocUrl : undefined,
     });
   } catch (e) {
     logger.warn({ err: e, jobId: ctx.jobId }, "job status update after cover letter failed (document saved)");

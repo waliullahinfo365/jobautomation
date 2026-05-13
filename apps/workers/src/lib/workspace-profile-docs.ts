@@ -19,33 +19,57 @@ async function loadLatestText(
   tenantId: string,
   userId: string,
   type: "CV" | "Cover Letter" | "Portfolio",
+  profileDocumentType: "cv_resume" | "cover_letter_template" | "supporting_document",
   maxChars: number
-): Promise<string | undefined> {
-  const base = { tenantId, type, ...workspaceJobFilter, ...notAiGenerated };
-  let doc: unknown = await DocumentModel.findOne({ ...base, createdBy: userId }).sort({ updatedAt: -1 }).select("contentText").lean();
+): Promise<{ text?: string; documentId?: string; fileName?: string }> {
+  const activeBase = { tenantId, profileDocumentType, isActiveProfileDocument: true, ...workspaceJobFilter, ...notAiGenerated };
+  const legacyBase = { tenantId, type, ...workspaceJobFilter, ...notAiGenerated };
+  let doc: unknown = await DocumentModel.findOne({ ...activeBase, createdBy: userId }).sort({ updatedAt: -1 }).select("_id fileName contentText").lean();
   if (!doc) {
-    doc = await DocumentModel.findOne(base).sort({ updatedAt: -1 }).select("contentText").lean();
+    doc = await DocumentModel.findOne(activeBase).sort({ updatedAt: -1 }).select("_id fileName contentText").lean();
   }
-  const row = doc as { contentText?: string } | null;
+  if (!doc) {
+    doc = await DocumentModel.findOne({ ...legacyBase, createdBy: userId }).sort({ updatedAt: -1 }).select("_id fileName contentText").lean();
+  }
+  if (!doc) {
+    doc = await DocumentModel.findOne(legacyBase).sort({ updatedAt: -1 }).select("_id fileName contentText").lean();
+  }
+  const row = doc as { _id?: unknown; fileName?: string; contentText?: string } | null;
   const raw = typeof row?.contentText === "string" ? row.contentText.trim() : "";
-  if (!raw) return undefined;
-  return truncate(`${type} excerpt`, raw, maxChars);
+  if (!raw) return {};
+  return {
+    text: truncate(`${type} excerpt`, raw, maxChars),
+    documentId: row?._id ? String(row._id) : undefined,
+    fileName: row?.fileName,
+  };
 }
 
 export type WorkspaceProfileForPrompt = {
   cvText?: string;
   coverLetterStyleText?: string;
   portfolioText?: string;
+  cvDocumentId?: string;
+  cvFileName?: string;
+  coverLetterTemplateDocumentId?: string;
+  coverLetterTemplateFileName?: string;
 };
 
 export async function loadWorkspaceProfileForPrompt(tenantId: string, userId: string): Promise<WorkspaceProfileForPrompt> {
   try {
-    const [cvText, coverLetterStyleText, portfolioText] = await Promise.all([
-      loadLatestText(tenantId, userId, "CV", MAX_CV_CHARS),
-      loadLatestText(tenantId, userId, "Cover Letter", MAX_COVER_LETTER_CHARS),
-      loadLatestText(tenantId, userId, "Portfolio", MAX_PORTFOLIO_CHARS),
+    const [cv, coverLetter, portfolio] = await Promise.all([
+      loadLatestText(tenantId, userId, "CV", "cv_resume", MAX_CV_CHARS),
+      loadLatestText(tenantId, userId, "Cover Letter", "cover_letter_template", MAX_COVER_LETTER_CHARS),
+      loadLatestText(tenantId, userId, "Portfolio", "supporting_document", MAX_PORTFOLIO_CHARS),
     ]);
-    return { cvText, coverLetterStyleText, portfolioText };
+    return {
+      cvText: cv.text,
+      cvDocumentId: cv.documentId,
+      cvFileName: cv.fileName,
+      coverLetterStyleText: coverLetter.text,
+      coverLetterTemplateDocumentId: coverLetter.documentId,
+      coverLetterTemplateFileName: coverLetter.fileName,
+      portfolioText: portfolio.text,
+    };
   } catch {
     return {};
   }

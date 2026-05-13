@@ -12,7 +12,7 @@ import { showError } from "@/lib/ui/toast";
 
 export type UploadPayload = {
   fileName: string;
-  type: "CV" | "Cover Letter" | "Research" | "Portfolio" | "Other";
+  type: "CV" | "Cover Letter" | "Cover Letter Template" | "Research" | "Supporting Document" | "Portfolio" | "Other";
   jobId?: string;
   contentText?: string;
   notes?: string;
@@ -33,8 +33,8 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
   const typeOptions: { label: string; value: UploadPayload["type"] }[] = useMemo(
     () => [
       { label: t("documents.upload.cvResume"), value: "CV" },
-      { label: t("documents.documentType.coverLetter"), value: "Cover Letter" },
-      { label: t("documents.upload.portfolio"), value: "Portfolio" },
+      { label: t("documents.documentType.coverLetterTemplate"), value: "Cover Letter Template" },
+      { label: t("documents.documentType.supportingDocument"), value: "Supporting Document" },
       { label: t("documents.folderTree.research"), value: "Research" },
       { label: t("documents.upload.other"), value: "Other" },
     ],

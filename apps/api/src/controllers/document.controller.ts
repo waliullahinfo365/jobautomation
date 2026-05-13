@@ -10,6 +10,17 @@ import { routeCvToJobFolder } from "../services/cv-routing.service";
 import { exportDocumentPdf } from "../services/pdf-export.service";
 import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { sanitizeDocumentForApi } from "../utils/document-response";
+import { processUploadedProfileDocument } from "@jobflow/workers/processors/document-upload";
+
+function profileTypeFromBody(body: Record<string, unknown>) {
+  const explicit = String(body.profileDocumentType ?? "");
+  if (explicit === "cv_resume" || explicit === "cover_letter_template" || explicit === "supporting_document") return explicit;
+  if (body.type === "cv_resume" || body.type === "CV") return "cv_resume";
+  if (body.type === "cover_letter_template" || body.type === "Cover Letter") return "cover_letter_template";
+  if (body.type === "supporting_document" || body.type === "Portfolio") return "supporting_document";
+  return undefined;
+}
+
 export const listDocuments = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const { page, limit, skip } = getPagination(req.query);
@@ -48,13 +59,56 @@ export const listDocuments = asyncHandler(async (req: Request, res) => {
 export const createDocument = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const body = { ...req.body } as Record<string, unknown>;
+  const profileDocumentType = profileTypeFromBody(body);
+  const workspaceProfileUpload = profileDocumentType && !body.jobId;
+  const contentText = typeof body.contentText === "string" ? body.contentText.trim() : "";
+  if (workspaceProfileUpload && profileDocumentType !== "supporting_document" && !contentText) {
+    throw new ApiError(
+      profileDocumentType === "cv_resume"
+        ? "Master CV text is missing. Upload a CV with extractable text or paste the extracted CV text before saving."
+        : "Cover letter template text is missing. Upload a template with extractable text or paste the extracted template text before saving.",
+      422,
+      "DOCUMENT_TEXT_REQUIRED"
+    );
+  }
   const notes = body.notes;
   if (typeof notes === "string" && notes.trim()) {
     const meta = typeof body.metadata === "object" && body.metadata !== null ? { ...(body.metadata as object) } : {};
     body.metadata = { ...meta, notes: notes.trim() };
   }
   delete body.notes;
+  if (workspaceProfileUpload) {
+    body.profileDocumentType = profileDocumentType;
+    body.isActiveProfileDocument = false;
+    body.sourceFileName = body.sourceFileName ?? body.fileName;
+    body.extractionStatus = contentText ? "Provided" : "Not Required";
+    body.metadata = {
+      ...(typeof body.metadata === "object" && body.metadata !== null ? (body.metadata as Record<string, unknown>) : {}),
+      workspaceLibrary: true,
+      profileDocumentType,
+    };
+  }
   const row = await createTenantScopedRecord(DocumentModel, tenantId, req.user?.id ?? "system", body as never);
+  if (workspaceProfileUpload) {
+    try {
+      await processUploadedProfileDocument({
+        tenantId,
+        userId: req.user?.id ?? "system",
+        documentId: String(row._id),
+        profileDocumentType,
+      });
+      const refreshed = await findTenantScopedById(DocumentModel, tenantId, String(row._id));
+      const plain = refreshed && typeof refreshed.toObject === "function" ? refreshed.toObject() : refreshed ?? row;
+      return successResponse(res, sanitizeDocumentForApi(plain as Record<string, unknown>), "Created", 201);
+    } catch (error) {
+      await DocumentModel.findByIdAndUpdate(row._id, {
+        extractionStatus: "Failed",
+        extractionError: error instanceof Error ? error.message : "Profile document routing failed",
+        isActiveProfileDocument: false,
+      });
+      throw error;
+    }
+  }
   return successResponse(res, row, "Created", 201);
 });
 export const getDocumentById = asyncHandler(async (req: Request, res) => {
@@ -66,7 +120,22 @@ export const getDocumentById = asyncHandler(async (req: Request, res) => {
 });
 export const updateDocument = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const row = await updateTenantScopedById(DocumentModel, tenantId, req.params.id, req.body);
+  const body = { ...req.body } as Record<string, unknown>;
+  if (body.isActiveProfileDocument === true) {
+    const existing = await findTenantScopedById(DocumentModel, tenantId, req.params.id);
+    if (!existing) throw new ApiError("Not found", 404, "NOT_FOUND");
+    const profileDocumentType =
+      String((existing as Record<string, unknown>).profileDocumentType ?? "") ||
+      profileTypeFromBody({ type: (existing as Record<string, unknown>).type });
+    if (profileDocumentType) {
+      await DocumentModel.updateMany(
+        { tenantId, profileDocumentType, _id: { $ne: req.params.id } },
+        { isActiveProfileDocument: false }
+      );
+      body.profileDocumentType = profileDocumentType;
+    }
+  }
+  const row = await updateTenantScopedById(DocumentModel, tenantId, req.params.id, body);
   if (!row) throw new ApiError("Not found", 404, "NOT_FOUND");
   const plain = typeof row.toObject === "function" ? row.toObject() : row;
   return successResponse(res, sanitizeDocumentForApi(plain), "Updated");
