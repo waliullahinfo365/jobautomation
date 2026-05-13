@@ -235,13 +235,17 @@ async function routeGeneratedDocToDrive(input: {
     accessToken: auth.accessToken,
   });
   let parentId = input.preferredFolderId;
+  let storageLocation = "";
   if (!parentId && job) {
     if (input.fallbackFolder === "research") {
       parentId = String((job as Record<string, unknown>).researchFolderId ?? "");
+      storageLocation = `Job Applications/Applications/${String((job as Record<string, unknown>).company ?? "Company")} ${String((job as Record<string, unknown>).position ?? "Position")}/Research`;
     } else if (input.fallbackFolder === "cover-letter") {
       parentId = String((job as Record<string, unknown>).coverLetterFolderId ?? "");
+      storageLocation = `Job Applications/Applications/${String((job as Record<string, unknown>).company ?? "Company")} ${String((job as Record<string, unknown>).position ?? "Position")}/Cover Letter`;
     } else {
       parentId = workspace.aiDrafts.folder.id;
+      storageLocation = "Job Applications/AI Drafts";
     }
   }
   if (!parentId) {
@@ -259,7 +263,9 @@ async function routeGeneratedDocToDrive(input: {
       parentId: jobFolder.folder.id,
     });
     parentId = section.folder.id;
+    storageLocation = `Job Applications/Applications/${company} ${position}/${sectionName}`;
   }
+  if (!storageLocation && input.fallbackFolder === "ai-drafts") storageLocation = "Job Applications/AI Drafts";
 
   const doc = await createGoogleDoc({
     accessToken: auth.accessToken,
@@ -271,6 +277,8 @@ async function routeGeneratedDocToDrive(input: {
     ok: true as const,
     googleDocId: doc.id,
     googleDocUrl: doc.webViewLink ?? `https://docs.google.com/document/d/${doc.id}/edit`,
+    parentId,
+    storageLocation,
   };
 }
 
@@ -369,7 +377,7 @@ export async function createResearchDocument(input: {
     },
   });
   let driveRoute:
-    | { ok: true; googleDocId: string; googleDocUrl: string }
+    | { ok: true; googleDocId: string; googleDocUrl: string; parentId?: string; storageLocation?: string }
     | { ok: false; reason?: string };
   try {
     driveRoute = await routeGeneratedDocToDrive({
@@ -385,10 +393,16 @@ export async function createResearchDocument(input: {
   if (driveRoute.ok) {
     await DocumentModel.findByIdAndUpdate(doc._id, {
       googleDriveFileId: driveRoute.googleDocId,
+      driveFileId: driveRoute.googleDocId,
+      driveFileLink: driveRoute.googleDocUrl,
+      googleDriveFolderId: driveRoute.parentId,
+      storageProvider: "Google Drive",
+      storageLocation: driveRoute.storageLocation,
       storageUrl: driveRoute.googleDocUrl,
       $set: {
         "metadata.googleDocId": driveRoute.googleDocId,
         "metadata.googleDocUrl": driveRoute.googleDocUrl,
+        "metadata.storageLocation": driveRoute.storageLocation,
       },
     });
   } else {
@@ -453,14 +467,14 @@ export async function createResearchDocument(input: {
       metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
     });
   }
-  await notifyAutomationEvent({
-    tenantId: ctx.tenantId,
-    moduleKey: "research-document",
-    event: "research-generated",
-    message: `📄 Research generated for ${ctx.company} — ${ctx.position}`,
-    operationId: ctx.operationId,
-    metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
-  });
+    await notifyAutomationEvent({
+      tenantId: ctx.tenantId,
+      moduleKey: "research-document",
+      event: "research-generated",
+      message: `Research ready for ${ctx.company} — ${ctx.position}${driveRoute.ok ? `\nOpen research: ${driveRoute.googleDocUrl}` : ""}`,
+      operationId: ctx.operationId,
+      metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
+    });
 
   return {
     ...suppressFlag,
@@ -553,10 +567,10 @@ export async function createCoverLetterDocument(input: {
     },
   });
   let draftCopy:
-    | { ok: true; googleDocId: string; googleDocUrl: string }
+    | { ok: true; googleDocId: string; googleDocUrl: string; parentId?: string; storageLocation?: string }
     | { ok: false; reason?: string } = { ok: false };
   let coverLetterCopy:
-    | { ok: true; googleDocId: string; googleDocUrl: string }
+    | { ok: true; googleDocId: string; googleDocUrl: string; parentId?: string; storageLocation?: string }
     | { ok: false; reason?: string } = { ok: false };
   try {
     draftCopy = await routeGeneratedDocToDrive({
@@ -581,10 +595,16 @@ export async function createCoverLetterDocument(input: {
   if (draftCopy.ok || coverLetterCopy.ok) {
     await DocumentModel.findByIdAndUpdate(doc._id, {
       googleDriveFileId: draftCopy.ok ? draftCopy.googleDocId : coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
+      driveFileId: draftCopy.ok ? draftCopy.googleDocId : coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
+      driveFileLink: draftCopy.ok ? draftCopy.googleDocUrl : coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : undefined,
+      googleDriveFolderId: draftCopy.ok ? draftCopy.parentId : coverLetterCopy.ok ? coverLetterCopy.parentId : undefined,
+      storageProvider: "Google Drive",
+      storageLocation: draftCopy.ok ? draftCopy.storageLocation : coverLetterCopy.ok ? coverLetterCopy.storageLocation : undefined,
       storageUrl: draftCopy.ok ? draftCopy.googleDocUrl : coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : undefined,
       $set: {
         "metadata.googleDocId": draftCopy.ok ? draftCopy.googleDocId : coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
         "metadata.googleDocUrl": draftCopy.ok ? draftCopy.googleDocUrl : coverLetterCopy.ok ? coverLetterCopy.googleDocUrl : undefined,
+        "metadata.storageLocation": draftCopy.ok ? draftCopy.storageLocation : coverLetterCopy.ok ? coverLetterCopy.storageLocation : undefined,
         "metadata.aiDraftGoogleDocId": draftCopy.ok ? draftCopy.googleDocId : undefined,
         "metadata.aiDraftGoogleDocUrl": draftCopy.ok ? draftCopy.googleDocUrl : undefined,
         "metadata.coverLetterGoogleDocId": coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
@@ -663,7 +683,7 @@ export async function createCoverLetterDocument(input: {
     tenantId: ctx.tenantId,
     moduleKey: logModule,
     event: "cover-letter-generated",
-    message: `✍️ Cover letter draft generated for ${ctx.company} — ${ctx.position}`,
+    message: `AI draft generated for ${ctx.company} — ${ctx.position}${draftCopy.ok ? `\nOpen draft: ${draftCopy.googleDocUrl}` : ""}`,
     operationId: ctx.operationId,
     metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
   });

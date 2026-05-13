@@ -14,8 +14,12 @@ export type NotificationEvent =
 
 export type NotificationSendResult = {
   status: "Sent" | "Warning" | "Failed";
-  provider: "telegram" | "slack" | "email" | "none";
+  provider: "telegram" | "slack" | "email" | "multiple" | "none";
   reason?: string;
+  providers?: {
+    telegram: Awaited<ReturnType<typeof sendTelegramNotification>>;
+    slack: Awaited<ReturnType<typeof sendSlackNotification>>;
+  };
 };
 
 export async function sendDashboardNotificationStub(input: {
@@ -121,16 +125,34 @@ export async function sendNotificationWithFallback(input: {
   event: NotificationEvent;
 }): Promise<NotificationSendResult> {
   const telegram = await sendTelegramNotification(input);
-  if (telegram.status === "Sent") return { status: "Sent", provider: "telegram" };
-
   const slack = await sendSlackNotification(input);
-  if (slack.status === "Sent") return { status: "Sent", provider: "slack" };
+  const providers = { telegram, slack };
+
+  if (telegram.status === "Sent" && slack.status === "Sent") {
+    return { status: "Sent", provider: "multiple", providers };
+  }
+  if (telegram.status === "Sent") {
+    return {
+      status: "Warning",
+      provider: "telegram",
+      reason: slack.reason ?? "Slack webhook is not configured.",
+      providers,
+    };
+  }
+  if (slack.status === "Sent") {
+    return {
+      status: "Warning",
+      provider: "slack",
+      reason: telegram.reason ?? "Telegram not configured.",
+      providers,
+    };
+  }
 
   if (telegram.status === "Failed") {
-    return { status: "Failed", provider: "telegram", reason: telegram.reason };
+    return { status: "Failed", provider: "telegram", reason: telegram.reason, providers };
   }
   if (slack.status === "Warning") {
-    return { status: "Warning", provider: "none", reason: "No notification provider configured." };
+    return { status: "Warning", provider: "none", reason: "No notification provider configured.", providers };
   }
-  return { status: "Warning", provider: "none", reason: telegram.reason ?? "No notification provider configured." };
+  return { status: "Warning", provider: "none", reason: telegram.reason ?? "No notification provider configured.", providers };
 }

@@ -143,7 +143,7 @@ export async function ensureWorkspaceFolderStructure(input: {
   });
 
   const reportChildren = await Promise.all(
-    ["Salary Research", "Pipeline Metrics", "Offer Comparison", "Weekly Reports", "Daily Digests"].map((name) =>
+    ["Salary Research", "Pipeline Metrics", "Offer Comparison"].map((name) =>
       findOrCreateFolder({
         accessToken: input.accessToken,
         name,

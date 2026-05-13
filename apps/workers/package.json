@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "typesVersions": {
     "*": {
-      "queue": ["./src/queues/automation.queue.ts"]
+      "queue": ["./src/queues/automation.queue.ts"],
+      "processors/folder-automation": ["./src/processors/folder-automation.processor.ts"]
     }
   },
   "exports": {
@@ -21,6 +22,12 @@
       "require": "./dist/queues/automation.queue.js",
       "import": "./dist/queues/automation.queue.js",
       "default": "./dist/queues/automation.queue.js"
+    },
+    "./processors/folder-automation": {
+      "types": "./src/processors/folder-automation.processor.ts",
+      "require": "./dist/processors/folder-automation.processor.js",
+      "import": "./dist/processors/folder-automation.processor.js",
+      "default": "./dist/processors/folder-automation.processor.js"
     }
   },
   "scripts": {

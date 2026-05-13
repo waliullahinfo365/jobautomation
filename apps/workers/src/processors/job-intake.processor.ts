@@ -26,18 +26,51 @@ function parseGmailMessageToPayload(message: any): JobIntakeEmailPayload {
   for (const h of message?.payload?.headers ?? []) {
     headers.set(String(h.name).toLowerCase(), String(h.value));
   }
-  const bodyData = message?.payload?.body?.data as string | undefined;
+  const bodyText = extractTextFromGmailPayload(message?.payload);
   return {
     provider: "gmail",
     providerMessageId: String(message?.id ?? ""),
     providerThreadId: String(message?.threadId ?? ""),
     from: headers.get("from") ?? "unknown@example.com",
     subject: headers.get("subject") ?? "",
-    bodyText: bodyData ? Buffer.from(bodyData, "base64url").toString("utf8") : "",
+    bodyText: bodyText || String(message?.snippet ?? ""),
     receivedAt: new Date(Number(message?.internalDate ?? Date.now())).toISOString(),
     labels: Array.isArray(message?.labelIds) ? message.labelIds : [],
     raw: { historyId: message?.historyId, snippet: message?.snippet },
   };
+}
+
+function decodeGmailBody(data?: string): string {
+  if (!data) return "";
+  try {
+    return Buffer.from(data, "base64url").toString("utf8");
+  } catch {
+    return "";
+  }
+}
+
+function extractTextFromGmailPayload(payload: any): string {
+  const mimeType = String(payload?.mimeType ?? "");
+  const body = decodeGmailBody(payload?.body?.data);
+  if (body && (mimeType.includes("text/plain") || !Array.isArray(payload?.parts))) return body;
+  const parts = Array.isArray(payload?.parts) ? payload.parts : [];
+  const textParts = parts.map(extractTextFromGmailPayload).filter(Boolean);
+  return textParts.join("\n").trim();
+}
+
+function parseProcessedMessageIds(metadata: Record<string, unknown> | undefined): string[] {
+  const raw = metadata?.processedMessageIds;
+  return Array.isArray(raw) ? raw.map(String).filter(Boolean) : [];
+}
+
+function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): string {
+  const configured = process.env.GMAIL_JOB_ALERT_QUERY || String(metadata?.jobIntakeQuery ?? "");
+  return configured.trim() || 'label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
+}
+
+function getMessageHistoryId(message: any): number {
+  const n = Number(message?.historyId ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export type JobIntakeProcessorPayload = {
@@ -77,9 +110,10 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
   }
 
   const gmailConn = await IntegrationConnectionModel.findOne({ tenantId: payload.tenantId, provider: "Gmail" });
-  const lastHistoryId = String((gmailConn?.metadata as Record<string, unknown> | undefined)?.lastHistoryId ?? "");
-  const query =
-    "label:job-alerts OR (job OR application OR recruiter OR opportunity OR hiring) newer_than:10d";
+  const gmailMetadata = gmailConn?.metadata as Record<string, unknown> | undefined;
+  const lastHistoryId = String(gmailMetadata?.lastHistoryId ?? "");
+  const processedMessageIds = new Set(parseProcessedMessageIds(gmailMetadata));
+  const query = getGmailIntakeQuery(gmailMetadata);
   const list = await gmailApiJson<{ messages?: Array<{ id: string; threadId: string }>; resultSizeEstimate?: number }>({
     accessToken: auth.accessToken,
     path: "users/me/messages",
@@ -87,14 +121,26 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
   });
   const messages = list.messages ?? [];
   let createdCount = 0;
+  let skippedCount = 0;
+  let maxHistoryId = Number(lastHistoryId || 0);
 
   for (const msg of messages) {
+    if (processedMessageIds.has(msg.id)) {
+      skippedCount += 1;
+      continue;
+    }
     const message = await gmailApiJson<any>({
       accessToken: auth.accessToken,
       path: `users/me/messages/${msg.id}`,
       query: { format: "full" },
     });
-    if (lastHistoryId && Number(message.historyId ?? 0) <= Number(lastHistoryId)) continue;
+    const messageHistoryId = getMessageHistoryId(message);
+    if (messageHistoryId > maxHistoryId) maxHistoryId = messageHistoryId;
+    if (lastHistoryId && messageHistoryId > 0 && messageHistoryId <= Number(lastHistoryId)) {
+      processedMessageIds.add(msg.id);
+      skippedCount += 1;
+      continue;
+    }
     const normalized = parseGmailMessageToPayload(message);
     const extraction = await runAiExtraction({
       payload: normalized,
@@ -113,6 +159,8 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       $or: [{ providerMessageId: normalized.providerMessageId }, { fingerprintHash }],
     }).select("_id");
     if (existing) {
+      processedMessageIds.add(normalized.providerMessageId);
+      skippedCount += 1;
       await AutomationLogModel.create({
         tenantId: payload.tenantId,
         createdBy: "system",
@@ -136,7 +184,19 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       continue;
     }
     const duplicate = await checkDuplicateJobWorker(payload.tenantId, data);
-    if (duplicate.status === "Duplicate") continue;
+    if (duplicate.status === "Duplicate") {
+      processedMessageIds.add(normalized.providerMessageId);
+      skippedCount += 1;
+      await notifyAutomationEvent({
+        tenantId: payload.tenantId,
+        moduleKey: "duplicate-protection",
+        event: "duplicate-skipped",
+        message: `Duplicate job skipped: ${data.company} — ${data.position}`,
+        operationId,
+        metadata: { duplicateOfJobId: duplicate.duplicateOfJobId },
+      });
+      continue;
+    }
 
     const created = await JobModel.create({
       tenantId: payload.tenantId,
@@ -159,41 +219,47 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       extractionConfidence: data.confidence,
     });
     createdCount += 1;
+    processedMessageIds.add(normalized.providerMessageId);
     await notifyAutomationEvent({
       tenantId: payload.tenantId,
       moduleKey: "job-intake",
       event: "new-job-detected",
-      message: `🆕 New job detected: ${data.company} — ${data.position}`,
+      message: `New job imported:\n${data.company} — ${data.position}\nSource: Gmail\nFolder: pending\nDraft: pending`,
       operationId,
       metadata: { jobId: String(created._id) },
     });
 
-    const downstreamModules = ["duplicate-protection", "research-document", "ai-processing"] as const;
-    if (!created.folderCreated && !created.driveFolderId) {
+    await AutomationLogModel.create({
+      tenantId: payload.tenantId,
+      createdBy: "system",
+      moduleKey: "job-intake",
+      moduleName: "job-intake",
+      status: "Success",
+      message: `New job created from Gmail: ${data.company} — ${data.position}.`,
+      operationId,
+      relatedRecordType: "Job",
+      relatedRecordId: String(created._id),
+      metadata: { gmailMessageId: normalized.providerMessageId, source: data.source || "gmail" },
+    });
+
+    const downstreamModules = [
+      { name: "duplicate-protection", payload: { jobId: String(created._id) }, delayMs: 0 },
+      { name: "folder-automation", payload: { jobId: String(created._id) }, delayMs: 1_000 },
+      { name: "research-document", payload: { jobId: String(created._id), mode: "research" }, delayMs: 2_000 },
+      { name: "ai-processing", payload: { jobId: String(created._id), mode: "draft" }, delayMs: 3_000 },
+    ] as const;
+    for (const moduleConfig of downstreamModules) {
       await enqueueAutomationJob({
-        name: "folder-automation",
+        name: moduleConfig.name,
+        delayMs: moduleConfig.delayMs,
         payload: {
           tenantId: payload.tenantId,
           userId: payload.userId,
-          operationId: `folder-automation-${Date.now()}-${created._id}`,
+          operationId: `${moduleConfig.name}-${Date.now()}-${created._id}`,
+          idempotencyKey: `${moduleConfig.name}:${payload.tenantId}:${created._id}`,
           requestedAt: new Date().toISOString(),
           source: "system",
-          jobId: String(created._id),
-        } as any,
-      });
-    }
-    for (const moduleName of downstreamModules) {
-      await enqueueAutomationJob({
-        name: moduleName,
-        payload: {
-          tenantId: payload.tenantId,
-          userId: payload.userId,
-          operationId: `${moduleName}-${Date.now()}-${created._id}`,
-          requestedAt: new Date().toISOString(),
-          source: "system",
-          ...(moduleName === "duplicate-protection" || moduleName === "research-document" || moduleName === "ai-processing"
-            ? { jobId: String(created._id) }
-            : {}),
+          ...moduleConfig.payload,
         } as any,
       });
     }
@@ -204,7 +270,9 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     gmailConn.syncStatus = "OK";
     gmailConn.metadata = {
       ...(gmailConn.metadata as Record<string, unknown>),
-      lastHistoryId: String(Date.now()),
+      lastHistoryId: maxHistoryId ? String(maxHistoryId) : lastHistoryId,
+      processedMessageIds: Array.from(processedMessageIds).slice(-500),
+      jobIntakeQuery: query,
     };
     await gmailConn.save();
   }
@@ -217,7 +285,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     status: "Success",
     message: `Gmail intake processed ${messages.length} messages; created ${createdCount} jobs.`,
     operationId,
-    metadata: { scannedMessages: messages.length, createdCount },
+    metadata: { scannedMessages: messages.length, createdCount, skippedCount, query },
   });
   return { suppressWorkerCompletionLog: true as const, moduleKey: "job-intake", status: "completed", operationId, createdCount };
 }

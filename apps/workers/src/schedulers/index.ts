@@ -33,4 +33,6 @@ export function registerSchedulers() {
   setInterval(() => void scheduleDailyDigestForAllTenants(), dailyDigestEveryMs);
   setInterval(() => void scheduleWeeklyReportsForAllTenants(), weeklyEveryMs);
   setInterval(() => void scheduleJobIntakeSweep(), intakeEveryMs);
+
+  void scheduleJobIntakeSweep();
 }

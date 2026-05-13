@@ -15,20 +15,21 @@ export async function notifyAutomationEvent(input: {
       message: input.message,
       event: input.event as any,
     });
-    if (result.status !== "Sent") {
+    if (result.status !== "Sent" || result.reason) {
       await AutomationLogModel.create({
         tenantId: input.tenantId,
         createdBy: "system",
         moduleKey: input.moduleKey,
         moduleName: input.moduleKey,
         status: "Warning",
-        message: result.reason ?? "No notification provider configured.",
+        message: result.reason ?? "One or more notification providers did not deliver.",
         operationId: input.operationId,
         metadata: {
           ...(input.metadata ?? {}),
           notificationEvent: input.event,
           notificationProvider: result.provider,
           notificationStatus: result.status,
+          notificationProviders: result.providers,
         },
       });
     }
