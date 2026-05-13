@@ -13,7 +13,7 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const { resolvedTheme } = useTheme();
-  const themeClass = resolvedTheme === "light" ? "light" : "dark";
+  const themeClass = resolvedTheme === "dark" ? "dark" : "light";
 
   return (
     <div className={cn("dashboard-bg", themeClass)} suppressHydrationWarning>

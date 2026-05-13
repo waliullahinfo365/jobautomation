@@ -24,7 +24,7 @@ export function MobileNav() {
   const { t } = useTranslation();
   const { theme, resolvedTheme } = useTheme();
   const handleLogout = useLogoutAction(() => setOpen(false));
-  const isDark = (resolvedTheme ?? theme ?? "dark") !== "light";
+  const isDark = (resolvedTheme ?? theme ?? "light") === "dark";
   const initials = useMemo(() => {
     const source = account?.name || account?.email || t("topbar.you");
     const parts = source.trim().split(/\s+/).filter(Boolean);

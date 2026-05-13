@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { t } = useTranslation();
-  const isDark = (resolvedTheme ?? theme ?? "dark") !== "light";
+  const isDark = (resolvedTheme ?? theme ?? "light") === "dark";
 
   return (
     <Button
