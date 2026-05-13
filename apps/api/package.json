@@ -6,6 +6,7 @@
     "dev": "dotenv -e ../../.env -- tsx watch src/server.ts",
     "build": "pnpm --filter @jobflow/integrations build && tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "admin:reset-operational-data": "tsx src/scripts/reset-operational-data.ts",
     "admin:reset-workspace-data": "dotenv -e ../../.env -- tsx src/scripts/admin-reset-workspace-data.ts",
     "admin:reset-production-operational-data": "dotenv -e ../../.env -- tsx src/scripts/admin-reset-production-operational-data.ts",
     "type-check": "tsc --noEmit",
