@@ -31,6 +31,10 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
           receivedAt: payload.requestedAt,
         },
         correlationId: payload.correlationId,
+        label: (payload as { label?: string }).label,
+        days: (payload as { days?: number }).days,
+        dryRun: (payload as { dryRun?: boolean }).dryRun,
+        enqueueDownstream: (payload as { enqueueDownstream?: boolean }).enqueueDownstream,
       });
     case "duplicate-protection":
       return processDuplicateProtectionProcessor({

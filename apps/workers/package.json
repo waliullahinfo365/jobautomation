@@ -8,7 +8,8 @@
     "*": {
       "queue": ["./src/queues/automation.queue.ts"],
       "processors/folder-automation": ["./src/processors/folder-automation.processor.ts"],
-      "processors/document-upload": ["./src/processors/document-upload.processor.ts"]
+      "processors/document-upload": ["./src/processors/document-upload.processor.ts"],
+      "processors/job-intake": ["./src/processors/job-intake.processor.ts"]
     }
   },
   "exports": {
@@ -35,6 +36,12 @@
       "require": "./dist/processors/document-upload.processor.js",
       "import": "./dist/processors/document-upload.processor.js",
       "default": "./dist/processors/document-upload.processor.js"
+    },
+    "./processors/job-intake": {
+      "types": "./src/processors/job-intake.processor.ts",
+      "require": "./dist/processors/job-intake.processor.js",
+      "import": "./dist/processors/job-intake.processor.js",
+      "default": "./dist/processors/job-intake.processor.js"
     }
   },
   "scripts": {

@@ -26,6 +26,8 @@ export function useAutomationApi(options?: { fallbackToMock?: boolean; params?: 
     ({ moduleKey, payload, execute }: { moduleKey: string; payload?: Record<string, unknown>; execute?: boolean }) =>
       api.runAutomationModule(moduleKey, payload, { execute })
   );
+  const resetMutation = useApiMutation(api.resetOperationalData);
+  const backfillMutation = useApiMutation(api.backfillJobIntake);
 
   const refetchAll = useCallback(async () => {
     await Promise.all([modulesQuery.refetch(), logsQuery.refetch()]);
@@ -49,12 +51,16 @@ export function useAutomationApi(options?: { fallbackToMock?: boolean; params?: 
     updateAutomationModule: updateMutation.mutate,
     runModule: runMutation.mutate,
     runAutomationModule: runMutation.mutate,
+    resetOperationalData: resetMutation.mutate,
+    backfillJobIntake: backfillMutation.mutate,
     loading,
     error,
     isUsingFallback,
     mutations: {
       updateLoading: updateMutation.loading,
       runLoading: runMutation.loading,
+      resetLoading: resetMutation.loading,
+      backfillLoading: backfillMutation.loading,
     },
   };
 }

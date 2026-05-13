@@ -68,6 +68,14 @@ function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): str
   return configured.trim() || 'label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
 }
 
+function buildBackfillQuery(input: { label?: string; days?: number; metadata?: Record<string, unknown> }) {
+  const days = Math.max(1, Math.min(30, Number(input.days ?? 7) || 7));
+  const label = String(input.label || "job alerts").trim();
+  const safeLabel = label.replace(/"/g, "");
+  if (safeLabel) return `newer_than:${days}d label:"${safeLabel}"`;
+  return `newer_than:${days}d ("job alert" OR job OR hiring OR application)`;
+}
+
 function getMessageHistoryId(message: any): number {
   const n = Number(message?.historyId ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -78,6 +86,10 @@ export type JobIntakeProcessorPayload = {
   userId: string;
   payload: JobIntakeEmailPayload;
   correlationId?: string;
+  label?: string;
+  days?: number;
+  dryRun?: boolean;
+  enqueueDownstream?: boolean;
 };
 
 export async function processJobIntakeProcessor(payload: JobIntakeProcessorPayload) {
@@ -113,7 +125,10 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
   const gmailMetadata = gmailConn?.metadata as Record<string, unknown> | undefined;
   const lastHistoryId = String(gmailMetadata?.lastHistoryId ?? "");
   const processedMessageIds = new Set(parseProcessedMessageIds(gmailMetadata));
-  const query = getGmailIntakeQuery(gmailMetadata);
+  const isBackfill = Boolean(payload.days || payload.label || payload.dryRun);
+  const query = isBackfill
+    ? buildBackfillQuery({ label: payload.label, days: payload.days, metadata: gmailMetadata })
+    : getGmailIntakeQuery(gmailMetadata);
   const list = await gmailApiJson<{ messages?: Array<{ id: string; threadId: string }>; resultSizeEstimate?: number }>({
     accessToken: auth.accessToken,
     path: "users/me/messages",
@@ -122,10 +137,12 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
   const messages = list.messages ?? [];
   let createdCount = 0;
   let skippedCount = 0;
+  let validCount = 0;
+  const preview: Array<{ messageId: string; company?: string; position?: string; subject?: string; from?: string }> = [];
   let maxHistoryId = Number(lastHistoryId || 0);
 
   for (const msg of messages) {
-    if (processedMessageIds.has(msg.id)) {
+    if (!isBackfill && processedMessageIds.has(msg.id)) {
       skippedCount += 1;
       continue;
     }
@@ -136,7 +153,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     });
     const messageHistoryId = getMessageHistoryId(message);
     if (messageHistoryId > maxHistoryId) maxHistoryId = messageHistoryId;
-    if (lastHistoryId && messageHistoryId > 0 && messageHistoryId <= Number(lastHistoryId)) {
+    if (!isBackfill && lastHistoryId && messageHistoryId > 0 && messageHistoryId <= Number(lastHistoryId)) {
       processedMessageIds.add(msg.id);
       skippedCount += 1;
       continue;
@@ -148,6 +165,17 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     });
     const data = extraction.data;
     if (!data.company || !data.position) continue;
+    validCount += 1;
+    if (payload.dryRun) {
+      preview.push({
+        messageId: normalized.providerMessageId,
+        company: data.company,
+        position: data.position,
+        subject: normalized.subject,
+        from: normalized.from,
+      });
+      continue;
+    }
     const fingerprintHash = createJobFingerprint({
       tenantId: payload.tenantId,
       company: data.company,
@@ -248,24 +276,26 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       { name: "research-document", payload: { jobId: String(created._id), mode: "research" }, delayMs: 2_000 },
       { name: "ai-processing", payload: { jobId: String(created._id), mode: "draft" }, delayMs: 3_000 },
     ] as const;
-    for (const moduleConfig of downstreamModules) {
-      await enqueueAutomationJob({
-        name: moduleConfig.name,
-        delayMs: moduleConfig.delayMs,
-        payload: {
-          tenantId: payload.tenantId,
-          userId: payload.userId,
-          operationId: `${moduleConfig.name}-${Date.now()}-${created._id}`,
-          idempotencyKey: `${moduleConfig.name}:${payload.tenantId}:${created._id}`,
-          requestedAt: new Date().toISOString(),
-          source: "system",
-          ...moduleConfig.payload,
-        } as any,
-      });
+    if (payload.enqueueDownstream !== false) {
+      for (const moduleConfig of downstreamModules) {
+        await enqueueAutomationJob({
+          name: moduleConfig.name,
+          delayMs: moduleConfig.delayMs,
+          payload: {
+            tenantId: payload.tenantId,
+            userId: payload.userId,
+            operationId: `${moduleConfig.name}-${Date.now()}-${created._id}`,
+            idempotencyKey: `${moduleConfig.name}:${payload.tenantId}:${created._id}`,
+            requestedAt: new Date().toISOString(),
+            source: "system",
+            ...moduleConfig.payload,
+          } as any,
+        });
+      }
     }
   }
 
-  if (gmailConn) {
+  if (gmailConn && !payload.dryRun) {
     gmailConn.lastSyncAt = new Date();
     gmailConn.syncStatus = "OK";
     gmailConn.metadata = {
@@ -287,5 +317,17 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     operationId,
     metadata: { scannedMessages: messages.length, createdCount, skippedCount, query },
   });
-  return { suppressWorkerCompletionLog: true as const, moduleKey: "job-intake", status: "completed", operationId, createdCount };
+  return {
+    suppressWorkerCompletionLog: true as const,
+    moduleKey: "job-intake",
+    status: "completed",
+    operationId,
+    dryRun: Boolean(payload.dryRun),
+    scannedMessages: messages.length,
+    validCount,
+    createdCount,
+    skippedCount,
+    query,
+    preview,
+  };
 }

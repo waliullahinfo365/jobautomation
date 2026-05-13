@@ -29,6 +29,10 @@ export interface BaseAutomationJobPayload {
 
 export interface JobIntakeJobPayload extends BaseAutomationJobPayload {
   providerMessageId?: string;
+  label?: string;
+  days?: number;
+  dryRun?: boolean;
+  enqueueDownstream?: boolean;
 }
 export interface DuplicateProtectionJobPayload extends BaseAutomationJobPayload {
   jobId: string;

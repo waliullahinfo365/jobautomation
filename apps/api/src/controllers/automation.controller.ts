@@ -19,6 +19,7 @@ import { generateDailyDigest, generateWeeklyReport } from "../services/report-ge
 import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { logTenantAudit } from "../services/audit-log.service";
 import type { AutomationJobName } from "@jobflow/shared/types/queue";
+import { processJobIntakeProcessor } from "@jobflow/workers/processors/job-intake";
 export const listAutomationModules = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const {page,limit,skip}=getPagination(req.query); const filter:Record<string,unknown>={tenantId}; if(typeof req.query.status==='string') filter.status=req.query.status; const [rows,total]=await Promise.all([AutomationModuleModel.find(filter).sort({updatedAt:-1}).skip(skip).limit(limit),AutomationModuleModel.countDocuments(filter)]); return paginatedResponse(res,rows,{page,limit,total,totalPages:Math.ceil(total/limit)}); });
 export const updateAutomationModule = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await AutomationModuleModel.findOneAndUpdate({tenantId,moduleKey:req.params.moduleKey},req.body,{new:true}); if(!row) throw new ApiError('Automation module not found',404,'NOT_FOUND'); return successResponse(res,row,'Automation module updated'); });
 export const runAutomationModule = asyncHandler(async (req: Request, res) => {
@@ -163,3 +164,35 @@ export const runAutomationModule = asyncHandler(async (req: Request, res) => {
   );
 });
 export const getAutomationLogs = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const logs=await listAutomationLogs(tenantId,{ moduleKey: typeof req.query.moduleKey==='string'?req.query.moduleKey:undefined, status: typeof req.query.status==='string'?req.query.status:undefined, limit: typeof req.query.limit==='string'?Number(req.query.limit):undefined, jobId: typeof req.query.jobId==='string'?req.query.jobId:undefined }); return successResponse(res,logs); });
+
+export const backfillJobIntake = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const label = typeof req.body?.label === "string" ? req.body.label : "job alerts";
+  const days = Math.max(1, Math.min(30, Number(req.body?.days ?? 7) || 7));
+  const dryRun = req.body?.dryRun === true;
+  const enqueueDownstream = req.body?.enqueueDownstream !== false;
+  const result = await processJobIntakeProcessor({
+    tenantId,
+    userId: req.user?.id ?? "system",
+    payload: {
+      provider: "gmail",
+      providerMessageId: "",
+      from: "",
+      subject: "",
+      bodyText: "",
+      receivedAt: new Date().toISOString(),
+    },
+    label,
+    days,
+    dryRun,
+    enqueueDownstream,
+    correlationId: typeof req.body?.correlationId === "string" ? req.body.correlationId : undefined,
+  });
+  await logTenantAudit(req, "automation.job_intake.backfill", {
+    entityType: "AutomationModule",
+    entityId: "job-intake",
+    message: dryRun ? "Gmail intake backfill dry run completed" : "Gmail intake backfill completed",
+    metadata: result,
+  });
+  return successResponse(res, result, dryRun ? "Gmail backfill dry run complete" : "Gmail backfill complete");
+});

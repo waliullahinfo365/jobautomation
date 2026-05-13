@@ -46,6 +46,8 @@ export function AutomationPageClient() {
   const [filters, setFilters] = useState<AutomationFilterState>(initialFilters);
   const [configureOpen, setConfigureOpen] = useState(false);
   const [configureModuleId, setConfigureModuleId] = useState<string | null>(null);
+  const [adminResetToken, setAdminResetToken] = useState("");
+  const [lastAdminResult, setLastAdminResult] = useState<string>("");
 
   const logRows = useMemo(
     () => normalizeAutomationLogsForUi(normalizeListResponse<unknown>(automationApi.logsQuery.data)),
@@ -210,6 +212,47 @@ export function AutomationPageClient() {
     [automationApi, t]
   );
 
+  const runReset = useCallback(
+    async (dryRun: boolean) => {
+      if (!adminResetToken.trim()) {
+        showError("Enter ADMIN_RESET_TOKEN first.");
+        return;
+      }
+      try {
+        const result = await automationApi.resetOperationalData({
+          dryRun,
+          adminResetToken: adminResetToken.trim(),
+          reason: dryRun ? "client test dry run" : "client test reset",
+        });
+        setLastAdminResult(JSON.stringify(result, null, 2).slice(0, 2200));
+        showSuccess(dryRun ? "Reset dry run completed." : "Operational data reset completed.");
+        await automationApi.refetch();
+      } catch (error) {
+        showError(error instanceof Error ? error.message : "Reset failed.");
+      }
+    },
+    [adminResetToken, automationApi],
+  );
+
+  const runBackfill = useCallback(
+    async (dryRun: boolean) => {
+      try {
+        const result = await automationApi.backfillJobIntake({
+          label: "job alerts",
+          days: 7,
+          dryRun,
+          enqueueDownstream: true,
+        });
+        setLastAdminResult(JSON.stringify(result, null, 2).slice(0, 2200));
+        showSuccess(dryRun ? "Gmail backfill dry run completed." : "Gmail backfill started.");
+        await automationApi.refetch();
+      } catch (error) {
+        showError(error instanceof Error ? error.message : "Gmail backfill failed.");
+      }
+    },
+    [automationApi],
+  );
+
   const initialModulesLoading =
     automationApi.modulesQuery.loading && automationApi.modulesQuery.data === undefined;
 
@@ -268,6 +311,46 @@ export function AutomationPageClient() {
         />
 
         <AutomationStatsCards stats={stats} />
+
+        <div className="rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-[var(--text-1)]">Client Test Admin Controls</h2>
+              <p className="mt-1 max-w-3xl text-xs text-[var(--text-3)]">
+                Reset only operational data, preserve users/integrations/OAuth/templates, then backfill Gmail job alerts for the last 7 days.
+              </p>
+            </div>
+            <input
+              type="password"
+              value={adminResetToken}
+              onChange={(e) => setAdminResetToken(e.target.value)}
+              placeholder="ADMIN_RESET_TOKEN"
+              className="min-h-[38px] rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] px-3 text-sm text-[var(--text-1)] outline-none"
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.resetLoading} onClick={() => void runReset(true)}>
+              Dry run reset
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.resetLoading} onClick={() => void runReset(false)}>
+              Reset operational data
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(true)}>
+              Dry run Gmail backfill
+            </Button>
+            <Button type="button" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(false)}>
+              Backfill last 7 days
+            </Button>
+            <Button type="button" variant="ghost" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(false)}>
+              Run Gmail intake now
+            </Button>
+          </div>
+          {lastAdminResult ? (
+            <pre className="mt-4 max-h-72 overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 text-xs text-[var(--text-2)]">
+              {lastAdminResult}
+            </pre>
+          ) : null}
+        </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <AutomationTabs value={activeTab} onChange={setActiveTab} />
