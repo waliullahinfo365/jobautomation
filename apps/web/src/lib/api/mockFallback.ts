@@ -31,6 +31,7 @@ const mockAutomationLogs: AutomationLog[] = mockActivityFeed.map((item, index) =
 }));
 
 export function shouldUseMockFallback(error?: unknown): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   if (!USE_MOCK_FALLBACK) return false;
   if (!error) return true;
   if (error instanceof ApiError) return error.isNetworkError || error.status >= 500 || error.status === 0;

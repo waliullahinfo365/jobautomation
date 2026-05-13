@@ -2,6 +2,7 @@
 
 import * as api from "@/lib/api/automation.api";
 import { useCallback } from "react";
+import { invalidateApiCache } from "@/lib/api/client";
 import { useApiMutation } from "./useApiMutation";
 import { useApiQuery } from "./useApiQuery";
 
@@ -28,6 +29,9 @@ export function useAutomationApi(options?: { fallbackToMock?: boolean; params?: 
   );
   const resetMutation = useApiMutation(api.resetOperationalData);
   const backfillMutation = useApiMutation(api.backfillJobIntake);
+  const debugCountsMutation = useApiMutation(({ adminResetToken }: { adminResetToken: string }) =>
+    api.getDebugDataCounts(adminResetToken)
+  );
 
   const refetchAll = useCallback(async () => {
     await Promise.all([modulesQuery.refetch(), logsQuery.refetch()]);
@@ -53,6 +57,8 @@ export function useAutomationApi(options?: { fallbackToMock?: boolean; params?: 
     runAutomationModule: runMutation.mutate,
     resetOperationalData: resetMutation.mutate,
     backfillJobIntake: backfillMutation.mutate,
+    getDebugDataCounts: debugCountsMutation.mutate,
+    clearApiCache: () => invalidateApiCache(),
     loading,
     error,
     isUsingFallback,
@@ -61,6 +67,7 @@ export function useAutomationApi(options?: { fallbackToMock?: boolean; params?: 
       runLoading: runMutation.loading,
       resetLoading: resetMutation.loading,
       backfillLoading: backfillMutation.loading,
+      debugCountsLoading: debugCountsMutation.loading,
     },
   };
 }

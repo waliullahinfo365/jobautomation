@@ -224,6 +224,7 @@ export function AutomationPageClient() {
           adminResetToken: adminResetToken.trim(),
           reason: dryRun ? "client test dry run" : "client test reset",
         });
+        automationApi.clearApiCache();
         setLastAdminResult(JSON.stringify(result, null, 2).slice(0, 2200));
         showSuccess(dryRun ? "Reset dry run completed." : "Operational data reset completed.");
         await automationApi.refetch();
@@ -243,6 +244,7 @@ export function AutomationPageClient() {
           dryRun,
           enqueueDownstream: true,
         });
+        automationApi.clearApiCache();
         setLastAdminResult(JSON.stringify(result, null, 2).slice(0, 2200));
         showSuccess(dryRun ? "Gmail backfill dry run completed." : "Gmail backfill started.");
         await automationApi.refetch();
@@ -252,6 +254,20 @@ export function AutomationPageClient() {
     },
     [automationApi],
   );
+
+  const loadDebugCounts = useCallback(async () => {
+    if (!adminResetToken.trim()) {
+      showError("Enter ADMIN_RESET_TOKEN first.");
+      return;
+    }
+    try {
+      const result = await automationApi.getDebugDataCounts({ adminResetToken: adminResetToken.trim() });
+      setLastAdminResult(JSON.stringify(result, null, 2).slice(0, 2200));
+      showSuccess("Production data counts loaded.");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Could not load data counts.");
+    }
+  }, [adminResetToken, automationApi]);
 
   const initialModulesLoading =
     automationApi.modulesQuery.loading && automationApi.modulesQuery.data === undefined;
@@ -337,6 +353,9 @@ export function AutomationPageClient() {
             </Button>
             <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(true)}>
               Dry run Gmail backfill
+            </Button>
+            <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.debugCountsLoading} onClick={() => void loadDebugCounts()}>
+              Show data counts
             </Button>
             <Button type="button" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(false)}>
               Backfill last 7 days

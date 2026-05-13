@@ -12,6 +12,8 @@ import {
   TenantModel,
   UserModel,
 } from "@jobflow/database/models";
+import { getDatabaseStatus } from "@jobflow/database";
+import { env } from "../config/env";
 
 type CountMap = Record<string, number>;
 
@@ -32,7 +34,7 @@ const jobLinkedDocumentFilter = (tenantId: string) => ({
   ],
 });
 
-async function countsForTenant(tenantId: string) {
+export async function getOperationalDataCounts(tenantId: string) {
   const [
     jobs,
     applications,
@@ -125,7 +127,7 @@ async function deleteOperationalData(tenantId: string): Promise<CountMap> {
 }
 
 export async function resetOperationalWorkspaceData(input: ResetOperationalDataInput) {
-  const before = await countsForTenant(input.tenantId);
+  const before = await getOperationalDataCounts(input.tenantId);
 
   if (input.dryRun) {
     return {
@@ -137,7 +139,7 @@ export async function resetOperationalWorkspaceData(input: ResetOperationalDataI
   }
 
   const deleted = await deleteOperationalData(input.tenantId);
-  const after = await countsForTenant(input.tenantId);
+  const after = await getOperationalDataCounts(input.tenantId);
 
   await AuditLogModel.create({
     tenantId: input.tenantId,
@@ -163,5 +165,35 @@ export async function resetOperationalWorkspaceData(input: ResetOperationalDataI
     deleted,
     after,
     message: "Operational data reset completed. Configuration, integrations, users, and active templates were preserved.",
+  };
+}
+
+export async function getAdminDebugDataCounts(tenantId: string) {
+  const db = getDatabaseStatus();
+  const counts = await getOperationalDataCounts(tenantId);
+  return {
+    tenantId,
+    environment: env.nodeEnv,
+    database: {
+      name: db.name,
+      host: db.host,
+      state: db.state,
+    },
+    mockFallbackEnabled: false,
+    demoModeEnabled: env.demoModeEnabled,
+    counts: {
+      jobs: counts.delete.jobs,
+      applications: counts.delete.applications,
+      documents: counts.delete.generatedDocuments + counts.preserve.workspaceDocuments,
+      generatedDocuments: counts.delete.generatedDocuments,
+      reports: counts.delete.reports,
+      interviews: counts.delete.interviews,
+      automationLogs: counts.delete.automationLogs,
+      integrations: counts.preserve.integrations,
+      users: counts.preserve.users,
+      workspaces: counts.preserve.tenants,
+      activeProfileDocuments: counts.preserve.activeProfileDocuments,
+    },
+    resetPreview: counts,
   };
 }

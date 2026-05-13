@@ -3,7 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
 import { ApiError } from "../utils/errors";
 import { assertTenantId } from "../services/baseTenant.service";
-import { resetOperationalWorkspaceData } from "../services/admin-reset.service";
+import { getAdminDebugDataCounts, resetOperationalWorkspaceData } from "../services/admin-reset.service";
+import { logger } from "../utils/logger";
 
 export function requireAdminResetToken(req: Request, _res: Response, next: NextFunction) {
   const expected = process.env.ADMIN_RESET_TOKEN?.trim();
@@ -30,4 +31,16 @@ export const resetOperationalData = asyncHandler(async (req: Request, res) => {
     reason: typeof req.body?.reason === "string" ? req.body.reason : undefined,
   });
   return successResponse(res, result, dryRun ? "Reset dry run complete" : "Operational data reset complete");
+});
+
+export const getDebugDataCounts = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const result = await getAdminDebugDataCounts(tenantId);
+  logger.info({
+    tenantId,
+    databaseName: result.database.name,
+    counts: result.counts,
+    mockFallbackUsed: false,
+  }, "admin debug data counts");
+  return successResponse(res, result, "Debug data counts");
 });

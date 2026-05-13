@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireRole } from "../middleware/rbac.middleware";
-import { requireAdminResetToken, resetOperationalData } from "../controllers/admin.controller";
+import { getDebugDataCounts, requireAdminResetToken, resetOperationalData } from "../controllers/admin.controller";
 
 export const adminRoutes = Router();
 
@@ -9,4 +9,11 @@ adminRoutes.post(
   requireRole("Owner"),
   requireAdminResetToken,
   resetOperationalData
+);
+
+adminRoutes.get(
+  "/debug/data-counts",
+  requireRole("Owner"),
+  requireAdminResetToken,
+  getDebugDataCounts
 );

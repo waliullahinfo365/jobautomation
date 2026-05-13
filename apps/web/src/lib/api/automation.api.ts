@@ -10,6 +10,9 @@ export function listAutomationLogs(params?: Record<string, unknown>) { return ap
 export function resetOperationalData(payload: { dryRun: boolean; adminResetToken: string; reason?: string }) {
   return apiFetch("/admin/workspace/reset-operational-data", { method: "POST", body: payload });
 }
+export function getDebugDataCounts(adminResetToken: string) {
+  return apiFetch(withQuery("/admin/debug/data-counts", { adminResetToken } as any));
+}
 export function backfillJobIntake(payload: { label: string; days: number; dryRun: boolean; enqueueDownstream: boolean }) {
   return apiFetch("/automation/job-intake/backfill", { method: "POST", body: payload });
 }
