@@ -26,6 +26,7 @@ import { tenantRoutes } from "./tenant.routes";
 export const apiRoutes = Router();
 
 apiRoutes.use(healthRoutes);
+apiRoutes.use("/api", healthRoutes);
 apiRoutes.use("/auth", authPublicRoutes);
 apiRoutes.use("/billing", billingWebhookRoutes);
 apiRoutes.use("/integrations/google", googleOAuthPublicRouter);

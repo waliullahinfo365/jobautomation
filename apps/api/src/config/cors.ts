@@ -3,14 +3,13 @@ import type { Request } from "express";
 import { env } from "./env";
 import { logger } from "../utils/logger";
 
-const defaultAllowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://127.0.0.1:3000",
+const productionOrigins = [
   "https://jobautomation-web.vercel.app",
   "https://newjob.guru",
   "https://www.newjob.guru",
 ];
+
+const devOrigins = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"];
 
 function parseOrigins(value: string) {
   return value
@@ -21,7 +20,15 @@ function parseOrigins(value: string) {
 
 export function getAllowedCorsOrigins() {
   const configured = parseOrigins(env.corsOrigins);
-  const origins = configured.length ? configured : defaultAllowedOrigins;
+  const origins = configured.length ? [...configured] : [...productionOrigins];
+  for (const origin of productionOrigins) {
+    if (!origins.includes(origin)) origins.push(origin);
+  }
+  if (env.nodeEnv !== "production") {
+    for (const origin of devOrigins) {
+      if (!origins.includes(origin)) origins.push(origin);
+    }
+  }
   if (env.appUrl && !origins.includes(env.appUrl)) origins.push(env.appUrl);
   return origins;
 }
@@ -33,7 +40,7 @@ export const corsOptionsDelegate: CorsOptionsDelegate<Request> = (req, callback)
   const corsOptions: CorsOptions = {
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
     exposedHeaders: ["Content-Disposition"],
   };
 

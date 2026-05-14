@@ -1,6 +1,7 @@
 import http from "node:http";
 import { connectDatabase, disconnectDatabase } from "@jobflow/database";
 import { createApp } from "./app";
+import { getAllowedCorsOrigins } from "./config/cors";
 import { validateApiEnv } from "./config/validate-env";
 import { env, requireJwtSecretInProduction } from "./config/env";
 import { requestShutdown } from "./shutdown";
@@ -9,6 +10,7 @@ import { logger } from "./utils/logger";
 async function bootstrap() {
   validateApiEnv();
   requireJwtSecretInProduction();
+  logger.info({ nodeEnv: env.nodeEnv, allowedCorsOrigins: getAllowedCorsOrigins() }, "API CORS configuration loaded");
   await connectDatabase();
   const app = createApp();
   const server = http.createServer(app);
