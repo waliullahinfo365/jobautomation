@@ -61,6 +61,10 @@ export async function me(): Promise<{ user: AuthSessionPayload["user"]; tenant: 
   return apiFetch("/auth/me", { method: "GET" });
 }
 
+export async function getGoogleLoginUrl(): Promise<{ authorizationUrl: string | null; oauthEnabled: boolean; message?: string }> {
+  return apiFetch("/auth/google/url", { method: "GET", headers: {} });
+}
+
 /** Clears token locally; server logout is a stub. */
 export async function logout(): Promise<void> {
   try {

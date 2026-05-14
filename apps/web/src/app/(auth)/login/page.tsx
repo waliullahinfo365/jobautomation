@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { APP_NAME } from "@/lib/constants";
 import { LoginBackground } from "@/components/auth/LoginBackground";
 import { LoginFooterCopy, LoginHeaderCopy } from "@/components/auth/AuthPageCopy";
@@ -17,12 +18,14 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
               <ZapIcon size={24} className="text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+            <h1 className="text-2xl font-bold text-white">{APP_NAME}</h1>
             <LoginHeaderCopy />
           </div>
 
           <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
-            <LoginForm />
+            <Suspense>
+              <LoginForm />
+            </Suspense>
           </div>
 
           <LoginFooterCopy />

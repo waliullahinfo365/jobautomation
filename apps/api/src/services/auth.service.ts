@@ -1,13 +1,67 @@
+import crypto from "node:crypto";
 import { seedAutomationModules } from "@jobflow/database/seed/seedAutomationModules";
 import { TenantModel, UserModel } from "@jobflow/database/models";
 import type { Tenant } from "@jobflow/shared/types/tenant";
 import type { User, UserStatus } from "@jobflow/shared/types/user";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 import { env } from "../config/env";
+import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED } from "../config/google-oauth";
 import { signAccessToken } from "../utils/jwt";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { ApiError } from "../utils/errors";
 import { logAuthEvent } from "./audit-log.service";
+
+// ─── Google login OAuth state ────────────────────────────────────────────────
+
+const GOOGLE_LOGIN_STATE_TYP = "google_login_state";
+const GOOGLE_LOGIN_SCOPES = ["openid", "email", "profile"];
+
+function getStateSecret(): string {
+  if (env.jwtSecret) return env.jwtSecret;
+  if (env.nodeEnv !== "production") return "jobflow-google-login-state-dev-insecure";
+  throw new ApiError("JWT_SECRET is required for Google login", 500, "CONFIG_ERROR");
+}
+
+export function createGoogleLoginState(): string {
+  const nonce = crypto.randomBytes(16).toString("hex");
+  return jwt.sign({ typ: GOOGLE_LOGIN_STATE_TYP, nonce, ts: Date.now() }, getStateSecret(), { expiresIn: 600 });
+}
+
+export function verifyGoogleLoginState(state: string): void {
+  try {
+    const d = jwt.verify(state, getStateSecret()) as Record<string, unknown>;
+    if (d.typ !== GOOGLE_LOGIN_STATE_TYP) throw new Error("bad state type");
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : "Invalid Google login state", 400, "OAUTH_STATE_INVALID");
+  }
+}
+
+function googleLoginRedirectUri(): string {
+  const base = (process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "") || `http://localhost:${env.port}`;
+  return `${base}/auth/google/callback`;
+}
+
+export function getGoogleLoginAuthorizationUrl(): { authorizationUrl: string | null; oauthEnabled: boolean; message?: string } {
+  if (!GOOGLE_OAUTH_ENABLED) {
+    return {
+      authorizationUrl: null,
+      oauthEnabled: false,
+      message: "Google sign-in is not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and API_PUBLIC_URL.",
+    };
+  }
+  const state = createGoogleLoginState();
+  const redirectUri = googleLoginRedirectUri();
+  const u = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  u.searchParams.set("client_id", GOOGLE_CLIENT_ID);
+  u.searchParams.set("redirect_uri", redirectUri);
+  u.searchParams.set("response_type", "code");
+  u.searchParams.set("scope", GOOGLE_LOGIN_SCOPES.join(" "));
+  u.searchParams.set("state", state);
+  u.searchParams.set("access_type", "offline");
+  u.searchParams.set("prompt", "select_account");
+  return { authorizationUrl: u.toString(), oauthEnabled: true };
+}
 
 const freeTrialLimits = {
   maxJobs: 25,
@@ -256,5 +310,111 @@ export const authService = {
 
   async logoutUser() {
     return { ok: true as const };
+  },
+
+  async loginWithGoogle(input: { code: string; state: string; req?: import("express").Request }) {
+    requireJwtForAuth();
+    verifyGoogleLoginState(input.state);
+
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+    if (!GOOGLE_OAUTH_ENABLED || !clientSecret) {
+      throw new ApiError("Google sign-in is not configured", 503, "GOOGLE_OAUTH_DISABLED");
+    }
+
+    const redirectUri = googleLoginRedirectUri();
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code: input.code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }).toString(),
+    });
+    if (!tokenRes.ok) {
+      const text = await tokenRes.text();
+      throw new ApiError(`Google token exchange failed: ${text.slice(0, 200)}`, 502, "GOOGLE_TOKEN_EXCHANGE_FAILED");
+    }
+    const tokens = (await tokenRes.json()) as { access_token: string; refresh_token?: string };
+
+    const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { authorization: `Bearer ${tokens.access_token}` },
+    });
+    if (!profileRes.ok) throw new ApiError("Google userinfo failed", 502, "GOOGLE_USERINFO_FAILED");
+    const profile = (await profileRes.json()) as { email?: string; name?: string };
+    if (!profile.email) throw new ApiError("Google did not return an email", 502, "GOOGLE_NO_EMAIL");
+
+    const email = profile.email.trim().toLowerCase();
+    const existingUser = await UserModel.findOne({ email }).lean() as Record<string, unknown> | null;
+
+    let userId: string;
+    let tenantId: string;
+
+    if (existingUser) {
+      if (existingUser.status !== "Active") {
+        throw new ApiError("Account is not active", 403, "USER_INACTIVE");
+      }
+      userId = String(existingUser._id);
+      tenantId = String(existingUser.tenantId);
+      await UserModel.updateOne({ _id: existingUser._id }, { $set: { lastLoginAt: new Date() } });
+    } else {
+      // First Google login — create user + tenant
+      const newUserId = new mongoose.Types.ObjectId();
+      const newTenantId = new mongoose.Types.ObjectId();
+      const name = (profile.name ?? email.split("@")[0]).trim();
+      const slugBase = slugifyWorkspace(name + " workspace");
+      const slug = await uniqueSlug(slugBase);
+
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      try {
+        await TenantModel.create([{
+          _id: newTenantId,
+          name: `${name}'s Workspace`,
+          slug,
+          ownerId: newUserId.toString(),
+          plan: "Free Trial",
+          status: "Trialing",
+          billingStatus: "Trialing",
+          billing: { planKey: "free_trial", billingStatus: "Trialing", cancelAtPeriodEnd: false },
+          limits: freeTrialLimits,
+          usage: { jobsCount: 0, automationRunsThisMonth: 0, aiCreditsUsedThisMonth: 0, documentsCount: 0, storageUsedMb: 0, usersCount: 1, integrationsCount: 0, reportsGeneratedThisMonth: 0 },
+        }], { session });
+        await UserModel.create([{
+          _id: newUserId,
+          tenantId: newTenantId.toString(),
+          createdBy: newUserId.toString(),
+          name,
+          email,
+          passwordHash: "",
+          role: "Owner",
+          status: "Active" as UserStatus,
+          lastLoginAt: new Date(),
+        }], { session });
+        await session.commitTransaction();
+      } catch (e) {
+        await session.abortTransaction();
+        throw e;
+      } finally {
+        session.endSession();
+      }
+      await seedAutomationModules(newTenantId.toString(), newUserId.toString());
+      userId = newUserId.toString();
+      tenantId = newTenantId.toString();
+    }
+
+    const userDoc = await UserModel.findById(userId).lean() as Record<string, unknown>;
+    const tenantDoc = await TenantModel.findById(tenantId).lean() as Record<string, unknown>;
+    if (!userDoc || !tenantDoc) throw new ApiError("Login failed to load session", 500, "LOGIN_FAILED");
+
+    const user = toPublicUser(userDoc);
+    const tenant = toPublicTenant(tenantDoc);
+    const accessToken = signAccessToken({ userId: user.id, tenantId: tenant.id, role: user.role, email: user.email });
+
+    await logAuthEvent({ tenantId: tenant.id, userId: user.id, action: "user.login", message: "Google login", req: input.req });
+
+    return { user, tenant, accessToken };
   },
 };
