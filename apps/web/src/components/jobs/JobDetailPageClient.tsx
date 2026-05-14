@@ -335,11 +335,11 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
             <div className="grid gap-3 text-sm sm:grid-cols-2">
               <div>
                 <p className="text-xs font-medium text-[var(--text-3)]">Source CV used</p>
-                <p className="mt-1 text-[var(--text-1)]">{job.sourceCvFileName ?? "—"}</p>
+                <p className="mt-1 text-[var(--text-1)] break-words">{job.sourceCvFileName ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-[var(--text-3)]">Template used</p>
-                <p className="mt-1 text-[var(--text-1)]">{job.coverLetterTemplateFileName ?? "—"}</p>
+                <p className="mt-1 text-[var(--text-1)] break-words">{job.coverLetterTemplateFileName ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-[var(--text-3)]">Generated cover letter</p>
@@ -365,7 +365,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
           </SectionCard>
 
           <SectionCard title={t("jobDetail.description")}>
-            <p className="text-sm leading-6 text-[var(--text-2)]">{job.description}</p>
+            <p className="text-sm leading-6 text-[var(--text-2)] whitespace-pre-wrap break-words overflow-hidden">{job.description}</p>
             {job.aiSummary && (
               <div className="mt-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
                 <div className="mb-1 flex items-center gap-2">

@@ -10,7 +10,7 @@ interface SectionCardProps {
 
 export function SectionCard({ title, description, action, children, contentClassName }: SectionCardProps) {
   return (
-    <Card className="hover-lift">
+    <Card className="hover-lift overflow-hidden">
       <CardHeader className="flex-row items-start justify-between space-y-0">
         <div>
           <CardTitle>{title}</CardTitle>
