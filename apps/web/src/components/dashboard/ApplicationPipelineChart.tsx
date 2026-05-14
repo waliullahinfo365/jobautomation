@@ -21,6 +21,9 @@ interface PipelineDataPoint {
 
 interface ApplicationPipelineChartProps {
   data: PipelineDataPoint[];
+  loading?: boolean;
+  error?: Error | null;
+  isUsingFallback?: boolean;
 }
 
 const STAGE_KEY_MAP: Record<string, string> = {
@@ -47,7 +50,7 @@ function useNarrowChart() {
   );
 }
 
-export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps) {
+export function ApplicationPipelineChart({ data, loading, error, isUsingFallback }: ApplicationPipelineChartProps) {
   const { t } = useTranslation();
   const narrow = useNarrowChart();
   const total = data.reduce((acc, item) => acc + item.count, 0);
@@ -55,6 +58,11 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
   const applied = data.find((d) => d.status === "Applied")?.count ?? 0;
   const interview = data.find((d) => d.status === "Interview")?.count ?? 0;
   const conversionPct = applied > 0 ? Math.round((interview / applied) * 100) : interview > 0 ? 100 : 0;
+
+  if (process.env.NODE_ENV !== "production") {
+    // eslint-disable-next-line no-console
+    console.log("[Dashboard Pipeline]", { data, total, loading, error: error?.message, isUsingFallback });
+  }
 
   const chartHeight = narrow ? 248 : 300;
   const chartMargins = narrow
@@ -79,22 +87,64 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
           </div>
         </div>
         <div className="jf-panel-tags">
-          <span className="jf-tag jf-tag--accent">
-            <span className="jf-tag-num">{total}</span> {t("dashboard.pipeline.tracked")}
-          </span>
-          <span className="jf-tag">
-            <span
-              className="h-1.5 w-1.5 rounded-full bg-[var(--accent-hi)] shadow-[0_0_8px_var(--accent-hi)]"
-              aria-hidden
-            />
-            {t("dashboard.pipeline.live")}
-          </span>
+          {loading ? (
+            <span className="jf-tag animate-pulse">
+              <span className="jf-tag-num">—</span> {t("dashboard.pipeline.tracked")}
+            </span>
+          ) : (
+            <span className="jf-tag jf-tag--accent">
+              <span className="jf-tag-num">{total}</span> {t("dashboard.pipeline.tracked")}
+            </span>
+          )}
+          {!loading && !error && (
+            <span className="jf-tag">
+              {isUsingFallback ? (
+                t("dashboard.pipeline.cached")
+              ) : (
+                <>
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-[var(--accent-hi)] shadow-[0_0_8px_var(--accent-hi)]"
+                    aria-hidden
+                  />
+                  {t("dashboard.pipeline.live")}
+                </>
+              )}
+            </span>
+          )}
         </div>
       </div>
 
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="flex items-end gap-2 px-4" style={{ height: chartHeight }}>
+          {[0.4, 0.7, 0.5, 0.9, 0.6, 0.3, 0.8, 0.2].map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 animate-pulse rounded-t-md bg-[var(--surface-4)]"
+              style={{ height: `${h * 100}%` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Error state */}
+      {!loading && error && (
+        <div className="flex items-center justify-center text-sm text-[var(--text-3)]" style={{ height: chartHeight }}>
+          {t("dashboard.pipeline.errorLoading")}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !error && total === 0 && (
+        <div className="flex flex-col items-center justify-center gap-1 text-sm text-[var(--text-3)]" style={{ height: chartHeight }}>
+          <span>{t("dashboard.pipeline.noData")}</span>
+        </div>
+      )}
+
+      {/* Chart */}
       <div
         className="w-full touch-pan-x"
-        style={{ minHeight: narrow ? 220 : 280 }}
+        style={{ minHeight: narrow ? 220 : 280, display: loading || error ? "none" : undefined }}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart data={data} margin={chartMargins}>
@@ -181,21 +231,21 @@ export function ApplicationPipelineChart({ data }: ApplicationPipelineChartProps
         <div>
           <div className="jf-pipe-stat-label">{t("dashboard.pipeline.conversion")}</div>
           <div className="jf-pipe-stat-val">
-            {conversionPct}%
+            {loading ? "—" : `${conversionPct}%`}
             <small>{t("dashboard.pipeline.appliedToInterview")}</small>
           </div>
         </div>
         <div>
-          <div className="jf-pipe-stat-label">{t("dashboard.pipeline.avgVelocity")}</div>
+          <div className="jf-pipe-stat-label">{t("dashboard.pipeline.totalJobs")}</div>
           <div className="jf-pipe-stat-val">
-            3.2d
-            <small>{t("dashboard.pipeline.stageToStage")}</small>
+            {loading ? "—" : total}
+            <small>{t("dashboard.pipeline.tracked")}</small>
           </div>
         </div>
         <div>
           <div className="jf-pipe-stat-label">{t("dashboard.pipeline.synced")}</div>
           <div className="jf-pipe-stat-val">
-            {t("dashboard.pipeline.live")}
+            {loading ? "—" : isUsingFallback ? t("dashboard.pipeline.cached") : t("dashboard.pipeline.live")}
             <small>{t("dashboard.pipeline.fromPipeline")}</small>
           </div>
         </div>

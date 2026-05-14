@@ -63,7 +63,7 @@ function computeFollowUpsDue(applications: Application[]): FollowUpReminderItem[
 
 export function DashboardPageClient() {
   const { t } = useTranslation();
-  const { jobsQuery, applicationsQuery: appsQuery, automationQuery, refetchAll } = useDashboardOverview({ fallbackToMock: true });
+  const { jobsQuery, applicationsQuery: appsQuery, automationQuery, refetchAll } = useDashboardOverview({ fallbackToMock: false });
   const [backfillLoading, setBackfillLoading] = useState(false);
 
   const jobs = useMemo((): Job[] => {
@@ -140,7 +140,12 @@ export function DashboardPageClient() {
       <StatsCards stats={stats} />
 
       <div className="jf-row-2 min-w-0">
-        <ApplicationPipelineChart data={pipelineBreakdown} />
+        <ApplicationPipelineChart
+          data={pipelineBreakdown}
+          loading={jobsQuery.loading}
+          error={jobsQuery.error}
+          isUsingFallback={jobsQuery.isUsingFallback}
+        />
         <UpcomingDeadlines jobs={jobSummaries} />
       </div>
 
