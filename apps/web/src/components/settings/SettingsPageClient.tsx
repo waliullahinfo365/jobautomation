@@ -48,7 +48,7 @@ export function SettingsPageClient() {
   const [profile, setProfile] = useState(mockProfileSettings);
   const [rules, setRules] = useState(mockAutomationRules);
   const [notifications, setNotifications] = useState(mockNotificationPreferences);
-  const billing = useBillingApi({ fallbackToMock: true });
+  const billing = useBillingApi({ fallbackToMock: false });
   const usingMock = useMemo(() => billing.plan.error ? shouldUseMockFallback(billing.plan.error) : false, [billing.plan.error]);
 
   return (

@@ -54,7 +54,7 @@ function scheduleDefaultLocal(): string {
 
 export function InterviewsPageClient() {
   const { t } = useTranslation();
-  const interviewsApi = useInterviewsApi({ fallbackToMock: true });
+  const interviewsApi = useInterviewsApi({ fallbackToMock: false });
 
   const [tab, setTab] = useState<InterviewTab>("Upcoming");
   const [filters, setFilters] = useState<InterviewFilterState>(initialFilters);

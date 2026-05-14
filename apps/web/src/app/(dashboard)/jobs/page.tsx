@@ -69,7 +69,7 @@ export default function JobsPage() {
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [localJobsOverlay, setLocalJobsOverlay] = useState<Job[]>([]);
 
-  const jobsApi = useJobsApi({ fallbackToMock: true });
+  const jobsApi = useJobsApi({ fallbackToMock: false });
 
   useEffect(() => {
     if (!jobsApi.isUsingFallback) {

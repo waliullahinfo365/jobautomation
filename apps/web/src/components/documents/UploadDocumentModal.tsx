@@ -27,7 +27,7 @@ type Props = {
 
 export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props) {
   const { t } = useTranslation();
-  const jobsApi = useJobsApi({ fallbackToMock: true });
+  const jobsApi = useJobsApi({ fallbackToMock: false });
   const jobs = useMemo(() => normalizeListResponse<unknown>(jobsApi.data).map(normalizeJobForUi), [jobsApi.data]);
 
   const typeOptions: { label: string; value: UploadPayload["type"] }[] = useMemo(

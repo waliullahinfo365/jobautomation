@@ -96,7 +96,7 @@ function filterApplications(applications: Application[], filters: ApplicationFil
 
 export function ApplicationsPageClient() {
   const { t } = useTranslation();
-  const applicationsApi = useApplicationsApi({ fallbackToMock: true });
+  const applicationsApi = useApplicationsApi({ fallbackToMock: false });
   const integrationsApi = useIntegrationsApi({ fallbackToMock: false });
 
   const [filters, setFilters] = useState<ApplicationFilterState>(initialFilters);

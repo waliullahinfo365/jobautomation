@@ -54,12 +54,12 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const mockFallbackJob = mockJobs.find((j) => j.id === id || j._id === id);
 
   const { data: rawJob, loading, isUsingFallback, refetch: refetchJob } = useJobDetail(id, {
-    fallbackToMock: true,
+    fallbackToMock: false,
     mockFallbackJob,
   });
 
   const jobsApi = useJobsApi();
-  const applicationsApi = useApplicationsApi({ fallbackToMock: true });
+  const applicationsApi = useApplicationsApi({ fallbackToMock: false });
 
   const job: Job | undefined = rawJob ? normalizeJobForUi(rawJob) : undefined;
 

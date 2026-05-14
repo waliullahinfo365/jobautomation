@@ -85,7 +85,7 @@ function buildLocalContact(input: {
 
 export function ContactsPageClient() {
   const { t } = useTranslation();
-  const contactsApi = useContactsApi({ fallbackToMock: true });
+  const contactsApi = useContactsApi({ fallbackToMock: false });
 
   const [tab, setTab] = useState<ContactTab>("all");
   const [filters, setFilters] = useState<ContactFilterState>(initialFilters);

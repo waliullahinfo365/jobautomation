@@ -120,8 +120,8 @@ function toastQueuedPayload(label: string, result: unknown) {
 
 export function DocumentsPageClient() {
   const { t } = useTranslation();
-  const documentsApi = useDocumentsApi({ fallbackToMock: true });
-  const jobsApi = useJobsApi({ fallbackToMock: true });
+  const documentsApi = useDocumentsApi({ fallbackToMock: false });
+  const jobsApi = useJobsApi({ fallbackToMock: false });
 
   const [tab, setTab] = useState<DocumentTab>("All Documents");
   const [filters, setFilters] = useState<DocumentFilterState>(initialFilters);

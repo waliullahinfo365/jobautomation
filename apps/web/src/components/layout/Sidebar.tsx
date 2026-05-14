@@ -16,8 +16,8 @@ import type { Job } from "@/types/job";
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const jobsQ = useJobsApi({ fallbackToMock: true });
-  const intQ = useInterviewsApi({ fallbackToMock: true });
+  const jobsQ = useJobsApi({ fallbackToMock: false });
+  const intQ = useInterviewsApi({ fallbackToMock: false });
   const jobsCount = normalizeListResponse<Job>(jobsQ.list).length;
   const interviewsCount = normalizeListResponse<Interview>(intQ.list).length;
 
@@ -85,12 +85,10 @@ export function Sidebar() {
           </span>
         </div>
         <div className="relative mt-0.5 h-1 overflow-hidden rounded-full bg-[var(--surface-4)]">
-          <div className="jf-progress-fill relative h-full w-[94%] rounded-full bg-gradient-to-r from-[#38C793] to-[#4FC2D8]" />
+          <div className="jf-progress-fill relative h-full w-full rounded-full bg-gradient-to-r from-[#38C793] to-[#4FC2D8]" />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[10.5px] text-[var(--text-3)]">
-          <span>
-            <b className="font-semibold text-[var(--text-1)]">94%</b> {t("sidebar.healthy")}
-          </span>
+          <span>{t("sidebar.healthy")}</span>
           <span>{t("sidebar.queueOk")}</span>
         </div>
       </div>

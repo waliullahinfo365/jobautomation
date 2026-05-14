@@ -91,14 +91,24 @@ export function DashboardPageClient() {
     return [];
   }, [applications]);
 
-  const stats = useMemo(() => ({
-    totalJobsTracked: jobs.length,
-    applicationsSent: applications.filter((app) => app.appliedAt).length || applications.filter((app) => app.applicationStatus === "Applied" || app.status === "Applied").length,
-    interviewsScheduled: applications.filter((app) => (app.interviewIds ?? []).length > 0 || app.applicationStatus === "Interview" || app.status === "Interview").length,
-    offersReceived: jobs.filter((job) => job.status === "Offer").length,
-    followUpsDue: followUpReminders.length,
-    automationsActive: modules.filter((m) => m.status === "Healthy" || m.status === "Ready" || m.status === "Not run yet").length,
-  }), [jobs, applications, modules, followUpReminders]);
+  const stats = useMemo(() => {
+    const activeModules = modules.filter((m) => m.status === "Healthy" || m.status === "Ready" || m.status === "Not run yet");
+    const totalRuns = modules.reduce((sum, m) => sum + (m.totalRuns ?? 0), 0);
+    const failedRuns = modules.reduce((sum, m) => sum + (m.failedRuns ?? 0), 0);
+    const automationSuccessRate = totalRuns > 0
+      ? Math.round(((totalRuns - failedRuns) / totalRuns) * 100)
+      : modules.length > 0 ? 100 : null;
+
+    return {
+      totalJobsTracked: jobs.length,
+      applicationsSent: applications.filter((app) => app.appliedAt).length || applications.filter((app) => app.applicationStatus === "Applied" || app.status === "Applied").length,
+      interviewsScheduled: applications.filter((app) => (app.interviewIds ?? []).length > 0 || app.applicationStatus === "Interview" || app.status === "Interview").length,
+      offersReceived: jobs.filter((job) => job.status === "Offer").length,
+      followUpsDue: followUpReminders.length,
+      automationsActive: activeModules.length,
+      automationSuccessRate,
+    };
+  }, [jobs, applications, modules, followUpReminders]);
 
   const importLastSevenDays = useCallback(async () => {
     setBackfillLoading(true);

@@ -54,8 +54,8 @@ export function SystemStatusClient() {
 
   const system = useApiQuery(() => getSystemStatus(), { enabled: true });
 
-  const billing = useBillingApi({ fallbackToMock: true });
-  const automation = useAutomationApi({ fallbackToMock: true, params: { status: "Failed", limit: 20 } });
+  const billing = useBillingApi({ fallbackToMock: false });
+  const automation = useAutomationApi({ fallbackToMock: false, params: { status: "Failed", limit: 20 } });
 
   useEffect(() => {
     void (async () => {

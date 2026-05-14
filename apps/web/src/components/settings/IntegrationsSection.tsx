@@ -182,7 +182,7 @@ export function IntegrationsSection() {
     integrationsError,
     resendStatus,
     testResend,
-  } = useIntegrationsApi({ fallbackToMock: true });
+  } = useIntegrationsApi({ fallbackToMock: false });
 
   const aiApi = useAiApi();
 

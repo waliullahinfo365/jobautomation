@@ -22,6 +22,7 @@ interface StatsCardsProps {
     offersReceived: number;
     followUpsDue: number;
     automationsActive: number;
+    automationSuccessRate: number | null;
   };
 }
 
@@ -58,9 +59,9 @@ export function StatsCards({ stats }: StatsCardsProps) {
     {
       labelKey: "dashboard.stats.totalJobsTracked",
       value: stats.totalJobsTracked,
-      metaKey: "dashboard.stats.metaVsWeek",
-      delta: "+6.4%",
-      deltaTone: "up" as const,
+      metaKey: "dashboard.stats.metaTotal",
+      delta: stats.totalJobsTracked > 0 ? `${stats.totalJobsTracked}` : "—",
+      deltaTone: "neutral" as const,
       icon: TrackedJobsIcon,
       iconTint: "default" satisfies IconTintKey,
       seed: stats.totalJobsTracked * 7 + 3,
@@ -69,9 +70,9 @@ export function StatsCards({ stats }: StatsCardsProps) {
     {
       labelKey: "dashboard.stats.applicationsSent",
       value: stats.applicationsSent,
-      metaKey: "dashboard.stats.metaSubmittedWeek",
-      delta: "+3",
-      deltaTone: "up" as const,
+      metaKey: "dashboard.stats.metaTotal",
+      delta: stats.applicationsSent > 0 ? `${stats.applicationsSent}` : "—",
+      deltaTone: "neutral" as const,
       icon: SendIcon,
       iconTint: "violet" satisfies IconTintKey,
       seed: stats.applicationsSent * 11 + 1,
@@ -114,12 +115,12 @@ export function StatsCards({ stats }: StatsCardsProps) {
       labelKey: "dashboard.stats.automationsActive",
       value: stats.automationsActive,
       metaKey: "dashboard.stats.metaSuccessRate",
-      delta: "92%",
-      deltaTone: "up" as const,
+      delta: stats.automationSuccessRate !== null ? `${stats.automationSuccessRate}%` : "—",
+      deltaTone: stats.automationSuccessRate !== null && stats.automationSuccessRate >= 80 ? ("up" as const) : ("neutral" as const),
       icon: BotIcon,
       iconTint: "default" satisfies IconTintKey,
       seed: stats.automationsActive * 3 + 9,
-      showTrend: true,
+      showTrend: stats.automationSuccessRate !== null,
     },
   ];
 

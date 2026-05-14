@@ -37,7 +37,7 @@ export function LogApplicationModal({
   initialJob,
 }: Props) {
   const { t } = useTranslation();
-  const jobsApi = useJobsApi({ fallbackToMock: true });
+  const jobsApi = useJobsApi({ fallbackToMock: false });
   const jobs = useMemo(() => {
     const raw = normalizeListResponse<unknown>(jobsApi.data);
     return raw.map(normalizeJobForUi);

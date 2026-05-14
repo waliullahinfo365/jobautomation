@@ -37,7 +37,7 @@ const initialFilters: AutomationFilterState = {
 
 export function AutomationPageClient() {
   const { t } = useTranslation();
-  const automationApi = useAutomationApi({ fallbackToMock: true });
+  const automationApi = useAutomationApi({ fallbackToMock: false });
 
   const [localModuleOverrides, setLocalModuleOverrides] = useState<Record<string, Partial<AutomationModule>>>({});
   const [selectedModule, setSelectedModule] = useState<AutomationModule | null>(null);
