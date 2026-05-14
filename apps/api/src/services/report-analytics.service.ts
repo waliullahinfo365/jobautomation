@@ -206,15 +206,17 @@ export function fillWeeklyTrendForUi(
 }
 
 export function weeklyPipelineStatusChart(metrics: WeeklyPerformanceMetrics): { label: string; value: number }[] {
+  // Prefer application-level pipeline breakdown; fall back to job-level status breakdown.
+  // Both use the raw status string as label — no prefix added.
   const apps = metrics.pipelineBreakdown?.applications ?? {};
-  const entries = Object.entries(apps).filter(([, v]) => Number(v) > 0);
-  if (entries.length) {
-    return entries.map(([label, value]) => ({ label, value: Number(value) })).slice(0, 10);
+  const appEntries = Object.entries(apps).filter(([, v]) => Number(v) > 0);
+  if (appEntries.length) {
+    return appEntries.map(([label, value]) => ({ label, value: Number(value) })).slice(0, 10);
   }
   const jobs = metrics.pipelineBreakdown?.jobs ?? {};
   return Object.entries(jobs)
     .filter(([, v]) => Number(v) > 0)
-    .map(([label, value]) => ({ label: `Job ${label}`, value: Number(value) }))
+    .map(([label, value]) => ({ label, value: Number(value) }))
     .slice(0, 10);
 }
 

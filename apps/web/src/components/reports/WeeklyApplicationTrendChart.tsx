@@ -12,7 +12,6 @@ const TOOLTIP_CONTENT = {
 } as const;
 
 const GRID_STROKE = "var(--border-subtle, rgba(255,255,255,0.045))";
-
 const TICK = { fill: "var(--text-3, #7C828F)", fontSize: 11 } as const;
 
 const BAR_FILLS = [
@@ -24,13 +23,19 @@ const BAR_FILLS = [
 
 export function WeeklyApplicationTrendChart({ data }: { data: { day: string; applications: number }[] }) {
   const { t } = useTranslation();
+
+  const header = (
+    <CardHeader>
+      <CardTitle>{t("reports.weeklyApplicationTrend")}</CardTitle>
+      <CardDescription>{t("reports.applicationsSubmittedByDay")}</CardDescription>
+    </CardHeader>
+  );
+
+  // No data at all — API hasn't returned yet or returned empty
   if (!data || data.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>{t("reports.weeklyApplicationTrend")}</CardTitle>
-          <CardDescription>{t("reports.applicationsSubmittedByDay")}</CardDescription>
-        </CardHeader>
+        {header}
         <CardContent className="flex h-[300px] items-center justify-center text-sm text-[var(--text-3)]">
           {t("reports.noApplicationsThisWeek")}
         </CardContent>
@@ -38,25 +43,43 @@ export function WeeklyApplicationTrendChart({ data }: { data: { day: string; app
     );
   }
 
+  const maxVal = Math.max(...data.map((d) => d.applications));
+  const allZero = maxVal === 0;
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("reports.weeklyApplicationTrend")}</CardTitle>
-        <CardDescription>{t("reports.chart.applicationsSubmittedByDay")}</CardDescription>
-      </CardHeader>
-      <CardContent className="h-[300px]">
+      {header}
+      <CardContent className="relative h-[300px]">
+        {/* Zero-state message overlaid on chart when all bars are 0 */}
+        {allZero && (
+          <div className="absolute inset-0 flex items-center justify-center pb-8">
+            <span className="rounded-md bg-[var(--surface-1)] px-3 py-1.5 text-xs text-[var(--text-3)]">
+              {t("reports.noApplicationsThisWeek")}
+            </span>
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid stroke={GRID_STROKE} strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="day" tickLine={false} axisLine={false} tick={TICK} />
-            <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={TICK} />
+            <YAxis
+              allowDecimals={false}
+              tickLine={false}
+              axisLine={false}
+              tick={TICK}
+              domain={[0, Math.max(1, maxVal)]}
+              tickCount={Math.min(5, Math.max(2, maxVal + 1))}
+            />
             <Tooltip
               contentStyle={TOOLTIP_CONTENT}
               labelStyle={{ color: "var(--text-2, #B5BAC4)" }}
             />
-            <Bar dataKey="applications" radius={[6, 6, 0, 0]}>
+            <Bar dataKey="applications" radius={[6, 6, 0, 0]} minPointSize={allZero ? 0 : 2}>
               {data.map((_, i) => (
-                <Cell key={i} fill={BAR_FILLS[i % BAR_FILLS.length]} />
+                <Cell
+                  key={i}
+                  fill={allZero ? "var(--border-subtle, rgba(255,255,255,0.06))" : BAR_FILLS[i % BAR_FILLS.length]}
+                />
               ))}
             </Bar>
           </BarChart>

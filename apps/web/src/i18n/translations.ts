@@ -743,6 +743,7 @@ export const messages: Record<
         dailyResponseRateMovement: "Tägliche Bewegung der Antwortrate für die Woche.",
         pipelineConversion: "Pipeline-Umwandlung",
         conversionByStage: "Umwandlungsraten nach Phase.",
+        onlyOneStatusActive: "Alle aktiven Jobs befinden sich in diesem Status.",
       },
     },
     settings: {
@@ -3337,6 +3338,7 @@ export const messages: Record<
         dailyResponseRateMovement: "Daily response-rate movement for the week.",
         pipelineConversion: "Pipeline Conversion",
         conversionByStage: "Conversion percentages by stage.",
+        onlyOneStatusActive: "All active jobs are in this status.",
       },
     },
     settings: {
