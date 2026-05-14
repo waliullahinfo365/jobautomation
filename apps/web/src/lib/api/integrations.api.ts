@@ -41,7 +41,7 @@ export type TelegramIntegrationStatus = {
   configured: boolean;
   botTokenConfigured: boolean;
   chatIdConfigured: boolean;
-  status: "connected" | "not_configured" | "needs_attention";
+  status: "connected" | "not_configured" | "needs_attention" | "disabled";
   lastTest?: IntegrationTestResult;
   lastNotificationAt?: string;
   message?: string;
