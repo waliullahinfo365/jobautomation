@@ -3671,7 +3671,7 @@ export const messages: Record<
       },
       confirm: {
         disconnectTitle: "Disconnect integration?",
-        disconnectDescription: "This removes the stored stub connection for this workspace. You can reconnect anytime.",
+        disconnectDescription: "This removes the stored connection for this workspace. You can reconnect anytime.",
         disconnectConfirm: "Disconnect",
       },
       loading: "Loading integrations…",

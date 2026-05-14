@@ -206,6 +206,26 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
       ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
       : (row?.errorMessage as string | undefined);
 
+  if (entry.provider === "Telegram") {
+    const botTokenConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
+    const chatIdConfigured = Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
+    const envConfigured = botTokenConfigured && chatIdConfigured;
+    const isDisabled = (row?.status as IntegrationStatus | undefined) === "Disabled";
+    if (isDisabled) {
+      resolvedStatus = "Disabled";
+      resolvedSyncStatus = "Disconnected";
+      resolvedError = undefined;
+    } else if (!envConfigured) {
+      resolvedStatus = "Not Connected";
+      resolvedSyncStatus = "Not configured";
+      resolvedError = "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.";
+    } else {
+      resolvedStatus = "Connected";
+      resolvedSyncStatus = "Connected";
+      resolvedError = undefined;
+    }
+  }
+
   if (entry.provider === "Slack") {
     const webhookConfigured = Boolean(process.env.SLACK_WEBHOOK_URL?.trim());
     cleanMeta.webhookConfigured = webhookConfigured;
@@ -275,10 +295,7 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     accountName: row?.accountName as string | undefined,
     lastSyncAt: row?.lastSyncAt ? new Date(row.lastSyncAt as string | Date).toISOString() : undefined,
     syncStatus: resolvedSyncStatus,
-    errorMessage:
-      entry.provider === "Telegram" && !(cleanMeta.botTokenConfigured === true && cleanMeta.chatIdConfigured === true)
-        ? "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway."
-        : resolvedError,
+    errorMessage: resolvedError,
     scopes: scopesList,
     metadata: cleanMeta,
     lastTest,
@@ -612,7 +629,7 @@ export async function disconnectIntegration(input: {
         syncStatus: undefined,
         lastSyncAt: undefined,
         scopes: [],
-        metadata: { stub: true, disconnectedAt: new Date().toISOString() },
+        metadata: { disconnectedAt: new Date().toISOString() },
         updatedBy: input.userId,
       },
       $unset: { accessTokenEncrypted: 1 },
@@ -630,7 +647,7 @@ export async function disconnectIntegration(input: {
     action: "integration.disconnected",
     entityType: "IntegrationConnection",
     entityId: provider,
-    message: `Integration disconnected (stub): ${provider}`,
+    message: `Integration disconnected: ${provider}`,
     metadata: { provider, slug: input.providerSlug },
   });
 

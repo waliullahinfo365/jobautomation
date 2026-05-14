@@ -123,9 +123,12 @@ export async function sendNotificationWithFallback(input: {
   tenantId: string;
   message: string;
   event: NotificationEvent;
+  skipTelegram?: boolean;
+  skipSlack?: boolean;
 }): Promise<NotificationSendResult> {
-  const telegram = await sendTelegramNotification(input);
-  const slack = await sendSlackNotification(input);
+  const skippedResult = { status: "Warning" as const, reason: "Disabled by user." };
+  const telegram = input.skipTelegram ? skippedResult : await sendTelegramNotification(input);
+  const slack = input.skipSlack ? skippedResult : await sendSlackNotification(input);
   const providers = { telegram, slack };
 
   if (telegram.status === "Sent" && slack.status === "Sent") {
