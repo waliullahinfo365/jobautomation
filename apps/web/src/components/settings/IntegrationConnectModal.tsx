@@ -333,6 +333,24 @@ export function IntegrationConnectModal({
             </>
           )}
 
+          {providerSlug === "telegram" && (
+            <>
+              <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                Telegram is configured via environment variables on the API server — not through this UI.
+                Clicking <strong>Enable Telegram</strong> re-enables notifications using the already-configured bot token and chat ID.
+              </p>
+              <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">To change your Telegram bot or chat ID:</p>
+                <ol className="mt-2 list-inside list-decimal space-y-1">
+                  <li>Go to Railway → API service → Variables</li>
+                  <li>Update <code className="rounded bg-muted px-1">TELEGRAM_BOT_TOKEN</code> and/or <code className="rounded bg-muted px-1">TELEGRAM_CHAT_ID</code></li>
+                  <li>Redeploy the API service</li>
+                  <li>Return here and click <strong>Enable Telegram</strong></li>
+                </ol>
+              </div>
+            </>
+          )}
+
           {providerSlug === "resend" && (
             <>
               <p className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">

@@ -225,24 +225,32 @@ export function IntegrationsSection() {
       const local = localBySlug[i.slug];
       const lt = lastTestBySlug[i.slug] ?? local?.lastTest ?? i.lastTest;
       if (i.slug === "telegram" && telegramStatus) {
+        const tgStatus: IntegrationListItem["status"] =
+          telegramStatus.status === "disabled"
+            ? "Disabled"
+            : telegramStatus.status === "connected"
+              ? "Connected"
+              : telegramStatus.status === "needs_attention"
+                ? "Needs Attention"
+                : "Not Connected";
+        const tgSyncStatus =
+          telegramStatus.status === "disabled"
+            ? "Disconnected"
+            : telegramStatus.status === "connected"
+              ? "Connected"
+              : telegramStatus.status === "needs_attention"
+                ? "Needs attention"
+                : "Not configured";
         return {
           ...i,
           ...local,
           lastTest: (telegramStatus.lastTest as IntegrationTestResult | undefined) ?? lt,
-          status: (
-            telegramStatus.status === "connected"
-              ? "Connected"
-              : telegramStatus.status === "needs_attention"
-                ? "Needs Attention"
-                : "Not Connected"
-          ) as IntegrationListItem["status"],
-          syncStatus:
-            telegramStatus.status === "connected"
-              ? "Connected"
-              : telegramStatus.status === "needs_attention"
-                ? "Needs attention"
-                : "Not configured",
-          errorMessage: telegramStatus.status === "not_configured" ? telegramStatus.message : undefined,
+          status: tgStatus,
+          syncStatus: tgSyncStatus,
+          errorMessage:
+            telegramStatus.status === "not_configured" || telegramStatus.status === "disabled"
+              ? telegramStatus.message
+              : undefined,
           metadata: {
             ...(i.metadata ?? {}),
             botTokenConfigured: telegramStatus.botTokenConfigured,

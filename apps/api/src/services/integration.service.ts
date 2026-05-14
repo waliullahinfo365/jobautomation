@@ -851,21 +851,26 @@ export async function getTelegramStatus(input: { tenantId: string }) {
   const meta = ((row?.metadata as Record<string, unknown> | undefined) ?? {}) as Record<string, unknown>;
   const lastTest = meta.lastTest ?? null;
   const lastNotificationAt = meta.lastNotificationAt ?? null;
-  const status: "connected" | "not_configured" | "needs_attention" = configured
-    ? row?.status === "Needs Attention"
-      ? "needs_attention"
-      : "connected"
-    : "not_configured";
+  const isDisabled = row?.status === "Disabled";
+  const status: "connected" | "not_configured" | "needs_attention" | "disabled" = isDisabled
+    ? "disabled"
+    : configured
+      ? row?.status === "Needs Attention"
+        ? "needs_attention"
+        : "connected"
+      : "not_configured";
   return {
     configured,
     botTokenConfigured,
     chatIdConfigured,
-    status: status as "connected" | "not_configured" | "needs_attention",
+    status: status as "connected" | "not_configured" | "needs_attention" | "disabled",
     lastTest,
     lastNotificationAt,
-    message: configured
-      ? "Telegram is configured."
-      : "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.",
+    message: isDisabled
+      ? "Telegram is disconnected. Click Connect to re-enable."
+      : configured
+        ? "Telegram is configured."
+        : "Telegram bot token or chat ID is missing. Add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Railway.",
   };
 }
 
