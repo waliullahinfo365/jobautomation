@@ -76,10 +76,8 @@ export function verifyGoogleLoginState(state: string): void {
 function googleLoginRedirectUri(): string {
   const explicit = process.env.GOOGLE_AUTH_REDIRECT_URI?.trim();
   if (explicit) return explicit;
-  if (env.nodeEnv === "production") {
-    throw new ApiError("GOOGLE_AUTH_REDIRECT_URI must be set in production", 500, "CONFIG_ERROR");
-  }
-  return `http://localhost:${env.port}/auth/google/callback`;
+  const base = (process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "") || `http://localhost:${env.port}`;
+  return `${base}/auth/google/callback`;
 }
 
 export function getGoogleLoginAuthorizationUrl(): { authorizationUrl: string | null; oauthEnabled: boolean; message?: string } {
