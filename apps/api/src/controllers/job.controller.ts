@@ -13,6 +13,19 @@ import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { getProfileDocumentContextFlags } from "../services/profile-document-context.service";
 import { assertCanCreateJob } from "../services/plan-limit.service";
 import { incrementUsage } from "../services/usage.service";
+/** Conditions that identify demo/test/stub jobs that must never appear in production. */
+function buildTestJobFilter(): Record<string, unknown> {
+  return {
+    $or: [
+      { source: "test" },
+      { intakeSource: "test" },
+      { providerMessageId: { $regex: "^test-" } },
+      { "rawSourceData.extractionAi.usedStub": true },
+      { "rawSourceData.extractionRaw.from": { $regex: "jobs\\.demo\\.jobflow\\.ai", $options: "i" } },
+    ],
+  };
+}
+
 export const listJobs = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const { page, limit, skip } = getPagination(req.query);
@@ -21,14 +34,19 @@ export const listJobs = asyncHandler(async (req: Request, res) => {
   const priority = typeof req.query.priority === "string" ? req.query.priority : undefined;
   const source = typeof req.query.source === "string" ? req.query.source : undefined;
   const includeArchived = req.query.includeArchived === "true";
+  const includeTest = req.query.includeTest === "true" && req.user?.role === "Owner";
 
   const filter: Record<string, unknown> = buildTenantFilter(tenantId);
 
   if (status) {
     filter.status = status;
   } else if (!includeArchived) {
-    // By default, exclude terminal/rejected states so dashboard counts reflect active jobs only
     filter.status = { $nin: ["Rejected", "Archived"] };
+  }
+
+  // Exclude demo/test/stub jobs unless caller is an Owner explicitly opting in
+  if (!includeTest) {
+    filter.$nor = [buildTestJobFilter()];
   }
 
   if (priority) filter.priority = priority;

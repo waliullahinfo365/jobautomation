@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireRole } from "../middleware/rbac.middleware";
-import { getDebugDataCounts, requireAdminResetToken, resetOperationalData, cleanupNonJobIntake, recalculateJobsCount } from "../controllers/admin.controller";
+import { getDebugDataCounts, requireAdminResetToken, resetOperationalData, cleanupNonJobIntake, recalculateJobsCount, cleanupTestJobsHandler } from "../controllers/admin.controller";
 
 export const adminRoutes = Router();
 
@@ -30,4 +30,11 @@ adminRoutes.post(
   requireRole("Owner"),
   requireAdminResetToken,
   recalculateJobsCount
+);
+
+adminRoutes.post(
+  "/cleanup/test-jobs",
+  requireRole("Owner"),
+  requireAdminResetToken,
+  cleanupTestJobsHandler
 );

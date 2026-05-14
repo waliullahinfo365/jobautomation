@@ -153,7 +153,70 @@ export async function recalculateTenantJobsCount(tenantId: string) {
   const realCount = await JobModel.countDocuments({
     tenantId,
     status: { $nin: ["Rejected", "Archived"] },
+    $nor: [
+      {
+        $or: [
+          { source: "test" },
+          { intakeSource: "test" },
+          { providerMessageId: { $regex: "^test-" } },
+          { "rawSourceData.extractionAi.usedStub": true },
+          { "rawSourceData.extractionRaw.from": { $regex: "jobs\\.demo\\.jobflow\\.ai", $options: "i" } },
+        ],
+      },
+    ],
   });
   await TenantModel.updateOne({ _id: tenantId }, { $set: { "usage.jobsCount": realCount } });
   return { tenantId, recalculatedJobsCount: realCount };
+}
+
+const TEST_JOB_FILTER = {
+  $or: [
+    { source: "test" },
+    { intakeSource: "test" },
+    { providerMessageId: { $regex: "^test-" } },
+    { "rawSourceData.extractionAi.usedStub": true },
+    { "rawSourceData.extractionRaw.from": { $regex: "jobs\\.demo\\.jobflow\\.ai", $options: "i" } },
+  ],
+};
+
+export async function cleanupTestJobs(input: { tenantId: string; dryRun: boolean }) {
+  const testJobs = await JobModel.find({
+    tenantId: input.tenantId,
+    status: { $nin: ["Archived", "Rejected"] },
+    ...TEST_JOB_FILTER,
+  }).select("_id company position source intakeSource providerMessageId status");
+
+  const toArchive = testJobs.map((j) => String(j._id));
+
+  if (!input.dryRun && toArchive.length > 0) {
+    await JobModel.updateMany(
+      { _id: { $in: toArchive }, tenantId: input.tenantId },
+      {
+        $set: {
+          status: "Archived",
+          "rawSourceData.rejectReason": "Demo/test job hidden from production",
+          "rawSourceData.archivedAt": new Date().toISOString(),
+        },
+        $addToSet: { tags: "auto-archived-test-job" },
+      }
+    );
+    // Recalculate count immediately after archiving
+    await recalculateTenantJobsCount(input.tenantId);
+  }
+
+  return {
+    dryRun: input.dryRun,
+    scanned: testJobs.length,
+    toArchive: toArchive.length,
+    archivedIds: input.dryRun ? [] : toArchive,
+    preview: input.dryRun
+      ? testJobs.map((j) => ({
+          id: String(j._id),
+          company: (j as any).company,
+          position: (j as any).position,
+          source: (j as any).source,
+          intakeSource: (j as any).intakeSource,
+        }))
+      : undefined,
+  };
 }
