@@ -99,8 +99,6 @@ export function getApiHeaders(extra?: HeadersInit): HeadersInit {
   const token = getAuthToken();
   const base: Record<string, string> = {
     "Content-Type": "application/json",
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
   };
   if (token) {
     base.Authorization = `Bearer ${token}`;
