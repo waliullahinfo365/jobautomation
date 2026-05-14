@@ -1,6 +1,6 @@
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import { AutomationLogModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
-import { runAiExtraction, classifyEmailType } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, isRealJobOpportunity } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import { checkDuplicateJobWorker } from "../lib/duplicate-job-check";
 import { loadGoogleAccessToken } from "../lib/google-auth";
@@ -161,8 +161,9 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     const normalized = parseGmailMessageToPayload(message);
 
     // Classify before extraction — skip non-job emails early
-    const classification = classifyEmailType(normalized);
-    if (!classification.isJobOpportunity || classification.confidence < 0.75) {
+    const classification = isRealJobOpportunity(normalized);
+    const CONFIDENCE_THRESHOLD = 0.85;
+    if (!classification.isJob || classification.confidence < CONFIDENCE_THRESHOLD) {
       processedMessageIds.add(normalized.providerMessageId);
       skippedCount += 1;
       if (!payload.dryRun) {
@@ -172,13 +173,13 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
           moduleKey: "job-intake",
           moduleName: "job-intake",
           status: "Warning",
-          message: `Email skipped (not a job opportunity): ${normalized.subject || "(no subject)"}`,
+          message: `Email skipped (${classification.detectedType}): ${normalized.subject || "(no subject)"}`,
           operationId,
           metadata: {
             gmailMessageId: normalized.providerMessageId,
             from: normalized.from,
             subject: normalized.subject,
-            emailType: classification.emailType,
+            detectedType: classification.detectedType,
             classificationConfidence: classification.confidence,
             classificationReason: classification.reason,
           },
@@ -274,10 +275,10 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       extractedFromEmail: true,
       extractionConfidence: data.confidence,
       jobIntakeClassification: {
-        isJobOpportunity: classification.isJobOpportunity,
+        isJobOpportunity: classification.isJob,
         confidence: classification.confidence,
         reason: classification.reason,
-        emailType: classification.emailType,
+        emailType: classification.detectedType,
       },
     });
     createdCount += 1;

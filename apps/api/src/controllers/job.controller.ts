@@ -13,7 +13,34 @@ import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { getProfileDocumentContextFlags } from "../services/profile-document-context.service";
 import { assertCanCreateJob } from "../services/plan-limit.service";
 import { incrementUsage } from "../services/usage.service";
-export const listJobs = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const {page,limit,skip}=getPagination(req.query); const search=typeof req.query.search==='string'?req.query.search:undefined; const status=typeof req.query.status==='string'?req.query.status:undefined; const priority=typeof req.query.priority==='string'?req.query.priority:undefined; const source=typeof req.query.source==='string'?req.query.source:undefined; const filter:Record<string,unknown>=buildTenantFilter(tenantId); if(status) filter.status=status; if(priority) filter.priority=priority; if(source) filter.source=source; if(search) filter.$or=[{company:{$regex:search,$options:'i'}},{position:{$regex:search,$options:'i'}},{source:{$regex:search,$options:'i'}},{contactEmail:{$regex:search,$options:'i'}}]; const [rows,total]=await Promise.all([JobModel.find(filter).sort({updatedAt:-1}).skip(skip).limit(limit),JobModel.countDocuments(filter)]); return paginatedResponse(res,rows,{page,limit,total,totalPages:Math.ceil(total/limit)}); });
+export const listJobs = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const { page, limit, skip } = getPagination(req.query);
+  const search = typeof req.query.search === "string" ? req.query.search : undefined;
+  const status = typeof req.query.status === "string" ? req.query.status : undefined;
+  const priority = typeof req.query.priority === "string" ? req.query.priority : undefined;
+  const source = typeof req.query.source === "string" ? req.query.source : undefined;
+  const includeArchived = req.query.includeArchived === "true";
+
+  const filter: Record<string, unknown> = buildTenantFilter(tenantId);
+
+  if (status) {
+    filter.status = status;
+  } else if (!includeArchived) {
+    // By default, exclude terminal/rejected states so dashboard counts reflect active jobs only
+    filter.status = { $nin: ["Rejected", "Archived"] };
+  }
+
+  if (priority) filter.priority = priority;
+  if (source) filter.source = source;
+  if (search) filter.$or = [{ company: { $regex: search, $options: "i" } }, { position: { $regex: search, $options: "i" } }, { source: { $regex: search, $options: "i" } }, { contactEmail: { $regex: search, $options: "i" } }];
+
+  const [rows, total] = await Promise.all([
+    JobModel.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit),
+    JobModel.countDocuments(filter),
+  ]);
+  return paginatedResponse(res, rows, { page, limit, total, totalPages: Math.ceil(total / limit) });
+});
 export const createJob = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); await assertCanCreateJob(tenantId); const row=await createTenantScopedRecord(JobModel,tenantId,req.user?.id??'system',req.body); await incrementUsage({ tenantId, metric: "jobsCount", amount: 1 }); return successResponse(res,row,'Created',201); });
 export const getJobById = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);

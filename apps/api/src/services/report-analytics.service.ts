@@ -119,7 +119,7 @@ export async function getWeeklyPerformanceMetrics(input: {
         { $match: { tenantId } },
         { $group: { _id: "$applicationStatus", count: { $sum: 1 } } },
       ]),
-      JobModel.aggregate([{ $match: { tenantId } }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
+      JobModel.aggregate([{ $match: { tenantId, status: { $nin: ["Rejected", "Archived"] } } }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
     ]);
 
   const responseRate = applicationsSubmitted > 0 ? Number((repliesReceived / applicationsSubmitted).toFixed(3)) : 0;

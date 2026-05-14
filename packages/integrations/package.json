@@ -6,15 +6,33 @@
   "types": "./src/index.ts",
   "typesVersions": {
     "*": {
-      "ai/anthropic-messages": ["./src/ai/anthropic-messages.ts"],
-      "ai/*": ["./src/ai/*.ts"],
-      "gmail/*": ["./src/gmail/*.ts"],
-      "google-drive/*": ["./src/google-drive/*.ts"],
-      "google-calendar/*": ["./src/google-calendar/*.ts"],
-      "smtp/*": ["./src/smtp/*.ts"],
-      "email/*": ["./src/email/*.ts"],
-      "notifications/*": ["./src/notifications/*.ts"],
-      "notion-legacy/*": ["./src/notion-legacy/*.ts"]
+      "ai/anthropic-messages": [
+        "./src/ai/anthropic-messages.ts"
+      ],
+      "ai/*": [
+        "./src/ai/*.ts"
+      ],
+      "gmail/*": [
+        "./src/gmail/*.ts"
+      ],
+      "google-drive/*": [
+        "./src/google-drive/*.ts"
+      ],
+      "google-calendar/*": [
+        "./src/google-calendar/*.ts"
+      ],
+      "smtp/*": [
+        "./src/smtp/*.ts"
+      ],
+      "email/*": [
+        "./src/email/*.ts"
+      ],
+      "notifications/*": [
+        "./src/notifications/*.ts"
+      ],
+      "notion-legacy/*": [
+        "./src/notion-legacy/*.ts"
+      ]
     }
   },
   "exports": {
@@ -82,15 +100,18 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "type-check": "tsc --noEmit",
-    "lint": "echo 'integrations lint placeholder'"
+    "lint": "echo 'integrations lint placeholder'",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@jobflow/shared": "workspace:*",
     "nodemailer": "^6.9.16"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.17",
     "@types/node": "^20",
-    "typescript": "^5"
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }
