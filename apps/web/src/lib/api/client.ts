@@ -1,4 +1,4 @@
-import { env, AUTH_TOKEN_STORAGE_KEY, DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
+import { env, AUTH_TOKEN_STORAGE_KEY } from "@/config/env";
 import { showError } from "@/lib/ui/toast";
 
 if (process.env.NODE_ENV !== "production") {
@@ -102,9 +102,6 @@ export function getApiHeaders(extra?: HeadersInit): HeadersInit {
   };
   if (token) {
     base.Authorization = `Bearer ${token}`;
-  } else {
-    base["x-tenant-id"] = fromStorage("tenantId") ?? DEMO_TENANT_ID;
-    base["x-user-id"] = fromStorage("userId") ?? DEMO_USER_ID;
   }
   return {
     ...base,
