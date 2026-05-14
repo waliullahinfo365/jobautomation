@@ -1,6 +1,11 @@
 import type { JobExtractionResult, JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import type { AiProvider, AiRuntimeConfig, AiServiceResult } from "@jobflow/shared/types/ai";
 import { DEFAULT_AI_MODEL } from "@jobflow/shared/constants/ai";
+import {
+  buildAnthropicModelCandidates,
+  callAnthropicMessages,
+  resolveAnthropicApiKey,
+} from "./anthropic-messages";
 
 const LOCATION_KEYWORDS = ["remote", "toronto", "vancouver", "new york", "london", "berlin", "barcelona", "madrid", "paris", "amsterdam", "berlin", "munich", "zurich", "dubai", "singapore", "sydney", "melbourne"];
 
@@ -367,10 +372,75 @@ function usageFromLengths(inputLen: number, outputLen: number) {
   };
 }
 
-/**
- * Tenant-aware job extraction. Uses deterministic stub unless real providers are enabled later.
- * TODO: When `shouldUseStub` is false and API keys exist, call OpenAI/Anthropic SDK here.
- */
+const EXTRACTION_PROMPT = (payload: JobIntakeEmailPayload, base: JobExtractionResult) => `You are a job application assistant. Extract structured job data from the email below.
+
+Return ONLY valid JSON with this exact shape (no extra keys, no markdown fences):
+{
+  "is_job_opportunity": true,
+  "confidence": 0.0,
+  "company": "",
+  "position": "",
+  "location": null,
+  "job_url": null,
+  "employment_type": null,
+  "seniority": null,
+  "salary": null,
+  "deadline": null,
+  "source_type": "unknown",
+  "summary": "",
+  "requirements": [],
+  "skills": [],
+  "reject_reason": null
+}
+
+Rules:
+- is_job_opportunity: true only for real job postings/alerts/recruiter outreach. False for newsletters, updates, articles.
+- company: the actual hiring company. NEVER use "linkedin" unless LinkedIn itself is hiring.
+- position: exact job title. NEVER use the email subject verbatim if it's "Your job alert for X".
+- source_type: one of "linkedin_job_alert" | "saved_job_reminder" | "ats_job_alert" | "direct_recruiter" | "unknown"
+- If confidence < 0.85, set is_job_opportunity to false and explain in reject_reason.
+- requirements and skills: max 8 items each, plain strings.
+- deadline: ISO date string or null.
+
+Pre-extracted hints (may be wrong, use your judgment):
+  company hint: ${base.company}
+  position hint: ${base.position}
+  location hint: ${base.location ?? "none"}
+  url hint: ${base.jobUrl ?? "none"}
+
+---EMAIL FROM: ${payload.from}
+SUBJECT: ${payload.subject}
+BODY:
+${payload.bodyText.slice(0, 3000)}`;
+
+function parseExtractionJson(text: string): Partial<{
+  is_job_opportunity: boolean;
+  confidence: number;
+  company: string;
+  position: string;
+  location: string | null;
+  job_url: string | null;
+  employment_type: string | null;
+  seniority: string | null;
+  salary: string | null;
+  deadline: string | null;
+  source_type: string;
+  summary: string;
+  requirements: string[];
+  skills: string[];
+  reject_reason: string | null;
+}> | null {
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const raw = fenceMatch ? fenceMatch[1] : text.trim();
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+  try {
+    return JSON.parse(jsonMatch[0]) as ReturnType<typeof parseExtractionJson>;
+  } catch {
+    return null;
+  }
+}
+
 export async function runAiExtraction(input: {
   payload: JobIntakeEmailPayload;
   config: AiRuntimeConfig;
@@ -378,21 +448,64 @@ export async function runAiExtraction(input: {
   const base = await extractJobFromEmail(input.payload);
   const usedStub = shouldUseStub(input.config);
   const provider: AiProvider = usedStub ? "Stub" : input.config.provider;
-  const model = usedStub ? DEFAULT_AI_MODEL : input.config.model;
+  const body = `${input.payload.subject}\n${input.payload.bodyText}`;
 
-  if (!usedStub && input.config.apiKeyDecrypted) {
-    // TODO: real LLM extraction — return stub data with configured provider metadata for now.
+  if (!usedStub) {
+    const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
+    if (apiKey) {
+      const modelCandidates = buildAnthropicModelCandidates(input.config.model);
+      try {
+        const result = await callAnthropicMessages({
+          prompt: EXTRACTION_PROMPT(input.payload, base),
+          apiKey,
+          modelCandidates,
+          maxTokens: 800,
+          temperature: 0.1,
+        });
+        if (result.ok) {
+          const parsed = parseExtractionJson(result.text);
+          if (parsed && parsed.is_job_opportunity !== undefined) {
+            const company = parsed.company?.trim() || base.company;
+            const position = parsed.position?.trim() || base.position;
+            const confidence = typeof parsed.confidence === "number" ? parsed.confidence : base.confidence;
+            return {
+              provider: "Claude",
+              model: result.model,
+              usedStub: false,
+              confidence,
+              data: {
+                company: company.toLowerCase() === "linkedin" ? base.company : company,
+                position,
+                location: parsed.location ?? base.location,
+                jobUrl: parsed.job_url ?? base.jobUrl,
+                salaryRange: parsed.salary ?? base.salaryRange,
+                source: payload_source(input.payload),
+                confidence,
+                description: parsed.summary || base.description,
+                raw: base.raw,
+              },
+              usage: usageFromLengths(body.length, result.text.length),
+            };
+          }
+        }
+      } catch {
+        // Fall through to deterministic extraction
+      }
+    }
   }
 
-  const body = `${input.payload.subject}\n${input.payload.bodyText}`;
   return {
     provider,
-    model,
+    model: usedStub ? DEFAULT_AI_MODEL : (input.config.model ?? DEFAULT_AI_MODEL),
     usedStub,
     confidence: base.confidence,
     data: base,
     usage: usageFromLengths(body.length, JSON.stringify(base).length),
   };
+}
+
+function payload_source(payload: JobIntakeEmailPayload): string {
+  return payload.provider ?? "email";
 }
 
 /** Legacy export — deterministic research. */
@@ -431,11 +544,48 @@ export async function runResearchGeneration(input: {
   config: AiRuntimeConfig;
 }): Promise<AiServiceResult<Awaited<ReturnType<typeof generateJobResearch>>>> {
   const usedStub = shouldUseStub(input.config);
-  const provider: AiProvider = usedStub ? "Stub" : input.config.provider;
-  const model = usedStub ? DEFAULT_AI_MODEL : input.config.model;
+  const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
 
-  if (!usedStub && input.config.apiKeyDecrypted) {
-    // TODO: OpenAI / Claude research call
+  if (!usedStub) {
+    const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
+    if (apiKey) {
+      const modelCandidates = buildAnthropicModelCandidates(input.config.model);
+      const prompt = [
+        "Write a concise job research brief as plain text with these headings:",
+        "Company Overview | Role Summary | Key Requirements | Resume Keywords | Cover Letter Angles | Interview Prep Notes",
+        "",
+        `Company: ${input.job.company}`,
+        `Position: ${input.job.position}`,
+        `Location: ${input.job.location ?? "Not specified"}`,
+        `Job description: ${input.job.description ?? "Not provided"}`,
+        "",
+        "Base your analysis only on the job description provided. Do not invent facts.",
+      ].join("\n");
+      try {
+        const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 900, temperature: 0.3 });
+        if (result.ok) {
+          const text = result.text;
+          const summary = text.split("\n")[0] ?? `${input.job.company} hiring for ${input.job.position}.`;
+          return {
+            provider: "Claude",
+            model: result.model,
+            usedStub: false,
+            confidence: 0.88,
+            data: {
+              summary,
+              keyRequirements: ["See research document"],
+              companyResearch: text,
+              talkingPoints: ["See research document"],
+              confidence: 0.88,
+              promptVersion: "research-v2-claude",
+            },
+            usage: usageFromLengths(inText.length, text.length),
+          };
+        }
+      } catch {
+        // Fall through to stub
+      }
+    }
   }
 
   const data = await generateJobResearch({
@@ -444,12 +594,10 @@ export async function runResearchGeneration(input: {
     description: input.job.description,
     location: input.job.location,
   });
-
-  const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
   return {
-    provider,
-    model,
-    usedStub,
+    provider: usedStub ? "Stub" : input.config.provider,
+    model: usedStub ? DEFAULT_AI_MODEL : input.config.model,
+    usedStub: true,
     confidence: data.confidence,
     data,
     usage: usageFromLengths(inText.length, data.summary.length + data.companyResearch.length),
@@ -486,11 +634,48 @@ export async function runCoverLetterGeneration(input: {
   config: AiRuntimeConfig;
 }): Promise<AiServiceResult<Awaited<ReturnType<typeof generateCoverLetterDraft>>>> {
   const usedStub = shouldUseStub(input.config);
-  const provider: AiProvider = usedStub ? "Stub" : input.config.provider;
-  const model = usedStub ? DEFAULT_AI_MODEL : input.config.model;
+  const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
 
-  if (!usedStub && input.config.apiKeyDecrypted) {
-    // TODO: OpenAI / Claude draft call
+  if (!usedStub) {
+    const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
+    if (apiKey) {
+      const modelCandidates = buildAnthropicModelCandidates(input.config.model);
+      const tone = input.job.tone ?? "professional";
+      const prompt = [
+        `Write a ${tone} cover letter (250–350 words) for the role below. Plain text only. No placeholders.`,
+        "RULES: Only cite experience from the job description context. Do not fabricate credentials.",
+        "",
+        `Company: ${input.job.company}`,
+        `Position: ${input.job.position}`,
+        `Job description: ${input.job.description ?? "Not provided"}`,
+      ].join("\n");
+      try {
+        const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 700, temperature: 0.4 });
+        if (result.ok) {
+          const lines = result.text.split("\n");
+          const opening = lines[0] ?? `Dear Hiring Team at ${input.job.company},`;
+          const closing = lines[lines.length - 1] ?? "Thank you for your consideration.";
+          return {
+            provider: "Claude",
+            model: result.model,
+            usedStub: false,
+            confidence: 0.86,
+            data: {
+              draftText: result.text,
+              opening,
+              experienceMatch: "",
+              closing,
+              tone,
+              confidence: 0.86,
+              promptVersion: "cover-letter-v2-claude",
+            },
+            usage: usageFromLengths(inText.length, result.text.length),
+          };
+        }
+      } catch {
+        // Fall through to stub
+      }
+    }
   }
 
   const data = await generateCoverLetterDraft({
@@ -499,12 +684,10 @@ export async function runCoverLetterGeneration(input: {
     description: input.job.description,
     tone: input.job.tone,
   });
-
-  const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
   return {
-    provider,
-    model,
-    usedStub,
+    provider: usedStub ? "Stub" : input.config.provider,
+    model: usedStub ? DEFAULT_AI_MODEL : input.config.model,
+    usedStub: true,
     confidence: data.confidence,
     data,
     usage: usageFromLengths(inText.length, data.draftText.length),

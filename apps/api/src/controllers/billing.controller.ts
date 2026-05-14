@@ -9,7 +9,8 @@ import {
   createCheckoutSessionStub,
   getCurrentPlan,
   getTenantUsage,
-  handleStripeWebhookStub,
+  handleStripeWebhook,
+  verifyStripeWebhookSignature,
   usagePercentages,
 } from "../services/billing.service";
 import { recalculateTenantUsage } from "../services/usage.service";
@@ -19,6 +20,7 @@ export const getPlan = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const snapshot = await getCurrentPlan({ tenantId });
   const percentages = usagePercentages(snapshot);
+  const stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY?.trim());
   const availablePlans = Object.values(PLAN_DEFINITIONS).map((p) => ({
     planKey: p.planKey,
     displayName: p.displayName,
@@ -38,6 +40,8 @@ export const getPlan = asyncHandler(async (req: Request, res) => {
       usage: snapshot.usage,
       usagePercentages: percentages,
       availablePlans,
+      stripeConfigured,
+      billingNotice: stripeConfigured ? null : "Billing is not configured. Contact support to set up your billing account.",
     },
     "Billing plan"
   );
@@ -72,8 +76,17 @@ export const postCancel = asyncHandler(async (req: Request, res) => {
 });
 
 export const postWebhook = asyncHandler(async (req: Request, res) => {
-  const result = await handleStripeWebhookStub({ event: req.body as Record<string, unknown> });
-  return successResponse(res, result, "Webhook received (stub)");
+  const signature = req.headers["stripe-signature"] as string | undefined;
+  if (signature) {
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody ?? Buffer.from(JSON.stringify(req.body));
+    const verify = verifyStripeWebhookSignature({ rawBody, signature });
+    if (!verify.verified) {
+      res.status(400).json({ error: verify.error ?? "Invalid webhook signature" });
+      return;
+    }
+  }
+  const result = await handleStripeWebhook({ event: req.body as Record<string, unknown> });
+  return successResponse(res, result, "Webhook received");
 });
 
 export const getUsage = asyncHandler(async (req: Request, res) => {

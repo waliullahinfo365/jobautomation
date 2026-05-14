@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { ApplicationModel } from "@jobflow/database/models";
-import { sendFollowUpReminderStub } from "@jobflow/integrations/smtp/smtp.service";
+import { ApplicationModel, UserModel } from "@jobflow/database/models";
+import { sendResendEmail, isResendConfigured } from "@jobflow/integrations/email/resend.service";
 import type { FollowUpReminderResult } from "@jobflow/shared/types/application";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
@@ -76,6 +76,10 @@ export async function processDueFollowUpsForTenant(input: {
   const tenantId = assertTenantId(input.tenantId);
   const operationId = input.operationId ?? randomUUID();
   const now = input.now ?? new Date();
+  // Resolve owner email for notifications
+  const owner = await UserModel.findOne({ tenantId, role: "Owner" }).select("email name").lean() as { email?: string; name?: string } | null;
+  const ownerEmail = owner?.email;
+
   const dueItems = await findDueFollowUps({ tenantId, now, limit: 100 });
   let sent = 0;
   let skipped = 0;
@@ -93,15 +97,18 @@ export async function processDueFollowUpsForTenant(input: {
     }
 
     try {
-      await sendFollowUpReminderStub({
-        tenantId,
-        applicationId: String(application._id),
-        to: application.contactEmail ?? "no-reply@example.com",
-        subject: `Follow-up reminder: ${application.company} - ${application.position}`,
-        bodyText:
-          application.followUpMessagePreview ??
-          `This is your scheduled follow-up reminder for ${application.company} (${application.position}).`,
-      });
+      const message = application.followUpMessagePreview
+        ?? `This is your scheduled follow-up reminder for ${application.company} (${application.position}).`;
+
+      if (ownerEmail && isResendConfigured()) {
+        const html = `<p><strong>Follow-up Reminder</strong></p><p>${message}</p><p>Application: ${application.company} — ${application.position}</p>`;
+        await sendResendEmail({
+          to: ownerEmail,
+          subject: `Follow-up reminder: ${application.company} — ${application.position}`,
+          html,
+          text: message,
+        });
+      }
 
       await ApplicationModel.findByIdAndUpdate(application._id, {
         followUpStatus: "Sent",

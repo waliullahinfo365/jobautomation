@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { AuditLogModel, TenantModel } from "@jobflow/database/models";
 import { PLAN_DEFINITIONS, displayPlanToPlanKey } from "@jobflow/shared/constants/plans";
 import type {
@@ -12,6 +13,55 @@ import type {
 } from "@jobflow/shared/types/billing";
 import { assertTenantId } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
+
+// ─── Stripe configuration helpers ─────────────────────────────────────────────
+
+function isStripeConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+}
+
+function stripeSecretKey(): string {
+  const key = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!key) throw new ApiError("Stripe billing is not configured. Set STRIPE_SECRET_KEY.", 503, "BILLING_NOT_CONFIGURED");
+  return key;
+}
+
+function stripeWebhookSecret(): string | null {
+  return process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? null;
+}
+
+/** Minimal raw HTTP client for Stripe API */
+async function stripeRequest<T>(
+  method: "GET" | "POST" | "DELETE",
+  path: string,
+  body?: Record<string, string>
+): Promise<T> {
+  const key = stripeSecretKey();
+  const url = `https://api.stripe.com/v1${path}`;
+  const encoded = body ? new URLSearchParams(body).toString() : undefined;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Version": "2023-10-16",
+    },
+    ...(encoded ? { body: encoded } : {}),
+  });
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    const msg = (json.error as { message?: string } | undefined)?.message ?? `Stripe HTTP ${res.status}`;
+    throw new ApiError(msg.slice(0, 300), res.status >= 500 ? 502 : 422, "STRIPE_ERROR");
+  }
+  return json as T;
+}
+
+function planPriceId(planKey: SubscriptionPlanKey, cycle: "monthly" | "yearly"): string | null {
+  const envKey = cycle === "yearly"
+    ? `STRIPE_PRICE_${planKey.toUpperCase()}_YEARLY`
+    : `STRIPE_PRICE_${planKey.toUpperCase()}`;
+  return process.env[envKey]?.trim() ?? process.env[`STRIPE_PRICE_${planKey.toUpperCase()}`]?.trim() ?? null;
+}
 
 function tenantQuery(tenantId: string) {
   return { $or: [{ _id: tenantId }, { slug: tenantId }] };
@@ -145,12 +195,51 @@ export async function createCheckoutSessionStub(input: {
 }): Promise<CheckoutResult> {
   assertTenantId(input.tenantId);
   if (!PLAN_DEFINITIONS[input.planKey]) throw new ApiError("Invalid planKey", 422, "VALIDATION_ERROR");
-  const sessionId = `stub_cs_${randomUUID()}`;
+
+  if (!isStripeConfigured()) {
+    throw new ApiError(
+      "Billing is not configured. Contact support to set up your billing account.",
+      503,
+      "BILLING_NOT_CONFIGURED"
+    );
+  }
+
+  const priceId = planPriceId(input.planKey, input.billingCycle);
+  if (!priceId) {
+    throw new ApiError(
+      `No Stripe price ID configured for plan "${input.planKey}" (${input.billingCycle}). Set STRIPE_PRICE_${input.planKey.toUpperCase()} in environment.`,
+      503,
+      "BILLING_NOT_CONFIGURED"
+    );
+  }
+
+  const tenant = await TenantModel.findOne({ $or: [{ _id: input.tenantId }, { slug: input.tenantId }] }).lean() as Record<string, unknown> | null;
+  const appBaseUrl = process.env.APP_BASE_URL ?? "https://newjob.guru";
+
+  const params: Record<string, string> = {
+    "line_items[0][price]": priceId,
+    "line_items[0][quantity]": "1",
+    mode: "subscription",
+    success_url: `${appBaseUrl}/billing?checkout=success&plan=${input.planKey}`,
+    cancel_url: `${appBaseUrl}/billing?checkout=cancelled`,
+    "metadata[tenantId]": input.tenantId,
+    "metadata[planKey]": input.planKey,
+  };
+
+  // Attach existing Stripe customer if available
+  const billing = (tenant?.billing ?? {}) as Record<string, unknown>;
+  const existingCustomerId = String(billing.stripeCustomerId ?? tenant?.stripeCustomerId ?? "");
+  if (existingCustomerId) {
+    params.customer = existingCustomerId;
+  }
+
+  const session = await stripeRequest<{ id: string; url: string }>("POST", "/checkout/sessions", params);
+
   return {
-    checkoutUrl: `https://billing.example.local/checkout/${sessionId}`,
-    sessionId,
+    checkoutUrl: session.url,
+    sessionId: session.id,
     planKey: input.planKey,
-    status: "stub_open",
+    status: "open",
   };
 }
 
@@ -192,6 +281,14 @@ export async function changePlanStub(input: { tenantId: string; planKey: Subscri
 
 export async function cancelSubscriptionStub(input: { tenantId: string }) {
   const tenantId = assertTenantId(input.tenantId);
+  const tenant = await TenantModel.findOne(tenantQuery(tenantId)).lean() as Record<string, unknown> | null;
+  const billing = (tenant?.billing ?? {}) as Record<string, unknown>;
+  const subscriptionId = String(billing.stripeSubscriptionId ?? tenant?.stripeSubscriptionId ?? "");
+
+  if (isStripeConfigured() && subscriptionId) {
+    await stripeRequest("POST", `/subscriptions/${subscriptionId}`, { cancel_at_period_end: "true" });
+  }
+
   await TenantModel.updateOne(tenantQuery(tenantId), {
     $set: {
       "billing.cancelAtPeriodEnd": true,
@@ -202,13 +299,117 @@ export async function cancelSubscriptionStub(input: { tenantId: string }) {
   return getCurrentPlan({ tenantId });
 }
 
+export function verifyStripeWebhookSignature(input: {
+  rawBody: Buffer | string;
+  signature: string;
+}): { verified: boolean; error?: string } {
+  const webhookSecret = stripeWebhookSecret();
+  if (!webhookSecret) return { verified: true }; // No secret = skip verification (dev only)
+
+  const parts = input.signature.split(",").reduce<Record<string, string>>((acc, part) => {
+    const [k, v] = part.split("=");
+    if (k && v) acc[k] = v;
+    return acc;
+  }, {});
+  const timestamp = parts["t"];
+  const sig = parts["v1"];
+  if (!timestamp || !sig) return { verified: false, error: "Missing webhook signature components" };
+
+  const body = typeof input.rawBody === "string" ? input.rawBody : input.rawBody.toString("utf8");
+  const payload = `${timestamp}.${body}`;
+  const expected = createHmac("sha256", webhookSecret).update(payload, "utf8").digest("hex");
+  const tolerance = 300; // 5 minutes
+  const age = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
+  if (age > tolerance) return { verified: false, error: "Webhook timestamp too old" };
+
+  try {
+    if (!timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(sig, "hex"))) {
+      return { verified: false, error: "Webhook signature mismatch" };
+    }
+  } catch {
+    return { verified: false, error: "Webhook signature verification failed" };
+  }
+  return { verified: true };
+}
+
+export async function handleStripeWebhook(input: { event: Record<string, unknown> }) {
+  const eventType = String(input.event?.type ?? "");
+  const eventId = String(input.event?.id ?? "unknown");
+  const data = (input.event?.data as Record<string, unknown> | undefined)?.object as Record<string, unknown> | undefined;
+
+  if (!data) return { received: true, eventId, eventType, handled: false, reason: "no data object" };
+
+  switch (eventType) {
+    case "checkout.session.completed": {
+      const tenantId = String((data.metadata as Record<string, string> | undefined)?.tenantId ?? "");
+      const planKey = String((data.metadata as Record<string, string> | undefined)?.planKey ?? "") as SubscriptionPlanKey;
+      const customerId = String(data.customer ?? "");
+      const subscriptionId = String(data.subscription ?? "");
+      if (!tenantId || !planKey || !PLAN_DEFINITIONS[planKey]) break;
+      const def = PLAN_DEFINITIONS[planKey];
+      await TenantModel.updateOne(tenantQuery(tenantId), {
+        $set: {
+          plan: def.displayName,
+          billingStatus: "Active",
+          "billing.planKey": planKey,
+          "billing.billingStatus": "Active",
+          "billing.stripeCustomerId": customerId,
+          "billing.stripeSubscriptionId": subscriptionId,
+          "billing.cancelAtPeriodEnd": false,
+        },
+      });
+      break;
+    }
+    case "customer.subscription.updated": {
+      const customerId = String(data.customer ?? "");
+      const subscriptionId = String(data.id ?? "");
+      const cancelAtPeriodEnd = Boolean(data.cancel_at_period_end);
+      const rawStatus = String(data.status ?? "");
+      const billingStatus: BillingStatus = rawStatus === "active" ? "Active" : rawStatus === "trialing" ? "Trialing" : rawStatus === "past_due" ? "Past Due" : "Cancelled";
+      const periodStart = data.current_period_start ? new Date(Number(data.current_period_start) * 1000) : undefined;
+      const periodEnd = data.current_period_end ? new Date(Number(data.current_period_end) * 1000) : undefined;
+      const update: Record<string, unknown> = {
+        billingStatus,
+        "billing.billingStatus": billingStatus,
+        "billing.stripeCustomerId": customerId,
+        "billing.stripeSubscriptionId": subscriptionId,
+        "billing.cancelAtPeriodEnd": cancelAtPeriodEnd,
+      };
+      if (periodStart) { update["billing.currentPeriodStart"] = periodStart; }
+      if (periodEnd) { update["billing.currentPeriodEnd"] = periodEnd; }
+      await TenantModel.updateOne({ "billing.stripeSubscriptionId": subscriptionId }, { $set: update });
+      break;
+    }
+    case "customer.subscription.deleted": {
+      const subscriptionId = String(data.id ?? "");
+      await TenantModel.updateOne({ "billing.stripeSubscriptionId": subscriptionId }, {
+        $set: {
+          billingStatus: "Cancelled",
+          "billing.billingStatus": "Cancelled",
+          "billing.cancelAtPeriodEnd": false,
+          plan: PLAN_DEFINITIONS["free_trial"].displayName,
+          "billing.planKey": "free_trial",
+        },
+      });
+      break;
+    }
+    case "invoice.payment_failed": {
+      const customerId = String(data.customer ?? "");
+      await TenantModel.updateOne({ "billing.stripeCustomerId": customerId }, {
+        $set: { billingStatus: "Past Due", "billing.billingStatus": "Past Due" },
+      });
+      break;
+    }
+    default:
+      return { received: true, eventId, eventType, handled: false };
+  }
+
+  return { received: true, eventId, eventType, handled: true };
+}
+
+/** @deprecated Use handleStripeWebhook — kept for controller compatibility during migration */
 export async function handleStripeWebhookStub(input: { event: Record<string, unknown> }) {
-  return {
-    received: true,
-    mode: "stub",
-    eventId: String(input.event?.id ?? input.event?.type ?? "unknown"),
-    message: "Stripe webhook stub: no payment processing",
-  };
+  return handleStripeWebhook(input);
 }
 
 

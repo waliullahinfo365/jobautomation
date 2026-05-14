@@ -51,7 +51,7 @@ export interface CheckoutResult {
   checkoutUrl: string;
   sessionId: string;
   planKey: SubscriptionPlanKey;
-  status: "stub_pending" | "stub_open";
+  status: "open" | "stub_pending" | "stub_open";
 }
 
 export interface PlanUsage {
