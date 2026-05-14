@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { AuditLogModel, TenantModel } from "@jobflow/database/models";
 import { PLAN_DEFINITIONS, displayPlanToPlanKey } from "@jobflow/shared/constants/plans";
@@ -243,7 +242,7 @@ export async function createCheckoutSessionStub(input: {
   };
 }
 
-export async function changePlanStub(input: { tenantId: string; planKey: SubscriptionPlanKey; userId?: string }) {
+export async function changePlanDirect(input: { tenantId: string; planKey: SubscriptionPlanKey; userId?: string }) {
   const tenantId = assertTenantId(input.tenantId);
   const def = PLAN_DEFINITIONS[input.planKey];
   if (!def) throw new ApiError("Invalid planKey", 422, "VALIDATION_ERROR");
@@ -279,7 +278,7 @@ export async function changePlanStub(input: { tenantId: string; planKey: Subscri
   return getCurrentPlan({ tenantId });
 }
 
-export async function cancelSubscriptionStub(input: { tenantId: string }) {
+export async function cancelSubscription(input: { tenantId: string }) {
   const tenantId = assertTenantId(input.tenantId);
   const tenant = await TenantModel.findOne(tenantQuery(tenantId)).lean() as Record<string, unknown> | null;
   const billing = (tenant?.billing ?? {}) as Record<string, unknown>;

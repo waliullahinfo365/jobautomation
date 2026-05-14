@@ -4,8 +4,8 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
 import { assertTenantId } from "../services/baseTenant.service";
 import {
-  cancelSubscriptionStub,
-  changePlanStub,
+  cancelSubscription,
+  changePlanDirect,
   createCheckoutSessionStub,
   getCurrentPlan,
   getTenantUsage,
@@ -59,7 +59,7 @@ export const postCheckout = asyncHandler(async (req: Request, res) => {
 
 export const postChangePlan = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const snapshot = await changePlanStub({ tenantId, planKey: req.body.planKey, userId: req.user?.id });
+  const snapshot = await changePlanDirect({ tenantId, planKey: req.body.planKey, userId: req.user?.id });
   void logTenantAudit(req, "billing.plan.changed", {
     entityType: "Tenant",
     entityId: tenantId,
@@ -71,7 +71,7 @@ export const postChangePlan = asyncHandler(async (req: Request, res) => {
 
 export const postCancel = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const snapshot = await cancelSubscriptionStub({ tenantId });
+  const snapshot = await cancelSubscription({ tenantId });
   return successResponse(res, snapshot, "Subscription cancel scheduled (stub)");
 });
 

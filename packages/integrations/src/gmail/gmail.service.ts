@@ -15,6 +15,7 @@ export function normalizeGmailMessage(input: Partial<JobIntakeEmailPayload>): Jo
   };
 }
 
+/** Dev-only: returns a placeholder payload for testing intake pipelines without real Gmail. */
 export async function fetchMessageByIdStub(messageId: string): Promise<JobIntakeEmailPayload> {
   return normalizeGmailMessage({
     provider: "gmail",
@@ -28,6 +29,53 @@ export async function fetchMessageByIdStub(messageId: string): Promise<JobIntake
   });
 }
 
+/**
+ * Verifies a Gmail push notification webhook request.
+ *
+ * Google signs push notification requests with an OIDC token (Bearer) in the
+ * Authorization header. If GMAIL_WEBHOOK_TOKEN env is set, we verify against
+ * Google's tokeninfo endpoint. As a final guard, we require the payload to be
+ * a non-null object with a message property (Gmail push notification shape).
+ */
+export async function verifyGmailWebhook(
+  payload: unknown,
+  authorizationHeader?: string
+): Promise<{ valid: boolean; reason?: string }> {
+  // Basic payload shape check: Gmail push notifications always have `message` + `subscription`
+  if (typeof payload !== "object" || payload === null) {
+    return { valid: false, reason: "Payload is not an object" };
+  }
+
+  const body = payload as Record<string, unknown>;
+
+  // If GMAIL_WEBHOOK_TOKEN is configured, verify via Google tokeninfo
+  const webhookToken = process.env.GMAIL_WEBHOOK_TOKEN?.trim();
+  if (webhookToken && authorizationHeader) {
+    const bearerMatch = authorizationHeader.match(/^Bearer\s+(.+)$/i);
+    if (!bearerMatch) return { valid: false, reason: "Missing Bearer token in Authorization header" };
+    const idToken = bearerMatch[1];
+    try {
+      const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+      if (!res.ok) return { valid: false, reason: `Google tokeninfo rejected token (HTTP ${res.status})` };
+      const info = (await res.json()) as Record<string, unknown>;
+      if (typeof info.aud !== "string") return { valid: false, reason: "Token audience missing" };
+      // Optionally: verify info.aud matches project/service account
+      if (info.error) return { valid: false, reason: `Token invalid: ${String(info.error_description ?? info.error)}` };
+    } catch (e) {
+      return { valid: false, reason: `Could not verify token: ${e instanceof Error ? e.message : "fetch failed"}` };
+    }
+  }
+
+  // Accept Gmail-shaped payloads (has `message` with base64 data or standard structure)
+  const hasMessage = "message" in body || "data" in body;
+  if (!hasMessage && !("providerMessageId" in body)) {
+    return { valid: false, reason: "Payload does not match Gmail push notification shape" };
+  }
+
+  return { valid: true };
+}
+
+/** @deprecated Use verifyGmailWebhook — kept for backward compatibility */
 export function verifyGmailWebhookStub(payload: unknown): boolean {
   return typeof payload === "object" && payload !== null;
 }

@@ -1,4 +1,4 @@
-import { normalizeGmailReply, verifyGmailWebhookStub } from "@jobflow/integrations/gmail/gmail.service";
+import { normalizeGmailReply, verifyGmailWebhook } from "@jobflow/integrations/gmail/gmail.service";
 import type { Request } from "express";
 import * as integrationService from "../services/integration.service";
 import { processEmailReply } from "../services/email-reply-detection.service";
@@ -93,8 +93,8 @@ export const testResend = asyncHandler(async (req: Request, res) => {
 
 export const gmailReplyWebhook = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const isValid = verifyGmailWebhookStub(req.body);
-  if (!isValid) return successResponse(res, { accepted: false }, "Invalid webhook payload");
+  const verification = await verifyGmailWebhook(req.body, req.headers.authorization);
+  if (!verification.valid) return successResponse(res, { accepted: false, reason: verification.reason }, "Invalid webhook payload");
   const payload = normalizeGmailReply(req.body);
   const result = await processEmailReply({ tenantId, payload });
   return successResponse(res, result, "Reply webhook processed");
