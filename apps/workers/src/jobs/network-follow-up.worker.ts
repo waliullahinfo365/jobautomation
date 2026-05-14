@@ -1,3 +1,3 @@
-export async function run() {
-  // TODO: implement network-follow-up worker logic
-}
+import { processNetworkFollowUpJob } from "../processors/network-follow-up.processor";
+
+export { processNetworkFollowUpJob };

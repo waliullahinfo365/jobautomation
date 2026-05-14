@@ -1,3 +1,3 @@
-export async function run() {
-  // TODO: implement lifecycle-monitoring worker logic
-}
+import { processLifecycleMonitoringJob } from "../processors/lifecycle-monitoring.processor";
+
+export { processLifecycleMonitoringJob };

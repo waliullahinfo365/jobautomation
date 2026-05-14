@@ -1,3 +1,3 @@
-export async function run() {
-  // TODO: implement offer-tracking worker logic
-}
+import { processOfferTrackingJob } from "../processors/offer-tracking.processor";
+
+export { processOfferTrackingJob };
