@@ -1,6 +1,6 @@
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import { AutomationLogModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
-import { runAiExtraction } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, classifyEmailType } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import { checkDuplicateJobWorker } from "../lib/duplicate-job-check";
 import { loadGoogleAccessToken } from "../lib/google-auth";
@@ -159,6 +159,34 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       continue;
     }
     const normalized = parseGmailMessageToPayload(message);
+
+    // Classify before extraction — skip non-job emails early
+    const classification = classifyEmailType(normalized);
+    if (!classification.isJobOpportunity || classification.confidence < 0.75) {
+      processedMessageIds.add(normalized.providerMessageId);
+      skippedCount += 1;
+      if (!payload.dryRun) {
+        await AutomationLogModel.create({
+          tenantId: payload.tenantId,
+          createdBy: "system",
+          moduleKey: "job-intake",
+          moduleName: "job-intake",
+          status: "Warning",
+          message: `Email skipped (not a job opportunity): ${normalized.subject || "(no subject)"}`,
+          operationId,
+          metadata: {
+            gmailMessageId: normalized.providerMessageId,
+            from: normalized.from,
+            subject: normalized.subject,
+            emailType: classification.emailType,
+            classificationConfidence: classification.confidence,
+            classificationReason: classification.reason,
+          },
+        });
+      }
+      continue;
+    }
+
     const extraction = await runAiExtraction({
       payload: normalized,
       config: { provider: "Claude", model: "claude-3-5-sonnet-20241022", fallbackToStub: true },
@@ -245,6 +273,12 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       providerThreadId: normalized.providerThreadId,
       extractedFromEmail: true,
       extractionConfidence: data.confidence,
+      jobIntakeClassification: {
+        isJobOpportunity: classification.isJobOpportunity,
+        confidence: classification.confidence,
+        reason: classification.reason,
+        emailType: classification.emailType,
+      },
     });
     createdCount += 1;
     processedMessageIds.add(normalized.providerMessageId);
@@ -313,7 +347,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     moduleKey: "job-intake",
     moduleName: "job-intake",
     status: "Success",
-    message: `Gmail intake processed ${messages.length} messages; created ${createdCount} jobs.`,
+    message: `Gmail intake: scanned ${messages.length}, created ${createdCount}, skipped ${skippedCount} (duplicates + non-job emails).`,
     operationId,
     metadata: { scannedMessages: messages.length, createdCount, skippedCount, query },
   });

@@ -4,6 +4,7 @@ import { successResponse } from "../utils/apiResponse";
 import { ApiError } from "../utils/errors";
 import { assertTenantId } from "../services/baseTenant.service";
 import { getAdminDebugDataCounts, resetOperationalWorkspaceData } from "../services/admin-reset.service";
+import { cleanupNonJobIntakeRecords, recalculateTenantJobsCount } from "../services/admin-intake-cleanup.service";
 import { logger } from "../utils/logger";
 
 export function requireAdminResetToken(req: Request, _res: Response, next: NextFunction) {
@@ -43,4 +44,17 @@ export const getDebugDataCounts = asyncHandler(async (req: Request, res) => {
     mockFallbackUsed: false,
   }, "admin debug data counts");
   return successResponse(res, result, "Debug data counts");
+});
+
+export const cleanupNonJobIntake = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const dryRun = req.body?.dryRun !== false;
+  const result = await cleanupNonJobIntakeRecords({ tenantId, dryRun });
+  return successResponse(res, result, dryRun ? "Cleanup dry run complete" : "Non-job intake records archived");
+});
+
+export const recalculateJobsCount = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const result = await recalculateTenantJobsCount(tenantId);
+  return successResponse(res, result, "Tenant jobs count recalculated");
 });

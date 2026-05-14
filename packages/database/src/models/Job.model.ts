@@ -27,6 +27,12 @@ const JobSchema = new Schema(
     providerThreadId: String,
     extractedFromEmail: { type: Boolean, default: false },
     extractionConfidence: Number,
+    jobIntakeClassification: {
+      isJobOpportunity: Boolean,
+      confidence: Number,
+      reason: String,
+      emailType: { type: String, enum: ["job_alert", "recruiter_opportunity", "newsletter", "notification", "marketing", "unknown"] },
+    },
     aiProcessingStatus: {
       type: String,
       enum: ["Not Started", "Queued", "Processing", "Completed", "Failed"],
