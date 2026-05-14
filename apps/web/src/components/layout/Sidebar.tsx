@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BrandMark, LiveIcon, SIDEBAR_NAV } from "@/components/icons";
+import { LiveIcon, SIDEBAR_NAV } from "@/components/icons";
+import { BRAND } from "@/lib/brand";
 import { useInterviewsApi } from "@/hooks/api/useInterviewsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -23,12 +25,12 @@ export function Sidebar() {
     <aside className="jf-sidebar hidden md:flex">
       <div className="mb-3 border-b border-[var(--border-subtle)] pb-3.5">
         <div className="flex items-center gap-2.5 px-2 py-1.5">
-          <div className="jf-brand-mark text-white">
-            <BrandMark size={16} className="relative z-[1]" />
+          <div className="flex-none">
+            <Image src={BRAND.iconPath} alt={BRAND.name} width={30} height={30} priority />
           </div>
           <div className="jf-sidebar-collapsed-text min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-[13.5px] font-bold tracking-[-0.012em] text-[var(--text-1)]">JobFlow AI</span>
+              <span className="text-[13.5px] font-bold tracking-[-0.012em] text-[var(--text-1)]">{BRAND.name}</span>
               <span className="rounded-full border border-[var(--accent-ring)] bg-[var(--accent-bg)] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-[var(--accent-hi)]">
                 Beta
               </span>

@@ -679,7 +679,7 @@ export async function testIntegration(input: {
         await sendSmtpMail({
           ...outbound,
           to: toAddr,
-          subject: "JobFlow SMTP Test",
+          subject: "NewJob Guru SMTP Test",
           html: "<p>SMTP email delivery is connected.</p>",
           text: "SMTP email delivery is connected.",
         });
@@ -858,7 +858,7 @@ export async function testTelegramNotification(input: { tenantId: string; userId
   const result = await notifications.sendTelegramNotification({
     tenantId,
     event: "daily-digest",
-    message: "✅ JobFlow Telegram notifications are connected.",
+    message: "✅ NewJob Guru Telegram notifications are connected.",
   });
   const isConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()) && Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
   const status = result.status === "Sent" ? "Success" : result.status === "Warning" ? "Warning" : "Failed";
@@ -918,7 +918,7 @@ export async function testSlackNotification(input: { tenantId: string; userId: s
     const posted = await notifications.sendSlackNotification({
       tenantId,
       event: "daily-digest",
-      message: "✅ JobFlow Slack notifications are connected.",
+      message: "✅ NewJob Guru Slack notifications are connected.",
     });
     if (posted.status === "Sent") {
       status = "Success";
@@ -1048,7 +1048,7 @@ export async function testResendNotification(input: {
 
   const sendResult = await sendResendEmail({
     to: recipient,
-    subject: "JobFlow Resend Test",
+    subject: "NewJob Guru Resend Test",
     html: "<p>Resend email delivery is connected.</p>",
     text: "Resend email delivery is connected.",
   });

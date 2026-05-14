@@ -326,7 +326,7 @@ export function IntegrationConnectModal({
                 <Input
                   value={fromName}
                   onChange={(e) => setFromName(e.target.value)}
-                  placeholder="JobFlow"
+                  placeholder="NewJob Guru"
                   autoComplete="off"
                 />
               </div>

@@ -4,7 +4,7 @@ import { APP_NAME } from "@/lib/constants";
 import { LoginBackground } from "@/components/auth/LoginBackground";
 import { LoginFooterCopy, LoginHeaderCopy } from "@/components/auth/AuthPageCopy";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { ZapIcon } from "@/components/icons";
+import { BrandIcon } from "@/components/auth/BrandIcon";
 
 export const metadata: Metadata = { title: "Sign In" };
 
@@ -15,9 +15,7 @@ export default function LoginPage() {
       <main className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-sm space-y-6">
           <div className="flex flex-col items-center gap-2 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-              <ZapIcon size={24} className="text-primary-foreground" />
-            </div>
+            <BrandIcon size={40} />
             <h1 className="text-2xl font-bold text-white">{APP_NAME}</h1>
             <LoginHeaderCopy />
           </div>

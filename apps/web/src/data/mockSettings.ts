@@ -152,7 +152,7 @@ export const mockResendIntegrationStatus = {
 export const mockProfileSettings: ProfileSettings = {
   name: "Wali Ullah",
   email: "wali.ullah@gmail.com",
-  workspaceName: "JobFlow AI",
+  workspaceName: "NewJob Guru",
   timezone: "Asia/Karachi (UTC+5)",
   role: "Admin",
   avatarInitials: "WU",
@@ -211,7 +211,7 @@ export const mockNotificationPreferences: NotificationPreferences = {
 export const mockStorageSettings: StorageSettings = {
   database: "MongoDB (placeholder)",
   fileStorage: "Google Drive (placeholder)",
-  pdfExportsFolder: "Drive / JobFlow AI / Exports",
+  pdfExportsFolder: "Drive / NewJob Guru / Exports",
   dataRetention: "12 months",
 };
 

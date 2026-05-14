@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { BrandMark, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
+import Image from "next/image";
+import { SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
+import { BRAND } from "@/lib/brand";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { APP_NAME } from "@/lib/constants";
 import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { me } from "@/lib/api/auth.api";
@@ -73,10 +74,8 @@ export function MobileNav() {
     <>
       <header className="jf-mobile-topbar flex min-h-[52px] items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] px-3 py-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:min-h-[56px] sm:px-4 md:hidden">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="jf-brand-mark shrink-0 text-white">
-            <BrandMark size={14} className="relative z-[1]" />
-          </div>
-          <span className="truncate text-sm font-semibold text-[var(--text-1)]">{APP_NAME}</span>
+          <Image src={BRAND.iconPath} alt={BRAND.name} width={26} height={26} priority />
+          <span className="truncate text-sm font-semibold text-[var(--text-1)]">{BRAND.name}</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <LanguageSwitcher compact />
@@ -103,7 +102,7 @@ export function MobileNav() {
             aria-label={t("common.openMenu")}
           >
             <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
-              <span className="font-semibold text-[var(--text-1)]">{APP_NAME}</span>
+              <span className="font-semibold text-[var(--text-1)]">{BRAND.name}</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

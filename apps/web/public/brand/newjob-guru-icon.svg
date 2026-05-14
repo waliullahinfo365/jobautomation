@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <!-- Briefcase body -->
+  <rect x="14" y="28" width="36" height="22" rx="4" stroke="white" stroke-width="2.5" fill="none"/>
+  <!-- Briefcase handle -->
+  <path d="M23 28v-4a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Center divider line -->
+  <line x1="14" y1="36" x2="50" y2="36" stroke="white" stroke-width="2" opacity="0.5"/>
+  <!-- Upward arrow -->
+  <path d="M32 22 L32 12 M29 15 L32 12 L35 15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <!-- Spark dots -->
+  <circle cx="50" cy="18" r="1.8" fill="white" opacity="0.8"/>
+  <circle cx="54" cy="14" r="1.2" fill="white" opacity="0.5"/>
+  <circle cx="46" cy="14" r="1.2" fill="white" opacity="0.5"/>
+</svg>

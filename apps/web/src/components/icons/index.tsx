@@ -1,5 +1,5 @@
 /**
- * JobFlow AI — Custom Icon System
+ * NewJob Guru — Custom Icon System
  * ──────────────────────────────────────────────
  * Drop this file at: src/components/icons/index.tsx (or .jsx)
  *

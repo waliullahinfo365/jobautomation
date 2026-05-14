@@ -34,7 +34,7 @@ export async function processMemoryQueueNow() {
 }
 
 async function main() {
-  logger.info("Starting JobFlow workers");
+  logger.info("Starting NewJob Guru workers");
   logger.info({ queueMode: process.env.QUEUE_MODE }, "Worker queue mode loaded");
   validateWorkerEnv();
   await connectDatabase();

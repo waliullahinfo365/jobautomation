@@ -24,8 +24,8 @@ export const WORKER_SCHEDULES = {
 
 // ─── App strings ──────────────────────────────────────────────────────────────
 
-export const APP_NAME        = "JobPilot";
-export const APP_DESCRIPTION = "Job Application Automation Dashboard";
+export const APP_NAME        = "NewJob Guru";
+export const APP_DESCRIPTION = "AI-powered job application automation";
 export const APP_VERSION     = "0.1.0";
 
 // ─── Follow-up timings (days) ────────────────────────────────────────────────

@@ -298,7 +298,7 @@ async function main() {
   const db = getDatabaseStatus();
   const tenantId = await resolveTenantId();
 
-  console.log("JobFlow operational data reset");
+  console.log("NewJob Guru operational data reset");
   console.log(`NODE_ENV: ${process.env.NODE_ENV || "(not set)"}`);
   console.log(`Connected database: ${db.name || "(unknown)"} @ ${db.host || "(unknown host)"}`);
   console.log(`Workspace scope: ${tenantId || "all workspaces"}`);
