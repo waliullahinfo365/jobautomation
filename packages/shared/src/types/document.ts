@@ -8,7 +8,7 @@ export interface CvRoutingResult {
   tenantId: string;
   documentId: string;
   jobId: string;
-  status: "completed" | "existing" | "failed";
+  status: "completed" | "existing" | "failed" | "pending";
   targetPath?: string;
   message: string;
 }

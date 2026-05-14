@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { DocumentModel, JobModel } from "@jobflow/database/models";
-import { routeFileToFolderStub } from "@jobflow/integrations/google-drive/drive.service";
+import { processCvRoutingJob } from "@jobflow/workers/processors/cv-routing";
 import type { CvRoutingResult } from "@jobflow/shared/types/document";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
@@ -27,10 +27,12 @@ export async function routeCvToJobFolder(input: RouteCvInput): Promise<CvRouting
   if (!document) throw new ApiError("Document not found", 404, "NOT_FOUND");
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
 
-  const isCvType = document.type === "CV" || !document.type;
+  const docRaw = document as unknown as Record<string, unknown>;
+  const jobRaw = job as unknown as Record<string, unknown>;
+  const isCvType = docRaw.type === "CV" || !docRaw.type;
   if (!isCvType) throw new ApiError("Document must be CV for route-cv", 422, "VALIDATION_ERROR");
 
-  if (!job.driveFolderId || !job.folderCreated) {
+  if (!jobRaw.driveFolderId || !jobRaw.folderCreated) {
     await provisionJobFolders({
       tenantId,
       jobId: input.jobId,
@@ -39,9 +41,9 @@ export async function routeCvToJobFolder(input: RouteCvInput): Promise<CvRouting
     });
   }
 
-  const freshDocument = await findTenantScopedById(DocumentModel, tenantId, input.documentId);
-  const freshJob = await findTenantScopedById(JobModel, tenantId, input.jobId);
-  if (!freshDocument || !freshJob?.driveFolderId) throw new ApiError("Folder provisioning failed", 500, "AUTOMATION_ERROR");
+  const freshDoc = await findTenantScopedById(DocumentModel, tenantId, input.documentId);
+  if (!freshDoc) throw new ApiError("Document not found after folder provisioning", 500, "AUTOMATION_ERROR");
+  const freshDocument = freshDoc as unknown as Record<string, unknown> & { _id: unknown };
 
   if (freshDocument.routedToJobFolder && freshDocument.targetPath) {
     return {
@@ -50,7 +52,7 @@ export async function routeCvToJobFolder(input: RouteCvInput): Promise<CvRouting
       documentId: input.documentId,
       jobId: input.jobId,
       status: "existing",
-      targetPath: freshDocument.targetPath,
+      targetPath: String(freshDocument.targetPath),
       message: "CV already routed to job folder",
     };
   }
@@ -58,48 +60,24 @@ export async function routeCvToJobFolder(input: RouteCvInput): Promise<CvRouting
   await DocumentModel.findByIdAndUpdate(freshDocument._id, { routingStatus: "Queued", routingError: undefined });
 
   try {
-    const routed = await routeFileToFolderStub({
+    await processCvRoutingJob({
       tenantId,
-      jobId: input.jobId,
       documentId: input.documentId,
-      sourceFileId: freshDocument.sourceFileId,
-      fileName: freshDocument.fileName,
-      targetFolderId: freshJob.driveFolderId,
-    });
-
-    await DocumentModel.findByIdAndUpdate(freshDocument._id, {
-      routedToJobFolder: true,
-      routedAt: new Date(routed.routedAt),
-      sourceFileId: freshDocument.sourceFileId ?? freshDocument.googleDriveFileId ?? String(freshDocument._id),
-      targetFolderId: routed.targetFolderId,
-      targetPath: routed.targetPath,
-      googleDriveFileId: routed.targetFileId,
-      googleDriveFolderId: routed.targetFolderId,
-      routingStatus: "Completed",
-      routingError: undefined,
-    });
-
-    await createAutomationLog({
-      tenantId,
-      moduleKey: "cv-routing",
-      moduleName: "CV Routing",
-      status: "Success",
-      message: "CV routed to job folder",
-      relatedRecordType: "Document",
-      relatedRecordId: input.documentId,
+      jobId: input.jobId,
+      userId: input.userId,
       operationId,
-      idempotencyKey,
-      metadata: { jobId: input.jobId, targetPath: routed.targetPath, targetFolderId: routed.targetFolderId },
     });
 
+    const routedDoc = await findTenantScopedById(DocumentModel, tenantId, input.documentId);
+    const routed = routedDoc as unknown as Record<string, unknown> | null;
     return {
       operationId,
       tenantId,
       documentId: input.documentId,
       jobId: input.jobId,
-      status: "completed",
-      targetPath: routed.targetPath,
-      message: "CV routed to job folder",
+      status: routed?.routingStatus === "Completed" ? "completed" : "pending",
+      targetPath: routed?.targetPath ? String(routed.targetPath) : "",
+      message: routed?.routingStatus === "Completed" ? "CV routed to job folder" : "CV routing pending — Drive not connected",
     };
   } catch (error) {
     await DocumentModel.findByIdAndUpdate(freshDocument._id, {

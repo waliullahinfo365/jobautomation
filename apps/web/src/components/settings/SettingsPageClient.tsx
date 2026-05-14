@@ -94,8 +94,8 @@ export function SettingsPageClient() {
               }}
               onCheckout={async (planKey) => {
                 try {
-                  const result = await billing.checkout({ planKey, billingCycle: "monthly" });
-                  showInfo(`Checkout stub opened: ${(result as any).checkoutUrl ?? "n/a"}`);
+                  await billing.checkout({ planKey, billingCycle: "monthly" });
+                  showInfo("Billing not yet configured — Stripe checkout requires setup. Contact support to upgrade.");
                 } catch (error) {
                   showError(error instanceof Error ? error.message : "Failed to open checkout");
                 }

@@ -12,7 +12,7 @@ import { AutomationLogTable } from "@/components/automation/AutomationLogTable";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { useDashboardOverview } from "@/hooks/api/useDashboardOverview";
 import { useTranslation } from "@/i18n/useTranslation";
-import { mockFollowUpReminders, type FollowUpReminderItem } from "@/data/mockApplications";
+import type { FollowUpReminderItem } from "@/data/mockApplications";
 import type { AutomationLog, AutomationModule } from "@/types/automation";
 import type { Job, JobSummary } from "@/types/job";
 import type { Application } from "@/types/application";
@@ -88,7 +88,7 @@ export function DashboardPageClient() {
 
   const followUpReminders = useMemo((): FollowUpReminderItem[] => {
     if (applications.length > 0) return computeFollowUpsDue(applications);
-    return mockFollowUpReminders;
+    return [];
   }, [applications]);
 
   const stats = useMemo(() => ({
