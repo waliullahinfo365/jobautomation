@@ -46,6 +46,7 @@ export function LoginForm() {
   const [redirecting, setRedirecting] = useState(true);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Handle already-authenticated and Google callback token
   useEffect(() => {
@@ -58,9 +59,13 @@ export function LoginForm() {
     if (googleErr) {
       setGoogleError(decodeURIComponent(googleErr));
       setRedirecting(false);
-      // Clean the URL
       router.replace("/login");
       return;
+    }
+
+    if (searchParams.get("reset") === "1") {
+      setSuccessMsg(t("auth.passwordResetSuccess"));
+      router.replace("/login");
     }
 
     if (token && tenantId && userId) {
@@ -119,6 +124,11 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {successMsg && (
+        <p className="rounded-md border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+          {successMsg}
+        </p>
+      )}
       {(error || googleError) ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error ?? googleError}
@@ -129,7 +139,7 @@ export function LoginForm() {
       <Button
         type="button"
         variant="outline"
-        className="w-full gap-2"
+        className="w-full h-11 gap-2"
         onClick={onGoogleSignIn}
         disabled={googleLoading || loading}
       >
@@ -161,14 +171,20 @@ export function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          className="h-11"
         />
       </div>
 
       {/* Password with eye toggle */}
       <div className="space-y-2">
-        <label className="text-sm font-medium" htmlFor="password">
-          {t("auth.password")}
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium" htmlFor="password">
+            {t("auth.password")}
+          </label>
+          <a href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
+            {t("auth.forgotPassword")}
+          </a>
+        </div>
         <div className="relative">
           <Input
             id="password"
@@ -179,7 +195,7 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={8}
-            className="pr-10"
+            className="h-11 pr-10"
           />
           <button
             type="button"
@@ -193,7 +209,7 @@ export function LoginForm() {
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading || googleLoading}>
+      <Button type="submit" className="w-full h-11" disabled={loading || googleLoading}>
         {loading ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
     </form>

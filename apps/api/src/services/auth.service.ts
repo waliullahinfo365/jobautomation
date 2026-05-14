@@ -12,6 +12,42 @@ import { hashPassword, verifyPassword } from "../utils/password";
 import { ApiError } from "../utils/errors";
 import { logAuthEvent } from "./audit-log.service";
 
+// ─── Password reset token store (in-memory, single process) ─────────────────
+// For multi-instance deployments, replace with a DB-backed token model.
+const passwordResetTokens = new Map<string, { email: string; expiresAt: number }>();
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  const normalised = email.trim().toLowerCase();
+  // Always respond the same way — don't leak whether email exists
+  const exists = await UserModel.exists({ email: normalised });
+  if (!exists) return;
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+  passwordResetTokens.set(token, { email: normalised, expiresAt });
+
+  const frontendUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+  // Log link for environments without an email service configured
+  // Replace this block with your email provider (Resend, SendGrid, etc.)
+  console.info(`[auth] Password reset link for ${normalised}: ${resetUrl}`);
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  const entry = passwordResetTokens.get(token);
+  if (!entry || entry.expiresAt < Date.now()) {
+    throw new ApiError("Reset token is invalid or expired", 400, "INVALID_RESET_TOKEN");
+  }
+  passwordResetTokens.delete(token);
+
+  const userDoc = await UserModel.findOne({ email: entry.email }).lean();
+  if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");
+
+  const passwordHash = await hashPassword(newPassword);
+  await UserModel.updateOne({ _id: (userDoc as Record<string, unknown>)._id }, { $set: { passwordHash } });
+}
+
 // ─── Google login OAuth state ────────────────────────────────────────────────
 
 const GOOGLE_LOGIN_STATE_TYP = "google_login_state";
@@ -38,8 +74,12 @@ export function verifyGoogleLoginState(state: string): void {
 }
 
 function googleLoginRedirectUri(): string {
-  const base = (process.env.API_PUBLIC_URL ?? "").replace(/\/$/, "") || `http://localhost:${env.port}`;
-  return `${base}/auth/google/callback`;
+  const explicit = process.env.GOOGLE_AUTH_REDIRECT_URI?.trim();
+  if (explicit) return explicit;
+  if (env.nodeEnv === "production") {
+    throw new ApiError("GOOGLE_AUTH_REDIRECT_URI must be set in production", 500, "CONFIG_ERROR");
+  }
+  return `http://localhost:${env.port}/auth/google/callback`;
 }
 
 export function getGoogleLoginAuthorizationUrl(): { authorizationUrl: string | null; oauthEnabled: boolean; message?: string } {

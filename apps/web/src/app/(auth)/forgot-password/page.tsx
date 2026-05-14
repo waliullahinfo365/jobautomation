@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { APP_NAME } from "@/lib/constants";
 import { LoginBackground } from "@/components/auth/LoginBackground";
-import { LoginFooterCopy, LoginHeaderCopy } from "@/components/auth/AuthPageCopy";
-import { LoginForm } from "@/components/auth/LoginForm";
+import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 import { ZapIcon } from "@/components/icons";
+import { APP_NAME } from "@/lib/constants";
 
-export const metadata: Metadata = { title: "Sign In" };
+export const metadata: Metadata = { title: "Forgot Password" };
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   return (
     <>
       <LoginBackground />
@@ -19,16 +18,15 @@ export default function LoginPage() {
               <ZapIcon size={24} className="text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold text-white">{APP_NAME}</h1>
-            <LoginHeaderCopy />
           </div>
-
-          <div className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
+          <div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
             <Suspense>
-              <LoginForm />
+              <ForgotPasswordForm />
             </Suspense>
           </div>
-
-          <LoginFooterCopy />
+          <p className="text-center text-xs text-zinc-300">
+            <a href="/login" className="text-white font-medium hover:underline">← Back to sign in</a>
+          </p>
         </div>
       </main>
     </>

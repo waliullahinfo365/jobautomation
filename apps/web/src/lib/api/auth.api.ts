@@ -61,6 +61,14 @@ export async function me(): Promise<{ user: AuthSessionPayload["user"]; tenant: 
   return apiFetch("/auth/me", { method: "GET" });
 }
 
+export async function forgotPassword(email: string): Promise<{ ok: boolean }> {
+  return apiFetch("/auth/forgot-password", { method: "POST", body: { email }, headers: {} });
+}
+
+export async function resetPassword(token: string, password: string): Promise<{ ok: boolean }> {
+  return apiFetch("/auth/reset-password", { method: "POST", body: { token, password }, headers: {} });
+}
+
 export async function getGoogleLoginUrl(): Promise<{ authorizationUrl: string | null; oauthEnabled: boolean; message?: string }> {
   return apiFetch("/auth/google/url", { method: "GET", headers: {} });
 }

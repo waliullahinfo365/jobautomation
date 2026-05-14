@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { authService, getGoogleLoginAuthorizationUrl } from "../services/auth.service";
+import { authService, getGoogleLoginAuthorizationUrl, requestPasswordReset, confirmPasswordReset } from "../services/auth.service";
 import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
 
@@ -38,6 +38,16 @@ export const meHandler = asyncHandler(async (req: Request, res: Response) => {
   return successResponse(res, result, "Current user");
 });
 
+export const forgotPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  await requestPasswordReset(req.body.email ?? "");
+  return successResponse(res, { ok: true }, "If that email exists, a reset link has been sent");
+});
+
+export const resetPasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  await confirmPasswordReset(req.body.token, req.body.password);
+  return successResponse(res, { ok: true }, "Password reset successfully");
+});
+
 export const googleLoginUrlHandler = asyncHandler(async (_req: Request, res: Response) => {
   const result = getGoogleLoginAuthorizationUrl();
   return successResponse(res, result, "Google login URL");
@@ -46,7 +56,7 @@ export const googleLoginUrlHandler = asyncHandler(async (_req: Request, res: Res
 export const googleLoginCallbackHandler = asyncHandler(async (req: Request, res: Response) => {
   const { code, state, error } = req.query as Record<string, string>;
 
-  const appUrl = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
   const failUrl = (msg: string) => `${appUrl}/login?google_error=${encodeURIComponent(msg)}`;
 
   if (error) {
@@ -63,7 +73,7 @@ export const googleLoginCallbackHandler = asyncHandler(async (req: Request, res:
       tenantId: result.tenant.id,
       userId: result.user.id,
     });
-    return res.redirect(`${appUrl}/login?${params.toString()}`);
+    return res.redirect(`${appUrl}/auth/callback?${params.toString()}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Google sign-in failed";
     return res.redirect(failUrl(msg));
