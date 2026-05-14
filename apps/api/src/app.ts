@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import { corsOptions } from "./config/cors";
+import { corsOptionsDelegate } from "./config/cors";
 import { env } from "./config/env";
 import { errorMiddleware } from "./middleware/error.middleware";
 import { notFoundMiddleware } from "./middleware/not-found.middleware";
@@ -22,7 +22,8 @@ export function createApp() {
       crossOriginResourcePolicy: { policy: "cross-origin" },
     }),
   );
-  app.use(cors(corsOptions));
+  app.use(cors(corsOptionsDelegate));
+  app.options("*", cors(corsOptionsDelegate));
 
   if (env.nodeEnv !== "production") {
     app.use(morgan("dev"));

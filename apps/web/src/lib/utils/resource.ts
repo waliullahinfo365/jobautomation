@@ -839,8 +839,20 @@ function mapAutomationCategoryBackendToUi(c: string): AutomationCategory {
 
 export function mapAutomationStatusBackendToUi(s: string): AutomationStatus {
   switch (s) {
+    case "healthy":
+      return "Healthy";
+    case "warning":
+      return "Warning";
+    case "failed":
+      return "Failed";
+    case "needs_setup":
+      return "Needs Setup";
+    case "not_run_yet":
+      return "Not run yet";
+    case "ready":
+      return "Ready";
     case "Healthy":
-      return "Active";
+      return "Healthy";
     case "Paused":
       return "Paused";
     case "Error":
@@ -873,8 +885,8 @@ export function normalizeAutomationModuleForUi(raw: unknown): AutomationModule {
   const actions: AutomationAction[] =
     rawActions.length > 0
       ? rawActions
-      : [{ id: "stub", title: "Automation steps", detail: "See module configuration in backend." }];
-  const ms = Number(r.averageDurationMs);
+      : [];
+  const ms = Number(r.averageDurationMs ?? r.avgDurationMs);
   const avg =
     Number.isFinite(ms) && ms > 0 ? `${Math.round(ms)}ms` : String(r.averageDuration ?? "—");
   const cfg =
@@ -893,7 +905,17 @@ export function normalizeAutomationModuleForUi(raw: unknown): AutomationModule {
     nextRun: (r.nextRunAt ?? r.nextRun) as AutomationModule["nextRun"],
     successRate: Number(r.successRate ?? 0),
     totalRuns: Number(r.totalRuns ?? 0),
+    successRuns: Number(r.successRuns ?? 0),
     failedRuns: Number(r.failedRuns ?? 0),
+    warningRuns: Number(r.warningRuns ?? 0),
+    avgDurationMs: r.avgDurationMs == null ? null : Number(r.avgDurationMs),
+    lastRunStatus: (r.lastRunStatus as string | null | undefined) ?? null,
+    lastMessage: (r.lastMessage as string | null | undefined) ?? null,
+    lastError: (r.lastError as string | null | undefined) ?? null,
+    requiredIntegrations: Array.isArray(r.requiredIntegrations) ? (r.requiredIntegrations as string[]) : [],
+    missingRequirements: Array.isArray(r.missingRequirements) ? (r.missingRequirements as string[]) : [],
+    recommendedNextStep: typeof r.recommendedNextStep === "string" ? r.recommendedNextStep : undefined,
+    readiness: r.readiness && typeof r.readiness === "object" ? (r.readiness as Record<string, boolean>) : undefined,
     averageDuration: avg,
     triggerType: String(r.triggerType ?? "Scheduled"),
     triggerSource: String(r.triggerSource ?? "System"),
@@ -901,7 +923,7 @@ export function normalizeAutomationModuleForUi(raw: unknown): AutomationModule {
     inputSource: String(r.inputSource ?? ""),
     actions,
     configuration: cfg,
-    recentLogs: [],
+    recentLogs: Array.isArray(r.recentLogs) ? (r.recentLogs as unknown[]).map(normalizeAutomationLogForUi) : [],
     lastRunAt: r.lastRunAt as string | undefined,
     nextRunAt: r.nextRunAt as string | undefined,
     runCount: Number(r.totalRuns ?? 0),

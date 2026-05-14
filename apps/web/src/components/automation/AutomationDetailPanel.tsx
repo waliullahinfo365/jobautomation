@@ -23,6 +23,11 @@ interface AutomationDetailPanelProps {
 
 export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigure }: AutomationDetailPanelProps) {
   const { t } = useTranslation();
+  const requiredIntegrations = module?.requiredIntegrations?.map((item) => translateRequirement(item, t)) ?? [];
+  const missingRequirements = module?.missingRequirements?.map((item) => translateRequirement(item, t)) ?? [];
+  const recommendation = module ? translatedRecommendation(module, missingRequirements, t) : "";
+  const moduleTitle = module ? translateModuleField(module.id, "title", module.name, t) : "";
+  const moduleDescription = module ? translateModuleField(module.id, "description", module.description, t) : "";
   return (
     <AnimatePresence>
       {open && module ? (
@@ -43,8 +48,8 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
           >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--text-1)]">{module.name}</h2>
-            <p className="mt-1 text-sm text-[var(--text-2)]">{module.description}</p>
+            <h2 className="text-xl font-semibold text-[var(--text-1)]">{moduleTitle}</h2>
+            <p className="mt-1 text-sm text-[var(--text-2)]">{moduleDescription}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <AutomationStatusBadge status={module.status} />
               <AutomationCategoryBadge category={module.category} />
@@ -60,6 +65,33 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
             <AutomationHealthMetrics module={module} />
           </SectionCard>
 
+          <SectionCard title={t("automation.detail.readiness")}>
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs text-[var(--text-3)]">{t("automation.detail.requiredIntegrations")}</p>
+                <p className="font-medium text-[var(--text-1)]">
+                  {requiredIntegrations.length ? requiredIntegrations.join(", ") : t("automation.detail.none")}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-3)]">{t("automation.detail.missingRequirements")}</p>
+                <p className={module.missingRequirements?.length ? "font-medium text-[var(--amber)]" : "font-medium text-[var(--emerald)]"}>
+                  {missingRequirements.length ? missingRequirements.join(", ") : t("automation.detail.none")}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-[var(--text-3)]">{t("automation.detail.recommendedNextStep")}</p>
+                <p className="font-medium text-[var(--text-1)]">{recommendation || t("automation.detail.noRecommendation")}</p>
+              </div>
+              {module.lastError ? (
+                <div className="rounded-lg border border-[var(--rose-border)] bg-[var(--rose-bg)] p-3 text-[var(--rose)]">
+                  <p className="text-xs font-medium">{t("automation.detail.lastError")}</p>
+                  <p className="mt-1 text-sm">{module.lastError}</p>
+                </div>
+              ) : null}
+            </div>
+          </SectionCard>
+
           <SectionCard title={t("section.triggerInfo")}>
             <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
               <Info label={t("automation.detail.triggerType")} value={module.triggerType} />
@@ -71,12 +103,16 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
 
           <SectionCard title={t("automation.detail.actionsPerformed")}>
             <div className="space-y-2">
-              {module.actions.map((action) => (
-                <div key={action.id} className="rounded-lg border border-[var(--border-default)] p-3">
-                  <p className="text-sm font-medium text-[var(--text-1)]">{action.title}</p>
-                  <p className="text-xs text-[var(--text-3)]">{action.detail}</p>
-                </div>
-              ))}
+              {module.actions.length ? (
+                module.actions.map((action) => (
+                  <div key={action.id} className="rounded-lg border border-[var(--border-default)] p-3">
+                    <p className="text-sm font-medium text-[var(--text-1)]">{action.title}</p>
+                    <p className="text-xs text-[var(--text-3)]">{action.detail}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-[var(--text-3)]">{t("automation.detail.actionsAvailableFromBackend")}</p>
+              )}
             </div>
           </SectionCard>
 
@@ -115,9 +151,11 @@ export function AutomationDetailPanel({ module, open, onClose, onRun, onConfigur
           </SectionCard>
 
           <div className="flex flex-wrap gap-2 border-t border-[var(--border-default)] pt-5">
-            <Button type="button" variant="default" onClick={() => module && onRun?.(module)}>
-              {t("automation.actions.runNow")}
-            </Button>
+            {onRun ? (
+              <Button type="button" variant="default" onClick={() => module && onRun(module)}>
+                {t("automation.actions.runNow")}
+              </Button>
+            ) : null}
             <Button type="button" variant="outline" onClick={() => module && onConfigure?.(module)}>
               {t("integrations.configure")}
             </Button>
@@ -135,6 +173,58 @@ function translateLogStatus(status: string, t: (key: string) => string) {
   if (status === "Warning") return t("status.warning");
   if (status === "Failed") return t("status.failed");
   return status;
+}
+
+function translateRequirement(value: string, t: (key: string) => string) {
+  const keys: Record<string, string> = {
+    Gmail: "automation.requirements.gmail",
+    "Claude or OpenAI": "automation.requirements.aiProvider",
+    "Google Drive": "automation.requirements.googleDrive",
+    "Google Drive and Google Docs scope": "automation.requirements.googleDriveDocs",
+    "Google Calendar": "automation.requirements.googleCalendar",
+    "Active CV / resume": "automation.requirements.activeCv",
+    "Telegram, Slack, Resend, SMTP, or dashboard notifications": "automation.requirements.notificationChannel",
+    "Dashboard notifications": "automation.requirements.dashboardNotifications",
+  };
+  const key = keys[value];
+  return key ? t(key) : value;
+}
+
+function translatedRecommendation(module: AutomationModule, missingRequirements: string[], t: (key: string) => string) {
+  if (module.status === "Needs Setup") {
+    return `${t("automation.recommendations.configure")}: ${missingRequirements.join(", ")}.`;
+  }
+  if (module.status === "Not run yet") return t("automation.recommendations.notRunYet");
+  if (module.status === "Failed") return t("automation.recommendations.failed");
+  if (module.status === "Warning") return t("automation.recommendations.warning");
+  if (module.status === "Healthy") return t("automation.recommendations.healthy");
+  return module.recommendedNextStep || t("automation.detail.noRecommendation");
+}
+
+function translateModuleField(moduleId: string, field: "title" | "description", fallback: string, t: (key: string) => string) {
+  const keys: Record<string, string> = {
+    "job-intake": "jobIntake",
+    "duplicate-protection": "duplicateProtection",
+    "folder-automation": "googleDriveFolders",
+    "applied-status": "appliedStatus",
+    "interview-scheduling": "interviewScheduling",
+    "cv-routing": "cvRouting",
+    "email-reply-detection": "replyDetection",
+    "follow-up-reminder": "followUpReminders",
+    "pdf-export": "pdfExport",
+    "research-document": "researchDocument",
+    "ai-processing": "aiProcessing",
+    "network-follow-up": "networkFollowUp",
+    "offer-tracking": "offerTracking",
+    "deadline-alert": "deadlineAlerts",
+    "lifecycle-monitoring": "lifecycleMonitoring",
+    "daily-digest": "dailyDigest",
+    "weekly-report": "weeklyReport",
+  };
+  const key = keys[moduleId];
+  if (!key) return fallback;
+  const translated = t(`dashboard.automationModules.${key}.${field}`);
+  return translated.includes(`dashboard.automationModules.${key}`) ? fallback : translated;
 }
 
 function Info({ label, value }: { label: string; value: string }) {

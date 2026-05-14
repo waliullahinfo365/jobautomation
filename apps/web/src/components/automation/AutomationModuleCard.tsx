@@ -143,13 +143,19 @@ export function AutomationModuleCard({ module, variant = "default", onView, onTo
             </div>
           </div>
 
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between text-xs text-[var(--text-3)]">
-              <span>{isDash ? t("dashboard.automationHealth.successRate") : t("automation.moduleCard.successRate")}</span>
-              <span className="font-medium text-[var(--text-2)]">{module.successRate}%</span>
+          {module.totalRuns > 0 ? (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between text-xs text-[var(--text-3)]">
+                <span>{isDash ? t("dashboard.automationHealth.successRate") : t("automation.moduleCard.successRate")}</span>
+                <span className="font-medium text-[var(--text-2)]">{module.successRate}%</span>
+              </div>
+              <Progress value={module.successRate} />
             </div>
-            <Progress value={module.successRate} />
-          </div>
+          ) : (
+            <div className="mt-4 rounded-[var(--r-md)] border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 text-xs text-[var(--text-3)]">
+              {t("dashboard.automationHealth.noRunsHint")}
+            </div>
+          )}
 
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--text-3)]">
             <span>
@@ -171,6 +177,13 @@ export function AutomationModuleCard({ module, variant = "default", onView, onTo
             </span>
           </div>
 
+          {module.missingRequirements?.length ? (
+            <div className="mt-3 rounded-[var(--r-md)] border border-[var(--amber-border)] bg-[var(--amber-bg)] p-3 text-xs text-[var(--amber)]">
+              <span className="font-medium">{t("dashboard.automationHealth.missingSetup")}:</span>{" "}
+              {module.missingRequirements.map((item) => translateRequirement(item, t)).join(", ")}
+            </div>
+          ) : null}
+
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => onView?.(module)}>
               <EyeIcon size={14} className="mr-1" />
@@ -189,4 +202,19 @@ export function AutomationModuleCard({ module, variant = "default", onView, onTo
       </Card>
     </motion.div>
   );
+}
+
+function translateRequirement(value: string, t: (key: string) => string) {
+  const keys: Record<string, string> = {
+    Gmail: "automation.requirements.gmail",
+    "Claude or OpenAI": "automation.requirements.aiProvider",
+    "Google Drive": "automation.requirements.googleDrive",
+    "Google Drive and Google Docs scope": "automation.requirements.googleDriveDocs",
+    "Google Calendar": "automation.requirements.googleCalendar",
+    "Active CV / resume": "automation.requirements.activeCv",
+    "Telegram, Slack, Resend, SMTP, or dashboard notifications": "automation.requirements.notificationChannel",
+    "Dashboard notifications": "automation.requirements.dashboardNotifications",
+  };
+  const key = keys[value];
+  return key ? t(key) : value;
 }

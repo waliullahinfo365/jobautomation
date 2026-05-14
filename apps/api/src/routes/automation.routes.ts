@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { backfillJobIntake, getAutomationLogs, listAutomationModules, runAutomationModule, updateAutomationModule } from "../controllers/automation.controller";
+import { backfillJobIntake, getAutomationLogs, getAutomationModulesHealth, listAutomationModules, runAutomationModule, updateAutomationModule } from "../controllers/automation.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
 import { automationRunBodySchema } from "../validators/ai-processing.validator";
@@ -8,6 +8,7 @@ import { listQuerySchema, moduleKeyParamSchema } from "../validators/common.vali
 export const automationRoutes = Router();
 
 automationRoutes.get("/modules", requirePermission("automation.read"), validateQuery(listQuerySchema), listAutomationModules);
+automationRoutes.get("/modules/health", requirePermission("automation.read"), getAutomationModulesHealth);
 automationRoutes.patch(
   "/modules/:moduleKey",
   requirePermission("automation.update"),

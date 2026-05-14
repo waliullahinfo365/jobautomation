@@ -20,7 +20,13 @@ import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { logTenantAudit } from "../services/audit-log.service";
 import type { AutomationJobName } from "@jobflow/shared/types/queue";
 import { processJobIntakeProcessor } from "@jobflow/workers/processors/job-intake";
+import { getAutomationModuleHealth } from "../services/automation-health.service";
 export const listAutomationModules = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const {page,limit,skip}=getPagination(req.query); const filter:Record<string,unknown>={tenantId}; if(typeof req.query.status==='string') filter.status=req.query.status; const [rows,total]=await Promise.all([AutomationModuleModel.find(filter).sort({updatedAt:-1}).skip(skip).limit(limit),AutomationModuleModel.countDocuments(filter)]); return paginatedResponse(res,rows,{page,limit,total,totalPages:Math.ceil(total/limit)}); });
+export const getAutomationModulesHealth = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const data = await getAutomationModuleHealth(tenantId);
+  return successResponse(res, data, "Automation module health loaded");
+});
 export const updateAutomationModule = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await AutomationModuleModel.findOneAndUpdate({tenantId,moduleKey:req.params.moduleKey},req.body,{new:true}); if(!row) throw new ApiError('Automation module not found',404,'NOT_FOUND'); return successResponse(res,row,'Automation module updated'); });
 export const runAutomationModule = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);

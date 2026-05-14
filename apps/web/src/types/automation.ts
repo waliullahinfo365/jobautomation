@@ -1,4 +1,12 @@
-export type AutomationStatus = "Active" | "Paused" | "Failed" | "Needs Setup";
+export type AutomationStatus =
+  | "Active"
+  | "Paused"
+  | "Failed"
+  | "Needs Setup"
+  | "Ready"
+  | "Not run yet"
+  | "Healthy"
+  | "Warning";
 
 export type AutomationCategory =
   | "Intake"
@@ -45,6 +53,8 @@ export interface AutomationLog {
 
 export interface AutomationModule {
   id: string;
+  key?: string;
+  moduleKey?: string;
   name: string;
   description: string;
   category: AutomationCategory;
@@ -54,7 +64,17 @@ export interface AutomationModule {
   nextRun?: Date | string;
   successRate: number;
   totalRuns: number;
+  successRuns?: number;
   failedRuns: number;
+  warningRuns?: number;
+  avgDurationMs?: number | null;
+  lastRunStatus?: string | null;
+  lastMessage?: string | null;
+  lastError?: string | null;
+  requiredIntegrations?: string[];
+  missingRequirements?: string[];
+  recommendedNextStep?: string;
+  readiness?: Record<string, boolean>;
   averageDuration: string;
   triggerType: string;
   triggerSource: string;

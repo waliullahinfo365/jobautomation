@@ -56,7 +56,7 @@ async function fetchAll(o: Options | undefined): Promise<CombinedState> {
   const [jobs, applications, modules, logs] = await Promise.all([
     loadWithFallback(() => jobsApi.listJobs(p), { fallbackToMock: fb, mockResourceName: "jobs" }),
     loadWithFallback(() => applicationsApi.listApplications(p), { fallbackToMock: fb, mockResourceName: "applications" }),
-    loadWithFallback(() => automationApi.listAutomationModules(), { fallbackToMock: fb, mockResourceName: "automationModules" }),
+    loadWithFallback(() => automationApi.listAutomationModuleHealth(), { fallbackToMock: false, mockResourceName: "automationModules" }),
     loadWithFallback(() => automationApi.listAutomationLogs(p), { fallbackToMock: fb, mockResourceName: "automationLogs" }),
   ]);
   return { jobs, applications, modules, logs };

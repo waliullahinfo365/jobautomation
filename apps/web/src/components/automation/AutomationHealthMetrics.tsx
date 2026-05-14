@@ -1,15 +1,17 @@
 import type { AutomationModule } from "@/types/automation";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
+import { useTranslation } from "@/i18n/useTranslation";
 
 export function AutomationHealthMetrics({ module }: { module: AutomationModule }) {
+  const { t } = useTranslation();
   const metrics = [
-    { label: "Success Rate", value: `${module.successRate}%` },
-    { label: "Total Runs", value: String(module.totalRuns) },
-    { label: "Failed Runs", value: String(module.failedRuns) },
-    { label: "Last Run", value: module.lastRun ? formatDate(module.lastRun, "MMM d, yyyy HH:mm") : "—" },
-    { label: "Average Duration", value: module.averageDuration },
-    { label: "Next Scheduled Run", value: module.nextRun ? formatDate(module.nextRun, "MMM d, yyyy HH:mm") : "—" },
+    { label: t("automation.moduleCard.successRate"), value: module.totalRuns > 0 ? `${module.successRate}%` : "—" },
+    { label: t("automation.moduleCard.totalRunsLabel"), value: String(module.totalRuns) },
+    { label: t("automation.moduleCard.failedRunsLabel"), value: String(module.failedRuns) },
+    { label: t("automation.moduleCard.lastRun"), value: module.lastRun ? formatDate(module.lastRun, "MMM d, yyyy HH:mm") : "—" },
+    { label: t("automation.moduleCard.avgDuration"), value: module.averageDuration },
+    { label: t("automation.detail.nextScheduledRun"), value: module.nextRun ? formatDate(module.nextRun, "MMM d, yyyy HH:mm") : "—" },
   ];
 
   return (

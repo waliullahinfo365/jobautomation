@@ -8,6 +8,7 @@ const envSchema = z.object({
   ACCESS_TOKEN_EXPIRES_IN: z.string().default("7d"),
   BCRYPT_SALT_ROUNDS: z.coerce.number().min(4).max(15).default(12),
   APP_URL: z.string().url().optional().or(z.literal("").transform(() => undefined)),
+  CORS_ORIGINS: z.string().optional(),
   /** When true (default) and not in production, demo headers / fallback apply when no Bearer token. Set `false` to require JWT in development. */
   ALLOW_DEV_AUTH_HEADERS: z
     .string()
@@ -52,6 +53,7 @@ export const env = {
   accessTokenExpiresIn: data.ACCESS_TOKEN_EXPIRES_IN,
   bcryptSaltRounds: data.BCRYPT_SALT_ROUNDS,
   appUrl: data.APP_URL ?? "http://localhost:3000",
+  corsOrigins: data.CORS_ORIGINS ?? "",
   allowDevAuthHeaders: data.ALLOW_DEV_AUTH_HEADERS,
   demoTenantId: data.DEMO_TENANT_ID ?? "demo-tenant-id",
   demoUserId: data.DEMO_USER_ID ?? "demo-user-id",

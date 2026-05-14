@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { ApplicationPipelineChart } from "@/components/dashboard/ApplicationPipelineChart";
@@ -13,12 +13,13 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { useDashboardOverview } from "@/hooks/api/useDashboardOverview";
 import { useTranslation } from "@/i18n/useTranslation";
 import { mockFollowUpReminders, type FollowUpReminderItem } from "@/data/mockApplications";
-import { automationModules as mockModules } from "@/data/automationModules";
 import type { AutomationLog, AutomationModule } from "@/types/automation";
 import type { Job, JobSummary } from "@/types/job";
 import type { Application } from "@/types/application";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
-import { normalizeJobForUi } from "@/lib/utils/resource";
+import { normalizeAutomationLogForUi, normalizeAutomationModuleForUi, normalizeJobForUi } from "@/lib/utils/resource";
+import * as automationApi from "@/lib/api/automation.api";
+import { showError, showSuccess } from "@/lib/ui/toast";
 
 const PIPELINE_STATUSES = [
   "New", "Research", "Drafting", "Ready to Apply",
@@ -62,7 +63,8 @@ function computeFollowUpsDue(applications: Application[]): FollowUpReminderItem[
 
 export function DashboardPageClient() {
   const { t } = useTranslation();
-  const { jobsQuery, applicationsQuery: appsQuery, automationQuery } = useDashboardOverview({ fallbackToMock: true });
+  const { jobsQuery, applicationsQuery: appsQuery, automationQuery, refetchAll } = useDashboardOverview({ fallbackToMock: true });
+  const [backfillLoading, setBackfillLoading] = useState(false);
 
   const jobs = useMemo((): Job[] => {
     const raw = normalizeListResponse(jobsQuery.data);
@@ -75,11 +77,11 @@ export function DashboardPageClient() {
 
   const modules = useMemo((): AutomationModule[] => {
     const raw = normalizeListResponse(automationQuery.data);
-    return raw.length > 0 ? (raw as AutomationModule[]) : mockModules;
+    return raw.map(normalizeAutomationModuleForUi);
   }, [automationQuery.data]);
 
   const automationLogs = useMemo((): AutomationLog[] => {
-    return normalizeListResponse<AutomationLog>(automationQuery.logs.data);
+    return normalizeListResponse(automationQuery.logs.data).map(normalizeAutomationLogForUi);
   }, [automationQuery.logs.data]);
 
   const jobSummaries = useMemo(() => jobs.map(toJobSummary), [jobs]);
@@ -95,8 +97,21 @@ export function DashboardPageClient() {
     interviewsScheduled: applications.filter((app) => (app.interviewIds ?? []).length > 0 || app.applicationStatus === "Interview" || app.status === "Interview").length,
     offersReceived: jobs.filter((job) => job.status === "Offer").length,
     followUpsDue: followUpReminders.length,
-    automationsActive: modules.filter((m) => m.status === "Active").length,
+    automationsActive: modules.filter((m) => m.status === "Healthy" || m.status === "Ready" || m.status === "Not run yet").length,
   }), [jobs, applications, modules, followUpReminders]);
+
+  const importLastSevenDays = useCallback(async () => {
+    setBackfillLoading(true);
+    try {
+      await automationApi.backfillJobIntake({ label: "job alerts", days: 7, dryRun: false, enqueueDownstream: true });
+      showSuccess(t("dashboard.emptyJobs.backfillStarted"));
+      await refetchAll();
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t("dashboard.emptyJobs.backfillFailed"));
+    } finally {
+      setBackfillLoading(false);
+    }
+  }, [refetchAll, t]);
 
   const pipelineBreakdown = useMemo(
     () => PIPELINE_STATUSES.map((status) => ({ status, count: jobs.filter((job) => job.status === status).length })),
@@ -138,7 +153,12 @@ export function DashboardPageClient() {
         </div>
       </div>
 
-      <AutomationHealth modules={modules} />
+      <AutomationHealth
+        modules={modules}
+        jobsCount={jobs.length}
+        onImportGmail={importLastSevenDays}
+        importLoading={backfillLoading}
+      />
 
       <AutomationLogTable logs={automationLogs} />
     </div>

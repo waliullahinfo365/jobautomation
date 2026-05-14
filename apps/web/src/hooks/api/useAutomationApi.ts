@@ -10,7 +10,7 @@ export function useAutomationApi(options?: { fallbackToMock?: boolean; params?: 
   const p = options?.params;
   const fb = options?.fallbackToMock;
 
-  const modulesQuery = useApiQuery(() => api.listAutomationModules(), {
+  const modulesQuery = useApiQuery(() => api.listAutomationModuleHealth(), {
     fallbackToMock: fb,
     mockResourceName: "automationModules",
   });

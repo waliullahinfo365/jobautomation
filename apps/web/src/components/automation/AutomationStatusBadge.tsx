@@ -10,6 +10,10 @@ const statusStyles: Record<AutomationStatus, string> = {
   Paused: "bg-[var(--amber-bg)] text-[var(--amber)]",
   Failed: "bg-[var(--rose-bg)] text-[var(--rose)]",
   "Needs Setup": "bg-[var(--surface-3)] text-[var(--text-2)]",
+  Ready: "bg-[var(--surface-3)] text-[var(--text-2)]",
+  "Not run yet": "bg-[var(--surface-3)] text-[var(--text-2)]",
+  Healthy: "bg-[var(--emerald-bg)] text-[var(--emerald)]",
+  Warning: "bg-[var(--amber-bg)] text-[var(--amber)]",
 };
 
 function statusLabel(status: AutomationStatus, t: (key: string) => string): string {
@@ -22,6 +26,14 @@ function statusLabel(status: AutomationStatus, t: (key: string) => string): stri
       return t("automation.moduleStatus.failed");
     case "Needs Setup":
       return t("automation.moduleStatus.needsSetup");
+    case "Ready":
+      return t("automation.moduleStatus.ready");
+    case "Not run yet":
+      return t("automation.moduleStatus.notRunYet");
+    case "Healthy":
+      return t("automation.moduleStatus.healthy");
+    case "Warning":
+      return t("automation.moduleStatus.warning");
     default:
       return status;
   }

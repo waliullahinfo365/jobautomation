@@ -1,22 +1,52 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AutomationIcon } from "@/components/icons";
 import type { AutomationModule } from "@/types/automation";
 import { AutomationModuleCard } from "@/components/automation/AutomationModuleCard";
+import { AutomationDetailPanel } from "@/components/automation/AutomationDetailPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 
 interface AutomationHealthProps {
   modules: AutomationModule[];
+  jobsCount: number;
+  onImportGmail: () => void;
+  importLoading: boolean;
 }
 
-export function AutomationHealth({ modules }: AutomationHealthProps) {
+const CONFIG_TARGETS: Record<string, string> = {
+  "job-intake": "/settings?tab=integrations&provider=gmail",
+  "email-reply-detection": "/settings?tab=integrations&provider=gmail",
+  "folder-automation": "/settings?tab=integrations&provider=google-drive",
+  "cv-routing": "/documents",
+  "research-document": "/settings?tab=integrations&provider=claude",
+  "ai-processing": "/settings?tab=integrations&provider=claude",
+  "pdf-export": "/settings?tab=integrations&provider=google-drive",
+  "daily-digest": "/settings?tab=notifications",
+  "weekly-report": "/settings?tab=notifications",
+  "interview-scheduling": "/settings?tab=integrations&provider=google-calendar",
+  "deadline-alert": "/settings?tab=notifications",
+  "follow-up-reminder": "/settings?tab=notifications",
+  "offer-tracking": "/settings?tab=integrations&provider=gmail",
+};
+
+export function AutomationHealth({ modules, jobsCount, onImportGmail, importLoading }: AutomationHealthProps) {
   const { t } = useTranslation();
-  const activeCount  = modules.filter((m) => m.status === "Active").length;
+  const router = useRouter();
+  const [selectedModule, setSelectedModule] = useState<AutomationModule | null>(null);
+  const activeCount  = modules.filter((m) => m.status === "Healthy" || m.status === "Ready" || m.status === "Not run yet").length;
   const pausedCount  = modules.filter((m) => m.status === "Paused").length;
   const failedCount  = modules.filter((m) => m.status === "Failed" || m.status === "Needs Setup").length;
+  const selectedWithText = useMemo(() => selectedModule, [selectedModule]);
+
+  function configureModule(module: AutomationModule) {
+    router.push(CONFIG_TARGETS[module.id] ?? "/automation");
+  }
 
   return (
     <section className="space-y-4">
@@ -37,11 +67,39 @@ export function AutomationHealth({ modules }: AutomationHealthProps) {
         </CardContent>
       </Card>
 
+      {jobsCount === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--text-1)]">{t("dashboard.emptyJobs.title")}</p>
+              <p className="text-sm text-[var(--text-3)]">{t("dashboard.emptyJobs.description")}</p>
+            </div>
+            <Button type="button" onClick={onImportGmail} disabled={importLoading}>
+              {importLoading ? t("dashboard.emptyJobs.importing") : t("dashboard.emptyJobs.importGmail")}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {modules.map((module) => (
-          <AutomationModuleCard key={module.id} module={module} variant="dashboard" />
+          <AutomationModuleCard
+            key={module.id}
+            module={module}
+            variant="dashboard"
+            onView={setSelectedModule}
+            onConfigure={configureModule}
+          />
         ))}
       </div>
+
+      <AutomationDetailPanel
+        module={selectedWithText}
+        open={Boolean(selectedWithText)}
+        onClose={() => setSelectedModule(null)}
+        onRun={selectedWithText?.id === "job-intake" ? () => onImportGmail() : undefined}
+        onConfigure={configureModule}
+      />
     </section>
   );
 }
