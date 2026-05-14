@@ -60,6 +60,13 @@ export function RecentJobsTable({ jobs }: RecentJobsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {jobs.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                  {t("dashboard.recentJobs.empty")}
+                </TableCell>
+              </TableRow>
+            )}
             {jobs.map((job) => {
               const pKey = getPriorityKey(job);
               return (

@@ -39,6 +39,12 @@ export function FollowUpReminders({ reminders }: FollowUpRemindersProps) {
         <CardTitle>{t("dashboard.followUpReminders.title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-1">
+        {reminders.length === 0 && (
+          <div className="flex flex-col items-center gap-1 py-8 text-center text-sm text-[var(--text-3)]">
+            <FollowUpIcon size={22} className="mb-1 opacity-40" />
+            <span>{t("dashboard.followUpReminders.empty")}</span>
+          </div>
+        )}
         {reminders.map((item) => (
           <div key={item.id} className="flex items-start justify-between gap-4 rounded-lg px-3 py-2.5 hover:bg-[var(--surface-3)]">
             <div>

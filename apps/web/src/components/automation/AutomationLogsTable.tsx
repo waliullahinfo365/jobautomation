@@ -56,6 +56,13 @@ export function AutomationLogsTable({ logs }: { logs: AutomationLog[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {logs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                    {t("automation.logs.empty")}
+                  </TableCell>
+                </TableRow>
+              )}
               {logs.map((log) => {
                 const displayMessage = friendlyAutomationLogMessage(log.technicalMessage ?? log.message);
                 return (

@@ -39,7 +39,8 @@ export function AutomationHealth({ modules, jobsCount, onImportGmail, importLoad
   const { t } = useTranslation();
   const router = useRouter();
   const [selectedModule, setSelectedModule] = useState<AutomationModule | null>(null);
-  const activeCount  = modules.filter((m) => m.status === "Healthy" || m.status === "Ready" || m.status === "Not run yet").length;
+  const activeCount  = modules.filter((m) => m.status === "Healthy" || m.status === "Ready").length;
+  const notRunCount  = modules.filter((m) => m.status === "Not run yet").length;
   const pausedCount  = modules.filter((m) => m.status === "Paused").length;
   const failedCount  = modules.filter((m) => m.status === "Failed" || m.status === "Needs Setup").length;
   const selectedWithText = useMemo(() => selectedModule, [selectedModule]);
@@ -58,6 +59,7 @@ export function AutomationHealth({ modules, jobsCount, onImportGmail, importLoad
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <Badge variant="success">{activeCount} {t("dashboard.automationHealth.active")}</Badge>
+            {notRunCount > 0 && <Badge variant="default">{notRunCount} {t("dashboard.automationHealth.notRunYet")}</Badge>}
             <Badge variant="warning">{pausedCount} {t("dashboard.automationHealth.paused")}</Badge>
             <Badge variant="danger">{failedCount} {t("dashboard.automationHealth.needsAttention")}</Badge>
             <Link href="/automation" className="rounded-md border border-[var(--border-default)] px-2.5 py-1 font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]">

@@ -155,6 +155,7 @@ export const messages: Record<
         lastUpdated: "Zuletzt aktualisiert",
         action: "Aktion",
         view: "Anzeigen",
+        empty: "Noch keine Jobs. Verbinde Gmail oder füge einen Job manuell hinzu.",
       },
       priority: {
         high: "Hoch",
@@ -166,10 +167,12 @@ export const messages: Record<
         dueToday: "Heute fällig",
         scheduled: "Geplant",
         overdue: "Überfällig",
+        empty: "Keine fälligen Nachfassaktionen.",
       },
       automationHealth: {
         title: "Automatisierungsstatus",
         active: "Aktiv",
+        notRunYet: "Noch nicht ausgeführt",
         paused: "Pausiert",
         needsAttention: "Benötigt Aufmerksamkeit",
         manage: "Verwalten",
@@ -1995,6 +1998,7 @@ export const messages: Record<
         relatedRecord: "Verknüpfter Datensatz",
         duration: "Dauer",
         action: "Aktion",
+        empty: "Noch keine Automatisierungsprotokolle.",
       },
       filter: {
         searchPlaceholder: "Nach Modulname oder Beschreibung suchen",
@@ -2317,7 +2321,7 @@ export const messages: Record<
     },
     sidebar: {
       systemOnline: "System online",
-      modulesLine: "17 Module · Automatisierungsstatus",
+      modulesLine: "Automatisierungsstatus",
       live: "Live",
       healthy: "gesund",
       queueOk: "Warteschlange OK",
@@ -2745,6 +2749,7 @@ export const messages: Record<
         lastUpdated: "Last Updated",
         action: "Action",
         view: "View",
+        empty: "No job opportunities yet. Connect Gmail or add a job manually.",
       },
       priority: {
         high: "High",
@@ -2756,10 +2761,12 @@ export const messages: Record<
         dueToday: "Due Today",
         scheduled: "Scheduled",
         overdue: "Overdue",
+        empty: "No follow-up reminders due.",
       },
       automationHealth: {
         title: "Automation Health",
         active: "Active",
+        notRunYet: "Not run yet",
         paused: "Paused",
         needsAttention: "Needs attention",
         manage: "Manage",
@@ -4580,6 +4587,7 @@ export const messages: Record<
         relatedRecord: "Related Record",
         duration: "Duration",
         action: "Action",
+        empty: "No automation logs yet.",
       },
       filter: {
         searchPlaceholder: "Search by module name or description",
@@ -4792,7 +4800,7 @@ export const messages: Record<
     },
     sidebar: {
       systemOnline: "System Online",
-      modulesLine: "17 modules · automation health",
+      modulesLine: "Automation health",
       live: "Live",
       healthy: "healthy",
       queueOk: "Queue OK",

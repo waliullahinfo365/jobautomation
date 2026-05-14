@@ -62,7 +62,7 @@ export function UpcomingDeadlines({ jobs }: UpcomingDeadlinesProps) {
           </div>
           <div className="jf-empty-title">{t("dashboard.deadlines.emptyTitle")}</div>
           <p className="jf-empty-sub">{t("dashboard.deadlines.emptyBody")}</p>
-          <Link href="/settings" className="jf-empty-cta">
+          <Link href="/settings?tab=notifications" className="jf-empty-cta">
             {t("dashboard.deadlines.configureReminders")}
             <ArrowRightIcon size={14} />
           </Link>

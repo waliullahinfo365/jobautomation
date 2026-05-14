@@ -92,7 +92,7 @@ export function DashboardPageClient() {
   }, [applications]);
 
   const stats = useMemo(() => {
-    const activeModules = modules.filter((m) => m.status === "Healthy" || m.status === "Ready" || m.status === "Not run yet");
+    const activeModules = modules.filter((m) => m.status === "Healthy" || m.status === "Ready");
     const totalRuns = modules.reduce((sum, m) => sum + (m.totalRuns ?? 0), 0);
     const failedRuns = modules.reduce((sum, m) => sum + (m.failedRuns ?? 0), 0);
     const automationSuccessRate = totalRuns > 0
