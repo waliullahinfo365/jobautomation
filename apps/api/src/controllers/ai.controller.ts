@@ -50,6 +50,6 @@ export const testAi = asyncHandler(async (req: Request, res) => {
       keyRequirements: wrapped.data.keyRequirements,
       usage: wrapped.usage,
     },
-    "AI test (deterministic stub unless real SDK is wired)"
+    "AI test"
   );
 });

@@ -543,10 +543,8 @@ export async function connectIntegration(input: {
       const chatIdConfigured = Boolean(process.env.TELEGRAM_CHAT_ID?.trim());
       mergedMeta.botTokenConfigured = botTokenConfigured;
       mergedMeta.chatIdConfigured = chatIdConfigured;
-      mergedMeta.stub = false;
-    } else {
-      mergedMeta.stub = true;
     }
+    delete mergedMeta.stub;
     if (provider === "Gmail" || provider === "Google Drive" || provider === "Google Calendar") {
       mergedMeta.demoConnection = true;
       mergedMeta.reconnectRequired = true;

@@ -57,7 +57,7 @@ export async function seedTenant() {
       ...userFilter,
       createdBy: "system",
       name: "Demo Owner",
-      passwordHash: "TODO_HASH",
+      passwordHash: "DEMO_SEED_NO_LOGIN",
       role: "Owner",
       status: "Active",
     });

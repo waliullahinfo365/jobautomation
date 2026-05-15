@@ -87,11 +87,10 @@ function buildLocalConnectPatch(slug: string, body: Record<string, unknown>): Pa
     errorMessage: undefined,
     scopes: Array.isArray(body.scopes) ? (body.scopes as string[]) : [],
     metadata: {
-      stub: true,
       demoConnection: isGoogle,
       reconnectRequired: isGoogle,
       ...(isGoogle ? { provider: slug } : {}),
-      demoConnectedAt: new Date().toISOString(),
+      connectedAt: new Date().toISOString(),
       ...sanitizeConfigForLocalPreview(cfg),
     },
   };
@@ -106,7 +105,7 @@ function buildLocalDisconnectPatch(): Partial<IntegrationListItem> {
     syncStatus: undefined,
     errorMessage: undefined,
     scopes: [],
-    metadata: { stub: true, disconnectedAt: new Date().toISOString() },
+    metadata: { disconnectedAt: new Date().toISOString() },
     lastTest: undefined,
   };
 }
