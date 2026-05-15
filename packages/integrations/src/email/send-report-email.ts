@@ -32,11 +32,11 @@ export async function sendReportEmail(params: SendReportEmailParams): Promise<Se
     if (r.success) {
       return { success: true, provider: "resend", message: "Delivered via Resend." };
     }
-    const safe = r.message.replace(/\b(sk|rsk)_[a-z0-9]+/gi, "[redacted]");
+    const safe = r.message.replace(/\b(re_)[a-z0-9_-]{10,}/gi, "[redacted]");
     return {
       success: false,
       provider: "resend",
-      message: `Resend email failed: ${safe}`.slice(0, 320),
+      message: safe.slice(0, 320),
     };
   }
 

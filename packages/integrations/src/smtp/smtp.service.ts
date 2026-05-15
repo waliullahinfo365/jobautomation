@@ -1,44 +1,77 @@
-export async function sendFollowUpReminderStub(input: {
+import { sendResendEmail, isResendConfigured } from "../email/resend.service";
+
+export async function sendFollowUpReminder(input: {
   to: string;
   subject: string;
   bodyText: string;
   tenantId: string;
   applicationId: string;
 }) {
-  // TODO: Replace with real SMTP provider send call.
+  if (!isResendConfigured()) {
+    return { success: false, provider: "none" as const, message: "Resend not configured." };
+  }
+  const result = await sendResendEmail({
+    tenantId: input.tenantId,
+    to: input.to,
+    subject: input.subject,
+    html: `<p>${input.bodyText.replace(/\n/g, "<br>")}</p>`,
+    text: input.bodyText,
+  });
   return {
-    deliveryId: `follow-up-${Date.now()}`,
-    status: "sent" as const,
-    recipient: input.to,
+    success: result.success,
+    provider: result.provider,
+    deliveryId: result.deliveryId,
+    message: result.message,
   };
 }
 
-export async function sendApplicationNotificationStub(input: {
+export async function sendApplicationNotification(input: {
   to: string;
   subject: string;
   bodyText: string;
   tenantId: string;
 }) {
-  // TODO: Replace with real SMTP provider send call.
+  if (!isResendConfigured()) {
+    return { success: false, provider: "none" as const, message: "Resend not configured." };
+  }
+  const result = await sendResendEmail({
+    tenantId: input.tenantId,
+    to: input.to,
+    subject: input.subject,
+    html: `<p>${input.bodyText.replace(/\n/g, "<br>")}</p>`,
+    text: input.bodyText,
+  });
   return {
-    deliveryId: `notification-${Date.now()}`,
-    status: "sent" as const,
-    recipient: input.to,
+    success: result.success,
+    provider: result.provider,
+    deliveryId: result.deliveryId,
+    message: result.message,
   };
 }
 
-export async function sendReportEmailStub(input: {
+export async function sendReportEmailViaResend(input: {
   to: string | string[];
   subject: string;
   html: string;
   text: string;
+  tenantId: string;
   reportType: "Daily Digest" | "Weekly Performance" | "PDF Export" | "Manual Report";
 }) {
-  const recipient = Array.isArray(input.to) ? input.to.join(",") : input.to;
+  const recipient = Array.isArray(input.to) ? input.to[0] : input.to;
+  if (!recipient || !isResendConfigured()) {
+    return { success: false, provider: "none" as const, message: "Resend not configured or no recipient." };
+  }
+  const result = await sendResendEmail({
+    tenantId: input.tenantId,
+    to: recipient,
+    subject: input.subject,
+    html: input.html,
+    text: input.text,
+  });
   return {
-    deliveryId: `report-${input.reportType.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`,
-    status: "Sent" as const,
-    sentAt: new Date().toISOString(),
-    recipient,
+    success: result.success,
+    provider: result.provider,
+    deliveryId: result.deliveryId,
+    message: result.message,
   };
 }

@@ -1083,12 +1083,12 @@ export async function testResendNotification(input: {
       status: "Success",
       message: "Test email sent successfully.",
       checkedAt,
-      metadata: {},
+      metadata: { deliveryId: sendResult.deliveryId },
     };
     automationStatus = "Success";
     automationMessage = "Resend test email sent";
   } else {
-    const safe = sendResult.message.replace(/\b(sk|rsk)_[a-z0-9_-]{10,}/gi, "[redacted]");
+    const safe = sendResult.message.replace(/\b(re_)[a-z0-9_-]{10,}/gi, "[redacted]");
     result = {
       provider: "Resend",
       status: "Failed",

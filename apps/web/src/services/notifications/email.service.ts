@@ -1,5 +1,3 @@
-// TODO: Implement with Nodemailer using SMTP, or route through Gmail API.
-
 export interface EmailPayload {
   to:       string | string[];
   subject:  string;
@@ -8,34 +6,25 @@ export interface EmailPayload {
   from?:    string;
 }
 
+/**
+ * Web-layer email service stub. In production, all transactional email is
+ * sent by the Express API workers via Resend (RESEND_API_KEY + RESEND_FROM_EMAIL).
+ * Components should call the API via apiFetch rather than this class directly.
+ */
 export class EmailService {
-  /**
-   * TODO: Send a transactional email.
-   */
   async send(_payload: EmailPayload): Promise<void> {
-    // TODO: Create Nodemailer transporter from env.smtp config
-    // TODO: transporter.sendMail(payload)
-    throw new Error("EmailService.send not implemented");
+    throw new Error("EmailService.send: use apiFetch to call the API email endpoints.");
   }
 
-  /**
-   * TODO: Send the daily digest email to the user.
-   */
   async sendDailyDigest(_to: string, _digestHtml: string): Promise<void> {
-    throw new Error("EmailService.sendDailyDigest not implemented");
+    throw new Error("EmailService.sendDailyDigest: use apiFetch to call the API email endpoints.");
   }
 
-  /**
-   * TODO: Send the weekly performance report email.
-   */
   async sendWeeklyReport(_to: string, _reportHtml: string): Promise<void> {
-    throw new Error("EmailService.sendWeeklyReport not implemented");
+    throw new Error("EmailService.sendWeeklyReport: use apiFetch to call the API email endpoints.");
   }
 
-  /**
-   * TODO: Send a follow-up reminder notification.
-   */
   async sendFollowUpReminder(_to: string, _jobTitle: string, _company: string): Promise<void> {
-    throw new Error("EmailService.sendFollowUpReminder not implemented");
+    throw new Error("EmailService.sendFollowUpReminder: use apiFetch to call the API email endpoints.");
   }
 }
