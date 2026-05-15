@@ -78,6 +78,9 @@ const JobSchema = new Schema(
     tags: { type: [String], default: [] },
     notes: String,
     rawSourceData: { type: Schema.Types.Mixed, default: {} },
+    deadlineAlertSentAt: Date,
+    deadlineAlertKey: String,
+    deadlineAlertError: String,
   }),
   { timestamps: true }
 );
@@ -88,4 +91,5 @@ JobSchema.index({ tenantId: 1, company: 1, position: 1 });
 JobSchema.index({ tenantId: 1, jobUrl: 1 });
 JobSchema.index({ tenantId: 1, fingerprintHash: 1 }, { unique: true, sparse: true });
 JobSchema.index({ deadline: 1 });
+JobSchema.index({ tenantId: 1, deadlineAlertKey: 1 }, { sparse: true });
 export const JobModel = models.Job || model("Job", JobSchema);
