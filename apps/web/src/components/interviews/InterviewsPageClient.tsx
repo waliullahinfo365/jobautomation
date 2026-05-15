@@ -9,13 +9,15 @@ import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/PageHeader";
 import type {
   AwaitingConfirmationInterview,
+  CalendarSyncStatus,
   CompletedInterview,
   Interview,
+  InterviewAutomationLog,
   InterviewOutcome,
   InterviewTab,
   PrepTask,
+  PrepTaskType,
 } from "@/types/interview";
-import { calendarSyncStatus, interviewAutomationLogs, prepTasks as initialPrepTasks } from "@/data/mockInterviews";
 import { InterviewStatsCards } from "./InterviewStatsCards";
 import { InterviewTabs } from "./InterviewTabs";
 import { InterviewFilters, type InterviewFilterState } from "./InterviewFilters";
@@ -28,14 +30,93 @@ import { AwaitingConfirmationSection } from "./AwaitingConfirmationSection";
 import { InterviewAutomationLogs } from "./InterviewAutomationLogs";
 import { InterviewDetailPanel } from "./InterviewDetailPanel";
 import { useInterviewsApi } from "@/hooks/api/useInterviewsApi";
+import { useIntegrationsApi } from "@/hooks/api/useIntegrationsApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
+import { apiFetch, withQuery } from "@/lib/api/client";
 import { getResourceId, normalizeInterviewsForUi } from "@/lib/utils/resource";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
-import { DEMO_TENANT_ID, DEMO_USER_ID } from "@/config/env";
 import { AnimatePresence, motion } from "framer-motion";
+
+const LABEL_TO_TASK_TYPE: [RegExp, PrepTaskType][] = [
+  [/research|company/i, "Research Company"],
+  [/job.?description|role|jd/i, "Review Job Description"],
+  [/practice|star|behavioral|answer/i, "Practice Answers"],
+  [/technical|coding|architect|algorithm/i, "Technical Prep"],
+  [/question/i, "Prepare Questions"],
+  [/portfolio|case.?study/i, "Portfolio Review"],
+];
+
+function inferTaskType(label: string): PrepTaskType {
+  for (const [pattern, type] of LABEL_TO_TASK_TYPE) {
+    if (pattern.test(label)) return type;
+  }
+  return "Research Company";
+}
+
+function computePrepTasksFromInterviews(interviews: Interview[], doneTaskIds: Set<string>): PrepTask[] {
+  const now = Date.now();
+  return interviews
+    .filter((iv) => !["Completed", "Cancelled", "No Show"].includes(iv.status))
+    .flatMap((iv) => {
+      const due = new Date(new Date(iv.dateTime).getTime() - 24 * 60 * 60 * 1000);
+      return iv.prepChecklist.map((item) => {
+        const taskId = `${iv.id}__${item.id}`;
+        const isDone = item.done || doneTaskIds.has(taskId);
+        return {
+          id: taskId,
+          interviewId: iv.id,
+          company: iv.company,
+          position: iv.position,
+          title: item.label,
+          taskType: inferTaskType(item.label),
+          dueDate: due.toISOString(),
+          priority: "Medium" as const,
+          status: isDone ? ("Done" as const) : due.getTime() < now ? ("Overdue" as const) : ("Not Started" as const),
+        };
+      });
+    });
+}
+
+function normalizeApiLogToInterviewLog(raw: unknown, idx: number): InterviewAutomationLog {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const moduleKey = String(r.moduleKey ?? r.moduleName ?? "");
+  const module: InterviewAutomationLog["module"] =
+    moduleKey.includes("email-reply") ? "Email Reply Detection"
+    : moduleKey.includes("follow-up") ? "Follow-Up Reminder Engine"
+    : moduleKey.includes("calendar") ? "Calendar Sync"
+    : "Interview Scheduling Automation";
+  const rawStatus = String(r.status ?? "");
+  const status: InterviewAutomationLog["status"] =
+    rawStatus === "Success" ? "success" : rawStatus === "Warning" ? "warning" : "error";
+  const meta = (r.metadata ?? {}) as Record<string, unknown>;
+  return {
+    id: String(r._id ?? r.id ?? idx),
+    time: String(r.createdAt ?? r.timestamp ?? new Date().toISOString()),
+    module,
+    status,
+    message: String(r.message ?? ""),
+    relatedInterview: r.relatedRecordId ? String(r.relatedRecordId).slice(-6) : "—",
+    durationMs: Number(meta.durationMs ?? 0),
+  };
+}
+
+function deriveCalendarSyncStatus(integrations: unknown[]): CalendarSyncStatus {
+  const cal = integrations.find((i) => {
+    const item = (i ?? {}) as Record<string, unknown>;
+    return String(item.provider ?? "").toLowerCase().includes("calendar") ||
+           String(item.slug ?? "").toLowerCase().includes("calendar");
+  });
+  const item = (cal ?? {}) as Record<string, unknown>;
+  const isConnected = String(item.status ?? "") === "Connected";
+  return {
+    googleCalendar: isConnected ? "Connected" : "Not connected",
+    lastSync: String(item.lastSyncAt ?? item.updatedAt ?? new Date().toISOString()),
+    nextSync: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  };
+}
 
 const initialFilters: InterviewFilterState = {
   query: "",
@@ -55,10 +136,12 @@ function scheduleDefaultLocal(): string {
 export function InterviewsPageClient() {
   const { t } = useTranslation();
   const interviewsApi = useInterviewsApi({ fallbackToMock: false });
+  const integrationsApi = useIntegrationsApi({ fallbackToMock: false });
 
   const [tab, setTab] = useState<InterviewTab>("Upcoming");
   const [filters, setFilters] = useState<InterviewFilterState>(initialFilters);
-  const [prepTasks, setPrepTasks] = useState<PrepTask[]>(initialPrepTasks);
+  const [doneTaskIds, setDoneTaskIds] = useState<Set<string>>(new Set());
+  const [liveAutoLogs, setLiveAutoLogs] = useState<InterviewAutomationLog[]>([]);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [fallbackEdits, setFallbackEdits] = useState<Record<string, Partial<Interview>>>({});
@@ -83,6 +166,18 @@ export function InterviewsPageClient() {
     if (!interviewsApi.isUsingFallback) setFallbackEdits({});
   }, [interviewsApi.isUsingFallback]);
 
+  useEffect(() => {
+    if (tab !== "Automation Logs") return;
+    apiFetch<{ data?: unknown[] } | unknown[]>(
+      withQuery("/automation/logs", { moduleKey: "interview-scheduling", limit: "50" })
+    )
+      .then((res) => {
+        const rows = Array.isArray(res) ? res : (Array.isArray((res as { data?: unknown[] }).data) ? (res as { data: unknown[] }).data : []);
+        setLiveAutoLogs(rows.map(normalizeApiLogToInterviewLog));
+      })
+      .catch(() => {});
+  }, [tab]);
+
   const interviews = useMemo(() => {
     if (!interviewsApi.isUsingFallback || Object.keys(fallbackEdits).length === 0) return baseInterviews;
     return baseInterviews.map((iv) => {
@@ -91,6 +186,16 @@ export function InterviewsPageClient() {
       return ed ? ({ ...iv, ...ed } as Interview) : iv;
     });
   }, [baseInterviews, interviewsApi.isUsingFallback, fallbackEdits]);
+
+  const prepTasks = useMemo(
+    () => computePrepTasksFromInterviews(interviews, doneTaskIds),
+    [interviews, doneTaskIds]
+  );
+
+  const calendarSyncStatus = useMemo(() => {
+    const raw = normalizeListResponse<unknown>(integrationsApi.integrations);
+    return deriveCalendarSyncStatus(raw);
+  }, [integrationsApi.integrations]);
 
   useEffect(() => {
     if (!selectedInterview) return;
@@ -230,8 +335,6 @@ export function InterviewsPageClient() {
     }
     try {
       await interviewsApi.createInterview({
-        tenantId: DEMO_TENANT_ID,
-        createdBy: DEMO_USER_ID,
         company: scheduleForm.company.trim(),
         position: scheduleForm.position.trim(),
         interviewType: scheduleForm.interviewType,
@@ -253,9 +356,20 @@ export function InterviewsPageClient() {
     }
   };
 
-  const markTaskDone = (id: string) => {
-    setPrepTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: "Done" } : t)));
-  };
+  const markTaskDone = useCallback(
+    (taskId: string) => {
+      setDoneTaskIds((prev) => new Set(prev).add(taskId));
+      const [interviewId, itemId] = taskId.split("__");
+      if (!interviewId || !itemId || interviewsApi.isUsingFallback) return;
+      const interview = interviews.find((iv) => iv.id === interviewId);
+      if (!interview) return;
+      const updatedChecklist = interview.prepChecklist.map((item) =>
+        item.id === itemId ? { ...item, done: true } : item
+      );
+      void interviewsApi.updateInterview({ id: interviewId, payload: { prepChecklist: updatedChecklist } });
+    },
+    [interviews, interviewsApi]
+  );
 
   const confirmAwaiting = (id: string) => {
     setHiddenAwaitingIds((prev) => new Set(prev).add(id));
@@ -365,7 +479,7 @@ export function InterviewsPageClient() {
             <AwaitingConfirmationSection items={awaitingItems} onConfirm={confirmAwaiting} />
           )
         ) : null}
-        {tab === "Automation Logs" ? <InterviewAutomationLogs logs={interviewAutomationLogs} /> : null}
+        {tab === "Automation Logs" ? <InterviewAutomationLogs logs={liveAutoLogs} /> : null}
       </div>
 
       <InterviewDetailPanel

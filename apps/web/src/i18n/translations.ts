@@ -1605,6 +1605,7 @@ export const messages: Record<
         status: "STATUS",
         action: "AKTION",
         markDone: "Als erledigt markieren",
+        noTasks: "Keine Vorbereitungsaufgaben. Planen Sie ein Vorstellungsgespräch mit einer Checkliste.",
       },
       completed: {
         title: "Abgeschlossene Vorstellungsgespräche",
@@ -1632,6 +1633,7 @@ export const messages: Record<
         duration: "DAUER",
         action: "AKTION",
         view: "Anzeigen",
+        noLogs: "Noch keine Automatisierungsprotokolle für Vorstellungsgespräche.",
       },
       schedule: {
         title: "Vorstellungsgespräch planen",
@@ -4200,6 +4202,7 @@ export const messages: Record<
         status: "STATUS",
         action: "ACTION",
         markDone: "Mark Done",
+        noTasks: "No preparation tasks. Schedule an interview with a prep checklist to see tasks here.",
       },
       completed: {
         title: "Completed Interviews",
@@ -4227,6 +4230,7 @@ export const messages: Record<
         duration: "DURATION",
         action: "ACTION",
         view: "View",
+        noLogs: "No automation logs for interviews yet.",
       },
       schedule: {
         title: "Schedule interview",

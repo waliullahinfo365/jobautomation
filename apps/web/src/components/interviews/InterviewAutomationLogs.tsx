@@ -38,6 +38,13 @@ export function InterviewAutomationLogs({ logs }: { logs: InterviewAutomationLog
           </TableRow>
         </TableHeader>
         <TableBody>
+          {logs.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                {t("interviews.logs.noLogs")}
+              </TableCell>
+            </TableRow>
+          ) : null}
           {logs.map((log) => (
             <TableRow key={log.id}>
               <TableCell>{timeFmt.format(new Date(log.time))}</TableCell>

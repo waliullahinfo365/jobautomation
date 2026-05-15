@@ -46,6 +46,13 @@ export function PrepTasksSection({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {tasks.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                {t("interviews.prep.noTasks")}
+              </TableCell>
+            </TableRow>
+          ) : null}
           {tasks.map((task) => (
             <TableRow key={task.id}>
               <TableCell className="font-medium">{task.company}</TableCell>
