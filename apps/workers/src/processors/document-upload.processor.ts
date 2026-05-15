@@ -84,8 +84,6 @@ export async function processUploadedProfileDocument(payload: DocumentUploadProc
     });
     parentId = cvFolder.folder.id;
     storageLocation = "Job Applications/Templates/CV";
-  } else if (payload.profileDocumentType === "cover_letter_template") {
-    fileName = "COVER_LETTER_TEMPLATE.docx";
   }
 
   const created = await createGoogleDoc({

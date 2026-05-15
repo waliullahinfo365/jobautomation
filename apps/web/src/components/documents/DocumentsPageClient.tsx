@@ -16,9 +16,9 @@ import type {
   ResearchDocumentRecord,
 } from "@/types/document";
 import {
-  mockFolderActivity,
   mockFolderAutomationSettings,
 } from "@/data/mockDocuments";
+import { apiFetch, withQuery } from "@/lib/api/client";
 import { DocumentStatsCards } from "./DocumentStatsCards";
 import { DocumentTabs } from "./DocumentTabs";
 import { DocumentFilters, type DocumentFilterState } from "./DocumentFilters";
@@ -126,7 +126,7 @@ export function DocumentsPageClient() {
   const [tab, setTab] = useState<DocumentTab>("All Documents");
   const [filters, setFilters] = useState<DocumentFilterState>(initialFilters);
   const [folderSettings, setFolderSettings] = useState<FolderAutomationSettings>(mockFolderAutomationSettings);
-  const [folderActivity, setFolderActivity] = useState<FolderActivityRecord[]>(mockFolderActivity);
+  const [folderActivity, setFolderActivity] = useState<FolderActivityRecord[]>([]);
   const [fallbackEdits, setFallbackEdits] = useState<Record<string, Partial<DocumentRecord>>>({});
   const [localNewDocuments, setLocalNewDocuments] = useState<DocumentRecord[]>([]);
   const [cvDefaultId, setCvDefaultId] = useState<string | null>(null);
@@ -149,6 +149,25 @@ export function DocumentsPageClient() {
       setLocalNewDocuments([]);
     }
   }, [documentsApi.isUsingFallback]);
+
+  useEffect(() => {
+    if (tab !== "Folder Automation") return;
+    apiFetch<{ data?: unknown[] } | unknown[]>(withQuery("/automation/logs", { moduleKey: "folder-automation", limit: "20" }))
+      .then((res) => {
+        const rows = Array.isArray(res) ? res : (Array.isArray((res as any).data) ? (res as any).data : []);
+        setFolderActivity(
+          rows.map((r: any, i: number) => ({
+            id: String(r._id ?? r.id ?? i),
+            time: String(r.createdAt ?? r.timestamp ?? ""),
+            job: String(r.metadata?.jobId ? `Job ${String(r.metadata.jobId).slice(-6)}` : (r.relatedRecordId ? `Job ${String(r.relatedRecordId).slice(-6)}` : "Workspace")),
+            action: String(r.message ?? ""),
+            folderPath: String(r.metadata?.folderPath ?? r.metadata?.jobFolderUrl ?? ""),
+            status: String(r.status ?? "Success") as "Success" | "Failed" | "Warning",
+          }))
+        );
+      })
+      .catch(() => {/* leave previous state */});
+  }, [tab]);
 
   const documents = useMemo(() => {
     const patched = baseDocuments.map((doc) => {

@@ -129,6 +129,11 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     name: "Exports",
     parentId: jobFolder.folder.id,
   });
+  const applicationProofFolder = await findOrCreateFolder({
+    accessToken: auth.accessToken,
+    name: "Application Proof",
+    parentId: jobFolder.folder.id,
+  });
 
   await JobModel.findByIdAndUpdate(payload.jobId, {
     folderCreated: true,
@@ -140,7 +145,7 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     cvFolderId: cvFolder.folder.id,
     coverLetterFolderId: coverLetterFolder.folder.id,
     researchFolderId: researchFolder.folder.id,
-    applicationProofFolderId: exportsFolder.folder.id,
+    applicationProofFolderId: applicationProofFolder.folder.id,
     interviewPrepFolderId: undefined,
     cvFolderLink: cvFolder.folder.webViewLink ?? `https://drive.google.com/drive/folders/${cvFolder.folder.id}`,
     coverLetterFolderLink:
@@ -148,8 +153,8 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
     researchFolderLink:
       researchFolder.folder.webViewLink ?? `https://drive.google.com/drive/folders/${researchFolder.folder.id}`,
     applicationProofFolderLink:
-      exportsFolder.folder.webViewLink ??
-      `https://drive.google.com/drive/folders/${exportsFolder.folder.id}`,
+      applicationProofFolder.folder.webViewLink ??
+      `https://drive.google.com/drive/folders/${applicationProofFolder.folder.id}`,
     interviewPrepFolderLink: undefined,
     folderProvisionStatus: "Completed",
     folderProvisionedAt: new Date(),
@@ -214,6 +219,7 @@ export async function processFolderAutomationJob(payload: FolderAutomationPayloa
         { name: "Cover Letter", created: coverLetterFolder.created },
         { name: "Research", created: researchFolder.created },
         { name: "Exports", created: exportsFolder.created },
+        { name: "Application Proof", created: applicationProofFolder.created },
       ],
       skippedExistingFolders: !jobFolder.created,
       driveConnected: true,

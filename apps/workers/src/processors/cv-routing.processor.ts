@@ -52,9 +52,10 @@ export async function processCvRoutingJob(payload: CvRoutingPayload) {
   const sourceCv =
     (await DocumentModel.findOne({
       tenantId: payload.tenantId,
-      type: "CV",
-      status: { $in: ["Ready", "Draft"] },
+      profileDocumentType: "cv_resume",
+      isActiveProfileDocument: true,
       $or: [{ jobId: { $exists: false } }, { jobId: null }, { jobId: "" }],
+      aiGenerated: { $ne: true },
     })
       .sort({ updatedAt: -1 })
       .lean()) as Record<string, unknown> | null;
