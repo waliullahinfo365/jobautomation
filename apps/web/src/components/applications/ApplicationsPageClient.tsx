@@ -79,6 +79,14 @@ function buildLocalDemoApplication(input: CreateApplicationFormPayload): Applica
 }
 
 function filterApplications(applications: Application[], filters: ApplicationFilterState) {
+  const now = Date.now();
+  const cutoff =
+    filters.dateRange === "Last 7 Days"
+      ? now - 7 * 24 * 60 * 60 * 1000
+      : filters.dateRange === "Last 30 Days"
+        ? now - 30 * 24 * 60 * 60 * 1000
+        : null;
+
   return applications.filter((app) => {
     const matchesQuery =
       !filters.query ||
@@ -89,8 +97,10 @@ function filterApplications(applications: Application[], filters: ApplicationFil
       filters.responseStatus === "All" ? true : app.responseStatus === filters.responseStatus;
     const matchesFollowUp =
       filters.followUpStatus === "All" ? true : app.followUpStatus === filters.followUpStatus;
+    const matchesDate =
+      !cutoff || (app.dateFound ? new Date(app.dateFound).getTime() >= cutoff : true);
 
-    return matchesQuery && matchesAppStatus && matchesResponse && matchesFollowUp;
+    return matchesQuery && matchesAppStatus && matchesResponse && matchesFollowUp && matchesDate;
   });
 }
 
@@ -294,10 +304,8 @@ export function ApplicationsPageClient() {
           skipped?: number;
           failed?: number;
         };
-        const msg = `Processed ${result.processed ?? 0}: sent ${result.sent ?? 0}, skipped ${result.skipped ?? 0}${
-          result.failed ? `, failed ${result.failed}` : ""
-        }.`;
-        showSuccess(msg);
+        const total = (result.processed ?? 0) || (result.sent ?? 0) + (result.skipped ?? 0) + (result.failed ?? 0);
+        showSuccess(`${total} ${t("applications.toast.followUpsProcessed")}`);
         await applicationsApi.refetch();
       } catch {
         showError(t("applications.toast.couldNotProcess"));

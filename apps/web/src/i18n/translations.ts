@@ -1252,6 +1252,7 @@ export const messages: Record<
         view: "Anzeigen",
         markFollowupSent: "Nachfassung als gesendet markieren",
         openEmail: "E-Mail öffnen",
+        openJob: "Job öffnen",
       },
       filters: {
         searchPlaceholder: "Nach Unternehmen, Position oder Kontakt-E-Mail suchen",
@@ -1276,6 +1277,7 @@ export const messages: Record<
         markedApplied: "Bewerbung als beworben markiert.",
         followUpScheduled: "Nachfassung geplant.",
         processedDueDemo: "Fällige Nachfassaktionen verarbeitet (Demo).",
+        followUpsProcessed: "Nachfassaktionen verarbeitet.",
         replySimulated: "Simulierte Antwort angewendet.",
         replyTestProcessed: "Antwort-Test verarbeitet.",
         actionFailed: "Aktion fehlgeschlagen. Bitte versuchen Sie es erneut.",
@@ -3847,6 +3849,7 @@ export const messages: Record<
         view: "View",
         markFollowupSent: "Mark Follow-Up Sent",
         openEmail: "Open Email",
+        openJob: "Open Job",
       },
       filters: {
         searchPlaceholder: "Search by company, position, or contact email",
@@ -3871,6 +3874,7 @@ export const messages: Record<
         markedApplied: "Application marked as applied.",
         followUpScheduled: "Follow-up scheduled.",
         processedDueDemo: "Processed due follow-ups (demo).",
+        followUpsProcessed: "follow-ups processed.",
         replySimulated: "Simulated reply applied to demo data.",
         replyTestProcessed: "Reply test processed.",
         actionFailed: "Action failed. Please try again.",

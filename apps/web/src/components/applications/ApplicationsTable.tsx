@@ -88,9 +88,30 @@ export function ApplicationsTable({ applications, onView, onMarkFollowUpSent }: 
                   <Button variant="secondary" size="sm" onClick={() => onMarkFollowUpSent(app.id)}>
                     {t("applications.table.markFollowupSent")}
                   </Button>
-                  <Button variant="ghost" size="sm">
-                    {t("applications.table.openEmail")}
-                  </Button>
+                  {app.contactEmail ? (
+                    <a
+                      href={
+                        app.providerThreadId
+                          ? `https://mail.google.com/mail/u/0/#inbox/${app.providerThreadId}`
+                          : `mailto:${app.contactEmail}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-accent"
+                    >
+                      {t("applications.table.openEmail")}
+                    </a>
+                  ) : null}
+                  {app.jobUrl ? (
+                    <a
+                      href={app.jobUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 items-center justify-center rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-accent"
+                    >
+                      {t("applications.table.openJob")}
+                    </a>
+                  ) : null}
                 </div>
               </TableCell>
             </TableRow>
