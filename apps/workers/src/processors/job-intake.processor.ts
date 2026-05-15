@@ -136,14 +136,16 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
   });
   const messages = list.messages ?? [];
   let createdCount = 0;
-  let skippedCount = 0;
+  let nonJobSkipped = 0;
+  let duplicateSkipped = 0;
+  let alreadyProcessed = 0;
   let validCount = 0;
   const preview: Array<{ messageId: string; company?: string; position?: string; subject?: string; from?: string }> = [];
   let maxHistoryId = Number(lastHistoryId || 0);
 
   for (const msg of messages) {
     if (!isBackfill && processedMessageIds.has(msg.id)) {
-      skippedCount += 1;
+      alreadyProcessed += 1;
       continue;
     }
     const message = await gmailApiJson<any>({
@@ -155,17 +157,24 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     if (messageHistoryId > maxHistoryId) maxHistoryId = messageHistoryId;
     if (!isBackfill && lastHistoryId && messageHistoryId > 0 && messageHistoryId <= Number(lastHistoryId)) {
       processedMessageIds.add(msg.id);
-      skippedCount += 1;
+      alreadyProcessed += 1;
       continue;
     }
     const normalized = parseGmailMessageToPayload(message);
+
+    // Skip demo/test sender domains — never create production jobs from synthetic emails
+    if (/jobs\.demo\.jobflow\.ai|@test\.|@example\./i.test(normalized.from)) {
+      processedMessageIds.add(normalized.providerMessageId);
+      nonJobSkipped += 1;
+      continue;
+    }
 
     // Classify before extraction — skip non-job emails early
     const classification = isRealJobOpportunity(normalized);
     const CONFIDENCE_THRESHOLD = 0.85;
     if (!classification.isJob || classification.confidence < CONFIDENCE_THRESHOLD) {
       processedMessageIds.add(normalized.providerMessageId);
-      skippedCount += 1;
+      nonJobSkipped += 1;
       if (!payload.dryRun) {
         await AutomationLogModel.create({
           tenantId: payload.tenantId,
@@ -190,10 +199,35 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
 
     const extraction = await runAiExtraction({
       payload: normalized,
-      config: { provider: "Claude", model: "claude-3-5-sonnet-20241022", fallbackToStub: true },
+      config: { provider: "Claude", model: "claude-3-5-sonnet-latest", fallbackToStub: false },
     });
     const data = extraction.data;
-    if (!data.company || !data.position) continue;
+    const UNKNOWN_COMPANY = !data.company || data.company === "Unknown Company";
+    const UNKNOWN_POSITION = !data.position || data.position === "Unknown Position";
+    if (UNKNOWN_COMPANY || UNKNOWN_POSITION) {
+      nonJobSkipped += 1;
+      processedMessageIds.add(normalized.providerMessageId);
+      if (!payload.dryRun) {
+        await AutomationLogModel.create({
+          tenantId: payload.tenantId,
+          createdBy: "system",
+          moduleKey: "job-intake",
+          moduleName: "job-intake",
+          status: "Warning",
+          message: `Email skipped (extraction failed — no company/position): ${normalized.subject || "(no subject)"}`,
+          operationId,
+          metadata: {
+            gmailMessageId: normalized.providerMessageId,
+            from: normalized.from,
+            subject: normalized.subject,
+            extractedCompany: data.company,
+            extractedPosition: data.position,
+            usedStub: extraction.usedStub,
+          },
+        });
+      }
+      continue;
+    }
     validCount += 1;
     if (payload.dryRun) {
       preview.push({
@@ -217,7 +251,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     }).select("_id");
     if (existing) {
       processedMessageIds.add(normalized.providerMessageId);
-      skippedCount += 1;
+      duplicateSkipped += 1;
       await AutomationLogModel.create({
         tenantId: payload.tenantId,
         createdBy: "system",
@@ -243,7 +277,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     const duplicate = await checkDuplicateJobWorker(payload.tenantId, data);
     if (duplicate.status === "Duplicate") {
       processedMessageIds.add(normalized.providerMessageId);
-      skippedCount += 1;
+      duplicateSkipped += 1;
       await notifyAutomationEvent({
         tenantId: payload.tenantId,
         moduleKey: "duplicate-protection",
@@ -342,15 +376,24 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     await gmailConn.save();
   }
 
+  const totalSkipped = nonJobSkipped + duplicateSkipped + alreadyProcessed;
   await AutomationLogModel.create({
     tenantId: payload.tenantId,
     createdBy: "system",
     moduleKey: "job-intake",
     moduleName: "job-intake",
     status: "Success",
-    message: `Gmail intake: scanned ${messages.length}, created ${createdCount}, skipped ${skippedCount} (duplicates + non-job emails).`,
+    message: `Gmail intake: scanned ${messages.length}, created ${createdCount}, non-job skipped ${nonJobSkipped}, duplicates skipped ${duplicateSkipped}, already processed ${alreadyProcessed}.`,
     operationId,
-    metadata: { scannedMessages: messages.length, createdCount, skippedCount, query },
+    metadata: {
+      scannedMessages: messages.length,
+      createdCount,
+      nonJobSkipped,
+      duplicateSkipped,
+      alreadyProcessed,
+      totalSkipped,
+      query,
+    },
   });
   return {
     suppressWorkerCompletionLog: true as const,
@@ -361,7 +404,9 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     scannedMessages: messages.length,
     validCount,
     createdCount,
-    skippedCount,
+    nonJobSkipped,
+    duplicateSkipped,
+    alreadyProcessed,
     query,
     preview,
   };

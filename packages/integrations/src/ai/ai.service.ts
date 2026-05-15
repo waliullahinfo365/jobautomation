@@ -77,7 +77,10 @@ const HARD_REJECT_SUBJECT_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/your profile (appeared|was (viewed|seen)|got \d+)/i, "linkedin_update"],
   [/#\d{2,4}\s*$/i, "newsletter"], // Newsletter issue numbers like "#162"
   [/newsletter/i, "newsletter"],
-  [/unsubscribe/i, "newsletter"],
+  // Explicit promotional / event subjects — not recruiter outreach
+  [/\b(webinar|conference|summit|workshop|event|meetup)\b/i, "newsletter"],
+  [/\b(discount|promo|coupon|sale|offer ends|% off)\b/i, "newsletter"],
+  [/\b(product update|release notes|changelog|new feature)\b/i, "newsletter"],
 ];
 
 /** Body signals that indicate a non-job email */
@@ -88,7 +91,9 @@ const HARD_REJECT_BODY_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/linkedin\.com\/sales\/contract-chooser/i, "sales_nav_notification"],
   [/sales navigator/i, "sales_nav_notification"],
   [/inmail credit/i, "sales_nav_notification"],
-  [/unsubscribe from this (email|newsletter|digest)/i, "newsletter"],
+  // Only reject if body contains newsletter-style unsubscribe + no job URL anywhere in body
+  [/unsubscribe from this newsletter/i, "newsletter"],
+  [/you('re| are) receiving this (email|newsletter) because you subscribed/i, "newsletter"],
 ];
 
 /** Strong positive signals in body */
@@ -100,6 +105,11 @@ const JOB_BODY_SIGNALS: RegExp[] = [
   /\b(salary range|compensation|equity|base pay)\b/i,
   /https?:\/\/[^\s]*(greenhouse\.io|lever\.co|ashbyhq\.com|workday\.com|jobvite|icims|taleo)[^\s]*/i,
   /https?:\/\/[^\s]*\/(jobs?|careers?|apply|opening|vacancy|position)[^\s]*/i,
+  // Direct recruiter outreach phrases
+  /\b(i (came across|noticed|found|saw) your (profile|background|experience|linkedin))\b/i,
+  /\b(we('re| are) looking for|we have an? (opening|role|position|opportunity) for)\b/i,
+  /\b(would you be (open|interested) (to|in) (exploring|discussing|learning|hearing))\b/i,
+  /\b(full.time|contract|permanent|hybrid|remote.first)\b.{0,60}\b(role|position|opportunity)\b/i,
 ];
 
 /** Strong positive signals in subject */
@@ -111,6 +121,10 @@ const JOB_SUBJECT_SIGNALS: RegExp[] = [
   /\b(apply now|apply today|apply for)\b/i,
   /\b(recruiter|talent acquisition|sourcer|headhunter)\b/i,
   /\b(vacancy|opening|position available)\b/i,
+  /\b(interested in|exploring|opportunity for you)\b/i,
+  /\b(full.?time|contract|permanent)\s+(role|position|opportunity)\b/i,
+  // "Role at Company" anywhere in subject (not just end-of-line)
+  /\b[\w\s,()-]{3,40}\s+at\s+[A-Z][A-Za-z0-9\s&.'-]{2,40}\b/,
 ];
 
 // ─── LinkedIn-specific routing ────────────────────────────────────────────────
@@ -216,24 +230,28 @@ export function isRealJobOpportunity(payload: JobIntakeEmailPayload): EmailClass
   const reasons: string[] = [];
 
   const subjectMatches = JOB_SUBJECT_SIGNALS.filter((p) => p.test(subject));
-  if (subjectMatches.length >= 2) { score += 0.4; reasons.push("strong job subject signals"); }
-  else if (subjectMatches.length === 1) { score += 0.25; reasons.push("job subject signal"); }
+  if (subjectMatches.length >= 2) { score += 0.45; reasons.push("strong job subject signals"); }
+  else if (subjectMatches.length === 1) { score += 0.28; reasons.push("job subject signal"); }
 
   const bodyMatches = JOB_BODY_SIGNALS.filter((p) => p.test(body));
-  if (bodyMatches.length >= 3) { score += 0.45; reasons.push("multiple job body signals"); }
-  else if (bodyMatches.length === 2) { score += 0.30; reasons.push("two job body signals"); }
-  else if (bodyMatches.length === 1) { score += 0.15; reasons.push("job body signal"); }
+  if (bodyMatches.length >= 3) { score += 0.50; reasons.push("multiple job body signals"); }
+  else if (bodyMatches.length === 2) { score += 0.35; reasons.push("two job body signals"); }
+  else if (bodyMatches.length === 1) { score += 0.20; reasons.push("job body signal"); }
 
   const hasSalary = /(\$|USD|EUR|CAD|GBP)\s?[\d,.kK]+/i.test(body);
-  if (hasSalary) { score += 0.1; reasons.push("salary mention"); }
+  if (hasSalary) { score += 0.12; reasons.push("salary mention"); }
 
-  const hasRoleAtCompany = /\b[\w\s,()-]{3,50}\s+at\s+[A-Z][A-Za-z0-9\s&.'-]{2,40}$/m.test(subject);
-  if (hasRoleAtCompany) { score += 0.15; reasons.push("'Role at Company' pattern in subject"); }
+  // ATS job URL in body even from non-ATS sender
+  const hasAtsUrl = /https?:\/\/[^\s]*(greenhouse\.io|lever\.co|ashbyhq\.com|workday\.com|jobvite|icims|taleo|smartrecruiters|bamboohr|recruitee|breezy)[^\s]*/i.test(body);
+  if (hasAtsUrl) { score += 0.30; reasons.push("ATS URL in body"); }
 
   const isJob = score >= 0.85;
   const confidence = Math.min(0.97, score);
   let detectedType: DetectedEmailType = "unknown";
-  if (isJob) detectedType = score >= 0.9 ? "job_alert" : "recruiter_opportunity";
+  if (isJob) {
+    const isDirectRecruiter = bodyMatches.some((_, i) => i >= 7); // recruiter outreach patterns start at index 7
+    detectedType = isDirectRecruiter ? "recruiter_opportunity" : score >= 0.9 ? "job_alert" : "recruiter_opportunity";
+  }
 
   return {
     isJob,
@@ -331,6 +349,10 @@ export async function extractJobFromEmail(payload: JobIntakeEmailPayload): Promi
 
   const salaryMatch = payload.bodyText.match(/(?:\$|USD|CAD|EUR)\s?[\d,.kK]+(?:\s?-\s?(?:\$|USD|CAD|EUR)?\s?[\d,.kK]+)?/i);
 
+  // Deadline extraction: "apply by", "closes on", "deadline: <date>"
+  const deadlineMatch = payload.bodyText.match(/(?:apply by|deadline[:\s]+|closes?\s+on[:\s]+|applications?\s+close[:\s]+)(\w+ \d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+  const deadline = deadlineMatch ? (() => { try { const d = new Date(deadlineMatch[1]); return isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10); } catch { return undefined; } })() : undefined;
+
   const locationFromCard = linkedInCard?.location;
   const locationKw = locationFromCard ?? LOCATION_KEYWORDS.find((keyword) =>
     payload.bodyText.toLowerCase().includes(keyword)
@@ -348,6 +370,7 @@ export async function extractJobFromEmail(payload: JobIntakeEmailPayload): Promi
     location: locationKw ? (locationKw.charAt(0).toUpperCase() + locationKw.slice(1)) : undefined,
     jobUrl: urlMatch?.[0],
     salaryRange: salaryMatch?.[0],
+    deadline,
     source: payload.provider,
     confidence,
     description: payload.bodyText.slice(0, 1000),
@@ -359,7 +382,10 @@ export async function extractJobFromEmail(payload: JobIntakeEmailPayload): Promi
 }
 
 function shouldUseStub(config: AiRuntimeConfig): boolean {
-  return config.provider === "Stub" || config.fallbackToStub || !config.apiKeyDecrypted;
+  if (config.provider === "Stub") return true;
+  // Use Claude whenever a key is available from env or config — never block on fallbackToStub alone.
+  const hasKey = Boolean(resolveAnthropicApiKey() ?? config.apiKeyDecrypted);
+  return !hasKey;
 }
 
 function usageFromLengths(inputLen: number, outputLen: number) {
