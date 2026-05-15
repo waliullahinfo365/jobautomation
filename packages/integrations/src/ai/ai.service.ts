@@ -542,65 +542,81 @@ export async function generateJobResearch(input: {
 export async function runResearchGeneration(input: {
   job: { company: string; position: string; description?: string; location?: string };
   config: AiRuntimeConfig;
-}): Promise<AiServiceResult<Awaited<ReturnType<typeof generateJobResearch>>>> {
-  const usedStub = shouldUseStub(input.config);
+}): Promise<AiServiceResult<{
+  company_overview: string;
+  role_summary: string;
+  candidate_match: string;
+  possible_gaps: string;
+  talking_points: string[];
+  interview_questions: string[];
+  application_strategy: string;
+  sources_note: string;
+  summary: string;
+  promptVersion: string;
+}>> {
+  const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
   const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
 
-  if (!usedStub) {
-    const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
-    if (apiKey) {
-      const modelCandidates = buildAnthropicModelCandidates(input.config.model);
-      const prompt = [
-        "Write a concise job research brief as plain text with these headings:",
-        "Company Overview | Role Summary | Key Requirements | Resume Keywords | Cover Letter Angles | Interview Prep Notes",
-        "",
-        `Company: ${input.job.company}`,
-        `Position: ${input.job.position}`,
-        `Location: ${input.job.location ?? "Not specified"}`,
-        `Job description: ${input.job.description ?? "Not provided"}`,
-        "",
-        "Base your analysis only on the job description provided. Do not invent facts.",
-      ].join("\n");
-      try {
-        const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 900, temperature: 0.3 });
-        if (result.ok) {
-          const text = result.text;
-          const summary = text.split("\n")[0] ?? `${input.job.company} hiring for ${input.job.position}.`;
-          return {
-            provider: "Claude",
-            model: result.model,
-            usedStub: false,
-            confidence: 0.88,
-            data: {
-              summary,
-              keyRequirements: ["See research document"],
-              companyResearch: text,
-              talkingPoints: ["See research document"],
-              confidence: 0.88,
-              promptVersion: "research-v2-claude",
-            },
-            usage: usageFromLengths(inText.length, text.length),
-          };
-        }
-      } catch {
-        // Fall through to stub
-      }
-    }
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not set. Cannot generate research without a valid API key.");
   }
 
-  const data = await generateJobResearch({
-    company: input.job.company,
-    position: input.job.position,
-    description: input.job.description,
-    location: input.job.location,
-  });
+  const modelCandidates = buildAnthropicModelCandidates(input.config.model);
+  const prompt = [
+    "You are a career research assistant. Output ONLY valid JSON — no markdown, no commentary.",
+    "Return a single JSON object with exactly these keys:",
+    '  "company_overview": string',
+    '  "role_summary": string',
+    '  "candidate_match": string',
+    '  "possible_gaps": string',
+    '  "talking_points": array of strings',
+    '  "interview_questions": array of strings',
+    '  "application_strategy": string',
+    '  "sources_note": string',
+    "",
+    "Base analysis ONLY on the job description. Do not invent facts.",
+    "",
+    `Company: ${input.job.company}`,
+    `Position: ${input.job.position}`,
+    `Location: ${input.job.location ?? "Not specified"}`,
+    `Job description:\n${input.job.description ?? "Not provided"}`,
+  ].join("\n");
+
+  const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 1500, temperature: 0.2 });
+  if (!result.ok) {
+    throw new Error(`Claude research generation failed: [${result.errorType}] ${result.message}`);
+  }
+
+  const cleaned = result.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(cleaned) as Record<string, unknown>;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("Claude returned non-JSON research output");
+    parsed = JSON.parse(match[0]) as Record<string, unknown>;
+  }
+
+  const data = {
+    company_overview: String(parsed.company_overview ?? ""),
+    role_summary: String(parsed.role_summary ?? ""),
+    candidate_match: String(parsed.candidate_match ?? ""),
+    possible_gaps: String(parsed.possible_gaps ?? ""),
+    talking_points: Array.isArray(parsed.talking_points) ? (parsed.talking_points as string[]) : [],
+    interview_questions: Array.isArray(parsed.interview_questions) ? (parsed.interview_questions as string[]) : [],
+    application_strategy: String(parsed.application_strategy ?? ""),
+    sources_note: String(parsed.sources_note ?? ""),
+    summary: String(parsed.role_summary ?? `${input.job.company} is hiring for ${input.job.position}.`),
+    promptVersion: "research-v3-claude-json",
+  };
+
   return {
-    provider: usedStub ? "Stub" : input.config.provider,
-    model: usedStub ? DEFAULT_AI_MODEL : input.config.model,
-    usedStub: true,
-    confidence: data.confidence,
+    provider: "Claude",
+    model: result.model,
+    usedStub: false,
+    confidence: 0.9,
     data,
-    usage: usageFromLengths(inText.length, data.summary.length + data.companyResearch.length),
+    usage: usageFromLengths(inText.length, result.text.length),
   };
 }
 
@@ -632,65 +648,69 @@ export async function generateCoverLetterDraft(input: {
 export async function runCoverLetterGeneration(input: {
   job: { company: string; position: string; description?: string; tone?: "professional" | "confident" | "friendly" };
   config: AiRuntimeConfig;
-}): Promise<AiServiceResult<Awaited<ReturnType<typeof generateCoverLetterDraft>>>> {
-  const usedStub = shouldUseStub(input.config);
+}): Promise<AiServiceResult<{
+  subject: string;
+  cover_letter: string;
+  key_customizations: string[];
+  missing_info_warnings: string[];
+  draftText: string;
+  promptVersion: string;
+}>> {
+  const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
   const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
 
-  if (!usedStub) {
-    const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
-    if (apiKey) {
-      const modelCandidates = buildAnthropicModelCandidates(input.config.model);
-      const tone = input.job.tone ?? "professional";
-      const prompt = [
-        `Write a ${tone} cover letter (250–350 words) for the role below. Plain text only. No placeholders.`,
-        "RULES: Only cite experience from the job description context. Do not fabricate credentials.",
-        "",
-        `Company: ${input.job.company}`,
-        `Position: ${input.job.position}`,
-        `Job description: ${input.job.description ?? "Not provided"}`,
-      ].join("\n");
-      try {
-        const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 700, temperature: 0.4 });
-        if (result.ok) {
-          const lines = result.text.split("\n");
-          const opening = lines[0] ?? `Dear Hiring Team at ${input.job.company},`;
-          const closing = lines[lines.length - 1] ?? "Thank you for your consideration.";
-          return {
-            provider: "Claude",
-            model: result.model,
-            usedStub: false,
-            confidence: 0.86,
-            data: {
-              draftText: result.text,
-              opening,
-              experienceMatch: "",
-              closing,
-              tone,
-              confidence: 0.86,
-              promptVersion: "cover-letter-v2-claude",
-            },
-            usage: usageFromLengths(inText.length, result.text.length),
-          };
-        }
-      } catch {
-        // Fall through to stub
-      }
-    }
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not set. Cannot generate cover letter without a valid API key.");
   }
 
-  const data = await generateCoverLetterDraft({
-    company: input.job.company,
-    position: input.job.position,
-    description: input.job.description,
-    tone: input.job.tone,
-  });
+  const modelCandidates = buildAnthropicModelCandidates(input.config.model);
+  const tone = input.job.tone ?? "professional";
+  const prompt = [
+    "You are a professional cover letter writer. Output ONLY valid JSON — no markdown, no commentary.",
+    "Return a single JSON object with exactly these keys:",
+    '  "subject": string — email subject line for this application',
+    `  "cover_letter": string — full ${tone} cover letter, 250-350 words, plain text with \\n line breaks`,
+    '  "key_customizations": array of 3-5 strings — ways this letter is tailored to the role',
+    '  "missing_info_warnings": array of strings — requirements in JD not addressed (empty if none)',
+    "",
+    "Do not fabricate credentials. Only cite experience from the job description.",
+    "",
+    `Company: ${input.job.company}`,
+    `Position: ${input.job.position}`,
+    `Job description:\n${input.job.description ?? "Not provided"}`,
+  ].join("\n");
+
+  const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 1200, temperature: 0.4 });
+  if (!result.ok) {
+    throw new Error(`Claude cover letter generation failed: [${result.errorType}] ${result.message}`);
+  }
+
+  const cleaned = result.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(cleaned) as Record<string, unknown>;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("Claude returned non-JSON cover letter output");
+    parsed = JSON.parse(match[0]) as Record<string, unknown>;
+  }
+
+  const data = {
+    subject: String(parsed.subject ?? `Application for ${input.job.position} at ${input.job.company}`),
+    cover_letter: String(parsed.cover_letter ?? ""),
+    key_customizations: Array.isArray(parsed.key_customizations) ? (parsed.key_customizations as string[]) : [],
+    missing_info_warnings: Array.isArray(parsed.missing_info_warnings) ? (parsed.missing_info_warnings as string[]) : [],
+    draftText: String(parsed.cover_letter ?? ""),
+    promptVersion: "cover-letter-v3-claude-json",
+  };
+
   return {
-    provider: usedStub ? "Stub" : input.config.provider,
-    model: usedStub ? DEFAULT_AI_MODEL : input.config.model,
-    usedStub: true,
-    confidence: data.confidence,
+    provider: "Claude",
+    model: result.model,
+    usedStub: false,
+    confidence: 0.9,
     data,
-    usage: usageFromLengths(inText.length, data.draftText.length),
+    usage: usageFromLengths(inText.length, result.text.length),
   };
 }
 

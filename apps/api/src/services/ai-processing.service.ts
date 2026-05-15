@@ -111,10 +111,9 @@ export async function runResearchGeneration(input: RunInput): Promise<AiProcessi
       promptVersion: research.promptVersion,
       contentText: research.summary,
       generationMetadata: {
-        keyRequirements: research.keyRequirements,
-        companyResearch: research.companyResearch,
-        talkingPoints: research.talkingPoints,
-        confidence: research.confidence,
+        keyRequirements: research.talking_points,
+        companyResearch: research.role_summary,
+        talkingPoints: research.talking_points,
         usedStub: wrapped.usedStub,
       },
       metadata: {
@@ -138,7 +137,7 @@ export async function runResearchGeneration(input: RunInput): Promise<AiProcessi
       relatedRecordType: "Job",
       relatedRecordId: input.jobId,
       inputText: [job.company, job.position, job.description].filter(Boolean).join("\n"),
-      outputText: [research.summary, research.companyResearch].join("\n"),
+      outputText: [research.summary, research.role_summary].join("\n"),
       usedStub: wrapped.usedStub,
     });
 
@@ -169,9 +168,9 @@ export async function runResearchGeneration(input: RunInput): Promise<AiProcessi
         company: job.company,
         position: job.position,
         summary: research.summary,
-        keyRequirements: research.keyRequirements,
-        companyResearch: research.companyResearch,
-        recommendedTalkingPoints: research.talkingPoints,
+        keyRequirements: research.talking_points,
+        companyResearch: research.role_summary,
+        recommendedTalkingPoints: research.talking_points,
       },
     };
   } catch (error) {
@@ -224,8 +223,6 @@ export async function runDraftGeneration(input: RunInput): Promise<AiProcessingR
         company: job.company,
         position: job.position,
         draftText: existingDocument.contentText ?? "",
-        tone: (existingDocument.generationMetadata as { tone?: string } | undefined)?.tone ?? "professional",
-        sections: ["opening", "experienceMatch", "closing"],
       },
     };
   }
@@ -278,11 +275,9 @@ export async function runDraftGeneration(input: RunInput): Promise<AiProcessingR
       promptVersion: draft.promptVersion,
       contentText: draft.draftText,
       generationMetadata: {
-        opening: draft.opening,
-        experienceMatch: draft.experienceMatch,
-        closing: draft.closing,
-        tone: draft.tone,
-        confidence: draft.confidence,
+        subject: draft.subject,
+        keyCustomizations: draft.key_customizations,
+        missingInfoWarnings: draft.missing_info_warnings,
         usedStub: wrappedDraft.usedStub,
       },
       metadata: {
@@ -337,8 +332,8 @@ export async function runDraftGeneration(input: RunInput): Promise<AiProcessingR
         company: job.company,
         position: job.position,
         draftText: draft.draftText,
-        tone: draft.tone,
-        sections: ["opening", "experienceMatch", "closing"],
+        subject: draft.subject,
+        keyCustomizations: draft.key_customizations,
       },
     };
   } catch (error) {

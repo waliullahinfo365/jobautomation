@@ -3,11 +3,11 @@
  * @see https://docs.anthropic.com/en/api/messages
  */
 
-export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022";
+export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-latest";
 
 /** Dated / stable IDs tried if the primary model returns 404 or model-related 400. */
 const MODEL_FALLBACK_CHAIN = [
-  "claude-sonnet-4-20250514",
+  "claude-3-5-sonnet-20241022",
   "claude-3-5-haiku-20241022",
 ] as const;
 

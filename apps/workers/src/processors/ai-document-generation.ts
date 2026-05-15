@@ -25,15 +25,9 @@ type JobContext = {
   userName?: string;
 };
 
-type FallbackReason = "none" | "no-api-key" | "claude-error";
-
 type ClaudeResult = {
   text: string;
   model: string;
-  usedFallback: boolean;
-  fallbackReason: FallbackReason;
-  /** Sanitized short reason when fallbackReason === claude-error */
-  claudeFailureSummary?: string;
 };
 
 function toId(value: unknown): string {
@@ -122,88 +116,58 @@ async function writeAutomationLog(input: {
   }
 }
 
-function fallbackLogMessage(summary: string): string {
-  const safe = redactForLog(summary, 400);
-  const short = safe.length > 180 ? `${safe.slice(0, 177)}…` : safe;
-  return `Claude generation failed; fallback draft created: ${short}`;
-}
 
+/**
+ * Calls Claude and returns the text result.
+ * Throws with a clean error message if the API key is missing or the call fails —
+ * callers must mark the job Failed and rethrow; no fake content is produced.
+ */
 async function generateWithClaude(input: {
   prompt: string;
-  fallbackText: string;
-  modelHint?: string;
+  maxTokens?: number;
+  temperature?: number;
 }): Promise<ClaudeResult> {
   const apiKey = resolveAnthropicApiKey();
-  const modelCandidates = buildAnthropicModelCandidates(input.modelHint);
-
   if (!apiKey) {
-    return { text: input.fallbackText, model: "stub", usedFallback: true, fallbackReason: "no-api-key" };
+    throw new Error("ANTHROPIC_API_KEY is not set. Cannot generate AI content without a valid API key.");
   }
+
+  const modelCandidates = buildAnthropicModelCandidates();
 
   try {
     const result = await callAnthropicMessages({
       prompt: input.prompt,
       apiKey,
       modelCandidates,
-      maxTokens: 1200,
-      temperature: 0.2,
+      maxTokens: input.maxTokens ?? 1500,
+      temperature: input.temperature ?? 0.2,
     });
 
     if (result.ok) {
-      logger.info(
-        { model: result.model, modelCandidatesTried: modelCandidates.length },
-        "anthropic messages success"
-      );
-      return { text: result.text, model: result.model, usedFallback: false, fallbackReason: "none" };
+      logger.info({ model: result.model }, "anthropic messages success");
+      return { text: result.text, model: result.model };
     }
 
-    const summary = `[${result.errorType}] ${result.message}${result.status != null ? ` (status ${result.status})` : ""} model=${result.modelAttempted}`;
-    const logBindings = {
-      errorType: result.errorType,
-      status: result.status,
-      message: redactForLog(result.message, 500),
-      modelAttempted: result.modelAttempted,
-    };
+    const summary = `[${result.errorType}] ${redactForLog(result.message, 400)}${result.status != null ? ` (status ${result.status})` : ""} model=${result.modelAttempted}`;
     if (result.errorType === "model_not_found") {
-      logger.warn(logBindings, "Anthropic model not found. Check ANTHROPIC_MODEL.");
+      logger.warn({ modelAttempted: result.modelAttempted }, "Anthropic model not found. Check ANTHROPIC_MODEL env.");
     } else {
-      logger.warn(logBindings, "anthropic messages failed");
+      logger.warn({ errorType: result.errorType, status: result.status, modelAttempted: result.modelAttempted }, "anthropic messages failed");
     }
-
-    return {
-      text: input.fallbackText,
-      model: "stub",
-      usedFallback: true,
-      fallbackReason: "claude-error",
-      claudeFailureSummary: redactForLog(summary),
-    };
+    throw new Error(`Claude API error: ${summary}`);
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("Claude API error:")) throw error;
     const ser = serializeWorkerError(error);
-    const summary = redactForLog(`[network] ${ser.name ?? "Error"}: ${ser.message}`);
-    logger.warn(
-      { errorType: ser.name, message: summary, code: ser.code },
-      "anthropic messages fetch threw"
-    );
-    return {
-      text: input.fallbackText,
-      model: "stub",
-      usedFallback: true,
-      fallbackReason: "claude-error",
-      claudeFailureSummary: summary,
-    };
+    throw new Error(`Claude API network error: ${redactForLog(`${ser.name ?? "Error"}: ${ser.message}`)}`);
   }
 }
 
 function generationLogMeta(
   jobId: string,
-  generated: ClaudeResult,
+  model: string,
   extra: Record<string, unknown>
 ): Record<string, unknown> {
-  const base: Record<string, unknown> = { jobId, model: generated.model, usedFallback: generated.usedFallback, ...extra };
-  if (generated.fallbackReason === "claude-error" && generated.claudeFailureSummary) {
-    base.claudeErrorSummary = generated.claudeFailureSummary;
-  }
-  return base;
+  return { jobId, model, ...extra };
 }
 
 async function persistDocument(docPayload: Record<string, unknown>) {
@@ -284,6 +248,60 @@ async function routeGeneratedDocToDrive(input: {
 
 const suppressFlag = { suppressWorkerCompletionLog: true as const };
 
+interface ResearchJson {
+  company_overview: string;
+  role_summary: string;
+  candidate_match: string;
+  possible_gaps: string;
+  talking_points: string[];
+  interview_questions: string[];
+  application_strategy: string;
+  sources_note: string;
+}
+
+function formatResearchAsText(r: ResearchJson, ctx: JobContext): string {
+  return [
+    `# Research Brief — ${ctx.company} — ${ctx.position}`,
+    "",
+    "## Company Overview",
+    r.company_overview,
+    "",
+    "## Role Summary",
+    r.role_summary,
+    "",
+    "## Candidate Match",
+    r.candidate_match,
+    "",
+    "## Possible Gaps",
+    r.possible_gaps,
+    "",
+    "## Talking Points",
+    ...r.talking_points.map((p) => `- ${p}`),
+    "",
+    "## Interview Questions",
+    ...r.interview_questions.map((q) => `- ${q}`),
+    "",
+    "## Application Strategy",
+    r.application_strategy,
+    "",
+    "## Sources Note",
+    r.sources_note,
+  ].join("\n");
+}
+
+function parseResearchJson(text: string): ResearchJson | null {
+  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  try {
+    return JSON.parse(cleaned) as ResearchJson;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]) as ResearchJson; } catch { return null; }
+    }
+    return null;
+  }
+}
+
 export async function createResearchDocument(input: {
   tenantId: string;
   userId: string;
@@ -297,61 +315,51 @@ export async function createResearchDocument(input: {
   const title = sanitizeTitle(`Research — ${ctx.company} — ${ctx.position}`);
 
   const prompt = [
-    "Create a concise job research brief in plain text with these section headings:",
-    "Company Overview",
-    "Role Summary",
-    "Key Requirements",
-    "Resume Keywords",
-    "Cover Letter Angles",
-    "Interview Prep Notes",
+    "You are a career research assistant. Output ONLY valid JSON — no markdown, no commentary.",
+    "Return a single JSON object with exactly these keys:",
+    '  "company_overview": string — 2-4 sentences about the company based on the job description',
+    '  "role_summary": string — what the role entails and its place in the org',
+    '  "candidate_match": string — how a strong candidate would match this role',
+    '  "possible_gaps": string — skills or experience the JD requires that may be challenging',
+    '  "talking_points": array of 4-6 string bullet points for interviews or networking',
+    '  "interview_questions": array of 5-7 likely interview questions for this role',
+    '  "application_strategy": string — 2-3 sentences on how to tailor the application',
+    '  "sources_note": string — note that analysis is based solely on the provided job description',
     "",
-    `Workspace: ${ctx.tenantName ?? "Unknown Workspace"}`,
-    `Candidate: ${ctx.userName ?? "Unknown User"}`,
+    "Base analysis ONLY on the job description provided. Do not invent facts.",
+    "",
     `Company: ${ctx.company}`,
     `Position: ${ctx.position}`,
     `Location: ${ctx.location ?? "Not specified"}`,
-    `Job description: ${ctx.description ?? "Not provided"}`,
-    ...(profileBlock
-      ? [
-          "",
-          profileBlock,
-          "",
-          "When profile documents are provided, align Resume Keywords and Cover Letter Angles with real skills and experience from the CV. If no CV is provided, use general best practices only.",
-        ]
-      : []),
+    `Job description:\n${ctx.description ?? "Not provided"}`,
+    ...(profileBlock ? ["", profileBlock, "", "When CV data is provided, align candidate_match with real skills from the CV."] : []),
   ].join("\n");
 
-  const fallbackText = [
-    "Company Overview",
-    `${ctx.company} is hiring for ${ctx.position}.`,
-    "",
-    "Role Summary",
-    "Focus on delivery, collaboration, and measurable outcomes aligned with the role.",
-    "",
-    "Key Requirements",
-    "- Relevant experience for the role",
-    "- Strong communication and ownership",
-    "- Track record of shipped work",
-    "",
-    "Resume Keywords",
-    "- Cross-functional delivery",
-    "- System design",
-    "- Metrics-driven execution",
-    "",
-    "Cover Letter Angles",
-    "- Business impact from prior projects",
-    "- Alignment with company mission",
-    "",
-    "Interview Prep Notes",
-    "- Prepare 2–3 STAR stories with metrics",
-    "- Research recent company news",
-  ].join("\n");
+  let generated: ClaudeResult;
+  try {
+    generated = await generateWithClaude({ prompt, maxTokens: 1800, temperature: 0.2 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Claude generation failed";
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: "research-document",
+      status: "Failed",
+      message: `Research generation failed: ${redactForLog(errorMessage, 300)}`,
+      operationId: ctx.operationId,
+      relatedRecordType: "Job",
+      relatedRecordId: ctx.jobId,
+      metadata: { source: "worker:research-document" },
+    });
+    await JobModel.findByIdAndUpdate(ctx.jobId, {
+      aiProcessingStatus: "Failed",
+      aiProcessingError: "Research generation failed. Check AI configuration.",
+      aiProcessingCompletedAt: new Date(),
+    });
+    throw error;
+  }
 
-  const generated = await generateWithClaude({
-    prompt,
-    fallbackText,
-    modelHint: "claude-3-5-sonnet-20241022",
-  });
+  const parsed = parseResearchJson(generated.text);
+  const docText = parsed ? formatResearchAsText(parsed, ctx) : generated.text;
 
   const doc = await persistDocument({
     tenantId: ctx.tenantId,
@@ -363,19 +371,19 @@ export async function createResearchDocument(input: {
     documentKind: "Research",
     generationStatus: "Generated",
     aiGenerated: true,
-    aiProvider: generated.usedFallback ? "Stub" : "Claude",
+    aiProvider: "Claude",
     aiModel: generated.model,
-    contentText: generated.text,
+    contentText: docText,
     metadata: {
       operationId: ctx.operationId,
       source: "worker:research-document",
       model: generated.model,
       generatedAt: new Date().toISOString(),
       usedWorkspaceProfile: Boolean(profile.cvText || profile.coverLetterStyleText || profile.portfolioText),
-      fallbackReason: generated.fallbackReason,
-      ...(generated.claudeFailureSummary ? { claudeErrorSummary: generated.claudeFailureSummary } : {}),
+      ...(parsed ? { structuredData: parsed } : {}),
     },
   });
+
   let driveRoute:
     | { ok: true; googleDocId: string; googleDocUrl: string; parentId?: string; storageLocation?: string }
     | { ok: false; reason?: string };
@@ -384,12 +392,13 @@ export async function createResearchDocument(input: {
       tenantId: ctx.tenantId,
       jobId: ctx.jobId,
       fileName: `Research - ${ctx.company} - ${ctx.position}`,
-      content: generated.text,
+      content: docText,
       fallbackFolder: "research",
     });
   } catch (error) {
     driveRoute = { ok: false, reason: error instanceof Error ? error.message : "Drive route failed" };
   }
+
   if (driveRoute.ok) {
     await DocumentModel.findByIdAndUpdate(doc._id, {
       googleDriveFileId: driveRoute.googleDocId,
@@ -432,51 +441,26 @@ export async function createResearchDocument(input: {
 
   const durationMs = Date.now() - started;
 
-  if (!generated.usedFallback) {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: "research-document",
-      status: "Success",
-      message: "Research document generated",
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
-    });
-  } else if (generated.fallbackReason === "no-api-key") {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: "research-document",
-      status: "Warning",
-      message: "Claude API key missing; generated demo AI draft.",
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
-    });
-  } else {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: "research-document",
-      status: "Warning",
-      message: fallbackLogMessage(generated.claudeFailureSummary || "Unknown Claude error"),
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
-    });
-  }
-    await notifyAutomationEvent({
-      tenantId: ctx.tenantId,
-      moduleKey: "research-document",
-      event: "research-generated",
-      message: `Research ready for ${ctx.company} — ${ctx.position}${driveRoute.ok ? `\nOpen research: ${driveRoute.googleDocUrl}` : ""}`,
-      operationId: ctx.operationId,
-      metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
-    });
+  await writeAutomationLog({
+    tenantId: ctx.tenantId,
+    moduleKey: "research-document",
+    status: "Success",
+    message: "Research document generated",
+    operationId: ctx.operationId,
+    relatedRecordType: "Document",
+    relatedRecordId: toId(doc._id),
+    durationMs,
+    metadata: generationLogMeta(ctx.jobId, generated.model, { documentId: toId(doc._id) }),
+  });
+
+  await notifyAutomationEvent({
+    tenantId: ctx.tenantId,
+    moduleKey: "research-document",
+    event: "research-generated",
+    message: `Research ready for ${ctx.company} — ${ctx.position}${driveRoute.ok ? `\nOpen research: ${driveRoute.googleDocUrl}` : ""}`,
+    operationId: ctx.operationId,
+    metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
+  });
 
   return {
     ...suppressFlag,
@@ -486,8 +470,27 @@ export async function createResearchDocument(input: {
     jobId: ctx.jobId,
     documentId: toId(doc._id),
     model: generated.model,
-    usedFallback: generated.usedFallback,
   };
+}
+
+interface CoverLetterJson {
+  subject: string;
+  cover_letter: string;
+  key_customizations: string[];
+  missing_info_warnings: string[];
+}
+
+function parseCoverLetterJson(text: string): CoverLetterJson | null {
+  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  try {
+    return JSON.parse(cleaned) as CoverLetterJson;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]) as CoverLetterJson; } catch { return null; }
+    }
+    return null;
+  }
 }
 
 export async function createCoverLetterDocument(input: {
@@ -501,6 +504,7 @@ export async function createCoverLetterDocument(input: {
   const logModule = input.logModuleKey ?? "ai-processing";
   const ctx = await loadJobContext(input);
   const profile = await loadWorkspaceProfileForPrompt(ctx.tenantId, ctx.userId);
+
   if (!profile.cvText) {
     const message = "Master CV is missing. Upload a CV before generating tailored cover letters.";
     await writeAutomationLog({
@@ -520,8 +524,10 @@ export async function createCoverLetterDocument(input: {
     });
     throw new Error(message);
   }
+
   const profileBlock = formatProfileContextBlock(profile);
   const title = sanitizeTitle(`Cover Letter — ${ctx.company} — ${ctx.position}`);
+
   if (!profile.coverLetterStyleText) {
     await writeAutomationLog({
       tenantId: ctx.tenantId,
@@ -536,46 +542,53 @@ export async function createCoverLetterDocument(input: {
   }
 
   const prompt = [
-    "Write a professional cover letter in plain text.",
-    "Keep it concise (around 250–350 words), tailored to the role and company below.",
+    "You are a professional cover letter writer. Output ONLY valid JSON — no markdown, no commentary.",
+    "Return a single JSON object with exactly these keys:",
+    '  "subject": string — email subject line for this application (e.g. "Application for Senior Engineer at Acme Corp")',
+    '  "cover_letter": string — full cover letter text, 250-350 words, plain text with line breaks (\\n), tailored to the role',
+    '  "key_customizations": array of 3-5 strings — specific ways this letter is tailored to the role/company',
+    '  "missing_info_warnings": array of strings — any info missing from the CV that the JD requires (empty array if none)',
     "",
     "STRICT RULES:",
-    "- Use ONLY employers, titles, skills, tools, and metrics that appear in the CV excerpt below (when provided).",
-    "- Do not invent degrees, certifications, employers, or achievements that are not supported by the CV.",
-    "- If the job description requires experience not evidenced in the CV, use careful wording: emphasize transferable skills, learning agility, and motivation without claiming direct experience you cannot cite from the CV.",
-    "- When a reference cover letter is provided, mirror its tone, pacing, salutation style, and formality. Do not copy employer-specific paragraphs verbatim.",
+    "- Use ONLY employers, titles, skills, tools, and metrics evidenced in the CV below.",
+    "- Do not invent degrees, certifications, employers, or achievements not in the CV.",
+    "- If the JD requires experience not in the CV, note it in missing_info_warnings; do not fabricate it in the letter.",
+    "- When a reference cover letter is provided, mirror its tone and formality.",
     "",
-    `Workspace: ${ctx.tenantName ?? "Unknown Workspace"}`,
-    `Candidate name (for sign-off only; do not fabricate credentials): ${ctx.userName ?? "Unknown User"}`,
+    `Candidate name (for sign-off only): ${ctx.userName ?? "Unknown User"}`,
     `Company: ${ctx.company}`,
     `Position: ${ctx.position}`,
     `Location: ${ctx.location ?? "Not specified"}`,
-    `Job description: ${ctx.description ?? "Not provided"}`,
+    `Job description:\n${ctx.description ?? "Not provided"}`,
     "",
     profileBlock,
   ].join("\n");
 
-  const fallbackText = profile.cvText
-    ? [
-        `Dear Hiring Team at ${ctx.company},`,
-        "",
-        `I am writing to express my interest in the ${ctx.position} role. Drawing on the experience summarized in my CV, I focus on delivering reliable outcomes, collaborating across teams, and taking ownership end to end.`,
-        "",
-        "I would welcome the opportunity to discuss how my background aligns with your needs. Thank you for your consideration.",
-      ].join("\n")
-    : [
-        `Dear Hiring Team at ${ctx.company},`,
-        "",
-        `I am writing to express my interest in the ${ctx.position} role. I am eager to contribute through strong collaboration, clear communication, and ownership of outcomes.`,
-        "",
-        "I would welcome the opportunity to discuss this role further. Thank you for your consideration.",
-      ].join("\n");
+  let generated: ClaudeResult;
+  try {
+    generated = await generateWithClaude({ prompt, maxTokens: 1500, temperature: 0.3 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Claude generation failed";
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: logModule,
+      status: "Failed",
+      message: `Cover letter generation failed: ${redactForLog(errorMessage, 300)}`,
+      operationId: ctx.operationId,
+      relatedRecordType: "Job",
+      relatedRecordId: ctx.jobId,
+      metadata: { source: "worker:cover-letter" },
+    });
+    await JobModel.findByIdAndUpdate(ctx.jobId, {
+      aiProcessingStatus: "Failed",
+      aiProcessingError: "Cover letter generation failed. Check AI configuration.",
+      aiProcessingCompletedAt: new Date(),
+    });
+    throw error;
+  }
 
-  const generated = await generateWithClaude({
-    prompt,
-    fallbackText,
-    modelHint: "claude-3-5-sonnet-20241022",
-  });
+  const parsed = parseCoverLetterJson(generated.text);
+  const coverLetterText = parsed?.cover_letter ?? generated.text;
 
   const doc = await persistDocument({
     tenantId: ctx.tenantId,
@@ -587,9 +600,9 @@ export async function createCoverLetterDocument(input: {
     documentKind: "Cover Letter",
     generationStatus: "Generated",
     aiGenerated: true,
-    aiProvider: generated.usedFallback ? "Stub" : "Claude",
+    aiProvider: "Claude",
     aiModel: generated.model,
-    contentText: generated.text,
+    contentText: coverLetterText,
     metadata: {
       operationId: ctx.operationId,
       source: "worker:cover-letter",
@@ -600,29 +613,34 @@ export async function createCoverLetterDocument(input: {
       sourceCvFileName: profile.cvFileName,
       coverLetterTemplateDocumentId: profile.coverLetterTemplateDocumentId,
       coverLetterTemplateFileName: profile.coverLetterTemplateFileName,
-      fallbackReason: generated.fallbackReason,
-      ...(generated.claudeFailureSummary ? { claudeErrorSummary: generated.claudeFailureSummary } : {}),
+      ...(parsed ? {
+        subject: parsed.subject,
+        keyCustomizations: parsed.key_customizations,
+        missingInfoWarnings: parsed.missing_info_warnings,
+      } : {}),
     },
   });
+
   let draftCopy:
     | { ok: true; googleDocId: string; googleDocUrl: string; parentId?: string; storageLocation?: string }
     | { ok: false; reason?: string } = { ok: false };
   let coverLetterCopy:
     | { ok: true; googleDocId: string; googleDocUrl: string; parentId?: string; storageLocation?: string }
     | { ok: false; reason?: string } = { ok: false };
+
   try {
     draftCopy = await routeGeneratedDocToDrive({
       tenantId: ctx.tenantId,
       jobId: ctx.jobId,
       fileName: `AI Draft - ${ctx.company} - ${ctx.position}`,
-      content: generated.text,
+      content: coverLetterText,
       fallbackFolder: "ai-drafts",
     });
     coverLetterCopy = await routeGeneratedDocToDrive({
       tenantId: ctx.tenantId,
       jobId: ctx.jobId,
       fileName: `Cover Letter - ${ctx.company} - ${ctx.position}`,
-      content: generated.text,
+      content: coverLetterText,
       fallbackFolder: "cover-letter",
     });
   } catch (error) {
@@ -630,6 +648,7 @@ export async function createCoverLetterDocument(input: {
     draftCopy = { ok: false, reason };
     coverLetterCopy = { ok: false, reason };
   }
+
   if (draftCopy.ok || coverLetterCopy.ok) {
     await DocumentModel.findByIdAndUpdate(doc._id, {
       googleDriveFileId: draftCopy.ok ? draftCopy.googleDocId : coverLetterCopy.ok ? coverLetterCopy.googleDocId : undefined,
@@ -692,43 +711,18 @@ export async function createCoverLetterDocument(input: {
 
   const durationMs = Date.now() - started;
 
-  if (!generated.usedFallback) {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: logModule,
-      status: "Success",
-      message: "Cover letter generated",
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
-    });
-  } else if (generated.fallbackReason === "no-api-key") {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: logModule,
-      status: "Warning",
-      message: "Claude API key missing; generated demo AI draft.",
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
-    });
-  } else {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: logModule,
-      status: "Warning",
-      message: fallbackLogMessage(generated.claudeFailureSummary || "Unknown Claude error"),
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id) }),
-    });
-  }
+  await writeAutomationLog({
+    tenantId: ctx.tenantId,
+    moduleKey: logModule,
+    status: "Success",
+    message: "Cover letter generated",
+    operationId: ctx.operationId,
+    relatedRecordType: "Document",
+    relatedRecordId: toId(doc._id),
+    durationMs,
+    metadata: generationLogMeta(ctx.jobId, generated.model, { documentId: toId(doc._id) }),
+  });
+
   await notifyAutomationEvent({
     tenantId: ctx.tenantId,
     moduleKey: logModule,
@@ -746,7 +740,6 @@ export async function createCoverLetterDocument(input: {
     jobId: ctx.jobId,
     documentId: toId(doc._id),
     model: generated.model,
-    usedFallback: generated.usedFallback,
   };
 }
 
@@ -783,30 +776,28 @@ export async function createAiAnalysisDocument(input: {
       : []),
   ].join("\n");
 
-  const fallbackText = [
-    "Fit summary",
-    `The ${ctx.position} role at ${ctx.company} appears aligned with a candidate who can deliver outcomes and collaborate broadly. Strength areas: execution, communication, ownership.`,
-    "",
-    "Missing information",
-    "- Compensation band",
-    "- Team size and stack details",
-    "- Interview process timeline",
-    "",
-    "Recommended next actions",
-    "- Complete research brief and tailor resume bullets",
-    "- Draft cover letter emphasizing measurable impact",
-    "- Schedule informational chat if possible",
-    "",
-    "Suggested follow-up",
-    "- Track application status weekly",
-    "- Prepare questions for hiring manager",
-  ].join("\n");
-
-  const generated = await generateWithClaude({
-    prompt,
-    fallbackText,
-    modelHint: "claude-3-5-sonnet-20241022",
-  });
+  let generated: ClaudeResult;
+  try {
+    generated = await generateWithClaude({ prompt, maxTokens: 1200, temperature: 0.2 });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Claude generation failed";
+    await writeAutomationLog({
+      tenantId: ctx.tenantId,
+      moduleKey: "ai-processing",
+      status: "Failed",
+      message: `AI analysis generation failed: ${redactForLog(errorMessage, 300)}`,
+      operationId: ctx.operationId,
+      relatedRecordType: "Job",
+      relatedRecordId: ctx.jobId,
+      metadata: { source: "worker:ai-processing" },
+    });
+    await JobModel.findByIdAndUpdate(ctx.jobId, {
+      aiProcessingStatus: "Failed",
+      aiProcessingError: "AI analysis generation failed. Check AI configuration.",
+      aiProcessingCompletedAt: new Date(),
+    });
+    throw error;
+  }
 
   const doc = await persistDocument({
     tenantId: ctx.tenantId,
@@ -818,7 +809,7 @@ export async function createAiAnalysisDocument(input: {
     documentKind: "Other",
     generationStatus: "Generated",
     aiGenerated: true,
-    aiProvider: generated.usedFallback ? "Stub" : "Claude",
+    aiProvider: "Claude",
     aiModel: generated.model,
     contentText: generated.text,
     metadata: {
@@ -828,8 +819,6 @@ export async function createAiAnalysisDocument(input: {
       model: generated.model,
       generatedAt: new Date().toISOString(),
       usedWorkspaceProfile: Boolean(profile.cvText || profile.coverLetterStyleText || profile.portfolioText),
-      fallbackReason: generated.fallbackReason,
-      ...(generated.claudeFailureSummary ? { claudeErrorSummary: generated.claudeFailureSummary } : {}),
     },
   });
 
@@ -845,43 +834,17 @@ export async function createAiAnalysisDocument(input: {
 
   const durationMs = Date.now() - started;
 
-  if (!generated.usedFallback) {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: "ai-processing",
-      status: "Success",
-      message: "AI job analysis generated",
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id), kind: "ai-analysis" }),
-    });
-  } else if (generated.fallbackReason === "no-api-key") {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: "ai-processing",
-      status: "Warning",
-      message: "Claude API key missing; generated demo AI draft.",
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id), kind: "ai-analysis" }),
-    });
-  } else {
-    await writeAutomationLog({
-      tenantId: ctx.tenantId,
-      moduleKey: "ai-processing",
-      status: "Warning",
-      message: fallbackLogMessage(generated.claudeFailureSummary || "Unknown Claude error"),
-      operationId: ctx.operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: toId(doc._id),
-      durationMs,
-      metadata: generationLogMeta(ctx.jobId, generated, { documentId: toId(doc._id), kind: "ai-analysis" }),
-    });
-  }
+  await writeAutomationLog({
+    tenantId: ctx.tenantId,
+    moduleKey: "ai-processing",
+    status: "Success",
+    message: "AI job analysis generated",
+    operationId: ctx.operationId,
+    relatedRecordType: "Document",
+    relatedRecordId: toId(doc._id),
+    durationMs,
+    metadata: generationLogMeta(ctx.jobId, generated.model, { documentId: toId(doc._id), kind: "ai-analysis" }),
+  });
 
   return {
     ...suppressFlag,
@@ -892,6 +855,5 @@ export async function createAiAnalysisDocument(input: {
     documentId: toId(doc._id),
     kind: "ai-analysis",
     model: generated.model,
-    usedFallback: generated.usedFallback,
   };
 }

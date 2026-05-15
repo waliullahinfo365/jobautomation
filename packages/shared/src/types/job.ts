@@ -99,6 +99,6 @@ export interface DraftGenerationResult {
   company: string;
   position: string;
   draftText: string;
-  tone: string;
-  sections: string[];
+  subject?: string;
+  keyCustomizations?: string[];
 }

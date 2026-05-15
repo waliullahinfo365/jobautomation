@@ -47,7 +47,8 @@ export const testAi = asyncHandler(async (req: Request, res) => {
       usedStub: wrapped.usedStub,
       confidence: wrapped.confidence,
       summary: wrapped.data.summary,
-      keyRequirements: wrapped.data.keyRequirements,
+      roleSummary: wrapped.data.role_summary,
+      companyOverview: wrapped.data.company_overview,
       usage: wrapped.usage,
     },
     "AI test"
