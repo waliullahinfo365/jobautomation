@@ -28,12 +28,28 @@ const ACTIVE_DOT = { r: 5, fill: "var(--accent-hi, #8499FF)", stroke: "var(--tex
 
 export function ResponseRateTrendChart({ data }: { data: { day: string; rate: number }[] }) {
   const { t } = useTranslation();
+
+  const header = (
+    <CardHeader>
+      <CardTitle>{t("reports.responseRateTrend")}</CardTitle>
+      <CardDescription>{t("reports.chart.dailyResponseRateMovement")}</CardDescription>
+    </CardHeader>
+  );
+
+  if (!data || data.length === 0) {
+    return (
+      <Card>
+        {header}
+        <CardContent className="flex h-[260px] items-center justify-center text-sm text-[var(--text-3)]">
+          {t("reports.noApplicationsThisWeek")}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("reports.responseRateTrend")}</CardTitle>
-        <CardDescription>{t("reports.chart.dailyResponseRateMovement")}</CardDescription>
-      </CardHeader>
+      {header}
       <CardContent className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>

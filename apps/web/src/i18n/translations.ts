@@ -1174,6 +1174,7 @@ export const messages: Record<
       closeModal: "Modal schließen",
       clearFilters: "Filter zurücksetzen",
       adjust: "Anpassungen",
+      actions: "Aktionen",
     },
     notifications: {
       title: "Benachrichtigungen",
@@ -3769,6 +3770,7 @@ export const messages: Record<
       closeModal: "Close modal",
       clearFilters: "Clear filters",
       adjust: "Adjust",
+      actions: "Actions",
     },
     notifications: {
       title: "Notifications",

@@ -24,19 +24,35 @@ const BAR_FILLS = [
 
 export function PipelineConversionChart({ data }: { data: { stage: string; conversion: number }[] }) {
   const { t } = useTranslation();
+
+  const header = (
+    <CardHeader>
+      <CardTitle>{t("reports.chart.pipelineConversion")}</CardTitle>
+      <CardDescription>{t("reports.chart.conversionByStage")}</CardDescription>
+    </CardHeader>
+  );
+
+  if (!data || data.length === 0) {
+    return (
+      <Card>
+        {header}
+        <CardContent className="flex h-[260px] items-center justify-center text-sm text-[var(--text-3)]">
+          {t("reports.noStatusDataYet")}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("reports.chart.pipelineConversion")}</CardTitle>
-        <CardDescription>{t("reports.chart.conversionByStage")}</CardDescription>
-      </CardHeader>
+      {header}
       <CardContent className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical">
             <CartesianGrid stroke={GRID_STROKE} strokeDasharray="3 3" horizontal={false} />
             <XAxis
               type="number"
-              tickFormatter={(v) => `${v}%`}
+              allowDecimals={false}
               tickLine={false}
               axisLine={false}
               tick={TICK}
@@ -45,7 +61,7 @@ export function PipelineConversionChart({ data }: { data: { stage: string; conve
             <Tooltip
               contentStyle={TOOLTIP_CONTENT}
               labelStyle={{ color: "var(--text-2, #B5BAC4)" }}
-              formatter={(v) => [`${v}%`, "Conversion"]}
+              formatter={(v) => [v, "Count"]}
             />
             <Bar dataKey="conversion" radius={[0, 6, 6, 0]}>
               {data.map((_, i) => (

@@ -789,11 +789,15 @@ export function normalizeWeeklyReportDataForUi(raw: unknown, fallback: WeeklyRep
     ? (m.topSources as { source: string; count: number }[])
     : fallback.topSources;
   const rec = Array.isArray(m.recommendations) ? (m.recommendations as string[]) : [];
-  const pb = m.pipelineBreakdown as { applications?: Record<string, number> } | undefined;
+  const pb = m.pipelineBreakdown as { applications?: Record<string, number>; jobs?: Record<string, number> } | undefined;
   const appsPb = pb?.applications ?? {};
+  const jobsPb = pb?.jobs ?? {};
+  const statusSource = Object.keys(appsPb).length > 0 ? appsPb : jobsPb;
   const pipelineConversion =
-    Object.keys(appsPb).length > 0
-      ? Object.entries(appsPb).map(([stage, conversion]) => ({ stage, conversion: Number(conversion) }))
+    Object.keys(statusSource).length > 0
+      ? Object.entries(statusSource)
+          .filter(([, v]) => Number(v) > 0)
+          .map(([stage, count]) => ({ stage, conversion: Number(count) }))
       : [];
   return {
     ...fallback,
