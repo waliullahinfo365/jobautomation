@@ -19,7 +19,6 @@ export async function GET(
     await connectDB();
     // TODO: const job = await JobModel.findById(params.id).lean();
     // TODO: if (!job) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
-    console.log("GET /api/jobs/[id]", params.id);
     return NextResponse.json({ success: true, message: "Not implemented" }, { status: 501 });
   } catch {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
@@ -42,7 +41,6 @@ export async function PATCH(
     }
     // TODO: const job = await JobModel.findByIdAndUpdate(params.id, parsed.data, { new: true }).lean();
     // TODO: LifecycleService side-effects based on status change
-    console.log("PATCH /api/jobs/[id]", params.id);
     return NextResponse.json({ success: true, message: "Not implemented" }, { status: 501 });
   } catch {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
@@ -59,7 +57,6 @@ export async function DELETE(
   try {
     await connectDB();
     // TODO: JobModel.findByIdAndDelete(params.id)
-    console.log("DELETE /api/jobs/[id]", params.id);
     return NextResponse.json({ success: true, message: "Not implemented" }, { status: 501 });
   } catch {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

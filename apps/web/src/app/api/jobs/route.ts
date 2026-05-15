@@ -23,7 +23,6 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Pa
     // TODO: const jobs = await JobModel.find(query).skip(...).limit(pageSize).lean();
     // TODO: const total = await JobModel.countDocuments(query);
 
-    console.log("GET /api/jobs", { page, pageSize, status, search });
 
     return NextResponse.json({
       success: true,

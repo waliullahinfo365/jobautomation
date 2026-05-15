@@ -595,7 +595,7 @@ export async function connectIntegration(input: {
     action: "integration.connected",
     entityType: "IntegrationConnection",
     entityId: provider,
-    message: `Integration connected (stub): ${provider}`,
+    message: `Integration connected: ${provider}`,
     metadata: { provider, slug: input.providerSlug },
   });
 
@@ -782,7 +782,7 @@ export async function testIntegration(input: {
         message = `${provider} is connected without an API key — add a key or use demo connect.`;
       } else {
         testStatus = "Success";
-        message = `${provider} configuration OK (stub test; no external AI call).`;
+        message = `${provider} API key is saved. Test by running an AI action (cover letter, research).`;
       }
     } else {
       testStatus = "Success";
@@ -793,7 +793,7 @@ export async function testIntegration(input: {
     message = `${provider} is not connected — connect before production use.`;
   } else if (statusRow === "Needs Attention" || statusRow === "Expired") {
     testStatus = "Failed";
-    message = `${provider} requires attention or re-authentication (stub).`;
+    message = `${provider} requires attention or re-authentication.`;
   } else {
     testStatus = "Warning";
     message = `${provider} is disabled or inactive for this workspace.`;
@@ -805,7 +805,7 @@ export async function testIntegration(input: {
     status: testStatus,
     message,
     checkedAt,
-    metadata: { stub: true },
+    metadata: {},
   };
 
   if (row?._id) {

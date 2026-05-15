@@ -10,7 +10,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
   // TODO: action === "connect"    → redirect to Google OAuth consent screen
   // TODO: action === "disconnect" → revoke token, clear from IntegrationModel
   // TODO: action === "test"       → GmailService.listLabels() to verify connection
-  console.log("POST /api/integrations/gmail", body);
   return NextResponse.json({ success: true, message: "Gmail integration not yet implemented" }, { status: 501 });
 }
 

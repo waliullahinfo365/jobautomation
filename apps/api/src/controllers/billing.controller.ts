@@ -54,7 +54,7 @@ export const postCheckout = asyncHandler(async (req: Request, res) => {
     planKey: req.body.planKey,
     billingCycle: req.body.billingCycle,
   });
-  return successResponse(res, result, "Checkout session (stub)");
+  return successResponse(res, result, "Checkout session");
 });
 
 export const postChangePlan = asyncHandler(async (req: Request, res) => {
@@ -63,16 +63,16 @@ export const postChangePlan = asyncHandler(async (req: Request, res) => {
   void logTenantAudit(req, "billing.plan.changed", {
     entityType: "Tenant",
     entityId: tenantId,
-    message: "Billing plan change (stub)",
+    message: "Billing plan changed",
     metadata: { planKey: req.body.planKey },
   });
-  return successResponse(res, snapshot, "Plan updated (stub)");
+  return successResponse(res, snapshot, "Plan updated");
 });
 
 export const postCancel = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const snapshot = await cancelSubscription({ tenantId });
-  return successResponse(res, snapshot, "Subscription cancel scheduled (stub)");
+  return successResponse(res, snapshot, "Subscription cancel scheduled");
 });
 
 export const postWebhook = asyncHandler(async (req: Request, res) => {

@@ -18,7 +18,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     // TODO: Create UserModel document
     // TODO: Return sanitized user (no passwordHash)
 
-    console.log("POST /api/auth — registration payload:", body);
 
     return NextResponse.json({ success: true, message: "Registration not yet implemented" }, { status: 501 });
   } catch (error) {

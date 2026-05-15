@@ -13,7 +13,6 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Pa
     // TODO: const logs = await AutomationLogModel.find(moduleId ? { moduleId } : {})
     //   .sort({ createdAt: -1 }).limit(limit).lean();
 
-    console.log("GET /api/automation", { moduleId, limit });
     return NextResponse.json({
       success: true,
       data: { items: [], total: 0, page: 1, pageSize: limit, totalPages: 0, hasNext: false, hasPrev: false },
@@ -28,7 +27,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
     await connectDB();
     const body = await req.json();
     // TODO: Toggle module status (pause / resume / trigger run)
-    console.log("POST /api/automation", body);
     return NextResponse.json({ success: true, message: "Not implemented" }, { status: 501 });
   } catch {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

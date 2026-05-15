@@ -10,7 +10,6 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Pa
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get("jobId");
     // TODO: const apps = await ApplicationModel.find(jobId ? { jobId } : {}).lean();
-    console.log("GET /api/applications", { jobId });
     return NextResponse.json({
       success: true,
       data: { items: [], total: 0, page: 1, pageSize: 20, totalPages: 0, hasNext: false, hasPrev: false },
