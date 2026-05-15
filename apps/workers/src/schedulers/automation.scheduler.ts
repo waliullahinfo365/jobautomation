@@ -125,6 +125,24 @@ export async function scheduleNetworkFollowUpSweep() {
   );
 }
 
+export async function scheduleOfferTrackingSweep() {
+  const date = todayKey();
+  const tenantIds = await activeTenantIds();
+  return enqueueManyAutomationJobs(
+    tenantIds.map((tenantId) => ({
+      name: "offer-tracking",
+      payload: {
+        tenantId,
+        operationId: `offer-tracking-${tenantId}-${date}`,
+        idempotencyKey: `offer-tracking:${tenantId}:${date}`,
+        requestedAt: new Date().toISOString(),
+        source: "scheduler",
+        date,
+      },
+    }))
+  );
+}
+
 export async function scheduleJobIntakeSweep() {
   const date = todayKey();
   const tenantIds = await activeTenantIds();

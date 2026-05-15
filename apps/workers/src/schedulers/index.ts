@@ -5,6 +5,7 @@ export {
   scheduleJobIntakeSweep,
   scheduleLifecycleMonitoringSweep,
   scheduleNetworkFollowUpSweep,
+  scheduleOfferTrackingSweep,
   scheduleWeeklyReportsForAllTenants,
 } from "./automation.scheduler";
 
@@ -15,6 +16,7 @@ import {
   scheduleJobIntakeSweep,
   scheduleLifecycleMonitoringSweep,
   scheduleNetworkFollowUpSweep,
+  scheduleOfferTrackingSweep,
   scheduleWeeklyReportsForAllTenants,
 } from "./automation.scheduler";
 
@@ -30,6 +32,7 @@ export function registerSchedulers() {
   setInterval(() => void scheduleDeadlineAlertSweep(), reminderEveryMs);
   setInterval(() => void scheduleLifecycleMonitoringSweep(), reminderEveryMs);
   setInterval(() => void scheduleNetworkFollowUpSweep(), reminderEveryMs);
+  setInterval(() => void scheduleOfferTrackingSweep(), reminderEveryMs);
   setInterval(() => void scheduleDailyDigestForAllTenants(), dailyDigestEveryMs);
   setInterval(() => void scheduleWeeklyReportsForAllTenants(), weeklyEveryMs);
   setInterval(() => void scheduleJobIntakeSweep(), intakeEveryMs);

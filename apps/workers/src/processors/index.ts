@@ -15,6 +15,10 @@ const REGISTERED_PROCESSORS = [
   "follow-up-reminder",
   "email-reply-detection",
   "applied-status",
+  "deadline-alert",
+  "lifecycle-monitoring",
+  "offer-tracking",
+  "network-follow-up",
 ] as const;
 
 export function registerProcessors() {
