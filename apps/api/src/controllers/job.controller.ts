@@ -279,3 +279,32 @@ recommendation: Concise recommended action.`;
     return successResponse(res, { score: null, reasons: [], redFlags: [], effort: "Medium", recommendation: "Analysis unavailable", cached: false });
   }
 });
+
+export const applyToJob = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.user?.tenantId);
+  const { id } = req.params as { id: string };
+
+  const job = await findTenantScopedById(JobModel, id, tenantId);
+  if (!job) throw ApiError.notFound("Job not found");
+
+  const j = job as Record<string, unknown>;
+  const jobUrl = String(j.jobUrl ?? j.url ?? "");
+  if (!jobUrl) throw ApiError.badRequest("This job has no URL — cannot auto-apply.");
+
+  const result = await enqueueAutomationModule({
+    name: "job-apply",
+    tenantId,
+    payload: {
+      jobId: id,
+      jobUrl,
+      coverLetterUrl: String(j.generatedCoverLetterLink ?? ""),
+      source: "api",
+    },
+  });
+
+  return successResponse(res, {
+    status: result.status,
+    operationId: result.operationId,
+    message: result.message,
+  });
+});

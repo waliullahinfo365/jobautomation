@@ -12,6 +12,7 @@ import { processJobIntakeProcessor } from "./job-intake.processor";
 import { processLifecycleMonitoringJob } from "./lifecycle-monitoring.processor";
 import { processOfferTrackingJob } from "./offer-tracking.processor";
 import { processNetworkFollowUpJob } from "./network-follow-up.processor";
+import { processJobApply } from "./job-apply.processor";
 import { processPdfExportJob } from "./pdf-export.processor";
 import { processResearchGenerationJob } from "./research-document.processor";
 import { processDailyDigestJob } from "./daily-digest.processor";
@@ -139,6 +140,8 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
         operationId: payload.operationId,
         date: (payload as { date?: string }).date,
       });
+    case "job-apply":
+      return processJobApply(payload as import("@jobflow/shared/types/queue").JobApplyPayload);
     default:
       return {
         queued: false,

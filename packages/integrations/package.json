@@ -32,6 +32,12 @@
       ],
       "notion-legacy/*": [
         "./src/notion-legacy/*.ts"
+      ],
+      "playwright": [
+        "./src/playwright/index.ts"
+      ],
+      "playwright/*": [
+        "./src/playwright/*.ts"
       ]
     }
   },
@@ -95,6 +101,18 @@
       "require": "./dist/notion-legacy/*.js",
       "import": "./dist/notion-legacy/*.js",
       "default": "./dist/notion-legacy/*.js"
+    },
+    "./playwright": {
+      "types": "./src/playwright/index.ts",
+      "require": "./dist/playwright/index.js",
+      "import": "./dist/playwright/index.js",
+      "default": "./dist/playwright/index.js"
+    },
+    "./playwright/*": {
+      "types": "./src/playwright/*.ts",
+      "require": "./dist/playwright/*.js",
+      "import": "./dist/playwright/*.js",
+      "default": "./dist/playwright/*.js"
     }
   },
   "scripts": {

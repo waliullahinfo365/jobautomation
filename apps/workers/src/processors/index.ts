@@ -19,6 +19,7 @@ const REGISTERED_PROCESSORS = [
   "lifecycle-monitoring",
   "offer-tracking",
   "network-follow-up",
+  "job-apply",
 ] as const;
 
 export function registerProcessors() {

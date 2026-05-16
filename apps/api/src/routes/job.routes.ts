@@ -16,6 +16,7 @@ import {
   runAiProcessing,
   undoReview,
   updateJob,
+  applyToJob,
 } from "../controllers/job.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
@@ -47,3 +48,6 @@ jobRoutes.get("/review/queue", requirePermission("jobs.read"), getReviewQueue);
 jobRoutes.patch("/:id/review", requirePermission("jobs.update"), validateParams(jobIdParamSchema), reviewJob);
 jobRoutes.post("/:id/review/undo", requirePermission("jobs.update"), validateParams(jobIdParamSchema), undoReview);
 jobRoutes.post("/:id/review/analyze", requirePermission("jobs.read"), validateParams(jobIdParamSchema), analyzeJobForReview);
+
+// Automated apply route
+jobRoutes.post("/:id/apply", requirePermission("jobs.update"), validateParams(jobIdParamSchema), applyToJob);

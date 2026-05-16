@@ -15,7 +15,8 @@ export type AutomationJobName =
   | "deadline-alert"
   | "lifecycle-monitoring"
   | "daily-digest"
-  | "weekly-report";
+  | "weekly-report"
+  | "job-apply";
 
 export interface BaseAutomationJobPayload {
   tenantId: string;
@@ -93,6 +94,15 @@ export interface WeeklyReportJobPayload extends BaseAutomationJobPayload {
   force?: boolean;
 }
 
+export interface JobApplyPayload extends BaseAutomationJobPayload {
+  jobId: string;
+  platform?: "linkedin" | "indeed" | "greenhouse" | "lever" | "workday" | "generic";
+  jobUrl: string;
+  coverLetterUrl?: string;
+  cvUrl?: string;
+  additionalContext?: string;
+}
+
 export type AutomationJobPayload =
   | JobIntakeJobPayload
   | DuplicateProtectionJobPayload
@@ -110,7 +120,8 @@ export type AutomationJobPayload =
   | DeadlineAlertJobPayload
   | LifecycleMonitoringJobPayload
   | DailyDigestJobPayload
-  | WeeklyReportJobPayload;
+  | WeeklyReportJobPayload
+  | JobApplyPayload;
 
 export interface EnqueueAutomationJobInput {
   name: AutomationJobName;
