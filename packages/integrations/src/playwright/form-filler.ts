@@ -265,7 +265,7 @@ async function applyFills(page: Page, instructions: FillInstruction[]): Promise<
         const count = await radios.count();
         for (let i = 0; i < count; i++) {
           const radio = radios.nth(i);
-          const label = await radio.evaluate((el) => {
+          const label = await radio.evaluate((el: HTMLInputElement) => {
             const id = el.getAttribute("id");
             const labelEl = id ? document.querySelector(`label[for="${id}"]`) : null;
             return labelEl?.textContent?.trim() || el.getAttribute("value") || "";

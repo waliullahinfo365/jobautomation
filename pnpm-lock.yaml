@@ -255,12 +255,18 @@ importers:
 
   packages/integrations:
     dependencies:
+      '@jobflow/database':
+        specifier: workspace:*
+        version: link:../database
       '@jobflow/shared':
         specifier: workspace:*
         version: link:../shared
       nodemailer:
         specifier: ^6.9.16
         version: 6.10.1
+      playwright:
+        specifier: ^1.52.0
+        version: 1.60.0
     devDependencies:
       '@types/node':
         specifier: ^20

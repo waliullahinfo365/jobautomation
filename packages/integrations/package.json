@@ -123,8 +123,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@jobflow/database": "workspace:*",
     "@jobflow/shared": "workspace:*",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "@types/node": "^20",

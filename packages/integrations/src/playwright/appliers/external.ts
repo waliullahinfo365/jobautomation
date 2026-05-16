@@ -176,8 +176,8 @@ async function applyWorkday(input: {
       .or(page.locator('button:has-text("Submit")'))
       .first();
 
-    const isLastStep = await submitBtn.evaluate((el) => {
-      const text = (el as HTMLElement).textContent?.toLowerCase() ?? "";
+    const isLastStep = await submitBtn.evaluate((el: HTMLElement) => {
+      const text = el.textContent?.toLowerCase() ?? "";
       return text.includes("submit");
     }).catch(() => false);
 
