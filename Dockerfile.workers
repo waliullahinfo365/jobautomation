@@ -13,8 +13,9 @@ COPY apps/workers ./apps/workers
 
 RUN pnpm install --frozen-lockfile
 
-# Install Playwright Chromium + OS dependencies
-RUN pnpm exec playwright install chromium --with-deps
+# Install Playwright Chromium + OS dependencies (run from workers dir where playwright is a direct dep)
+RUN cd /app/apps/workers && ./node_modules/.bin/playwright install chromium --with-deps 2>/dev/null \
+    || cd /app/packages/integrations && ./node_modules/.bin/playwright install chromium --with-deps
 
 RUN pnpm --filter @jobflow/shared build \
   && pnpm --filter @jobflow/database build \
