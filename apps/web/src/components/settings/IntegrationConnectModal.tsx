@@ -87,7 +87,7 @@ export function IntegrationConnectModal({
 
     const defaultModel =
       providerSlug === "claude"
-        ? AI_MODEL_OPTIONS.find((m) => m.provider === "Claude")?.model ?? "claude-3-5-sonnet-latest"
+        ? AI_MODEL_OPTIONS.find((m) => m.provider.toLowerCase() === "claude")?.model ?? "claude-3-5-sonnet-latest"
         : AI_MODEL_OPTIONS.find((m) => m.provider === "openai" && m.model === "gpt-4o-mini")?.model ??
           AI_MODEL_OPTIONS.find((m) => m.provider === "openai")?.model ??
           "gpt-4o-mini";
