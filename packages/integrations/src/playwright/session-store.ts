@@ -83,11 +83,11 @@ export async function loadSession(input: {
     tenantId: input.tenantId,
     provider,
     status: "Connected",
-  }).lean();
+  }).lean() as Record<string, unknown> | null;
 
   if (!row?.accessTokenEncrypted) return null;
   try {
-    const json = decrypt(row.accessTokenEncrypted as string);
+    const json = decrypt(String(row.accessTokenEncrypted));
     return JSON.parse(json) as object;
   } catch {
     return null;
