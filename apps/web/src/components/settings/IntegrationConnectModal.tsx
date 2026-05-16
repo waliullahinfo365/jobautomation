@@ -62,7 +62,7 @@ export function IntegrationConnectModal({
   const [channelName, setChannelName] = useState("#job-alerts");
   const [databaseName, setDatabaseName] = useState("");
   const [notionWorkspace, setNotionWorkspace] = useState("");
-  const [fallbackToStub, setFallbackToStub] = useState(true);
+  const [fallbackToStub] = useState(false);
 
   const aiModelChoices = useMemo(() => {
     if (!providerSlug || (providerSlug !== "openai" && providerSlug !== "claude")) return [];
@@ -246,10 +246,6 @@ export function IntegrationConnectModal({
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={fallbackToStub} onChange={(e) => setFallbackToStub(e.target.checked)} />
-                {t("integrations.modal.preferDeterministicStub")}
-              </label>
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">{t("integrations.labels.apiKey")}</p>
                 <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." type="password" autoComplete="off" />
