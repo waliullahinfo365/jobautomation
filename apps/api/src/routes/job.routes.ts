@@ -2,15 +2,19 @@ import { Router } from "express";
 import { jobCreateSchema, jobUpdateSchema } from "@jobflow/shared/schemas";
 import {
   aiProcessingStatus,
+  analyzeJobForReview,
   archiveJob,
   checkDuplicateJob,
   createJob,
   generateDraft,
   generateResearch,
   getJobById,
+  getReviewQueue,
   listJobs,
   provisionFolders,
+  reviewJob,
   runAiProcessing,
+  undoReview,
   updateJob,
 } from "../controllers/job.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
@@ -37,3 +41,9 @@ jobRoutes.post(
   runAiProcessing
 );
 jobRoutes.get("/:id/ai-processing/status", requirePermission("jobs.read"), validateParams(jobIdParamSchema), aiProcessingStatus);
+
+// Quick Review routes
+jobRoutes.get("/review/queue", requirePermission("jobs.read"), getReviewQueue);
+jobRoutes.patch("/:id/review", requirePermission("jobs.update"), validateParams(jobIdParamSchema), reviewJob);
+jobRoutes.post("/:id/review/undo", requirePermission("jobs.update"), validateParams(jobIdParamSchema), undoReview);
+jobRoutes.post("/:id/review/analyze", requirePermission("jobs.read"), validateParams(jobIdParamSchema), analyzeJobForReview);

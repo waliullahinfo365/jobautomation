@@ -109,3 +109,22 @@ export function provisionFolders(id: string, options?: { execute?: boolean }) {
 export function checkDuplicate(id: string) {
   return apiFetch<JobDuplicateCheckResponse>(`/jobs/${id}/check-duplicate`, { method: "POST" });
 }
+
+// ── Quick Review API ──────────────────────────────────────────────────────────
+import type { ReviewQueueResponse, ReviewActionResponse, JobReviewAi, ReviewStatus } from "@/types/job";
+
+export function getReviewQueue(limit = 30) {
+  return apiFetch<ReviewQueueResponse>(withQuery("/jobs/review/queue", { limit }));
+}
+
+export function reviewJob(jobId: string, payload: { reviewAction: string; reviewStatus: ReviewStatus }) {
+  return apiFetch<ReviewActionResponse>(`/jobs/${jobId}/review`, { method: "PATCH", body: payload });
+}
+
+export function undoReview(jobId: string) {
+  return apiFetch<{ jobId: string; reviewStatus: ReviewStatus; undone: boolean }>(`/jobs/${jobId}/review/undo`, { method: "POST" });
+}
+
+export function analyzeJobForReview(jobId: string) {
+  return apiFetch<JobReviewAi>(`/jobs/${jobId}/review/analyze`, { method: "POST" });
+}

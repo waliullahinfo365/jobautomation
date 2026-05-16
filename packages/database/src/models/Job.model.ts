@@ -81,6 +81,19 @@ const JobSchema = new Schema(
     deadlineAlertSentAt: Date,
     deadlineAlertKey: String,
     deadlineAlertError: String,
+    // Quick Review / swipe fields
+    reviewStatus: { type: String, enum: ["new", "rejected", "review_later", "saved", "apply_next"], default: "new" },
+    reviewedAt: Date,
+    reviewedBy: String,
+    reviewAction: String,
+    previousReviewStatus: String,
+    // AI review analysis cache
+    reviewAiScore: Number,
+    reviewAiReasons: { type: [String], default: [] },
+    reviewAiRedFlags: { type: [String], default: [] },
+    reviewAiEffort: { type: String, enum: ["Low", "Medium", "High"] },
+    reviewAiRecommendation: String,
+    reviewAiGeneratedAt: Date,
   }),
   { timestamps: true }
 );
@@ -92,4 +105,5 @@ JobSchema.index({ tenantId: 1, jobUrl: 1 });
 JobSchema.index({ tenantId: 1, fingerprintHash: 1 }, { unique: true, sparse: true });
 JobSchema.index({ deadline: 1 });
 JobSchema.index({ tenantId: 1, deadlineAlertKey: 1 }, { sparse: true });
+JobSchema.index({ tenantId: 1, reviewStatus: 1 });
 export const JobModel = models.Job || model("Job", JobSchema);

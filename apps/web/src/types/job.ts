@@ -133,3 +133,45 @@ export interface JobFilters {
   source?: JobSource | "All";
   remote?: boolean;
 }
+
+// ── Quick Review types ────────────────────────────────────────────────────────
+
+export type ReviewStatus = "new" | "rejected" | "review_later" | "saved" | "apply_next";
+export type ReviewAction = "reject" | "save" | "apply" | "later";
+
+export interface JobReviewAi {
+  score: number | null;
+  reasons: string[];
+  redFlags: string[];
+  effort: "Low" | "Medium" | "High";
+  recommendation: string;
+  cached?: boolean;
+}
+
+export interface ReviewableJob extends Job {
+  reviewStatus?: ReviewStatus;
+  reviewedAt?: string;
+  reviewAction?: string;
+  previousReviewStatus?: string;
+  reviewAiScore?: number;
+  reviewAiReasons?: string[];
+  reviewAiRedFlags?: string[];
+  reviewAiEffort?: "Low" | "Medium" | "High";
+  reviewAiRecommendation?: string;
+  reviewAiGeneratedAt?: string;
+}
+
+export interface ReviewQueueResponse {
+  jobs: ReviewableJob[];
+  total: number;
+  urgentCount: number;
+  deadlineSoonCount: number;
+}
+
+export interface ReviewActionResponse {
+  jobId: string;
+  reviewStatus: ReviewStatus;
+  reviewAction: string;
+  previousReviewStatus: string;
+  reviewedAt: string;
+}

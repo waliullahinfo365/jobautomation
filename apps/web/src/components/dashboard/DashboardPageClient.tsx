@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { JobMatchBlock } from "@/components/dashboard/JobMatchBlock";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { ApplicationPipelineChart } from "@/components/dashboard/ApplicationPipelineChart";
 import { RecentJobsTable } from "@/components/dashboard/RecentJobsTable";
@@ -148,6 +149,8 @@ export function DashboardPageClient() {
       <DashboardHero showMockIndicator={isUsingAnyFallback} />
 
       <StatsCards stats={stats} />
+
+      <JobMatchBlock />
 
       <div className="jf-row-2 min-w-0">
         <ApplicationPipelineChart
