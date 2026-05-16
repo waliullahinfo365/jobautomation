@@ -283,23 +283,25 @@ recommendation: Concise recommended action.`;
 export const applyToJob = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.user?.tenantId);
   const { id } = req.params as { id: string };
+  const userId = req.user?.id ?? "system";
 
   const job = await findTenantScopedById(JobModel, id, tenantId);
-  if (!job) throw ApiError.notFound("Job not found");
+  if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
 
   const j = job as Record<string, unknown>;
   const jobUrl = String(j.jobUrl ?? j.url ?? "");
-  if (!jobUrl) throw ApiError.badRequest("This job has no URL — cannot auto-apply.");
+  if (!jobUrl) throw new ApiError("This job has no URL — cannot auto-apply.", 422, "VALIDATION_ERROR");
 
   const result = await enqueueAutomationModule({
-    name: "job-apply",
+    moduleKey: "job-apply",
     tenantId,
+    userId,
     payload: {
       jobId: id,
       jobUrl,
       coverLetterUrl: String(j.generatedCoverLetterLink ?? ""),
-      source: "api",
     },
+    source: "api",
   });
 
   return successResponse(res, {
