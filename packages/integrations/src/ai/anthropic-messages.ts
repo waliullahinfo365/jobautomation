@@ -5,10 +5,11 @@
 
 export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-latest";
 
-/** Dated / stable IDs tried if the primary model returns 404 or model-related 400. */
+/** Latest-alias fallbacks — these always resolve to a current model and won't 404. */
 const MODEL_FALLBACK_CHAIN = [
-  "claude-3-5-sonnet-20241022",
-  "claude-3-haiku-20240307",
+  "claude-3-5-sonnet-latest",
+  "claude-3-5-haiku-latest",
+  "claude-3-opus-latest",
 ] as const;
 
 function uniqueModels(models: string[]): string[] {

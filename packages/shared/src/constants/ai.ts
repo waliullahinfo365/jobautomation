@@ -27,29 +27,29 @@ export const AI_MODEL_OPTIONS: AiModelOption[] = [
   },
   {
     provider: "Claude",
-    model: "claude-3-5-haiku-latest",
-    displayName: "Claude 3.5 Haiku",
-    recommendedFor: ["fast drafts", "summaries"],
+    model: "claude-3-5-sonnet-latest",
+    displayName: "Claude 3.5 Sonnet (Recommended)",
+    recommendedFor: ["research", "drafts", "analysis"],
     supportsJson: true,
     maxTokens: 200_000,
   },
   {
     provider: "Claude",
-    model: "claude-3-7-sonnet-latest",
-    displayName: "Claude 3.7 Sonnet",
-    recommendedFor: ["research", "long-form"],
+    model: "claude-3-5-haiku-latest",
+    displayName: "Claude 3.5 Haiku (Fast)",
+    recommendedFor: ["fast drafts", "summaries", "classification"],
     supportsJson: true,
     maxTokens: 200_000,
   },
   {
-    provider: "Stub",
-    model: "deterministic-stub-v1",
-    displayName: "Deterministic stub (dev)",
-    recommendedFor: ["local dev", "deterministic demos"],
-    supportsJson: false,
-    maxTokens: 0,
+    provider: "Claude",
+    model: "claude-3-opus-latest",
+    displayName: "Claude 3 Opus (Most capable)",
+    recommendedFor: ["complex reasoning", "long-form"],
+    supportsJson: true,
+    maxTokens: 200_000,
   },
 ];
 
-export const DEFAULT_AI_PROVIDER: AiProvider = "Stub";
-export const DEFAULT_AI_MODEL = "deterministic-stub-v1";
+export const DEFAULT_AI_PROVIDER: AiProvider = "Claude";
+export const DEFAULT_AI_MODEL = "claude-3-5-sonnet-latest";
