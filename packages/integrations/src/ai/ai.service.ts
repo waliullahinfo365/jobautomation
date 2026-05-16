@@ -132,10 +132,24 @@ const JOB_SUBJECT_SIGNALS: RegExp[] = [
 function classifyLinkedInEmail(payload: JobIntakeEmailPayload): EmailClassificationResult {
   const subject = payload.subject;
   const body = payload.bodyText;
+  const from = payload.from.toLowerCase();
 
   // Sales Navigator — always reject
   if (/sales navigator/i.test(subject) || /sales navigator/i.test(body)) {
     return { isJob: false, confidence: 0.98, reason: "LinkedIn Sales Navigator notification", detectedType: "sales_nav_notification" };
+  }
+
+  // jobalerts-noreply@linkedin.com is LinkedIn's dedicated job alert sender — always a job
+  if (from.includes("jobalerts-noreply@linkedin.com")) {
+    return { isJob: true, confidence: 0.95, reason: "LinkedIn Job Alerts sender (jobalerts-noreply)", detectedType: "job_alert" };
+  }
+
+  // Subject format "[Role] at [Company]" is LinkedIn's standard single-job alert format
+  if (
+    /^.{3,80}\s+at\s+.{2,60}$/i.test(subject.trim()) &&
+    !/(accepted|messaged|viewed|connected|update|invitation|just messaged)/i.test(subject)
+  ) {
+    return { isJob: true, confidence: 0.90, reason: "LinkedIn subject matches '[Role] at [Company]' format", detectedType: "job_alert" };
   }
 
   // Check hard-reject subjects first
