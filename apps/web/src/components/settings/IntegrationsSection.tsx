@@ -14,6 +14,7 @@ import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
 import { IntegrationCard } from "./IntegrationCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
+import { LinkedInSessionCard } from "./LinkedInSessionCard";
 
 function summarizeHealth(items: IntegrationListItem[]): IntegrationHealthSummary {
   const summary: IntegrationHealthSummary = {
@@ -521,6 +522,7 @@ export function IntegrationsSection() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <LinkedInSessionCard />
         {mergedItems.map((item) => (
           <IntegrationCard
             key={item.slug}

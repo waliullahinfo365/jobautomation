@@ -20,6 +20,7 @@ const REGISTERED_PROCESSORS = [
   "offer-tracking",
   "network-follow-up",
   "job-apply",
+  "linkedin-login",
 ] as const;
 
 export function registerProcessors() {

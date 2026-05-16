@@ -16,7 +16,8 @@ export type AutomationJobName =
   | "lifecycle-monitoring"
   | "daily-digest"
   | "weekly-report"
-  | "job-apply";
+  | "job-apply"
+  | "linkedin-login";
 
 export interface BaseAutomationJobPayload {
   tenantId: string;
@@ -94,6 +95,11 @@ export interface WeeklyReportJobPayload extends BaseAutomationJobPayload {
   force?: boolean;
 }
 
+export interface LinkedInLoginPayload extends BaseAutomationJobPayload {
+  email: string;
+  password: string;
+}
+
 export interface JobApplyPayload extends BaseAutomationJobPayload {
   jobId: string;
   platform?: "linkedin" | "indeed" | "greenhouse" | "lever" | "workday" | "generic";
@@ -121,7 +127,8 @@ export type AutomationJobPayload =
   | LifecycleMonitoringJobPayload
   | DailyDigestJobPayload
   | WeeklyReportJobPayload
-  | JobApplyPayload;
+  | JobApplyPayload
+  | LinkedInLoginPayload;
 
 export interface EnqueueAutomationJobInput {
   name: AutomationJobName;

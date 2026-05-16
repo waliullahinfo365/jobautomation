@@ -1,5 +1,10 @@
 import { Router } from "express";
 import {
+  startLinkedInLogin,
+  getLinkedInSessionStatus,
+  deleteLinkedInSession,
+} from "../controllers/linkedin-session.controller";
+import {
   connectIntegration,
   disconnectIntegration,
   getIntegrationHealth,
@@ -55,5 +60,9 @@ integrationRoutes.post(
   validateParams(integrationProviderParamSchema),
   testIntegration
 );
+integrationRoutes.post("/linkedin/session", requirePermission("integrations.connect"), startLinkedInLogin);
+integrationRoutes.get("/linkedin/session", requirePermission("integrations.read"), getLinkedInSessionStatus);
+integrationRoutes.delete("/linkedin/session", requirePermission("integrations.disconnect"), deleteLinkedInSession);
+
 integrationRoutes.post("/gmail/reply-webhook", gmailReplyWebhook);
 integrationRoutes.post("/gmail/reply-test", requirePermission("integrations.connect"), validateBody(replyTestBodySchema), gmailReplyTest);
