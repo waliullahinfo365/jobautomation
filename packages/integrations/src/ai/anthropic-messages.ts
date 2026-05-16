@@ -3,13 +3,12 @@
  * @see https://docs.anthropic.com/en/api/messages
  */
 
-export const DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-latest";
+export const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
-/** Latest-alias fallbacks — these always resolve to a current model and won't 404. */
+/** Fallback chain — Claude 4 model IDs current as of 2025-2026. */
 const MODEL_FALLBACK_CHAIN = [
-  "claude-3-5-sonnet-latest",
-  "claude-3-5-haiku-latest",
-  "claude-3-opus-latest",
+  "claude-opus-4-7",
+  "claude-haiku-4-5-20251001",
 ] as const;
 
 function uniqueModels(models: string[]): string[] {

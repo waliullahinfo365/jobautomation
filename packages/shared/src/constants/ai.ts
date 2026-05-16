@@ -27,29 +27,29 @@ export const AI_MODEL_OPTIONS: AiModelOption[] = [
   },
   {
     provider: "Claude",
-    model: "claude-3-5-sonnet-latest",
-    displayName: "Claude 3.5 Sonnet (Recommended)",
+    model: "claude-sonnet-4-6",
+    displayName: "Claude Sonnet 4.6 (Recommended)",
     recommendedFor: ["research", "drafts", "analysis"],
     supportsJson: true,
     maxTokens: 200_000,
   },
   {
     provider: "Claude",
-    model: "claude-3-5-haiku-latest",
-    displayName: "Claude 3.5 Haiku (Fast)",
-    recommendedFor: ["fast drafts", "summaries", "classification"],
+    model: "claude-opus-4-7",
+    displayName: "Claude Opus 4.7 (Most capable)",
+    recommendedFor: ["complex reasoning", "long-form"],
     supportsJson: true,
     maxTokens: 200_000,
   },
   {
     provider: "Claude",
-    model: "claude-3-opus-latest",
-    displayName: "Claude 3 Opus (Most capable)",
-    recommendedFor: ["complex reasoning", "long-form"],
+    model: "claude-haiku-4-5-20251001",
+    displayName: "Claude Haiku 4.5 (Fast)",
+    recommendedFor: ["fast drafts", "summaries", "classification"],
     supportsJson: true,
     maxTokens: 200_000,
   },
 ];
 
 export const DEFAULT_AI_PROVIDER: AiProvider = "Claude";
-export const DEFAULT_AI_MODEL = "claude-3-5-sonnet-latest";
+export const DEFAULT_AI_MODEL = "claude-sonnet-4-6";
