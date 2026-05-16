@@ -1,276 +1,328 @@
 "use client";
 
-import { MotionCard } from "@/components/shared/MotionCard";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { API_URL, AUTH_TOKEN_STORAGE_KEY, DEMO_TENANT_ID, DEMO_USER_ID, USE_MOCK_FALLBACK, env } from "@/config/env";
-import { getSystemStatus, type SystemStatusResponse } from "@/lib/api/system.api";
-import { useBillingApi } from "@/hooks/api/useBillingApi";
-import { useAutomationApi } from "@/hooks/api/useAutomationApi";
+import { getSystemStatus, type ServiceStatus, type SystemStatusResponse } from "@/lib/api/system.api";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
-import type { AutomationLog } from "@/types/automation";
-import { cn } from "@/lib/utils";
-import { ActivityIcon, LoaderIcon, ServerIcon, ShieldIcon, StatusIcon } from "@/components/icons";
+import { StatusIcon } from "@/components/icons";
 import { useTranslation } from "@/i18n/useTranslation";
-import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { API_URL } from "@/config/env";
 
-type HealthPayload = {
-  success?: boolean;
-  status?: string;
-  database?: { status?: string };
-  queue?: { mode?: string };
+// ── Status helpers ─────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<ServiceStatus, { label: string; dot: string; badge: string }> = {
+  healthy: {
+    label: "system.statusHealthy",
+    dot: "bg-green-500",
+    badge: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  },
+  warning: {
+    label: "system.statusWarning",
+    dot: "bg-amber-400",
+    badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  },
+  needs_attention: {
+    label: "system.statusNeedsAttention",
+    dot: "bg-amber-500",
+    badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  },
+  not_configured: {
+    label: "system.statusNotConfigured",
+    dot: "bg-gray-300 dark:bg-gray-600",
+    badge: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+  },
+  offline: {
+    label: "system.statusOffline",
+    dot: "bg-red-500",
+    badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  },
+  disabled: {
+    label: "system.statusDisabled",
+    dot: "bg-gray-300 dark:bg-gray-600",
+    badge: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
+  },
 };
 
-function tenantSource(t: (key: string) => string): string {
-  if (typeof window === "undefined") return t("system.serverSource");
-  try {
-    const hasToken = Boolean(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY));
-    if (hasToken) return t("system.bearerTokenSource");
-    const storedTenantId = localStorage.getItem("tenantId");
-    if (storedTenantId) return "localStorage.tenantId";
-  } catch {
-    /* ignore */
-  }
-  return t("system.demoHeadersSource");
+function StatusBadge({ status, t }: { status: ServiceStatus; t: (k: string) => string }) {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.not_configured;
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium", cfg.badge)}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
+      {t(cfg.label)}
+    </span>
+  );
 }
 
-function formatStatusValue(status: string | undefined, t: (key: string) => string) {
-  if (!status) return "—";
-  const normalized = status.toLowerCase();
-  if (normalized === "healthy") return t("system.healthy");
-  if (normalized === "operational") return t("system.operational");
-  if (normalized === "degraded") return t("system.degraded");
-  if (normalized === "offline") return t("system.offline");
-  if (normalized === "online") return t("system.online");
-  if (normalized === "ok") return t("system.ok");
-  return status;
+function OverallBanner({ status, failedLast24h, t }: { status: ServiceStatus; failedLast24h: number; t: (k: string) => string }) {
+  const isGood = status === "healthy";
+  const isOffline = status === "offline";
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-1 rounded-xl border px-5 py-4 sm:flex-row sm:items-center sm:justify-between",
+        isGood
+          ? "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/20"
+          : isOffline
+            ? "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20"
+            : "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            "h-3 w-3 rounded-full",
+            isGood ? "bg-green-500" : isOffline ? "bg-red-500" : "bg-amber-400",
+          )}
+        />
+        <span className="font-semibold text-sm text-[var(--text-1)]">
+          {isGood ? t("system.allSystemsOperational") : t("system.systemNeedsAttention")}
+        </span>
+      </div>
+      {failedLast24h > 0 && (
+        <span className="text-xs text-[var(--text-3)]">
+          {failedLast24h} {t("system.failuresLast24h")}
+        </span>
+      )}
+    </div>
+  );
 }
+
+function ServiceRow({ name, label, status, detail, t }: {
+  name: string;
+  label: string;
+  status: ServiceStatus;
+  detail?: string;
+  t: (k: string) => string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-2.5 border-b border-[var(--border)] last:border-0">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[var(--text-1)] truncate">{label}</p>
+        {detail && (
+          <p className="mt-0.5 text-xs text-[var(--text-3)] truncate max-w-[260px]">{detail}</p>
+        )}
+      </div>
+      <StatusBadge status={status} t={t} />
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export function SystemStatusClient() {
   const { t } = useTranslation();
-  const [health, setHealth] = useState<HealthPayload | null>(null);
-  const [healthError, setHealthError] = useState<string | null>(null);
+  const [apiReachable, setApiReachable] = useState<boolean | null>(null);
+  const [queueMode, setQueueMode] = useState<string | null>(null);
 
   const system = useApiQuery(() => getSystemStatus(), { enabled: true });
+  const payload = system.data as SystemStatusResponse | undefined;
 
-  const billing = useBillingApi({ fallbackToMock: false });
-  const automation = useAutomationApi({ fallbackToMock: false, params: { status: "Failed", limit: 20 } });
-
+  // Fetch public /health for API reachability (no auth needed)
   useEffect(() => {
     void (async () => {
       try {
         const res = await fetch(`${API_URL}/health`, { cache: "no-store" });
-        const json = (await res.json()) as HealthPayload;
-        setHealth(json);
-        setHealthError(null);
+        const json = await res.json() as { queue?: { mode?: string } };
+        setApiReachable(res.ok);
+        setQueueMode(json?.queue?.mode ?? null);
       } catch {
-        setHealthError(t("system.couldNotReachHealth"));
+        setApiReachable(false);
       }
     })();
-  }, [t]);
+  }, []);
 
-  const failedLogs = useMemo(() => {
-    const fromSystem = system.data?.recentFailedLogs ?? [];
-    if (fromSystem.length) return fromSystem;
-    const logs = automation.listAutomationLogs as AutomationLog[] | undefined;
-    return (logs ?? [])
-      .filter((l) => l.status === "Failed")
-      .slice(0, 12)
-      .map((l) => ({
-        id: l.id ?? l._id,
-        moduleKey: l.moduleId ?? "—",
-        moduleName: l.moduleName,
-        message: l.message,
-        error: undefined as string | undefined,
-      }));
-  }, [system.data, automation.listAutomationLogs]);
+  const services = payload?.services ?? {};
+  const serviceKeys = [
+    "api", "database", "queue", "worker",
+    "gmail", "googleDrive", "googleCalendar",
+    "aiProvider", "resend", "telegram", "slack",
+  ];
 
-  const payload = system.data as SystemStatusResponse | undefined;
+  // Compute overall status locally from public /health if system endpoint not yet loaded
+  const overallHealth: ServiceStatus = payload?.overallHealth ??
+    (apiReachable === false ? "offline" : "not_configured");
+
+  const failedLast24h = payload?.failedLogsLast24h ?? 0;
+  const recentFailedLogs = payload?.recentFailedLogs ?? [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         icon={StatusIcon}
         eyebrow={t("system.eyebrow")}
         title={t("system.title")}
         description={t("system.description")}
-        actions={
-          <Badge variant="outline" className="gap-1">
-            <ShieldIcon size={14} />
-            {t("system.qaBadge")}
-          </Badge>
-        }
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <MotionCard>
-          <Card className="border-0 shadow-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t("system.apiHealth")}</CardTitle>
-              <ServerIcon size={16} className="text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {healthError ? <p className="text-amber-600">{healthError}</p> : null}
-              {health ? (
-                <dl className="grid grid-cols-1 gap-1 text-muted-foreground">
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.status")}</dt>
-                    <dd className="font-medium text-foreground">{formatStatusValue(health.status, t)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.database")}</dt>
-                    <dd>{formatStatusValue(health.database?.status ?? payload?.database?.state, t)}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.queueMode")}</dt>
-                    <dd>{health.queue?.mode ?? payload?.queue?.mode ?? "—"}</dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="flex items-center gap-2 text-muted-foreground">
-                  <LoaderIcon size={16} /> {t("system.loadingHealth")}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </MotionCard>
+      {/* Overall health banner */}
+      {(payload || apiReachable === false) && (
+        <OverallBanner status={overallHealth} failedLast24h={failedLast24h} t={t} />
+      )}
 
-        <MotionCard delay={0.05}>
-          <Card className="border-0 shadow-none">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t("system.protectedStatus")}</CardTitle>
-              <ActivityIcon size={16} className="text-muted-foreground" />
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Services checklist */}
+        <Card className="border shadow-none">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">{t("system.servicesTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {system.loading && !payload ? (
+              <p className="text-sm text-[var(--text-3)] py-4">{t("system.loadingHealth")}</p>
+            ) : system.error && !payload ? (
+              <p className="text-sm text-amber-700 py-2">{t("system.signInForFullStatus")}</p>
+            ) : (
+              <div>
+                {/* API reachable row — from public /health */}
+                <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[var(--border)]">
+                  <p className="text-sm font-medium text-[var(--text-1)]">{t("system.apiHealth")}</p>
+                  <StatusBadge
+                    status={apiReachable === null ? "not_configured" : apiReachable ? "healthy" : "offline"}
+                    t={t}
+                  />
+                </div>
+                {queueMode && (
+                  <div className="flex items-center justify-between gap-3 py-2.5 border-b border-[var(--border)]">
+                    <p className="text-sm font-medium text-[var(--text-1)]">{t("system.queueMode")}</p>
+                    <StatusBadge
+                      status={queueMode === "bullmq" ? "healthy" : queueMode === "memory" ? "warning" : "disabled"}
+                      t={t}
+                    />
+                  </div>
+                )}
+                {serviceKeys.map((key) => {
+                  const svc = services[key];
+                  if (!svc) return null;
+                  return (
+                    <ServiceRow
+                      key={key}
+                      name={key}
+                      label={svc.label}
+                      status={svc.status}
+                      detail={svc.detail}
+                      t={t}
+                    />
+                  );
+                })}
+                {Object.keys(services).length === 0 && !system.loading && (
+                  <p className="py-4 text-sm text-[var(--text-3)]">{t("system.signInForFullStatus")}</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Integration summary + plan */}
+        <div className="space-y-4">
+          <Card className="border shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">{t("system.integrationHealth")}</CardTitle>
             </CardHeader>
-            <CardContent>
-              {system.loading ? (
-                <LoaderIcon size={20} className="text-muted-foreground" />
-              ) : system.error ? (
-                <p className="text-sm text-amber-700 dark:text-amber-300">
-                  {system.error.message} — {t("system.signInForFullStatus")}
-                </p>
-              ) : payload ? (
-                <dl className="grid gap-1 text-sm text-muted-foreground">
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.tenant")}</dt>
-                    <dd className="max-w-[60%] truncate font-mono text-xs text-foreground">{payload.tenantId}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.role")}</dt>
-                    <dd className="text-foreground">{payload.currentUserRole || "—"}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.automationModules")}</dt>
-                    <dd>{payload.automation.moduleCount}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt>{t("system.plan")}</dt>
-                    <dd className="text-right text-foreground">{payload.billing.displayName}</dd>
-                  </div>
-                </dl>
+            <CardContent className="px-4 pb-4">
+              {payload ? (
+                <div className="space-y-2">
+                  <IntegrationSummaryRow label={t("system.connected")} count={payload.integrationHealth.connected} variant="green" />
+                  <IntegrationSummaryRow label={t("system.needsAttention")} count={payload.integrationHealth.needsAttention} variant="amber" />
+                  <IntegrationSummaryRow label={t("system.notConnected")} count={payload.integrationHealth.notConnected} variant="gray" />
+                  {payload.integrationHealth.expired > 0 && (
+                    <IntegrationSummaryRow label={t("system.expired")} count={payload.integrationHealth.expired} variant="amber" />
+                  )}
+                  {payload.integrationHealth.disabled > 0 && (
+                    <IntegrationSummaryRow label={t("system.disabledCount")} count={payload.integrationHealth.disabled} variant="gray" />
+                  )}
+                </div>
               ) : (
-                <p className="text-sm text-muted-foreground">{t("system.noData")}</p>
+                <p className="text-sm text-[var(--text-3)]">{t("system.noData")}</p>
               )}
             </CardContent>
           </Card>
-        </MotionCard>
+
+          <Card className="border shadow-none">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">{t("system.accountInfo")}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 space-y-2 text-sm">
+              {payload ? (
+                <>
+                  <InfoRow label={t("system.plan")} value={payload.billing.displayName} />
+                  <InfoRow label={t("system.billingStatus")} value={payload.billing.billingStatus} />
+                  <InfoRow label={t("system.role")} value={payload.currentUserRole || "—"} />
+                  <InfoRow label={t("system.automationModules")} value={String(payload.automation.moduleCount)} />
+                </>
+              ) : (
+                <p className="text-[var(--text-3)]">{t("system.noData")}</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      <MotionCard delay={0.08}>
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("system.frontendEnvironment")}</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2 font-mono text-xs text-muted-foreground md:grid-cols-2">
-            <div>
-              <span className="text-foreground">{t("system.apiUrlLabel")}</span>
-              <div className="break-all">{API_URL}</div>
-            </div>
-            <div>
-              <span className="text-foreground">{t("system.mockFallbackLabel")}</span>
-              <div>{USE_MOCK_FALLBACK ? t("system.enabled") : t("system.disabled")}</div>
-            </div>
-            <div>
-              <span className="text-foreground">{t("system.demoTenantIdLabel")}</span>
-              <div className="break-all">{DEMO_TENANT_ID}</div>
-            </div>
-            <div>
-              <span className="text-foreground">{t("system.demoUserIdLabel")}</span>
-              <div className="break-all">{DEMO_USER_ID}</div>
-            </div>
-            <div className="md:col-span-2">
-              <span className="text-foreground">{t("system.tenantIdSourceLabel")}</span>
-              <div>{tenantSource(t)}</div>
-            </div>
-            <div>
-              <span className="text-foreground">{t("system.nodeEnvLabel")}</span>
-              <div>{env.app.nodeEnv}</div>
-            </div>
-          </CardContent>
-        </Card>
-      </MotionCard>
-
-      <MotionCard delay={0.1}>
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("system.billingCard")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            {billing.plan.loading ? (
-              <LoaderIcon size={16} />
-            ) : (
-              <pre className="max-h-48 overflow-auto rounded-lg bg-muted/50 p-3 text-xs">
-                {JSON.stringify(billing.plan.data ?? billing.usage.data ?? {}, null, 2)}
-              </pre>
+      {/* Recent failed logs */}
+      <Card className="border shadow-none">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold">{t("system.recentFailedLogs")}</CardTitle>
+            {failedLast24h > 0 && (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                {failedLast24h} {t("system.failuresLast24h")}
+              </span>
             )}
-          </CardContent>
-        </Card>
-      </MotionCard>
-
-      <MotionCard delay={0.12}>
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("system.integrationHealth")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <pre className="max-h-48 overflow-auto rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-              {JSON.stringify(payload?.integrationHealth ?? { note: t("system.requiresSystemStatus") }, null, 2)}
-            </pre>
-          </CardContent>
-        </Card>
-      </MotionCard>
-
-      <MotionCard delay={0.14}>
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-base">{t("system.recentFailedLogs")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {failedLogs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("system.noRecentFailures")}</p>
-            ) : (
-              <ul className="space-y-2">
-                {failedLogs.map((log) => (
-                  <li
-                    key={log.id}
-                    className={cn(
-                      "rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-sm",
-                      "text-red-900 dark:text-red-100"
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          {recentFailedLogs.length === 0 ? (
+            <p className="text-sm text-[var(--text-3)]">
+              {system.loading ? t("system.loadingHealth") : t("system.noRecentFailures")}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {recentFailedLogs.map((log) => (
+                <li
+                  key={log.id}
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm dark:border-red-900/40 dark:bg-red-950/20"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-medium text-red-900 dark:text-red-200">{log.moduleName}</span>
+                    {log.createdAt && (
+                      <span className="shrink-0 text-xs text-red-600/70 dark:text-red-400/70">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </span>
                     )}
-                  >
-                    <div className="font-medium">{log.moduleName}</div>
-                    <div className="text-xs opacity-90">{log.message}</div>
-                    {log.error ? <div className="mt-1 font-mono text-[10px] opacity-80">{log.error}</div> : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {automation.isUsingFallback ? (
-              <p className="text-xs text-muted-foreground">{t("system.showingMockLogs")}</p>
-            ) : null}
-          </CardContent>
-        </Card>
-      </MotionCard>
+                  </div>
+                  <p className="mt-0.5 text-xs text-red-800/80 dark:text-red-300/80">{log.message}</p>
+                  {log.error && (
+                    <p className="mt-1 font-mono text-[10px] text-red-700/70 dark:text-red-400/70 truncate">{log.error}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function IntegrationSummaryRow({ label, count, variant }: { label: string; count: number; variant: "green" | "amber" | "gray" }) {
+  const colors = {
+    green: "text-green-700 dark:text-green-300",
+    amber: "text-amber-700 dark:text-amber-300",
+    gray: "text-[var(--text-3)]",
+  };
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-[var(--text-2)]">{label}</span>
+      <span className={cn("font-semibold tabular-nums", colors[variant])}>{count}</span>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[var(--text-3)]">{label}</span>
+      <span className="text-[var(--text-1)] font-medium text-right">{value}</span>
     </div>
   );
 }
