@@ -30,7 +30,7 @@ const sections: SettingsSection[] = [
   "Notifications",
   "Data & Storage",
   "Security",
-  "Billing",
+  // "Billing" — hidden until Stripe is configured
 ];
 
 export function SettingsPageClient() {
