@@ -92,7 +92,6 @@ export function IntegrationConnectModal({
           AI_MODEL_OPTIONS.find((m) => m.provider === "openai")?.model ??
           "gpt-4o-mini";
     setModel(defaultModel);
-    setFallbackToStub(true);
     setApiKey("");
     setWorkspaceName("Demo Workspace");
     setChannelName("#jobflow-alerts");
