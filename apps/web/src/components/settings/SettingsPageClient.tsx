@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { SettingsIcon } from "@/components/icons";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,7 @@ import {
   mockProfileSettings,
 } from "@/data/mockSettings";
 import { useBillingApi } from "@/hooks/api/useBillingApi";
-import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
-import { shouldUseMockFallback } from "@/lib/api/mockFallback";
+import { showError, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
 
 const sections: SettingsSection[] = [
@@ -31,7 +30,7 @@ const sections: SettingsSection[] = [
   "Notifications",
   "Data & Storage",
   "Security",
-  "Billing Placeholder",
+  "Billing",
 ];
 
 export function SettingsPageClient() {
@@ -49,7 +48,6 @@ export function SettingsPageClient() {
   const [rules, setRules] = useState(mockAutomationRules);
   const [notifications, setNotifications] = useState(mockNotificationPreferences);
   const billing = useBillingApi({ fallbackToMock: false });
-  const usingMock = useMemo(() => billing.plan.error ? shouldUseMockFallback(billing.plan.error) : false, [billing.plan.error]);
 
   return (
     <div className="space-y-6">
@@ -72,32 +70,39 @@ export function SettingsPageClient() {
           {activeSection === "Notifications" ? <NotificationsSection preferences={notifications} onChange={setNotifications} /> : null}
           {activeSection === "Data & Storage" ? <DataStorageSection /> : null}
           {activeSection === "Security" ? <SecuritySection /> : null}
-          {activeSection === "Billing Placeholder" ? (
+          {activeSection === "Billing" ? (
             <BillingSection
               billing={(billing.plan.data as any) ?? {}}
               loading={billing.plan.loading || billing.usage.loading}
               error={billing.plan.error?.message ?? billing.usage.error?.message ?? null}
-              usingMock={usingMock}
               onRetry={() => {
                 void billing.plan.refetch();
                 void billing.usage.refetch();
               }}
-              onChangePlan={async (planKey) => {
+              onCheckout={async (planKey, billingCycle) => {
                 try {
-                  await billing.changePlan({ planKey });
-                  showSuccess(`Plan change request sent: ${planKey}`);
-                  void billing.plan.refetch();
-                  void billing.usage.refetch();
-                } catch (error) {
-                  showError(error instanceof Error ? error.message : "Failed to change plan");
-                }
-              }}
-              onCheckout={async (planKey) => {
-                try {
-                  await billing.checkout({ planKey, billingCycle: "monthly" });
-                  showInfo("Billing not yet configured — Stripe checkout requires setup. Contact support to upgrade.");
+                  const result = await billing.checkout({ planKey, billingCycle });
+                  const checkoutUrl = (result as any)?.checkoutUrl;
+                  if (checkoutUrl) {
+                    window.location.href = checkoutUrl;
+                  } else {
+                    showError("No checkout URL returned. Check Stripe configuration.");
+                  }
                 } catch (error) {
                   showError(error instanceof Error ? error.message : "Failed to open checkout");
+                }
+              }}
+              onOpenPortal={async () => {
+                try {
+                  const result = await billing.portal(undefined as never);
+                  const portalUrl = (result as any)?.portalUrl;
+                  if (portalUrl) {
+                    window.location.href = portalUrl;
+                  } else {
+                    showError("No portal URL returned. Check Stripe configuration.");
+                  }
+                } catch (error) {
+                  showError(error instanceof Error ? error.message : "Failed to open billing portal");
                 }
               }}
             />

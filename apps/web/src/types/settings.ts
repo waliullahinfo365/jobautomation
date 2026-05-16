@@ -9,7 +9,7 @@ export type SettingsSection =
   | "Notifications"
   | "Data & Storage"
   | "Security"
-  | "Billing Placeholder";
+  | "Billing";
 
 export interface IntegrationSetting {
   id: string;

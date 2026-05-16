@@ -18,6 +18,7 @@ export function useBillingApi(options?: { fallbackToMock?: boolean }) {
     plan,
     usage,
     checkout: useApiMutation(api.createCheckout).mutate,
+    portal: useApiMutation(() => api.openBillingPortal()).mutate,
     changePlan: useApiMutation(api.changePlan).mutate,
     cancel: useApiMutation(() => api.cancelSubscription()).mutate,
     recalculateUsage: useApiMutation(() => api.recalculateUsage()).mutate,

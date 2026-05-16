@@ -187,7 +187,7 @@ export async function checkPlanLimit(input: {
   };
 }
 
-export async function createCheckoutSessionStub(input: {
+export async function createCheckoutSession(input: {
   tenantId: string;
   planKey: SubscriptionPlanKey;
   billingCycle: "monthly" | "yearly";
@@ -406,9 +406,23 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
   return { received: true, eventId, eventType, handled: true };
 }
 
-/** @deprecated Use handleStripeWebhook — kept for controller compatibility during migration */
-export async function handleStripeWebhookStub(input: { event: Record<string, unknown> }) {
-  return handleStripeWebhook(input);
+export async function createBillingPortalSession(input: { tenantId: string }): Promise<{ portalUrl: string }> {
+  assertTenantId(input.tenantId);
+  if (!isStripeConfigured()) {
+    throw new ApiError("Billing is not configured. Set STRIPE_SECRET_KEY.", 503, "BILLING_NOT_CONFIGURED");
+  }
+  const tenant = await TenantModel.findOne(tenantQuery(input.tenantId)).lean() as Record<string, unknown> | null;
+  const billing = (tenant?.billing ?? {}) as Record<string, unknown>;
+  const customerId = String(billing.stripeCustomerId ?? tenant?.stripeCustomerId ?? "");
+  if (!customerId) {
+    throw new ApiError("No Stripe customer found. Complete a checkout first.", 422, "NO_STRIPE_CUSTOMER");
+  }
+  const appBaseUrl = process.env.APP_BASE_URL ?? "https://newjob.guru";
+  const session = await stripeRequest<{ url: string }>("POST", "/billing_portal/sessions", {
+    customer: customerId,
+    return_url: `${appBaseUrl}/settings?section=billing`,
+  });
+  return { portalUrl: session.url };
 }
 
 

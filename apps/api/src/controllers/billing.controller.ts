@@ -6,7 +6,8 @@ import { assertTenantId } from "../services/baseTenant.service";
 import {
   cancelSubscription,
   changePlanDirect,
-  createCheckoutSessionStub,
+  createCheckoutSession,
+  createBillingPortalSession,
   getCurrentPlan,
   getTenantUsage,
   handleStripeWebhook,
@@ -49,12 +50,18 @@ export const getPlan = asyncHandler(async (req: Request, res) => {
 
 export const postCheckout = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const result = await createCheckoutSessionStub({
+  const result = await createCheckoutSession({
     tenantId,
     planKey: req.body.planKey,
     billingCycle: req.body.billingCycle,
   });
   return successResponse(res, result, "Checkout session");
+});
+
+export const postBillingPortal = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const result = await createBillingPortalSession({ tenantId });
+  return successResponse(res, result, "Billing portal session");
 });
 
 export const postChangePlan = asyncHandler(async (req: Request, res) => {

@@ -8,5 +8,5 @@ export const SETTINGS_SECTION_I18N_KEY: Record<SettingsSection, string> = {
   Notifications: "settings.section.notifications",
   "Data & Storage": "settings.section.dataStorage",
   Security: "settings.section.security",
-  "Billing Placeholder": "settings.section.billing",
+  Billing: "settings.section.billing",
 };

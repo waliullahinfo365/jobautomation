@@ -44,6 +44,21 @@ export function createApp() {
     });
   }
 
+  // Capture raw body for Stripe webhook signature verification before JSON parsing
+  app.use((req, _res, next) => {
+    if (req.path === "/billing/webhook") {
+      let chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", () => {
+        const raw = Buffer.concat(chunks);
+        (req as express.Request & { rawBody: Buffer }).rawBody = raw;
+        try { (req as any).body = JSON.parse(raw.toString("utf8")); } catch { (req as any).body = {}; }
+        next();
+      });
+      return;
+    }
+    next();
+  });
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(apiRoutes);

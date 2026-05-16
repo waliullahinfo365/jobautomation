@@ -1,11 +1,10 @@
 "use client";
 
-import type { BillingPlanResponse } from "@/lib/api/billing.api";
+import type { BillingPlanResponse, AvailablePlan } from "@/lib/api/billing.api";
 import { SettingSectionCard } from "./SettingSectionCard";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
-import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { useTranslation } from "@/i18n/useTranslation";
 
 type BillingSectionProps = {
@@ -13,12 +12,19 @@ type BillingSectionProps = {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
-  onChangePlan?: (planKey: string) => void;
-  onCheckout?: (planKey: string) => void;
-  usingMock?: boolean;
+  onCheckout?: (planKey: string, billingCycle: "monthly" | "yearly") => void;
+  onOpenPortal?: () => void;
+  onCancelSubscription?: () => void;
 };
 
-export function BillingSection({ billing, loading, error, onRetry, onChangePlan, onCheckout, usingMock }: BillingSectionProps) {
+export function BillingSection({
+  billing,
+  loading,
+  error,
+  onRetry,
+  onCheckout,
+  onOpenPortal,
+}: BillingSectionProps) {
   const { t } = useTranslation();
 
   if (loading) {
@@ -29,63 +35,99 @@ export function BillingSection({ billing, loading, error, onRetry, onChangePlan,
   }
 
   const snapshot = billing as BillingPlanResponse;
-  const currentPlan = snapshot?.currentPlan?.displayName ?? String((billing as any)?.currentPlan ?? t("settings.billing.unknown"));
+  const stripeConfigured = snapshot?.stripeConfigured ?? false;
+  const billingNotice = snapshot?.billingNotice ?? null;
+  const currentPlan = snapshot?.currentPlan;
+  const currentPlanKey = currentPlan?.planKey ?? "free_trial";
+  const billingStatus = snapshot?.billingStatus ?? "Trialing";
   const usage = snapshot?.usage ?? {};
   const limits = snapshot?.limits ?? {};
-  const availablePlans = snapshot?.availablePlans ?? [];
-  const billingStatus = formatBillingStatus(snapshot?.billingStatus, t);
-  const billingStatusLine =
-    snapshot?.billingStatus === "Active"
-      ? t("settings.billing.statusActive")
-      : `${t("settings.billing.statusLabel")}: ${billingStatus}`;
+  const usagePercentages = snapshot?.usagePercentages ?? {};
+  const availablePlans = (snapshot?.availablePlans ?? []).filter((p) => p.planKey !== "free_trial");
+  const hasActiveSubscription = Boolean(currentPlan?.stripeSubscriptionId) && billingStatus === "Active";
+  const cancelAtPeriodEnd = currentPlan?.cancelAtPeriodEnd ?? false;
+  const periodEnd = currentPlan?.currentPeriodEnd
+    ? new Date(currentPlan.currentPeriodEnd).toLocaleDateString()
+    : null;
 
   return (
     <SettingSectionCard title={t("settings.billing.title")} description={t("settings.billing.description")}>
-      <div className="mb-4 flex items-center justify-between">
-        <ApiStatusIndicator
-          usingMock={usingMock}
-          labels={{
-            connected: t("settings.billing.apiConnected"),
-            mock: t("settings.billing.usingMockData"),
-            offline: t("settings.billing.apiOffline"),
-          }}
+      {/* Not configured notice */}
+      {!stripeConfigured && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-medium">{t("settings.billing.notConfiguredTitle")}</p>
+          <p className="mt-0.5 text-xs text-amber-700">{billingNotice ?? t("settings.billing.notConfiguredDescription")}</p>
+        </div>
+      )}
+
+      {/* Current plan summary */}
+      <div className="mb-4 rounded-md border bg-[var(--surface-2)] p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs text-[var(--text-3)]">{t("settings.billing.currentPlan")}</p>
+            <p className="text-base font-semibold text-[var(--text-1)]">{currentPlan?.displayName ?? t("settings.billing.unknown")}</p>
+            <p className="mt-0.5 text-xs text-[var(--text-3)]">
+              <BillingStatusBadge status={billingStatus} />
+              {cancelAtPeriodEnd && periodEnd ? ` · ${t("settings.billing.cancelsOn")} ${periodEnd}` : ""}
+            </p>
+          </div>
+          {stripeConfigured && hasActiveSubscription && (
+            <Button variant="outline" size="sm" onClick={onOpenPortal}>
+              {t("settings.billing.manageBilling")}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Usage meters */}
+      <div className="mb-4 space-y-3">
+        <p className="text-xs font-medium text-[var(--text-2)]">{t("settings.billing.usageTitle")}</p>
+        <UsageMeter
+          label={t("settings.billing.jobs")}
+          used={usage.jobsCount ?? 0}
+          limit={limits.maxJobs}
+          info={usagePercentages.maxJobs}
         />
-        <span className="text-xs text-[var(--text-3)]">
-          {billingStatusLine}
-        </span>
+        <UsageMeter
+          label={t("settings.billing.automationRuns")}
+          used={usage.automationRunsThisMonth ?? 0}
+          limit={limits.maxAutomationRuns}
+          info={usagePercentages.maxAutomationRuns}
+        />
+        <UsageMeter
+          label={t("settings.billing.aiCredits")}
+          used={usage.aiCreditsUsedThisMonth ?? 0}
+          limit={limits.maxAiCredits}
+          info={usagePercentages.maxAiCredits}
+        />
+        <UsageMeter
+          label={t("settings.billing.storageUsage")}
+          used={usage.storageUsedMb ?? 0}
+          limit={limits.maxStorageMb}
+          info={usagePercentages.maxStorageMb}
+          suffix="MB"
+        />
       </div>
-      <div className="space-y-2 text-sm">
-        <Field label={t("settings.billing.currentPlan")} value={currentPlan} />
-        <Field label={t("settings.billing.jobs")} value={`${usage.jobsCount ?? 0} / ${limits.maxJobs ?? "-"}`} />
-        <Field label={t("settings.billing.automationRuns")} value={`${usage.automationRunsThisMonth ?? 0} / ${limits.maxAutomationRuns ?? "-"}`} />
-        <Field label={t("settings.billing.aiCredits")} value={`${usage.aiCreditsUsedThisMonth ?? 0} / ${limits.maxAiCredits ?? "-"}`} />
-        <Field label={t("settings.billing.storageUsage")} value={`${usage.storageUsedMb ?? 0} / ${limits.maxStorageMb ?? "-"} MB`} />
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => onChangePlan?.("starter")}>
-          {t("settings.billing.changeToStarter")}
-        </Button>
-        <Button onClick={() => onCheckout?.("pro")}>{t("settings.billing.openCheckoutPro")}</Button>
-      </div>
-      {availablePlans.length > 0 ? (
-        <div className="mt-4 rounded-md border p-3">
-          <p className="mb-2 text-xs font-medium text-[var(--text-2)]">{t("settings.billing.availablePlans")}</p>
-          <div className="grid gap-1 text-xs text-[var(--text-2)]">
+
+      {/* Available plan upgrades */}
+      {availablePlans.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-medium text-[var(--text-2)]">{t("settings.billing.availablePlans")}</p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {availablePlans.map((plan) => (
-              <p key={plan.planKey}>
-                {formatPlanLine(plan, t)}
-              </p>
+              <PlanCard
+                key={plan.planKey}
+                plan={plan}
+                isCurrent={plan.planKey === currentPlanKey}
+                stripeConfigured={stripeConfigured}
+                onCheckout={onCheckout}
+              />
             ))}
           </div>
         </div>
-      ) : null}
-      {usingMock ? (
-        <p className="mt-3 text-xs text-amber-600">{t("settings.billing.mockFallback")}</p>
-      ) : null}
-      {error ? (
-        <p className="mt-3 text-xs text-rose-600">{error}</p>
-      ) : null}
-      <div className="mt-2">
+      )}
+
+      <div className="mt-4">
         <Button variant="ghost" size="sm" onClick={onRetry}>
           {t("settings.billing.refresh")}
         </Button>
@@ -94,35 +136,86 @@ export function BillingSection({ billing, loading, error, onRetry, onChangePlan,
   );
 }
 
-function formatBillingStatus(status: string | undefined, t: (key: string) => string) {
-  if (status === "Active") return t("settings.billing.active");
-  if (status === "Trialing") return t("settings.billing.trialing");
-  if (status === "Past Due") return t("settings.billing.pastDue");
-  if (status === "Cancelled") return t("settings.billing.cancelled");
-  return status ?? t("settings.billing.unknown");
-}
-
-function formatPlanLine(
-  plan: BillingPlanResponse["availablePlans"][number],
-  t: (key: string) => string
-) {
-  const keyByPlan: Record<string, string> = {
-    free_trial: "settings.billing.freeTrialPlan",
-    starter: "settings.billing.starterPlan",
-    pro: "settings.billing.proPlan",
-    agency: "settings.billing.agencyPlan",
-    enterprise: "settings.billing.enterprisePlan",
+function BillingStatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    Active: "text-green-600",
+    Trialing: "text-blue-600",
+    "Past Due": "text-amber-600",
+    Cancelled: "text-rose-600",
+    Suspended: "text-rose-600",
   };
-  const key = keyByPlan[plan.planKey];
-  if (key) return t(key);
-  return `${plan.displayName} - ${plan.currency} ${plan.priceMonthly}${t("settings.billing.perMonthSuffix")}`;
+  return <span className={colors[status] ?? "text-[var(--text-3)]"}>{status}</span>;
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function UsageMeter({
+  label,
+  used,
+  limit,
+  info,
+  suffix,
+}: {
+  label: string;
+  used: number;
+  limit: number | string | undefined;
+  info?: { current: number; limit: number | string; percent: number | null };
+  suffix?: string;
+}) {
+  const isUnlimited = limit === "unlimited" || limit === "custom" || info?.limit === "unlimited";
+  const percent = info?.percent ?? null;
+  const barColor = percent === null ? "bg-blue-500" : percent >= 90 ? "bg-rose-500" : percent >= 70 ? "bg-amber-500" : "bg-blue-500";
+
   return (
     <div>
-      <p className="text-xs text-[var(--text-3)]">{label}</p>
-      <p className="text-[var(--text-2)]">{value}</p>
+      <div className="mb-1 flex items-center justify-between text-xs text-[var(--text-3)]">
+        <span>{label}</span>
+        <span>
+          {used}{suffix ? ` ${suffix}` : ""} / {isUnlimited ? "∞" : `${limit ?? "—"}${suffix ? ` ${suffix}` : ""}`}
+        </span>
+      </div>
+      {!isUnlimited && percent !== null ? (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-3)]">
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(100, percent)}%` }} />
+        </div>
+      ) : (
+        <div className="h-1.5 w-full rounded-full bg-[var(--surface-3)]" />
+      )}
+    </div>
+  );
+}
+
+function PlanCard({
+  plan,
+  isCurrent,
+  stripeConfigured,
+  onCheckout,
+}: {
+  plan: AvailablePlan;
+  isCurrent: boolean;
+  stripeConfigured: boolean;
+  onCheckout?: (planKey: string, billingCycle: "monthly" | "yearly") => void;
+}) {
+  return (
+    <div className={`rounded-md border p-3 text-xs ${isCurrent ? "border-blue-400 bg-blue-50" : "border-[var(--border)] bg-[var(--surface-2)]"}`}>
+      <p className="font-semibold text-[var(--text-1)]">{plan.displayName}</p>
+      <p className="mt-0.5 text-[var(--text-3)]">
+        {plan.currency.toUpperCase()} {plan.priceMonthly}/mo
+      </p>
+      <div className="mt-2">
+        {isCurrent ? (
+          <span className="text-blue-600 font-medium">Current plan</span>
+        ) : stripeConfigured ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 px-2 text-xs"
+            onClick={() => onCheckout?.(plan.planKey, "monthly")}
+          >
+            Upgrade
+          </Button>
+        ) : (
+          <span className="text-[var(--text-3)]">Billing not configured</span>
+        )}
+      </div>
     </div>
   );
 }

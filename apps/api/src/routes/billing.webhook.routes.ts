@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { postWebhook } from "../controllers/billing.controller";
-import { validateBody } from "../middleware/validate.middleware";
-import { billingWebhookBodySchema } from "../validators/billing.validator";
 
 export const billingWebhookRoutes = Router();
-billingWebhookRoutes.post("/webhook", validateBody(billingWebhookBodySchema), postWebhook);
+// No Zod validation here — Stripe sends arbitrary event shapes and raw body must be preserved for HMAC verification
+billingWebhookRoutes.post("/webhook", postWebhook);
