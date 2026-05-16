@@ -9,7 +9,7 @@ export interface CalendarEventResult {
   operationId: string;
   tenantId: string;
   interviewId: string;
-  status: "created" | "existing" | "failed";
+  status: "created" | "existing" | "failed" | "pending" | "skipped";
   calendarEventId?: string;
   calendarEventUrl?: string;
   message: string;

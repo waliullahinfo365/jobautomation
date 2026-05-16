@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { InterviewModel } from "@jobflow/database/models";
-import { createCalendarEventStub } from "@jobflow/integrations/google-calendar/calendar.service";
+import { processInterviewSchedulingJob } from "@jobflow/workers/processors/interview-scheduling";
 import type { CalendarEventResult } from "@jobflow/shared/types/interview";
 import { createAutomationLog } from "./automation-log.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
@@ -20,6 +20,7 @@ export async function createInterviewCalendarEvent(input: CreateCalendarInput): 
   if (!interview) throw new ApiError("Interview not found", 404, "NOT_FOUND");
 
   const idempotencyKey = `interview-scheduling:${tenantId}:${input.interviewId}:${new Date(interview.dateTime).toISOString()}`;
+
   if (interview.calendarEventId && interview.calendarStatus === "Created") {
     return {
       operationId,
@@ -35,44 +36,47 @@ export async function createInterviewCalendarEvent(input: CreateCalendarInput): 
   await InterviewModel.findByIdAndUpdate(interview._id, { calendarStatus: "Queued", calendarError: undefined });
 
   try {
-    const event = await createCalendarEventStub({
+    // Use the real worker processor — checks Google Calendar connection, calls live API,
+    // stores real event URL. Falls back gracefully when Calendar is not connected.
+    const result = await processInterviewSchedulingJob({
       tenantId,
       interviewId: input.interviewId,
-      title: `${interview.company} - ${interview.position}`,
-      startTime: new Date(interview.dateTime).toISOString(),
-      description: interview.notesSummary,
-      attendees: interview.contactEmail ? [interview.contactEmail] : [],
-    });
-
-    await InterviewModel.findByIdAndUpdate(interview._id, {
-      calendarStatus: "Created",
-      calendarEventId: event.calendarEventId,
-      calendarEventUrl: event.calendarEventUrl,
-      calendarCreatedAt: new Date(event.createdAt),
-      calendarError: undefined,
-    });
-
-    await createAutomationLog({
-      tenantId,
-      moduleKey: "interview-scheduling",
-      moduleName: "Interview Scheduling",
-      status: "Success",
-      message: "Interview calendar event created",
-      relatedRecordType: "Interview",
-      relatedRecordId: input.interviewId,
+      userId: input.userId,
       operationId,
-      idempotencyKey,
-      metadata: { calendarEventId: event.calendarEventId, calendarEventUrl: event.calendarEventUrl },
     });
+
+    if ((result as any).pendingCalendarConnection) {
+      return {
+        operationId,
+        tenantId,
+        interviewId: input.interviewId,
+        status: "pending",
+        calendarEventId: undefined,
+        calendarEventUrl: undefined,
+        message: "Google Calendar not connected. Connect it in Settings → Integrations.",
+      };
+    }
+
+    if ((result as any).skipped) {
+      return {
+        operationId,
+        tenantId,
+        interviewId: input.interviewId,
+        status: "skipped",
+        calendarEventId: undefined,
+        calendarEventUrl: undefined,
+        message: (result as any).reason ?? "Calendar event skipped",
+      };
+    }
 
     return {
       operationId,
       tenantId,
       interviewId: input.interviewId,
-      status: "created",
-      calendarEventId: event.calendarEventId,
-      calendarEventUrl: event.calendarEventUrl,
-      message: "Calendar event created",
+      status: (result as any).existing ? "existing" : "created",
+      calendarEventId: (result as any).calendarEventId,
+      calendarEventUrl: (result as any).calendarEventLink,
+      message: (result as any).existing ? "Calendar event already exists" : "Calendar event created",
     };
   } catch (error) {
     await InterviewModel.findByIdAndUpdate(interview._id, {

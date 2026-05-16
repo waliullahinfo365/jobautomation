@@ -10,7 +10,8 @@
       "processors/folder-automation": ["./src/processors/folder-automation.processor.ts"],
       "processors/document-upload": ["./src/processors/document-upload.processor.ts"],
       "processors/job-intake": ["./src/processors/job-intake.processor.ts"],
-      "processors/cv-routing": ["./src/processors/cv-routing.processor.ts"]
+      "processors/cv-routing": ["./src/processors/cv-routing.processor.ts"],
+      "processors/interview-scheduling": ["./src/processors/interview-scheduling.processor.ts"]
     }
   },
   "exports": {
@@ -49,6 +50,12 @@
       "require": "./dist/processors/cv-routing.processor.js",
       "import": "./dist/processors/cv-routing.processor.js",
       "default": "./dist/processors/cv-routing.processor.js"
+    },
+    "./processors/interview-scheduling": {
+      "types": "./src/processors/interview-scheduling.processor.ts",
+      "require": "./dist/processors/interview-scheduling.processor.js",
+      "import": "./dist/processors/interview-scheduling.processor.js",
+      "default": "./dist/processors/interview-scheduling.processor.js"
     }
   },
   "scripts": {
