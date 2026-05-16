@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { backfillJobIntake, getAutomationLogs, getAutomationModulesHealth, listAutomationModules, runAutomationModule, updateAutomationModule } from "../controllers/automation.controller";
+import { backfillJobIntake, getAutomationLogs, getAutomationModulesHealth, getLifecycleInsightsHandler, listAutomationModules, runAutomationModule, updateAutomationModule } from "../controllers/automation.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
 import { automationRunBodySchema } from "../validators/ai-processing.validator";
@@ -23,4 +23,5 @@ automationRoutes.post(
   runAutomationModule
 );
 automationRoutes.get("/logs", requirePermission("automation.read"), validateQuery(listQuerySchema), getAutomationLogs);
+automationRoutes.get("/lifecycle-insights", requirePermission("automation.read"), getLifecycleInsightsHandler);
 automationRoutes.post("/job-intake/backfill", requirePermission("automation.run"), backfillJobIntake);

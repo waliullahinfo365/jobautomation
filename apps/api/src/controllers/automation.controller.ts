@@ -20,12 +20,28 @@ import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { logTenantAudit } from "../services/audit-log.service";
 import type { AutomationJobName } from "@jobflow/shared/types/queue";
 import { processJobIntakeProcessor } from "@jobflow/workers/processors/job-intake";
-import { getAutomationModuleHealth } from "../services/automation-health.service";
+import { getAutomationModuleHealth, getLifecycleInsights } from "../services/automation-health.service";
+export const getLifecycleInsightsHandler = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const status = req.query.status === "resolved" ? "resolved" : "open";
+  const severity = typeof req.query.severity === "string" ? req.query.severity : undefined;
+  const limit = typeof req.query.limit === "string" ? Math.min(100, Number(req.query.limit) || 50) : 50;
+  const items = await getLifecycleInsights(tenantId, { status, severity, limit });
+  return successResponse(res, items, "Lifecycle insights loaded");
+});
 export const listAutomationModules = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const {page,limit,skip}=getPagination(req.query); const filter:Record<string,unknown>={tenantId}; if(typeof req.query.status==='string') filter.status=req.query.status; const [rows,total]=await Promise.all([AutomationModuleModel.find(filter).sort({updatedAt:-1}).skip(skip).limit(limit),AutomationModuleModel.countDocuments(filter)]); return paginatedResponse(res,rows,{page,limit,total,totalPages:Math.ceil(total/limit)}); });
 export const getAutomationModulesHealth = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const data = await getAutomationModuleHealth(tenantId);
-  return successResponse(res, data, "Automation module health loaded");
+  const health = await getAutomationModuleHealth(tenantId);
+  // Keep data as array for backward-compat with frontend normalizeListResponse,
+  // and surface pipelineInsights + readiness as sibling fields.
+  return res.status(200).json({
+    success: true,
+    message: "Automation module health loaded",
+    data: health.modules,
+    pipelineInsights: health.pipelineInsights,
+    readiness: health.readiness,
+  });
 });
 export const updateAutomationModule = asyncHandler(async (req: Request, res) => { const tenantId=assertTenantId(req.tenantId); const row=await AutomationModuleModel.findOneAndUpdate({tenantId,moduleKey:req.params.moduleKey},req.body,{new:true}); if(!row) throw new ApiError('Automation module not found',404,'NOT_FOUND'); return successResponse(res,row,'Automation module updated'); });
 export const runAutomationModule = asyncHandler(async (req: Request, res) => {

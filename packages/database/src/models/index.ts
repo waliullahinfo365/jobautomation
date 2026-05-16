@@ -12,3 +12,4 @@ export * from "./Report.model";
 export * from "./Notification.model";
 export * from "./AuditLog.model";
 export * from "./AiUsageLog.model";
+export * from "./LifecycleInsight.model";

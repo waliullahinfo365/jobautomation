@@ -3,6 +3,7 @@ import {
   AutomationModuleModel,
   DocumentModel,
   IntegrationConnectionModel,
+  LifecycleInsightModel,
 } from "@jobflow/database/models";
 import {
   GOOGLE_DOCUMENTS_SCOPE,
@@ -133,8 +134,22 @@ function recommendedNextStep(status: HealthStatus, missingRequirements: string[]
   return "No action needed. Recent automation runs are successful.";
 }
 
+export async function getLifecycleInsights(tenantId: string, options?: {
+  status?: "open" | "resolved";
+  severity?: string;
+  limit?: number;
+}) {
+  const filter: Record<string, unknown> = { tenantId };
+  if (options?.status) filter.status = options.status;
+  if (options?.severity) filter.severity = options.severity;
+  return LifecycleInsightModel.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(options?.limit ?? 50)
+    .lean();
+}
+
 export async function getAutomationModuleHealth(tenantId: string) {
-  const [modules, logs, integrations, activeCvCount, activeTemplateCount] = await Promise.all([
+  const [modules, logs, integrations, activeCvCount, activeTemplateCount, openInsights] = await Promise.all([
     AutomationModuleModel.find({ tenantId }).lean(),
     AutomationLogModel.find({ tenantId }).sort({ createdAt: -1 }).limit(500).lean(),
     IntegrationConnectionModel.find({ tenantId }).lean(),
@@ -148,6 +163,10 @@ export async function getAutomationModuleHealth(tenantId: string) {
       isActiveProfileDocument: true,
       profileDocumentType: "cover_letter_template",
     }),
+    LifecycleInsightModel.find({ tenantId, status: "open" })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean(),
   ]);
 
   const moduleRows = new Map(modules.map((row: any) => [String(row.moduleKey), row]));
@@ -232,5 +251,22 @@ export async function getAutomationModuleHealth(tenantId: string) {
     };
   });
 
-  return data;
+  const insightSummary = {
+    total: openInsights.length,
+    critical: (openInsights as any[]).filter((i) => i.severity === "critical").length,
+    warning: (openInsights as any[]).filter((i) => i.severity === "warning").length,
+    info: (openInsights as any[]).filter((i) => i.severity === "info").length,
+    items: (openInsights as any[]).slice(0, 20).map((i) => ({
+      id: String(i._id),
+      recordType: i.recordType,
+      recordId: i.recordId,
+      severity: i.severity,
+      issueType: i.issueType,
+      message: i.message,
+      recommendedAction: i.recommendedAction,
+      createdAt: i.createdAt,
+    })),
+  };
+
+  return { modules: data, pipelineInsights: insightSummary, readiness };
 }
