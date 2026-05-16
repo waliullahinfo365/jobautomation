@@ -69,6 +69,9 @@ function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): str
 }
 
 function buildBackfillQuery(input: { label?: string; days?: number; metadata?: Record<string, unknown> }) {
+  // If a custom query is configured via env var, use it directly for backfill too
+  const envQuery = process.env.GMAIL_JOB_ALERT_QUERY?.trim();
+  if (envQuery) return envQuery;
   const days = Math.max(1, Math.min(30, Number(input.days ?? 7) || 7));
   const label = String(input.label || "job alerts").trim();
   const safeLabel = label.replace(/"/g, "");
