@@ -1,4 +1,4 @@
-import { ApplicationModel, AutomationLogModel, JobModel } from "@jobflow/database/models";
+import { ApplicationModel, AutomationLogModel, JobModel, NotificationModel } from "@jobflow/database/models";
 import {
   buildAnthropicModelCandidates,
   callAnthropicMessages,
@@ -54,6 +54,7 @@ function mightBeOffer(text: string): boolean {
   ];
   const nonOfferKeywords = [
     "we offer services", "offer a discount", "special offer", "promotional offer",
+    "limited time offer", "exclusive offer",
   ];
   if (nonOfferKeywords.some((k) => lower.includes(k))) return false;
   return offerKeywords.some((k) => lower.includes(k));
@@ -109,20 +110,21 @@ export async function processOfferTrackingJob(payload: {
   const started = Date.now();
   const operationId = payload.operationId ?? `offer-tracking-${Date.now()}`;
   const tenantId = payload.tenantId;
-  const now = payload.date ? new Date(payload.date) : new Date();
+  const today = (payload.date ? new Date(payload.date) : new Date()).toISOString().slice(0, 10);
 
   logger.info({ tenantId, operationId }, "offer tracking sweep started");
 
   try {
-    // Find applications with potential offer signals: recent replies that look offer-related
+    // Find applications with potential offer signals that haven't been processed today
     const candidates = await ApplicationModel.find({
       tenantId,
       applicationStatus: { $in: ["Applied", "Interview", "Replied"] },
       responseStatus: { $in: ["Positive Reply", "Needs Review"] },
-      // Not already at Offer/Rejected stage
       lastReplySnippet: { $exists: true, $ne: "" },
+      // Skip apps already processed today with this key pattern
+      offerDetectionKey: { $not: { $regex: `^offer-detection:${tenantId}:.*:${today}$` } },
     })
-      .select("_id company position lastEmailSubject lastReplySnippet applicationStatus jobId")
+      .select("_id company position lastEmailSubject lastReplySnippet applicationStatus jobId offerDetectionKey")
       .sort({ updatedAt: -1 })
       .limit(50)
       .lean() as Array<Record<string, unknown>>;
@@ -134,6 +136,7 @@ export async function processOfferTrackingJob(payload: {
     let failed = 0;
 
     for (const app of candidates) {
+      const appId = String(app._id);
       try {
         const subject = String(app.lastEmailSubject ?? "");
         const bodyText = String(app.lastReplySnippet ?? "");
@@ -153,29 +156,51 @@ export async function processOfferTrackingJob(payload: {
           position: String(app.position ?? ""),
         });
 
+        const detectionKey = `offer-detection:${tenantId}:${appId}:${today}`;
+
         if (!classification || !classification.is_offer_related || classification.confidence < 0.75) {
+          // Mark as checked today even on no-offer result to avoid re-processing
+          await ApplicationModel.findByIdAndUpdate(appId, {
+            offerDetectionKey: detectionKey,
+            $unset: { offerDetectionError: 1 },
+          });
           skipped += 1;
           continue;
         }
 
         logger.info(
-          { tenantId, operationId, applicationId: String(app._id), stage: classification.offer_stage, confidence: classification.confidence },
+          { tenantId, operationId, applicationId: appId, stage: classification.offer_stage, confidence: classification.confidence },
           "offer signal detected"
         );
 
-        // Update application and linked job to Offer status when high-confidence formal offer
         const isHighConfidence = classification.confidence >= 0.85;
         const isFormalOffer = ["written_offer", "verbal_offer"].includes(classification.offer_stage);
+        const offerNow = new Date();
+
+        // Build update: always save offer details; promote status only for high-confidence formal offers
+        const appUpdate: Record<string, unknown> = {
+          offerDetectionKey: detectionKey,
+          offerDetectedAt: offerNow,
+          offerStage: classification.offer_stage,
+          offerSummary: redactForLog(classification.summary, 500),
+          offerNextAction: classification.next_action,
+          offerConfidence: classification.confidence,
+          aiClassification: `offer:${classification.offer_stage}`,
+          $unset: { offerDetectionError: 1 },
+        };
 
         if (isHighConfidence && isFormalOffer) {
-          const offerNow = new Date();
-          await ApplicationModel.findByIdAndUpdate(app._id, {
-            applicationStatus: "Offer",
-            lastStatusChangedAt: offerNow,
-            aiClassification: `offer:${classification.offer_stage}`,
-          });
+          (appUpdate as any).applicationStatus = "Offer";
+          (appUpdate as any).lastStatusChangedAt = offerNow;
+        } else if (classification.offer_stage === "discussion" || classification.offer_stage === "negotiation") {
+          // Lower-confidence: mark as Offer Discussion without full status change
+          (appUpdate as any).responseStatus = "Positive Reply";
+        }
 
-          // Sync job status
+        await ApplicationModel.findByIdAndUpdate(appId, appUpdate);
+
+        // Sync job status for formal high-confidence offers
+        if (isHighConfidence && isFormalOffer) {
           const jobId = String(app.jobId ?? "");
           if (jobId) {
             const job = await JobModel.findOne({ _id: jobId, tenantId }).select("status").lean() as { status?: string } | null;
@@ -185,28 +210,64 @@ export async function processOfferTrackingJob(payload: {
           }
         }
 
+        // In-app bell notification
+        const severity = isFormalOffer ? "success" : "info";
+        const stageLabel: Record<OfferStage, string> = {
+          written_offer: "Written offer received",
+          verbal_offer: "Verbal offer received",
+          negotiation: "Offer negotiation in progress",
+          discussion: "Offer discussion started",
+          not_offer: "Offer signal",
+        };
+        try {
+          await NotificationModel.create({
+            tenantId,
+            createdBy: "system",
+            moduleKey: "offer-tracking",
+            type: "offer_detected",
+            title: `${stageLabel[classification.offer_stage]} — ${app.company}`,
+            message: `${app.position}: ${classification.summary}. Next: ${classification.next_action}`,
+            severity,
+            relatedRecordType: "Application",
+            relatedRecordId: appId,
+            actionUrl: `/applications`,
+            read: false,
+          });
+        } catch (e) {
+          logger.warn({ err: e }, "offer-tracking: failed to create in-app notification");
+        }
+
         await writeLog({
           tenantId,
           status: "Success",
           message: `Offer signal (${classification.offer_stage}, ${Math.round(classification.confidence * 100)}%) at ${app.company} — ${app.position}: ${redactForLog(classification.summary, 200)}`,
           operationId,
-          relatedRecordId: String(app._id),
-          metadata: { stage: classification.offer_stage, confidence: classification.confidence, autoUpdated: isHighConfidence && isFormalOffer },
+          relatedRecordId: appId,
+          metadata: {
+            stage: classification.offer_stage,
+            confidence: classification.confidence,
+            autoUpdated: isHighConfidence && isFormalOffer,
+            nextAction: classification.next_action,
+          },
         });
 
         await notifyAutomationEvent({
           tenantId,
           moduleKey: "offer-tracking",
           event: "offer-received",
-          message: `💼 Offer signal detected at ${app.company} — ${app.position}!\nStage: ${classification.offer_stage}\nNext: ${classification.next_action}`,
+          message: `Offer signal detected at ${app.company} — ${app.position}!\nStage: ${classification.offer_stage}\nNext: ${classification.next_action}`,
           operationId,
-          metadata: { applicationId: String(app._id), stage: classification.offer_stage, confidence: classification.confidence },
+          metadata: { applicationId: appId, stage: classification.offer_stage, confidence: classification.confidence },
         });
 
         detected += 1;
       } catch (error) {
         failed += 1;
-        logger.warn({ tenantId, operationId, applicationId: String(app._id), error: error instanceof Error ? error.message : "Unknown" }, "offer tracking failed for application");
+        const msg = error instanceof Error ? error.message : "Unknown";
+        logger.warn({ tenantId, operationId, applicationId: appId, error: msg }, "offer tracking failed for application");
+        try {
+          await ApplicationModel.findByIdAndUpdate(appId, { offerDetectionError: msg });
+        } catch { /* swallow */ }
       }
     }
 
