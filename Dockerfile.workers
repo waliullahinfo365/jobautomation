@@ -14,7 +14,7 @@ COPY apps/workers ./apps/workers
 RUN pnpm install --frozen-lockfile
 
 # Install Playwright Chromium + OS dependencies
-RUN npx playwright install chromium --with-deps
+RUN pnpm exec playwright install chromium --with-deps
 
 RUN pnpm --filter @jobflow/shared build \
   && pnpm --filter @jobflow/database build \
