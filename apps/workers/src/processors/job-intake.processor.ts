@@ -171,7 +171,12 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
 
     // Classify before extraction — skip non-job emails early
     const classification = isRealJobOpportunity(normalized);
-    const CONFIDENCE_THRESHOLD = 0.85;
+    // When the user has set a custom Gmail query (e.g. a dedicated "job-alerts" label),
+    // they've already pre-filtered their inbox — trust it with a lower threshold (0.35).
+    // The default 0.85 is for the generic fallback query that scans the whole inbox.
+    const usingCustomQuery = Boolean(process.env.GMAIL_JOB_ALERT_QUERY?.trim());
+    const envThreshold = process.env.JOB_INTAKE_MIN_CONFIDENCE ? Number(process.env.JOB_INTAKE_MIN_CONFIDENCE) : null;
+    const CONFIDENCE_THRESHOLD = envThreshold ?? (usingCustomQuery ? 0.35 : 0.85);
     if (!classification.isJob || classification.confidence < CONFIDENCE_THRESHOLD) {
       processedMessageIds.add(normalized.providerMessageId);
       nonJobSkipped += 1;
