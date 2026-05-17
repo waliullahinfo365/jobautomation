@@ -188,14 +188,17 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const handleAutoApply = useCallback(async () => {
     try {
       const res = await withLoading("autoApply", () => jobsApi.autoApply(id));
-      if (res.status === "skipped") {
-        showInfo(res.message || "Auto-apply already queued for this job.");
+      const status = res && typeof res === "object" && "status" in res ? (res as { status: string }).status : null;
+      const message = res && typeof res === "object" && "message" in res ? String((res as { message: unknown }).message) : null;
+      if (status === "skipped") {
+        showInfo(message || "Auto-apply already queued for this job.");
         return;
       }
       showSuccess("Auto-apply queued! The bot will submit your application shortly.");
       startPollingJob();
     } catch (e) {
-      showError(e instanceof ApiError ? e.message : "Auto-apply failed. Make sure LinkedIn is connected in Integrations.");
+      const msg = e != null && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : null;
+      showError(msg || "Auto-apply failed. Make sure LinkedIn is connected in Integrations.");
     }
   }, [id, jobsApi, startPollingJob, withLoading]);
 
@@ -425,7 +428,7 @@ function ActionButton({ label, loading, disabled, onClick, variant = "default", 
     <Button
       variant={variant}
       disabled={disabled}
-      onClick={onClick}
+      onClick={() => { void Promise.resolve(onClick()).catch(() => void 0); }}
       className={className}
     >
       {loading && <LoaderIcon size={14} className="mr-2" />}
