@@ -29,6 +29,7 @@ export function useJobsApi(options?: { fallbackToMock?: boolean; params?: Record
     jobsApi.runAiProcessing(id, runOptions)
   );
   const checkDuplicateMutation = useApiMutation((id: string) => jobsApi.checkDuplicate(id));
+  const autoApplyMutation = useApiMutation((id: string) => jobsApi.autoApplyJob(id));
 
   return {
     ...query,
@@ -43,6 +44,8 @@ export function useJobsApi(options?: { fallbackToMock?: boolean; params?: Record
     runAiProcessing: runAiProcessingMutation.mutate,
     provisionFolders: provisionMutation.mutate,
     checkDuplicate: checkDuplicateMutation.mutate,
+    autoApply: autoApplyMutation.mutate,
+    autoApplyLoading: autoApplyMutation.loading,
   };
 }
 

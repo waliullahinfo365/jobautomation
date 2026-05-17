@@ -125,6 +125,8 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
       jobUrl,
       platform,
       profile,
+      company: String(j.company ?? ""),
+      position: String(j.position ?? j.title ?? ""),
       cvUrl: cvUrl || undefined,
       coverLetterUrl: coverLetterUrl || undefined,
       additionalContext: additionalContext || undefined,

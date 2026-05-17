@@ -28,6 +28,8 @@ export interface RunApplyInput {
   jobUrl: string;
   platform?: ApplyPlatform;
   profile: UserProfile;
+  company: string;
+  position: string;
   cvUrl?: string;
   coverLetterUrl?: string;
   additionalContext?: string;
@@ -91,8 +93,8 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
   const coverLetterPath = input.coverLetterUrl ? await downloadToTemp(input.coverLetterUrl) : undefined;
 
   const jobContext = {
-    company: input.profile.currentTitle ?? "Unknown Company",
-    position: "Unknown Position",
+    company: input.company,
+    position: input.position,
     description: input.additionalContext,
   };
 

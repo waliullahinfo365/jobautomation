@@ -185,6 +185,20 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
     }
   }, [id, jobsApi, router, withLoading, t]);
 
+  const handleAutoApply = useCallback(async () => {
+    try {
+      const res = await withLoading("autoApply", () => jobsApi.autoApply(id));
+      if (res.status === "skipped") {
+        showInfo(res.message || "Auto-apply already queued for this job.");
+        return;
+      }
+      showSuccess("Auto-apply queued! The bot will submit your application shortly.");
+      startPollingJob();
+    } catch (e) {
+      showError(e instanceof ApiError ? e.message : "Auto-apply failed. Make sure LinkedIn is connected in Integrations.");
+    }
+  }, [id, jobsApi, startPollingJob, withLoading]);
+
   const handleLogApplicationFromJob = useCallback(
     async (form: CreateApplicationFormPayload) => {
       const payload = buildCreateApplicationPayload({ ...form, jobId: form.jobId || id });
@@ -264,6 +278,14 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         disabled={actionDisabled}
         onClick={handleProvisionFolders}
         variant="outline"
+      />
+      <ActionButton
+        label="⚡ Auto Apply"
+        loading={actionLoading === "autoApply"}
+        disabled={actionDisabled}
+        onClick={handleAutoApply}
+        variant="default"
+        className="bg-blue-600 hover:bg-blue-700 text-white"
       />
       <ActionButton
         label={t("jobDetail.logApplication")}

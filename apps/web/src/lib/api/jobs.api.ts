@@ -110,6 +110,10 @@ export function checkDuplicate(id: string) {
   return apiFetch<JobDuplicateCheckResponse>(`/jobs/${id}/check-duplicate`, { method: "POST" });
 }
 
+export function autoApplyJob(id: string) {
+  return apiFetch<JobQueueEnqueueResponse>(`/jobs/${id}/apply`, { method: "POST" });
+}
+
 // ── Quick Review API ──────────────────────────────────────────────────────────
 import type { ReviewQueueResponse, ReviewActionResponse, JobReviewAi, ReviewStatus } from "@/types/job";
 
