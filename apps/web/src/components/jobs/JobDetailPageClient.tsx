@@ -13,6 +13,7 @@ import { LogApplicationModal } from "@/components/applications/LogApplicationMod
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { Button } from "@/components/ui/button";
 import { useApplicationsApi } from "@/hooks/api/useApplicationsApi";
@@ -312,7 +313,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
 
   return (
     <div className="space-y-6">
-      <JobDetailHeader job={job} renderActions={actionBar} />
+      <JobDetailHeader job={job} renderActions={<ErrorBoundary>{actionBar}</ErrorBoundary>} />
 
       {duplicateFollowUp ? (
         <div className="rounded-lg border border-[rgba(229,162,59,0.35)] bg-[var(--amber-bg)] px-4 py-3 text-sm text-[var(--text-2)]">
@@ -430,9 +431,12 @@ function ActionButton({ label, loading, disabled, onClick, variant = "default", 
       disabled={disabled}
       onClick={() => { void Promise.resolve(onClick()).catch(() => void 0); }}
       className={className}
+      suppressHydrationWarning
     >
-      {loading && <LoaderIcon size={14} className="mr-2" />}
-      {label}
+      <span className="contents" suppressHydrationWarning>
+        {loading && <LoaderIcon size={14} className="mr-2" />}
+        {label}
+      </span>
     </Button>
   );
 }
