@@ -10,6 +10,7 @@ import {
   generateResearch,
   getJobById,
   getReviewQueue,
+  getPipelineSummary,
   listJobs,
   provisionFolders,
   reviewJob,
@@ -26,6 +27,7 @@ import { jobIdParamSchema, listQuerySchema } from "../validators/common.validato
 export const jobRoutes = Router();
 
 jobRoutes.get("/", requirePermission("jobs.read"), validateQuery(listQuerySchema), listJobs);
+jobRoutes.get("/pipeline/summary", requirePermission("jobs.read"), getPipelineSummary);
 jobRoutes.post("/", requirePermission("jobs.create"), validateBody(jobCreateSchema), createJob);
 jobRoutes.get("/:id", requirePermission("jobs.read"), validateParams(jobIdParamSchema), getJobById);
 jobRoutes.patch("/:id", requirePermission("jobs.update"), validateParams(jobIdParamSchema), validateBody(jobUpdateSchema), updateJob);

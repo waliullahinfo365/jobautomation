@@ -74,6 +74,15 @@ export function buildCreateJobPayload(input: CreateJobFormPayload): Record<strin
   return payload;
 }
 
+export type PipelineSummaryResponse = {
+  pipeline: { status: string; count: number }[];
+  totalActive: number;
+};
+
+export function getJobPipelineSummary() {
+  return apiFetch<PipelineSummaryResponse>("/jobs/pipeline/summary");
+}
+
 export function listJobs(params?: Record<string, unknown>) {
   return apiFetch<Job[]>(withQuery("/jobs", params as Record<string, string | number | boolean | null | undefined>));
 }

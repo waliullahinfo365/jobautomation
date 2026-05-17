@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { JobMatchBlock } from "@/components/dashboard/JobMatchBlock";
 import { StatsCards } from "@/components/dashboard/StatsCards";
@@ -20,12 +20,8 @@ import type { Application } from "@/types/application";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { normalizeAutomationLogForUi, normalizeAutomationModuleForUi, normalizeJobForUi } from "@/lib/utils/resource";
 import * as automationApi from "@/lib/api/automation.api";
+import { getJobPipelineSummary } from "@/lib/api/jobs.api";
 import { showError, showSuccess } from "@/lib/ui/toast";
-
-const PIPELINE_STATUSES = [
-  "New", "Research", "Drafting", "Ready to Apply",
-  "Applied", "Interview", "Offer", "Rejected",
-] as const;
 
 function toJobSummary(job: Job): JobSummary {
   return {
@@ -66,6 +62,15 @@ export function DashboardPageClient() {
   const { t } = useTranslation();
   const { jobsQuery, applicationsQuery: appsQuery, automationQuery, refetchAll } = useDashboardOverview({ fallbackToMock: false });
   const [backfillLoading, setBackfillLoading] = useState(false);
+  const [pipelineData, setPipelineData] = useState<{ status: string; count: number }[] | null>(null);
+  const [pipelineLoading, setPipelineLoading] = useState(true);
+
+  useEffect(() => {
+    getJobPipelineSummary()
+      .then((res) => setPipelineData(res.pipeline))
+      .catch(() => setPipelineData(null))
+      .finally(() => setPipelineLoading(false));
+  }, []);
 
   const jobs = useMemo((): Job[] => {
     const raw = normalizeListResponse(jobsQuery.data);
@@ -124,10 +129,7 @@ export function DashboardPageClient() {
     }
   }, [refetchAll, t]);
 
-  const pipelineBreakdown = useMemo(
-    () => PIPELINE_STATUSES.map((status) => ({ status, count: jobs.filter((job) => job.status === status).length })),
-    [jobs]
-  );
+  const pipelineBreakdown = pipelineData ?? [];
 
   const isUsingAnyFallback =
     jobsQuery.isUsingFallback ||
@@ -155,9 +157,9 @@ export function DashboardPageClient() {
       <div className="jf-row-2 min-w-0">
         <ApplicationPipelineChart
           data={pipelineBreakdown}
-          loading={jobsQuery.loading}
-          error={jobsQuery.error}
-          isUsingFallback={jobsQuery.isUsingFallback}
+          loading={pipelineLoading}
+          error={pipelineData === null && !pipelineLoading ? new Error("Failed to load") : null}
+          isUsingFallback={false}
         />
         <UpcomingDeadlines jobs={jobSummaries} />
       </div>

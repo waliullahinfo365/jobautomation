@@ -27,6 +27,27 @@ function buildTestJobFilter(): Record<string, unknown> {
   };
 }
 
+const PIPELINE_STATUSES = ["New", "Research", "Drafting", "Ready to Apply", "Applied", "Applying", "Interview", "Offer", "Rejected"];
+
+export const getPipelineSummary = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const filter: Record<string, unknown> = { ...buildTenantFilter(tenantId), status: { $nin: ["Archived"] } };
+  filter.$nor = [buildTestJobFilter()];
+
+  const agg = await JobModel.aggregate([
+    { $match: filter },
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
+
+  const byStatus: Record<string, number> = {};
+  for (const row of agg) byStatus[String(row._id)] = Number(row.count);
+
+  const pipeline = PIPELINE_STATUSES.map((status) => ({ status, count: byStatus[status] ?? 0 }));
+  const totalActive = pipeline.reduce((sum, d) => sum + d.count, 0);
+
+  return successResponse(res, { pipeline, totalActive });
+});
+
 export const listJobs = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const { page, limit, skip } = getPagination(req.query);
@@ -281,7 +302,7 @@ recommendation: Concise recommended action.`;
 });
 
 export const applyToJob = asyncHandler(async (req: Request, res) => {
-  const tenantId = assertTenantId(req.user?.tenantId);
+  const tenantId = assertTenantId(req.tenantId);
   const { id } = req.params as { id: string };
   const userId = req.user?.id ?? "system";
 
