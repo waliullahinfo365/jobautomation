@@ -306,7 +306,7 @@ export const applyToJob = asyncHandler(async (req: Request, res) => {
   const { id } = req.params as { id: string };
   const userId = req.user?.id ?? "system";
 
-  const job = await findTenantScopedById(JobModel, id, tenantId);
+  const job = await findTenantScopedById(JobModel, tenantId, id);
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
 
   const j = job as Record<string, unknown>;
