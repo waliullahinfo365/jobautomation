@@ -24,9 +24,13 @@ export interface LinkedInApplyResult {
 
 const EASY_APPLY_BTN = [
   'button[aria-label*="Easy Apply"]',
+  'button[data-control-name="jobdetail_topcard_inapply"]',
   'button.jobs-apply-button',
   '.jobs-apply-button',
+  '.jobs-s-apply button',
+  '.jobs-unified-top-card__cta-container button',
   'button:has-text("Easy Apply")',
+  '[data-job-id] button:has-text("Apply")',
 ].join(", ");
 
 const NEXT_BTN = [
@@ -55,18 +59,26 @@ async function isLoggedIn(page: Page): Promise<boolean> {
 }
 
 async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "not-found"> {
-  await humanDelay(1500, 2500);
+  // Wait up to 12s for any Apply button to appear (LinkedIn is heavily JS-rendered)
+  const appeared = await page.waitForSelector(
+    [EASY_APPLY_BTN, 'button:has-text("Apply")', 'a:has-text("Apply on company website")'].join(", "),
+    { timeout: 12_000, state: "visible" }
+  ).catch(() => null);
 
-  // Check for Easy Apply
+  if (!appeared) return "not-found";
+
+  await humanDelay(800, 1500);
+
+  // Check for Easy Apply specifically
   const easyApplyBtn = page.locator(EASY_APPLY_BTN).first();
   if (await easyApplyBtn.isVisible().catch(() => false)) {
     await easyApplyBtn.click();
-    await humanDelay(1000, 2000);
+    await humanDelay(1200, 2000);
     return "easy-apply";
   }
 
   // Check for external Apply button
-  const externalBtn = page.locator('button:has-text("Apply"), a:has-text("Apply on company website")').first();
+  const externalBtn = page.locator('a:has-text("Apply on company website"), a[href*="apply"]').first();
   if (await externalBtn.isVisible().catch(() => false)) {
     return "external";
   }
@@ -102,9 +114,9 @@ export async function applyViaLinkedIn(input: {
 }): Promise<LinkedInApplyResult> {
   const { page } = input;
 
-  // Navigate to job
-  await page.goto(input.jobUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await humanDelay(2000, 3500);
+  // Navigate to job — use "load" so JS-rendered content (Apply button) is present
+  await page.goto(input.jobUrl, { waitUntil: "load", timeout: 45_000 });
+  await humanDelay(2500, 4000);
 
   if (!(await isLoggedIn(page))) {
     return { success: false, message: "LinkedIn session expired — re-run save-session to log in again", stepsCompleted: 0 };
