@@ -1,11 +1,28 @@
+import { IntegrationConnectionModel } from "@jobflow/database/models";
 import { saveSession } from "@jobflow/integrations/playwright/session-store";
-import { launchBrowser } from "@jobflow/integrations/playwright/browser";
+import { launchBrowser, humanDelay } from "@jobflow/integrations/playwright/browser";
 import type { LinkedInLoginPayload } from "@jobflow/shared/types/queue";
 import { logger } from "../utils/logger";
 
 const LOGIN_URL = "https://www.linkedin.com/login";
-const FEED_URL = "https://www.linkedin.com/feed";
-const TIMEOUT = 30_000;
+const TIMEOUT = 45_000;
+
+/** Write login attempt result back to MongoDB so the UI can poll it immediately */
+async function writeLoginResult(tenantId: string, status: "pending" | "connected" | "failed", message: string) {
+  await IntegrationConnectionModel.findOneAndUpdate(
+    { tenantId, provider: "playwright-session-linkedin-attempt" },
+    {
+      tenantId,
+      provider: "playwright-session-linkedin-attempt",
+      status: status === "connected" ? "Connected" : status === "pending" ? "Needs Attention" : "Disabled",
+      syncStatus: status,
+      errorMessage: status === "failed" ? message : undefined,
+      lastSyncAt: new Date(),
+      metadata: { message, updatedAt: new Date().toISOString() },
+    },
+    { upsert: true, new: true }
+  );
+}
 
 export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promise<{
   success: boolean;
@@ -13,62 +30,128 @@ export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promi
 }> {
   logger.info({ tenantId: payload.tenantId }, "Starting LinkedIn credential login");
 
+  await writeLoginResult(payload.tenantId, "pending", "Login in progress…");
+
   const session = await launchBrowser({ headless: true });
   const { page, context } = session;
 
   try {
+    // Navigate to login page
     await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT });
+    await humanDelay(1500, 2500);
 
-    // Fill credentials
-    await page.fill("#username", payload.email);
-    await page.fill("#password", payload.password);
+    // Check page loaded correctly
+    const pageUrl = page.url();
+    if (!pageUrl.includes("linkedin.com")) {
+      throw new Error(`Unexpected redirect to: ${pageUrl}`);
+    }
 
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: TIMEOUT }),
-      page.click('[data-litms-control-urn="login-submit"], button[type="submit"]'),
-    ]);
+    // Wait for email field and fill it slowly
+    await page.waitForSelector("#username", { timeout: 15_000 });
+    await humanDelay(800, 1500);
+    await page.click("#username");
+    await humanDelay(300, 600);
+    await page.type("#username", payload.email, { delay: 80 + Math.random() * 60 });
+
+    await humanDelay(600, 1200);
+
+    // Fill password
+    await page.click("#password");
+    await humanDelay(400, 800);
+    await page.type("#password", payload.password, { delay: 70 + Math.random() * 50 });
+
+    await humanDelay(1000, 2000);
+
+    // Click sign in
+    const submitBtn = page.locator('[data-litms-control-urn="login-submit"], button[type="submit"]').first();
+    await submitBtn.click();
+
+    // Wait for navigation — LinkedIn may take several seconds
+    try {
+      await page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: TIMEOUT });
+    } catch {
+      // navigation timeout is acceptable — page may just be loading slowly
+    }
+
+    await humanDelay(2000, 3000);
 
     const currentUrl = page.url();
+    logger.info({ tenantId: payload.tenantId, currentUrl }, "Post-login URL");
 
-    // Check for 2FA / verification challenge
-    if (currentUrl.includes("/checkpoint") || currentUrl.includes("/challenge") || currentUrl.includes("/uas/")) {
+    // --- Detect failure states ---
+
+    // Wrong password / account error
+    const errorVisible = await page
+      .locator('#error-for-password, .alert-content, [data-test-id="alert-bar-text"], .login__form_error_container')
+      .first()
+      .isVisible()
+      .catch(() => false);
+    if (errorVisible) {
+      const errorText = await page
+        .locator('#error-for-password, .alert-content, [data-test-id="alert-bar-text"], .login__form_error_container')
+        .first()
+        .textContent()
+        .catch(() => "");
       await session.close();
-      return {
-        success: false,
-        message:
-          "LinkedIn requires verification (2FA or CAPTCHA). Please log in manually via the CLI: pnpm save-session linkedin",
-      };
+      const msg = `Wrong email or password. LinkedIn says: "${errorText?.trim() ?? "Incorrect credentials"}"`;
+      await writeLoginResult(payload.tenantId, "failed", msg);
+      return { success: false, message: msg };
     }
 
-    // Check for error
-    const errorEl = await page.locator(".alert-content, .login__form_error_container").first().isVisible().catch(() => false);
-    if (errorEl) {
-      const errorText = await page.locator(".alert-content, .login__form_error_container").first().textContent().catch(() => "");
+    // CAPTCHA / security checkpoint
+    if (
+      currentUrl.includes("/checkpoint") ||
+      currentUrl.includes("/challenge") ||
+      currentUrl.includes("/uas/") ||
+      currentUrl.includes("security-verification") ||
+      currentUrl.includes("feed/security")
+    ) {
       await session.close();
-      return { success: false, message: `Login failed: ${errorText?.trim() ?? "Wrong email or password"}` };
+      const msg =
+        "LinkedIn is showing a security verification challenge. This usually happens when logging in from a new location (cloud server). " +
+        "Please try: (1) logging into LinkedIn from your phone/browser first to mark this device as trusted, then retry here, " +
+        "or (2) temporarily connect via a VPN on the same IP as your normal login location.";
+      await writeLoginResult(payload.tenantId, "failed", msg);
+      return { success: false, message: msg };
     }
 
-    // Verify we are logged in (landed on feed, home, or mynetwork)
+    // Still on login page — login didn't proceed
+    if (currentUrl.includes("/login")) {
+      // Take a screenshot hint from page title
+      const title = await page.title().catch(() => "");
+      await session.close();
+      const msg = `Login page did not advance (page: "${title}", url: ${currentUrl}). LinkedIn may be blocking automated login from this server IP. Try again or use a different network.`;
+      await writeLoginResult(payload.tenantId, "failed", msg);
+      return { success: false, message: msg };
+    }
+
+    // --- Confirm successful login ---
     const loggedIn =
       currentUrl.includes("/feed") ||
       currentUrl.includes("/home") ||
       currentUrl.includes("/mynetwork") ||
       currentUrl.includes("/jobs") ||
-      currentUrl === "https://www.linkedin.com/";
+      currentUrl === "https://www.linkedin.com/" ||
+      currentUrl.startsWith("https://www.linkedin.com/?");
 
     if (!loggedIn) {
-      // Try navigating to feed to confirm
-      await page.goto(FEED_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT });
+      // Navigate to feed to confirm session
+      await page.goto("https://www.linkedin.com/feed/", { waitUntil: "domcontentloaded", timeout: TIMEOUT });
+      await humanDelay(2000, 3000);
       const afterUrl = page.url();
+
       if (afterUrl.includes("/login") || afterUrl.includes("/checkpoint")) {
         await session.close();
-        return { success: false, message: "Login did not succeed — still on login or checkpoint page." };
+        const msg = `Session not established — redirected back to ${afterUrl}. LinkedIn may have blocked the login.`;
+        await writeLoginResult(payload.tenantId, "failed", msg);
+        return { success: false, message: msg };
       }
     }
 
-    // Save session to MongoDB
+    // Save session cookies + localStorage to MongoDB
     const storageState = await context.storageState();
     await saveSession({ tenantId: payload.tenantId, platform: "linkedin", storageState });
+    await writeLoginResult(payload.tenantId, "connected", "LinkedIn session connected successfully.");
 
     await session.close();
     logger.info({ tenantId: payload.tenantId }, "LinkedIn session saved successfully");
@@ -77,6 +160,7 @@ export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promi
     await session.close().catch(() => void 0);
     const msg = err instanceof Error ? err.message : String(err);
     logger.error({ tenantId: payload.tenantId, err: msg }, "LinkedIn login error");
+    await writeLoginResult(payload.tenantId, "failed", `Login error: ${msg}`);
     return { success: false, message: `Login error: ${msg}` };
   }
 }

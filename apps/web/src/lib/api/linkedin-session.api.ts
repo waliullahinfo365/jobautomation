@@ -3,6 +3,8 @@ import { apiFetch } from "./client";
 export interface LinkedInSessionStatus {
   connected: boolean;
   savedAt: string | null;
+  loginAttemptStatus?: "pending" | "connected" | "failed" | null;
+  loginError?: string | null;
 }
 
 export interface LinkedInLoginResult {

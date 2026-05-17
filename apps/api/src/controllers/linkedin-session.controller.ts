@@ -30,24 +30,41 @@ export const startLinkedInLogin = asyncHandler(async (req: Request, res) => {
   }, "LinkedIn login queued");
 });
 
-/** GET /integrations/linkedin/session — check session status */
+/** GET /integrations/linkedin/session — check session status + latest login attempt result */
 export const getLinkedInSessionStatus = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
 
-  const row = await IntegrationConnectionModel.findOne({
-    tenantId,
-    provider: "playwright-session-linkedin",
-    status: "Connected",
-  }).lean() as Record<string, unknown> | null;
+  const [sessionRow, attemptRow] = await Promise.all([
+    IntegrationConnectionModel.findOne({
+      tenantId,
+      provider: "playwright-session-linkedin",
+      status: "Connected",
+    }).lean() as Promise<Record<string, unknown> | null>,
+    IntegrationConnectionModel.findOne({
+      tenantId,
+      provider: "playwright-session-linkedin-attempt",
+    }).lean() as Promise<Record<string, unknown> | null>,
+  ]);
 
-  if (!row) {
-    return successResponse(res, { connected: false, savedAt: null }, "LinkedIn session status");
+  const attemptMeta = (attemptRow?.metadata as Record<string, unknown>) ?? {};
+  const attemptStatus = attemptRow?.syncStatus as string | undefined;
+  const attemptMessage = (attemptMeta.message as string | undefined) ?? undefined;
+
+  if (sessionRow) {
+    const meta = (sessionRow.metadata as Record<string, unknown>) ?? {};
+    return successResponse(res, {
+      connected: true,
+      savedAt: meta.savedAt ?? sessionRow.lastSyncAt ?? null,
+      loginError: null,
+    }, "LinkedIn session status");
   }
 
-  const meta = (row.metadata as Record<string, unknown>) ?? {};
+  // No active session — return attempt state so UI can show error immediately
   return successResponse(res, {
-    connected: true,
-    savedAt: meta.savedAt ?? row.lastSyncAt ?? null,
+    connected: false,
+    savedAt: null,
+    loginAttemptStatus: attemptStatus ?? null,  // "pending" | "connected" | "failed" | null
+    loginError: attemptStatus === "failed" ? (attemptMessage ?? null) : null,
   }, "LinkedIn session status");
 });
 
@@ -55,10 +72,10 @@ export const getLinkedInSessionStatus = asyncHandler(async (req: Request, res) =
 export const deleteLinkedInSession = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
 
-  await IntegrationConnectionModel.deleteOne({
-    tenantId,
-    provider: "playwright-session-linkedin",
-  });
+  await Promise.all([
+    IntegrationConnectionModel.deleteOne({ tenantId, provider: "playwright-session-linkedin" }),
+    IntegrationConnectionModel.deleteOne({ tenantId, provider: "playwright-session-linkedin-attempt" }),
+  ]);
 
   return successResponse(res, { disconnected: true }, "LinkedIn session removed");
 });

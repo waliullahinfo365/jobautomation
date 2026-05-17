@@ -24,6 +24,7 @@ export function LinkedInSessionCard() {
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   async function fetchStatus() {
     try {
@@ -42,7 +43,9 @@ export function LinkedInSessionCard() {
     if (attempts >= POLL_MAX_ATTEMPTS) {
       setPolling(false);
       setConnecting(false);
-      showError("LinkedIn login timed out. Please check your credentials and try again.");
+      const msg = "LinkedIn login timed out. Please check your credentials and try again.";
+      setLoginError(msg);
+      showError(msg);
       return;
     }
 
@@ -50,21 +53,34 @@ export function LinkedInSessionCard() {
 
     try {
       const s = await getLinkedInSessionStatus();
+
+      // Success
       if (s.connected) {
         setStatus(s);
+        setLoginError(null);
         setPolling(false);
         setConnecting(false);
         showSuccess("LinkedIn connected! Your session is now active.");
         return;
       }
+
+      // Job failed — stop polling immediately and surface the error
+      if (s.loginAttemptStatus === "failed" && s.loginError) {
+        setPolling(false);
+        setConnecting(false);
+        setLoginError(s.loginError);
+        showError("LinkedIn login failed — see details below.");
+        return;
+      }
     } catch {
-      // keep polling
+      // keep polling on network errors
     }
 
     await pollForSession(attempts + 1);
   }
 
   async function handleLogin(email: string, password: string) {
+    setLoginError(null);
     try {
       setConnecting(true);
       const result = await startLinkedInLogin(email, password);
@@ -102,7 +118,9 @@ export function LinkedInSessionCard() {
     ? "Needs Attention"
     : status?.connected
       ? "Connected"
-      : "Not Connected";
+      : loginError
+        ? "Needs Attention"
+        : "Not Connected";
 
   const savedAt = status?.savedAt
     ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(
@@ -130,17 +148,21 @@ export function LinkedInSessionCard() {
         <CardContent className="space-y-3 text-sm">
           {polling ? (
             <p className="text-sm text-muted-foreground animate-pulse">
-              Connecting to LinkedIn… please wait (~15 s)
+              Connecting to LinkedIn… please wait (~20 s)
             </p>
           ) : status?.connected ? (
             <div>
               <p className="text-xs text-muted-foreground">Session saved</p>
               <p>{savedAt ?? "Active"}</p>
             </div>
+          ) : loginError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+              <p className="font-semibold mb-1">Login failed</p>
+              <p className="whitespace-pre-wrap">{loginError}</p>
+            </div>
           ) : (
             <p className="text-muted-foreground text-xs">
-              No active session. Connect to enable automated job applications via LinkedIn Easy
-              Apply.
+              No active session. Connect to enable automated job applications via LinkedIn Easy Apply.
             </p>
           )}
 
