@@ -31,6 +31,9 @@ export function LinkedInSessionCard() {
     try {
       const s = await getLinkedInSessionStatus();
       setStatus(s);
+      if (s.sessionExpired && s.loginError) {
+        setLoginError(s.loginError);
+      }
     } catch {
       // ignore — API may be loading
     }

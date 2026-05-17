@@ -10,7 +10,7 @@
  * 3. Playwright Chromium is installed in the worker Docker image.
  */
 
-import { JobModel, UserModel, AutomationLogModel } from "@jobflow/database/models";
+import { JobModel, UserModel, AutomationLogModel, IntegrationConnectionModel } from "@jobflow/database/models";
 import { runApply } from "@jobflow/integrations/playwright";
 import { detectPlatform } from "@jobflow/integrations/playwright";
 import type { JobApplyPayload } from "@jobflow/shared/types/queue";
@@ -166,6 +166,11 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
       status: "New",
       lastUpdated: new Date(),
     });
+    // Mark the LinkedIn session as expired so the Integrations panel shows a warning
+    await IntegrationConnectionModel.findOneAndUpdate(
+      { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
+      { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
+    ).catch(() => void 0);
   }
   // If failed for other reason, leave as "Applying" so user can see
 

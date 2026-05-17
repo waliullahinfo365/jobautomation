@@ -109,10 +109,12 @@ export const getLinkedInSessionStatus = asyncHandler(async (req: Request, res) =
 
   if (sessionRow) {
     const meta = (sessionRow.metadata as Record<string, unknown>) ?? {};
+    const sessionExpired = meta.sessionExpired === true;
     return successResponse(res, {
-      connected: true,
+      connected: !sessionExpired,
+      sessionExpired,
       savedAt: meta.savedAt ?? sessionRow.lastSyncAt ?? null,
-      loginError: null,
+      loginError: sessionExpired ? "LinkedIn session expired. Please re-import your cookies from Settings → Integrations." : null,
     }, "LinkedIn session status");
   }
 
