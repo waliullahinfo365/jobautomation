@@ -260,31 +260,45 @@ interface ResearchJson {
 }
 
 function formatResearchAsText(r: ResearchJson, ctx: JobContext): string {
+  const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   return [
-    `# Research Brief — ${ctx.company} — ${ctx.position}`,
+    `RESEARCH BRIEF`,
+    "=".repeat(60),
+    `Role:     ${ctx.position}`,
+    `Company:  ${ctx.company}`,
+    `Date:     ${date}`,
+    "=".repeat(60),
     "",
-    "## Company Overview",
+    "COMPANY OVERVIEW",
+    "-".repeat(40),
     r.company_overview,
     "",
-    "## Role Summary",
+    "ROLE SUMMARY",
+    "-".repeat(40),
     r.role_summary,
     "",
-    "## Candidate Match",
+    "CANDIDATE MATCH",
+    "-".repeat(40),
     r.candidate_match,
     "",
-    "## Possible Gaps",
+    "POSSIBLE GAPS",
+    "-".repeat(40),
     r.possible_gaps,
     "",
-    "## Talking Points",
-    ...r.talking_points.map((p) => `- ${p}`),
+    "TALKING POINTS",
+    "-".repeat(40),
+    ...r.talking_points.map((p) => `  • ${p}`),
     "",
-    "## Interview Questions",
-    ...r.interview_questions.map((q) => `- ${q}`),
+    "LIKELY INTERVIEW QUESTIONS",
+    "-".repeat(40),
+    ...r.interview_questions.map((q, i) => `  ${i + 1}. ${q}`),
     "",
-    "## Application Strategy",
+    "APPLICATION STRATEGY",
+    "-".repeat(40),
     r.application_strategy,
     "",
-    "## Sources Note",
+    "NOTE ON SOURCES",
+    "-".repeat(40),
     r.sources_note,
   ].join("\n");
 }
@@ -493,6 +507,44 @@ function parseCoverLetterJson(text: string): CoverLetterJson | null {
   }
 }
 
+function formatCoverLetterDocument(parsed: CoverLetterJson, ctx: JobContext): string {
+  const lines: string[] = [];
+
+  // Document header (shown in Google Docs / plain text viewer)
+  lines.push(`Cover Letter — ${ctx.position} at ${ctx.company}`);
+  lines.push("=".repeat(60));
+  lines.push("");
+
+  // Email subject line block
+  lines.push(`Subject: ${parsed.subject}`);
+  lines.push("");
+  lines.push("-".repeat(60));
+  lines.push("");
+
+  // The formatted letter itself (AI already adds header + sign-off)
+  lines.push(parsed.cover_letter);
+
+  // Metadata section for recruiter/candidate reference
+  if (parsed.key_customizations?.length) {
+    lines.push("");
+    lines.push("-".repeat(60));
+    lines.push("Key Customisations (AI notes for candidate review):");
+    for (const kc of parsed.key_customizations) {
+      lines.push(`  • ${kc}`);
+    }
+  }
+
+  if (parsed.missing_info_warnings?.length) {
+    lines.push("");
+    lines.push("Gaps Identified (requirements not evidenced in CV):");
+    for (const w of parsed.missing_info_warnings) {
+      lines.push(`  ⚠  ${w}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 export async function createCoverLetterDocument(input: {
   tenantId: string;
   userId: string;
@@ -541,21 +593,27 @@ export async function createCoverLetterDocument(input: {
     });
   }
 
+  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const prompt = [
-    "You are a professional cover letter writer. Output ONLY valid JSON — no markdown, no commentary.",
+    "You are a senior professional cover letter writer. Output ONLY valid JSON — no markdown fences, no commentary outside the JSON.",
     "Return a single JSON object with exactly these keys:",
-    '  "subject": string — email subject line for this application (e.g. "Application for Senior Engineer at Acme Corp")',
-    '  "cover_letter": string — full cover letter text, 250-350 words, plain text with line breaks (\\n), tailored to the role',
+    '  "subject": string — concise email subject line (e.g. "Application for Senior Software Engineer – Acme Corp")',
+    '  "cover_letter": string — the complete, fully-formatted cover letter as a SINGLE string using \\n for line breaks.',
+    "    The letter MUST follow this exact professional structure:",
+    `    [Candidate full name]\\n[Today's date: ${today}]\\n\\nHiring Manager\\n[Company name] Recruitment Team\\n\\nDear Hiring Manager,\\n\\n[OPENING PARAGRAPH — 2-3 sentences: state the role you are applying for, where you saw it, and one compelling hook about your candidacy]\\n\\n[BODY PARAGRAPH 1 — 3-4 sentences: highlight your most relevant experience and key achievement with a concrete metric from your CV]\\n\\n[BODY PARAGRAPH 2 — 3-4 sentences: connect your skills to the specific requirements of this role; show you understand what the company does]\\n\\n[CLOSING PARAGRAPH — 2-3 sentences: express enthusiasm, note you have attached your CV, and invite them to arrange an interview]\\n\\nYours sincerely,\\n\\n[Candidate full name]`,
     '  "key_customizations": array of 3-5 strings — specific ways this letter is tailored to the role/company',
-    '  "missing_info_warnings": array of strings — any info missing from the CV that the JD requires (empty array if none)',
+    '  "missing_info_warnings": array of strings — requirements in the JD not evidenced in the CV (empty array if none)',
     "",
     "STRICT RULES:",
-    "- Use ONLY employers, titles, skills, tools, and metrics evidenced in the CV below.",
-    "- Do not invent degrees, certifications, employers, or achievements not in the CV.",
-    "- If the JD requires experience not in the CV, note it in missing_info_warnings; do not fabricate it in the letter.",
-    "- When a reference cover letter is provided, mirror its tone and formality.",
+    "- Use ONLY employers, titles, skills, and achievements that are explicitly stated in the CV below.",
+    "- Every metric or achievement cited must come directly from the CV — do NOT invent numbers or employers.",
+    "- If the JD requires something not in the CV, note it in missing_info_warnings only; never fabricate it in the letter.",
+    "- When a reference cover letter is provided, mirror its tone, vocabulary level, and formality — do not copy its content.",
+    "- The letter body (excluding header and sign-off) must be 280–380 words.",
+    "- Use British English spelling unless the candidate's CV clearly uses American English.",
+    "- Do NOT include placeholder text like [Company Address] — omit fields you cannot confidently fill.",
     "",
-    `Candidate name (for sign-off only): ${ctx.userName ?? "Unknown User"}`,
+    `Candidate name: ${ctx.userName ?? "Unknown User"}`,
     `Company: ${ctx.company}`,
     `Position: ${ctx.position}`,
     `Location: ${ctx.location ?? "Not specified"}`,
@@ -566,7 +624,7 @@ export async function createCoverLetterDocument(input: {
 
   let generated: ClaudeResult;
   try {
-    generated = await generateWithClaude({ prompt, maxTokens: 1500, temperature: 0.3 });
+    generated = await generateWithClaude({ prompt, maxTokens: 2000, temperature: 0.3 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Claude generation failed";
     await writeAutomationLog({
@@ -588,7 +646,8 @@ export async function createCoverLetterDocument(input: {
   }
 
   const parsed = parseCoverLetterJson(generated.text);
-  const coverLetterText = parsed?.cover_letter ?? generated.text;
+  // Full formatted document for Drive/storage; raw letter body for form-fill attachment
+  const coverLetterText = parsed ? formatCoverLetterDocument(parsed, ctx) : generated.text;
 
   const doc = await persistDocument({
     tenantId: ctx.tenantId,
@@ -755,12 +814,24 @@ export async function createAiAnalysisDocument(input: {
   const profileBlock = formatProfileContextBlock(profile);
   const title = sanitizeTitle(`AI Analysis — ${ctx.company} — ${ctx.position}`);
 
+  const analysisDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const prompt = [
-    "Produce a structured job-fit analysis in plain text with headings:",
-    "Fit summary",
-    "Missing information",
-    "Recommended next actions",
-    "Suggested follow-up",
+    `Produce a professional job-fit analysis report. Use this exact structure with these section headers:`,
+    "",
+    `JOB-FIT ANALYSIS REPORT`,
+    `${"=".repeat(60)}`,
+    `Role:    ${ctx.position}`,
+    `Company: ${ctx.company}`,
+    `Date:    ${analysisDate}`,
+    `${"=".repeat(60)}`,
+    "",
+    "Then write each of the following four sections with a 40-dash underline beneath each heading:",
+    "1. FIT SUMMARY — 3-5 sentences assessing overall suitability based on the CV vs the JD",
+    "2. SKILL GAPS & MISSING INFORMATION — bullet list of requirements in the JD not evidenced in the CV",
+    "3. RECOMMENDED NEXT ACTIONS — numbered list of concrete steps to strengthen the application",
+    "4. SUGGESTED INTERVIEW PREPARATION — 3-5 questions the candidate should prepare answers for",
+    "",
+    "Write in a professional, objective tone. Base every claim on the CV and JD provided. Output plain text only — no markdown.",
     "",
     `Company: ${ctx.company}`,
     `Position: ${ctx.position}`,
