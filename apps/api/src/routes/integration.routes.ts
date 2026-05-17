@@ -3,6 +3,7 @@ import {
   startLinkedInLogin,
   getLinkedInSessionStatus,
   deleteLinkedInSession,
+  importLinkedInCookies,
 } from "../controllers/linkedin-session.controller";
 import {
   connectIntegration,
@@ -61,6 +62,7 @@ integrationRoutes.post(
   testIntegration
 );
 integrationRoutes.post("/linkedin/session", requirePermission("integrations.connect"), startLinkedInLogin);
+integrationRoutes.post("/linkedin/session/cookies", requirePermission("integrations.connect"), importLinkedInCookies);
 integrationRoutes.get("/linkedin/session", requirePermission("integrations.read"), getLinkedInSessionStatus);
 integrationRoutes.delete("/linkedin/session", requirePermission("integrations.disconnect"), deleteLinkedInSession);
 

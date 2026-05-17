@@ -11,6 +11,7 @@ import {
   startLinkedInLogin,
   getLinkedInSessionStatus,
   deleteLinkedInSession,
+  importLinkedInCookies,
   type LinkedInSessionStatus,
 } from "@/lib/api/linkedin-session.api";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
@@ -93,12 +94,31 @@ export function LinkedInSessionCard() {
 
       setModalOpen(false);
       setPolling(true);
-      showInfo("Login job queued — connecting to LinkedIn… this takes ~15 seconds.");
+      showInfo("Login job queued — connecting to LinkedIn… this takes ~20 seconds.");
       await pollForSession();
     } catch (e) {
       setConnecting(false);
       setPolling(false);
       showError(e instanceof Error ? e.message : "Failed to start LinkedIn login.");
+    }
+  }
+
+  async function handleCookieImport(cookieJson: string) {
+    setLoginError(null);
+    try {
+      setConnecting(true);
+      const result = await importLinkedInCookies(cookieJson);
+      setConnecting(false);
+      if (result.connected) {
+        await fetchStatus();
+        setModalOpen(false);
+        showSuccess(`LinkedIn session imported (${result.cookieCount} cookies). You're connected!`);
+      }
+    } catch (e) {
+      setConnecting(false);
+      const msg = e instanceof Error ? e.message : "Failed to import cookies.";
+      setLoginError(msg);
+      showError(msg);
     }
   }
 
@@ -195,7 +215,8 @@ export function LinkedInSessionCard() {
         onClose={() => {
           if (!connecting) setModalOpen(false);
         }}
-        onSubmit={handleLogin}
+        onSubmitCredentials={handleLogin}
+        onSubmitCookies={handleCookieImport}
       />
 
       <ConfirmDialog

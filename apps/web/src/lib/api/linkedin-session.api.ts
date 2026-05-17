@@ -27,3 +27,10 @@ export function getLinkedInSessionStatus(): Promise<LinkedInSessionStatus> {
 export function deleteLinkedInSession(): Promise<{ disconnected: boolean }> {
   return apiFetch<{ disconnected: boolean }>("/integrations/linkedin/session", { method: "DELETE" });
 }
+
+export function importLinkedInCookies(cookies: string): Promise<{ connected: boolean; cookieCount: number }> {
+  return apiFetch<{ connected: boolean; cookieCount: number }>("/integrations/linkedin/session/cookies", {
+    method: "POST",
+    body: { cookies },
+  });
+}
