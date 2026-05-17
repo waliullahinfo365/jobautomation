@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { authService, getGoogleLoginAuthorizationUrl, requestPasswordReset, confirmPasswordReset } from "../services/auth.service";
 import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
+import { UserModel } from "@jobflow/database/models";
+import { ApiError } from "../utils/errors";
 
 export const registerHandler = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.registerUser({
@@ -36,6 +38,31 @@ export const meHandler = asyncHandler(async (req: Request, res: Response) => {
   }
   const result = await authService.getCurrentUser({ userId, tenantId });
   return successResponse(res, result, "Current user");
+});
+
+export const getPreferencesHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const tenantId = req.user?.tenantId;
+  if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
+  const user = await UserModel.findOne({ _id: userId, tenantId }).lean();
+  if (!user) throw new ApiError("User not found", 404, "NOT_FOUND");
+  const u = user as Record<string, unknown>;
+  return successResponse(res, (u.preferences as Record<string, unknown>) ?? {});
+});
+
+export const updatePreferencesHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const tenantId = req.user?.tenantId;
+  if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
+  const allowed = ["phone", "location", "linkedinUrl", "websiteUrl", "yearsExperience", "currentTitle", "desiredSalary", "noticePeriod", "rightToWork", "requiresSponsorship"];
+  const patch: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in req.body) patch[`preferences.${key}`] = req.body[key];
+  }
+  const user = await UserModel.findOneAndUpdate({ _id: userId, tenantId }, { $set: patch }, { new: true }).lean();
+  if (!user) throw new ApiError("User not found", 404, "NOT_FOUND");
+  const u = user as Record<string, unknown>;
+  return successResponse(res, (u.preferences as Record<string, unknown>) ?? {}, "Preferences updated");
 });
 
 export const forgotPasswordHandler = asyncHandler(async (req: Request, res: Response) => {

@@ -2,6 +2,7 @@
 
 import type { ProfileSettings } from "@/types/settings";
 import { SettingSectionCard } from "./SettingSectionCard";
+import { AutoApplyProfileCard } from "./AutoApplyProfileCard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -17,6 +18,7 @@ export function ProfileSection({ profile, onChange }: ProfileSectionProps) {
   const { t, locale, setLocale } = useTranslation();
 
   return (
+    <div className="space-y-6">
     <SettingSectionCard title={t("settings.section.profile")} description={t("profile.description")}>
       <div className="space-y-4">
         <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
@@ -60,5 +62,7 @@ export function ProfileSection({ profile, onChange }: ProfileSectionProps) {
         />
       </div>
     </SettingSectionCard>
+    <AutoApplyProfileCard />
+    </div>
   );
 }
