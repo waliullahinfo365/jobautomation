@@ -199,14 +199,46 @@ export async function applyViaLinkedIn(input: {
         return { success: true, message: `DRY RUN — filled ${steps} steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
       }
 
-      await submitBtn.click();
-      await humanDelay(2000, 3000);
+      // Scroll submit button into view and wait for it to be enabled
+      await submitBtn.scrollIntoViewIfNeeded().catch(() => void 0);
+      await humanDelay(500, 800);
+
+      // Try normal click first, then force click, then JS click
+      const clicked = await submitBtn.click({ timeout: 5000 }).then(() => true).catch(() => false);
+      if (!clicked) {
+        await submitBtn.click({ force: true }).catch(() => void 0);
+      }
+
+      // Wait up to 8s for confirmation or modal to close
+      await humanDelay(3000, 4000);
+
+      // Modal closing = success (LinkedIn closes it after submit)
+      const modalStillOpen = await page.locator('[role="dialog"]').isVisible().catch(() => false);
 
       const confirmed =
+        !modalStillOpen ||
         (await page.locator('h2:has-text("Your application was sent")').isVisible().catch(() => false)) ||
         (await page.locator('[data-test-modal-id="application-submitted-modal"]').isVisible().catch(() => false)) ||
         (await page.locator('text="Application submitted"').isVisible().catch(() => false)) ||
-        (await page.locator('text="applied"').isVisible().catch(() => false));
+        (await page.locator('[class*="post-apply"]').isVisible().catch(() => false)) ||
+        (await page.locator('text="applied to"').isVisible().catch(() => false));
+
+      // If modal is still open, check if it changed to a success state
+      if (!confirmed && modalStillOpen) {
+        // Wait a bit more — LinkedIn sometimes takes time to show confirmation
+        await humanDelay(2000, 3000);
+        const confirmedLate =
+          (await page.locator('h2:has-text("Your application was sent")').isVisible().catch(() => false)) ||
+          !(await page.locator('[role="dialog"]').isVisible().catch(() => false));
+
+        return {
+          success: confirmedLate,
+          message: confirmedLate
+            ? `Application submitted after ${steps} steps: ${stepLog.join(" → ")}`
+            : `Submit clicked but modal still open and no confirmation. Steps: ${stepLog.join(" → ")}`,
+          stepsCompleted: steps,
+        };
+      }
 
       return {
         success: confirmed,
@@ -246,6 +278,8 @@ export async function applyViaLinkedIn(input: {
     // Click Next
     const nextBtn = page.locator(NEXT_BTN).first();
     if (await nextBtn.isVisible().catch(() => false)) {
+      await nextBtn.scrollIntoViewIfNeeded().catch(() => void 0);
+      await humanDelay(300, 600);
       await nextBtn.click();
       await humanDelay(1200, 2000);
     } else {
