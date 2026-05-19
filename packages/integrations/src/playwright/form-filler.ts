@@ -35,11 +35,13 @@ export interface UserProfile {
 
 export interface FormField {
   label: string;
-  type: "text" | "textarea" | "select" | "radio" | "checkbox" | "file" | "unknown";
+  type: "text" | "number" | "textarea" | "select" | "radio" | "checkbox" | "file" | "unknown";
   required: boolean;
   options?: string[];
   selector: string;
   currentValue?: string;
+  min?: string;
+  max?: string;
 }
 
 export interface FillInstruction {
@@ -121,6 +123,7 @@ export async function extractFormFields(page: Page): Promise<FormField[]> {
       else if (inputType === "radio") type = "radio";
       else if (inputType === "checkbox") type = "checkbox";
       else if (inputType === "file") type = "file";
+      else if (inputType === "number") type = "number";
       else if (inputType === "hidden") return;
 
       const options: string[] = [];
@@ -143,7 +146,9 @@ export async function extractFormFields(page: Page): Promise<FormField[]> {
             ? el.options[el.selectedIndex]?.text || ""
             : "";
 
-      fields.push({ label, type, required, options, selector, currentValue });
+      const min = el.getAttribute("min") ?? undefined;
+      const max = el.getAttribute("max") ?? undefined;
+      fields.push({ label, type, required, options, selector, currentValue, min, max });
     });
 
     return fields;
@@ -167,6 +172,8 @@ async function askAiForFills(
       options: f.options,
       selector: f.selector,
       current: f.currentValue,
+      ...(f.min !== undefined ? { min: f.min } : {}),
+      ...(f.max !== undefined ? { max: f.max } : {}),
     })),
     null,
     2
@@ -214,6 +221,7 @@ Rules:
 - For "Are you authorized to work?" type questions: answer based on rightToWork field
 - For "Do you require sponsorship?" type questions: answer based on requiresSponsorship field
 - Prefer "yes" for questions like "Are you available for interview?"
+- For number fields (type=number): ALWAYS provide a positive number. If the field asks for years of experience in a skill, use the candidate's total years experience or a reasonable estimate (never 0). If min is specified, the value must be >= min. Format as an integer string like "3" unless the field clearly needs a decimal.
 
 Respond with ONLY the JSON array, no markdown, no explanation.`;
 
@@ -282,7 +290,7 @@ async function applyFills(page: Page, instructions: FillInstruction[]): Promise<
         } else {
           await page.uncheck(ins.selector).catch(() => void 0);
         }
-      } else if (ins.type === "textarea" || ins.type === "text") {
+      } else if (ins.type === "textarea" || ins.type === "text" || ins.type === "number") {
         await humanType(page, ins.selector, ins.value);
       }
 
@@ -335,9 +343,25 @@ export async function fillFormPage(input: {
   const nonFileFields = fields.filter((f) => f.type !== "file");
   const fileFields = fields.filter((f) => f.type === "file");
 
-  // AI fills text/select/radio/checkbox
+  // AI fills text/select/radio/checkbox/number
   const instructions = await askAiForFills(nonFileFields, input.profile, input.jobContext);
   const { filled, errors } = await applyFills(input.page, instructions);
+
+  // Safety pass: required number fields that are still 0 or empty cause validation errors.
+  // Fill them with the profile's yearsExperience or a safe default.
+  const filledSelectorsAfterAi = new Set(filled.map((f) => f.selector));
+  const numberFields = nonFileFields.filter((f) => f.type === "number");
+  for (const nf of numberFields) {
+    if (filledSelectorsAfterAi.has(nf.selector)) continue;
+    const currentVal = await input.page.locator(nf.selector).inputValue().catch(() => "");
+    const numVal = parseFloat(currentVal);
+    const minVal = nf.min !== undefined ? parseFloat(nf.min) : 0;
+    if (!currentVal || isNaN(numVal) || numVal <= 0 || numVal < minVal) {
+      const fallback = String(input.profile.yearsExperience ?? 3);
+      await humanType(input.page, nf.selector, fallback).catch(() => void 0);
+      filled.push({ selector: nf.selector, value: fallback, type: "number", label: nf.label });
+    }
+  }
 
   // Handle file uploads separately
   const skipped: string[] = [];
