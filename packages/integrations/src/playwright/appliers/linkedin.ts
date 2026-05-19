@@ -38,23 +38,32 @@ const EASY_APPLY_BTN = [
   'span:has-text("Easy Apply")',
 ].join(", ");
 
+// All Next selectors MUST be scoped to the modal to avoid matching page-level carousel buttons
 const NEXT_BTN = [
-  'button[aria-label="Continue to next step"]',
-  'button[aria-label="Review your application"]',
-  'button[aria-label="Next"]',
-  'button:has-text("Next")',
-  'button:has-text("Review")',
-  'button:has-text("Continue")',
-  'button:has-text("Save and continue")',
+  '.jobs-easy-apply-modal button[aria-label="Continue to next step"]',
+  '.jobs-easy-apply-modal button[aria-label="Review your application"]',
+  '.jobs-easy-apply-modal button[aria-label="Next"]',
+  '.jobs-easy-apply-modal button:has-text("Next")',
+  '.jobs-easy-apply-modal button:has-text("Review")',
+  '.jobs-easy-apply-modal button:has-text("Continue")',
+  '.jobs-easy-apply-modal button:has-text("Save and continue")',
+  '[role="dialog"] button[aria-label="Continue to next step"]',
+  '[role="dialog"] button[aria-label="Review your application"]',
+  '[role="dialog"] button[aria-label="Next"]:not([data-testid*="carousel"])',
+  '[role="dialog"] button:has-text("Next"):not([data-testid*="carousel"])',
+  '[role="dialog"] button:has-text("Review")',
+  '[role="dialog"] button:has-text("Continue")',
+  '[role="dialog"] button:has-text("Save and continue")',
   '.jobs-easy-apply-modal footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
   '[role="dialog"] footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
 ].join(", ");
 
 const SUBMIT_BTN = [
-  'button[aria-label="Submit application"]',
-  'button:has-text("Submit application")',
-  'button:has-text("Submit")',
-  'button[aria-label*="Submit"]',
+  '.jobs-easy-apply-modal button[aria-label="Submit application"]',
+  '[role="dialog"] button[aria-label="Submit application"]',
+  '.jobs-easy-apply-modal button:has-text("Submit application")',
+  '[role="dialog"] button:has-text("Submit application")',
+  '[role="dialog"] button[aria-label*="Submit"]',
 ].join(", ");
 
 const DISMISS_BTN = [
@@ -287,7 +296,7 @@ export async function applyViaLinkedIn(input: {
     if (await nextBtn.isVisible().catch(() => false)) {
       await nextBtn.scrollIntoViewIfNeeded().catch(() => void 0);
       await humanDelay(300, 600);
-      await nextBtn.click();
+      await nextBtn.click({ force: true, timeout: 10_000 });
       await humanDelay(1200, 2000);
     } else {
       // Log all visible buttons for debugging
