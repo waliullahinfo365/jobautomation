@@ -292,7 +292,11 @@ async function applyFills(page: Page, instructions: FillInstruction[]): Promise<
         } else {
           await page.uncheck(ins.selector).catch(() => void 0);
         }
-      } else if (ins.type === "textarea" || ins.type === "text" || ins.type === "number") {
+      } else if (ins.type === "number") {
+        // Use locator.fill() for number inputs — reliably updates React controlled state
+        await page.locator(ins.selector).fill(ins.value).catch(() => void 0);
+        await page.locator(ins.selector).press("Tab").catch(() => void 0);
+      } else if (ins.type === "textarea" || ins.type === "text") {
         await humanType(page, ins.selector, ins.value);
       }
 
@@ -358,7 +362,8 @@ export async function fillFormPage(input: {
     const minVal = nf.min !== undefined ? parseFloat(nf.min) : 0.1;
     if (!currentVal || isNaN(numVal) || numVal <= 0 || numVal < minVal) {
       const fallback = String(input.profile.yearsExperience ?? 3);
-      await humanType(input.page, nf.selector, fallback).catch(() => void 0);
+      await input.page.locator(nf.selector).fill(fallback).catch(() => void 0);
+      await input.page.locator(nf.selector).press("Tab").catch(() => void 0);
       // Update filled list — replace if already there, else push
       const existingIdx = filled.findIndex((f) => f.selector === nf.selector);
       const entry = { selector: nf.selector, value: fallback, type: "number" as const, label: nf.label };

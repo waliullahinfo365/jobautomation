@@ -126,31 +126,26 @@ async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "
   return "not-found";
 }
 
-/** Force-fill all number inputs inside the modal that are 0 or empty using React-compatible events */
+/** Fill all visible number inputs that are 0 or empty using Playwright's fill (React-compatible) */
 async function fixNumberInputs(page: Page, yearsExperience: number): Promise<void> {
   try {
-    await page.evaluate((fallback) => {
-      const modal = document.querySelector('[role="dialog"], .jobs-easy-apply-modal');
-      if (!modal) return;
-      const inputs = modal.querySelectorAll('input[type="number"], input[type="text"]');
-      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-      inputs.forEach((el) => {
-        const input = el as HTMLInputElement;
-        const val = parseFloat(input.value);
-        const min = parseFloat(input.getAttribute("min") ?? "0");
-        // Only fix number-like inputs that are 0, empty, or below min
-        if (input.type === "number" || (input.type === "text" && !isNaN(min))) {
-          if (!input.value || isNaN(val) || val <= 0 || val < min) {
-            nativeSetter?.call(input, String(fallback));
-            input.dispatchEvent(new Event("input", { bubbles: true }));
-            input.dispatchEvent(new Event("change", { bubbles: true }));
-            input.dispatchEvent(new Event("blur", { bubbles: true }));
-          }
-        }
-      });
-    }, yearsExperience);
+    // Only target type="number" inputs — NOT text inputs (would corrupt name/location fields)
+    const inputs = page.locator('input[type="number"]');
+    const count = await inputs.count().catch(() => 0);
+    for (let i = 0; i < count; i++) {
+      const input = inputs.nth(i);
+      if (!await input.isVisible().catch(() => false)) continue;
+      const val = await input.inputValue().catch(() => "");
+      const numVal = parseFloat(val);
+      if (!val || isNaN(numVal) || numVal <= 0) {
+        // locator.fill() uses Playwright's InputEvent — reliably updates React state
+        await input.fill(String(yearsExperience)).catch(() => void 0);
+        await input.press("Tab").catch(() => void 0);
+        await humanDelay(200, 400);
+      }
+    }
   } catch {
-    // ignore — best effort
+    // ignore
   }
 }
 
