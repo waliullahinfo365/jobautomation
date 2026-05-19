@@ -349,19 +349,21 @@ export async function fillFormPage(input: {
   const instructions = await askAiForFills(nonFileFields, input.profile, input.jobContext);
   const { filled, errors } = await applyFills(input.page, instructions);
 
-  // Safety pass: required number fields that are still 0 or empty cause validation errors.
-  // Fill them with the profile's yearsExperience or a safe default.
-  const filledSelectorsAfterAi = new Set(filled.map((f) => f.selector));
+  // Safety pass: check ALL number fields after AI fills — including AI-filled ones.
+  // If value is 0, empty, or below min, override with yearsExperience or fallback.
   const numberFields = nonFileFields.filter((f) => f.type === "number");
   for (const nf of numberFields) {
-    if (filledSelectorsAfterAi.has(nf.selector)) continue;
     const currentVal = await input.page.locator(nf.selector).inputValue().catch(() => "");
     const numVal = parseFloat(currentVal);
-    const minVal = nf.min !== undefined ? parseFloat(nf.min) : 0;
+    const minVal = nf.min !== undefined ? parseFloat(nf.min) : 0.1;
     if (!currentVal || isNaN(numVal) || numVal <= 0 || numVal < minVal) {
       const fallback = String(input.profile.yearsExperience ?? 3);
       await humanType(input.page, nf.selector, fallback).catch(() => void 0);
-      filled.push({ selector: nf.selector, value: fallback, type: "number", label: nf.label });
+      // Update filled list — replace if already there, else push
+      const existingIdx = filled.findIndex((f) => f.selector === nf.selector);
+      const entry = { selector: nf.selector, value: fallback, type: "number" as const, label: nf.label };
+      if (existingIdx >= 0) filled[existingIdx] = entry;
+      else filled.push(entry);
     }
   }
 
