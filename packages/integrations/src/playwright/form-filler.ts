@@ -126,6 +126,11 @@ export async function extractFormFields(page: Page): Promise<FormField[]> {
       else if (inputType === "checkbox") type = "checkbox";
       else if (inputType === "file") type = "file";
       else if (inputType === "number") type = "number";
+      else if (inputType === "text") {
+        // LinkedIn uses type="text" with inputmode="decimal"/"numeric" for years-of-experience fields
+        const inputMode = el.getAttribute("inputmode") ?? "";
+        if (inputMode === "decimal" || inputMode === "numeric") type = "number";
+      }
       else if (inputType === "hidden") return;
 
       const options: string[] = [];

@@ -127,21 +127,48 @@ async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "
 }
 
 /** Fill all visible number inputs that are 0 or empty using Playwright's fill (React-compatible) */
+/** Fill all decimal/number inputs that are 0 or empty, including type="text" with numeric validation */
 async function fixNumberInputs(page: Page, yearsExperience: number): Promise<void> {
   try {
-    // Only target type="number" inputs — NOT text inputs (would corrupt name/location fields)
-    const inputs = page.locator('input[type="number"]');
-    const count = await inputs.count().catch(() => 0);
-    for (let i = 0; i < count; i++) {
-      const input = inputs.nth(i);
+    // 1. Fix standard type="number" inputs
+    const numInputs = page.locator('input[type="number"]');
+    const numCount = await numInputs.count().catch(() => 0);
+    for (let i = 0; i < numCount; i++) {
+      const input = numInputs.nth(i);
       if (!await input.isVisible().catch(() => false)) continue;
       const val = await input.inputValue().catch(() => "");
-      const numVal = parseFloat(val);
-      if (!val || isNaN(numVal) || numVal <= 0) {
-        // locator.fill() uses Playwright's InputEvent — reliably updates React state
+      if (!val || parseFloat(val) <= 0) {
         await input.fill(String(yearsExperience)).catch(() => void 0);
         await input.press("Tab").catch(() => void 0);
-        await humanDelay(200, 400);
+        await humanDelay(200, 300);
+      }
+    }
+
+    // 2. Fix inputs near "decimal number" validation errors (LinkedIn uses type="text" for these)
+    const errors = page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text');
+    const errCount = await errors.count().catch(() => 0);
+    for (let i = 0; i < errCount; i++) {
+      const err = errors.nth(i);
+      const text = await err.innerText().catch(() => "");
+      if (!text.toLowerCase().includes("decimal") && !text.toLowerCase().includes("number larger") && !text.toLowerCase().includes("number greater")) continue;
+
+      // Walk up the DOM from the error to find the associated input
+      const inputId = await err.evaluate((el) => {
+        let node: Element | null = el;
+        for (let d = 0; d < 6; d++) {
+          node = node?.parentElement ?? null;
+          if (!node) break;
+          const inp = node.querySelector('input');
+          if (inp) return inp.id || inp.getAttribute("name") || null;
+        }
+        return null;
+      }).catch(() => null);
+
+      if (inputId) {
+        const target = page.locator(`input[id="${inputId}"], input[name="${inputId}"]`).first();
+        await target.fill(String(yearsExperience)).catch(() => void 0);
+        await target.press("Tab").catch(() => void 0);
+        await humanDelay(200, 300);
       }
     }
   } catch {
