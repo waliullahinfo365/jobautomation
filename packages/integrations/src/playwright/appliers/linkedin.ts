@@ -56,6 +56,11 @@ const NEXT_BTN = [
   '[role="dialog"] button:has-text("Save and continue")',
   '.jobs-easy-apply-modal footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
   '[role="dialog"] footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
+  '.artdeco-modal button[aria-label="Continue to next step"]',
+  '.artdeco-modal button[aria-label="Review your application"]',
+  '.artdeco-modal button:has-text("Review")',
+  '.artdeco-modal button:has-text("Continue")',
+  '.artdeco-modal footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
 ].join(", ");
 
 const SUBMIT_BTN = [
@@ -64,6 +69,9 @@ const SUBMIT_BTN = [
   '.jobs-easy-apply-modal button:has-text("Submit application")',
   '[role="dialog"] button:has-text("Submit application")',
   '[role="dialog"] button[aria-label*="Submit"]',
+  // Broad fallbacks — LinkedIn may render modal outside [role="dialog"]
+  'button[aria-label="Submit application"]',
+  'button:has-text("Submit application")',
 ].join(", ");
 
 const DISMISS_BTN = [
@@ -251,8 +259,8 @@ export async function applyViaLinkedIn(input: {
     steps++;
     await humanDelay(1000, 1800);
 
-    // Get current modal heading for logging
-    const heading = await page.locator('[role="dialog"] h3, [role="dialog"] h2, .jobs-easy-apply-modal h3').first().innerText().catch(() => `step ${steps}`);
+    // Get current modal heading for logging — broad selectors since LinkedIn modal may not use role="dialog"
+    const heading = await page.locator('[role="dialog"] h3, [role="dialog"] h2, .jobs-easy-apply-modal h3, .jobs-easy-apply-content h3, .artdeco-modal h3, .artdeco-modal h2').first().innerText().catch(() => `step ${steps}`);
     stepLog.push(heading.trim().slice(0, 60));
 
     // Check if submit button is visible — final step
@@ -345,8 +353,9 @@ export async function applyViaLinkedIn(input: {
       await nextBtn.click({ force: true, timeout: 10_000 });
       await humanDelay(1500, 2500);
     } else {
-      const visibleBtns = await page.locator('[role="dialog"] button, .jobs-easy-apply-modal button').allInnerTexts().catch(() => [] as string[]);
-      return { success: false, message: `No Next/Submit button on step ${steps} (${heading.trim()}). Visible buttons: [${visibleBtns.join(" | ")}]. Steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
+      const visibleBtns = await page.locator('[role="dialog"] button, .jobs-easy-apply-modal button, .artdeco-modal button').allInnerTexts().catch(() => [] as string[]);
+      const allPageBtns = await page.locator('button:visible').allInnerTexts().catch(() => [] as string[]);
+      return { success: false, message: `No Next/Submit button on step ${steps} (${heading.trim()}). Modal buttons: [${visibleBtns.join(" | ")}]. All page buttons: [${allPageBtns.slice(0, 15).join(" | ")}]. Steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
     }
 
     // Check for validation errors AFTER clicking Next (LinkedIn validates on Next click)
