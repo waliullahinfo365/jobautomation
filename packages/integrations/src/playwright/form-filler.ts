@@ -67,6 +67,8 @@ export async function extractFormFields(page: Page): Promise<FormField[]> {
       options: string[];
       selector: string;
       currentValue: string;
+      min?: string;
+      max?: string;
     }> = [];
 
     const seen = new Set<string>();
