@@ -31,6 +31,11 @@ const EASY_APPLY_BTN = [
   '.jobs-unified-top-card__cta-container button',
   'button:has-text("Easy Apply")',
   '[data-job-id] button:has-text("Apply")',
+  // LinkedIn sometimes renders as span/div inside an anchor or li
+  'a:has-text("Easy Apply")',
+  'li:has-text("Easy Apply") a',
+  '[class*="apply"]:has-text("Easy Apply")',
+  'span:has-text("Easy Apply")',
 ].join(", ");
 
 const NEXT_BTN = [
@@ -59,22 +64,40 @@ async function isLoggedIn(page: Page): Promise<boolean> {
 }
 
 async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "not-found"> {
-  // Wait up to 12s for any Apply button to appear (LinkedIn is heavily JS-rendered)
-  const appeared = await page.waitForSelector(
-    [EASY_APPLY_BTN, 'button:has-text("Apply")', 'a:has-text("Apply on company website")'].join(", "),
-    { timeout: 12_000, state: "visible" }
-  ).catch(() => null);
+  // Wait up to 15s for page to settle
+  await page.waitForTimeout(3000);
 
-  if (!appeared) return "not-found";
+  // Try to find Easy Apply via text content anywhere on page (handles span/div/button/a)
+  const easyApplyEl = page.getByText("Easy Apply", { exact: true }).first();
+  const easyApplyVisible = await easyApplyEl.isVisible().catch(() => false);
 
-  await humanDelay(800, 1500);
+  if (easyApplyVisible) {
+    await humanDelay(500, 1000);
+    // Try normal click first
+    await easyApplyEl.click({ force: true }).catch(() => void 0);
+    await humanDelay(1500, 2500);
 
-  // Check for Easy Apply specifically
-  const easyApplyBtn = page.locator(EASY_APPLY_BTN).first();
-  if (await easyApplyBtn.isVisible().catch(() => false)) {
-    await easyApplyBtn.click();
-    await humanDelay(1200, 2000);
-    return "easy-apply";
+    // Check if modal opened (any dialog or application form appeared)
+    const modalOpen =
+      (await page.locator('[role="dialog"]').isVisible().catch(() => false)) ||
+      (await page.locator('.jobs-easy-apply-modal').isVisible().catch(() => false)) ||
+      (await page.locator('h3:has-text("Contact info")').isVisible().catch(() => false)) ||
+      (await page.locator('h3:has-text("Resume")').isVisible().catch(() => false)) ||
+      (await page.locator('button[aria-label="Submit application"]').isVisible().catch(() => false)) ||
+      (await page.locator('button:has-text("Next")').isVisible().catch(() => false));
+
+    if (modalOpen) return "easy-apply";
+
+    // Modal didn't open — try JS click on the element
+    await easyApplyEl.evaluate((el: Element) => (el as HTMLElement).click()).catch(() => void 0);
+    await humanDelay(1500, 2000);
+
+    const modalOpenAfterJs =
+      (await page.locator('[role="dialog"]').isVisible().catch(() => false)) ||
+      (await page.locator('button:has-text("Next")').isVisible().catch(() => false)) ||
+      (await page.locator('button[aria-label="Submit application"]').isVisible().catch(() => false));
+
+    if (modalOpenAfterJs) return "easy-apply";
   }
 
   // Check for external Apply button
