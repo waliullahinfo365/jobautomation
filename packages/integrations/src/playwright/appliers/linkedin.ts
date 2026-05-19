@@ -68,9 +68,12 @@ async function isLoggedIn(page: Page): Promise<boolean> {
   return !url.includes("/login") && !url.includes("/authwall") && !url.includes("/checkpoint");
 }
 
-async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "not-found"> {
-  // Wait up to 15s for page to settle
+async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "not-found" | "session-expired"> {
+  // Wait up to 15s for page to settle (LinkedIn may do a delayed JS redirect to login)
   await page.waitForTimeout(3000);
+
+  // Re-check login after the wait — LinkedIn sometimes redirects to /checkpoint after initial load
+  if (!(await isLoggedIn(page))) return "session-expired";
 
   // Try to find Easy Apply via text content anywhere on page (handles span/div/button/a)
   const easyApplyEl = page.getByText("Easy Apply", { exact: true }).first();
@@ -151,6 +154,10 @@ export async function applyViaLinkedIn(input: {
   }
 
   const applyType = await clickEasyApply(page);
+
+  if (applyType === "session-expired") {
+    return { success: false, message: "LinkedIn session expired — re-run save-session to log in again", stepsCompleted: 0 };
+  }
 
   if (applyType === "not-found") {
     // Capture page state for debugging
