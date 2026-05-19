@@ -126,6 +126,34 @@ async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "
   return "not-found";
 }
 
+/** Force-fill all number inputs inside the modal that are 0 or empty using React-compatible events */
+async function fixNumberInputs(page: Page, yearsExperience: number): Promise<void> {
+  try {
+    await page.evaluate((fallback) => {
+      const modal = document.querySelector('[role="dialog"], .jobs-easy-apply-modal');
+      if (!modal) return;
+      const inputs = modal.querySelectorAll('input[type="number"], input[type="text"]');
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+      inputs.forEach((el) => {
+        const input = el as HTMLInputElement;
+        const val = parseFloat(input.value);
+        const min = parseFloat(input.getAttribute("min") ?? "0");
+        // Only fix number-like inputs that are 0, empty, or below min
+        if (input.type === "number" || (input.type === "text" && !isNaN(min))) {
+          if (!input.value || isNaN(val) || val <= 0 || val < min) {
+            nativeSetter?.call(input, String(fallback));
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            input.dispatchEvent(new Event("blur", { bubbles: true }));
+          }
+        }
+      });
+    }, yearsExperience);
+  } catch {
+    // ignore — best effort
+  }
+}
+
 async function dismissModal(page: Page): Promise<void> {
   try {
     const btn = page.locator(DISMISS_BTN).first();
@@ -284,12 +312,8 @@ export async function applyViaLinkedIn(input: {
 
     await humanDelay(600, 1000);
 
-    // Check for validation errors before clicking Next
-    const hasError = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().isVisible().catch(() => false);
-    if (hasError) {
-      const errorText = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().innerText().catch(() => "unknown error");
-      return { success: false, message: `Validation error on step ${steps} (${heading.trim()}): ${errorText.trim()}. Steps so far: ${stepLog.join(" → ")}`, stepsCompleted: steps };
-    }
+    // Clear any pre-existing validation errors by force-filling all number inputs > 0
+    await fixNumberInputs(page, input.profile.yearsExperience ?? 20);
 
     // Click Next
     const nextBtn = page.locator(NEXT_BTN).first();
@@ -297,11 +321,27 @@ export async function applyViaLinkedIn(input: {
       await nextBtn.scrollIntoViewIfNeeded().catch(() => void 0);
       await humanDelay(300, 600);
       await nextBtn.click({ force: true, timeout: 10_000 });
-      await humanDelay(1200, 2000);
+      await humanDelay(1500, 2500);
     } else {
-      // Log all visible buttons for debugging
       const visibleBtns = await page.locator('[role="dialog"] button, .jobs-easy-apply-modal button').allInnerTexts().catch(() => [] as string[]);
       return { success: false, message: `No Next/Submit button on step ${steps} (${heading.trim()}). Visible buttons: [${visibleBtns.join(" | ")}]. Steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
+    }
+
+    // Check for validation errors AFTER clicking Next (LinkedIn validates on Next click)
+    const hasErrorAfterNext = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().isVisible().catch(() => false);
+    if (hasErrorAfterNext) {
+      // Try to fix number fields and retry Next once
+      await fixNumberInputs(page, input.profile.yearsExperience ?? 20);
+      await humanDelay(800, 1200);
+      await nextBtn.click({ force: true, timeout: 10_000 }).catch(() => void 0);
+      await humanDelay(1500, 2000);
+
+      // If still erroring, report failure
+      const stillError = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().isVisible().catch(() => false);
+      if (stillError) {
+        const errorText = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().innerText().catch(() => "unknown error");
+        return { success: false, message: `Validation error on step ${steps} (${heading.trim()}): ${errorText.trim()}. Steps so far: ${stepLog.join(" → ")}`, stepsCompleted: steps };
+      }
     }
   }
 
