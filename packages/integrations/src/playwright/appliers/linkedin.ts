@@ -125,7 +125,16 @@ export async function applyViaLinkedIn(input: {
   const applyType = await clickEasyApply(page);
 
   if (applyType === "not-found") {
-    return { success: false, message: "No Apply button found on this job page", stepsCompleted: 0 };
+    // Capture page state for debugging
+    const currentUrl = page.url();
+    const pageTitle = await page.title().catch(() => "unknown");
+    const bodyText = await page.locator("body").innerText().catch(() => "").then((t) => t.slice(0, 500));
+    const allButtons = await page.locator("button").allInnerTexts().catch(() => [] as string[]);
+    return {
+      success: false,
+      message: `No Apply button found. URL: ${currentUrl} | Title: ${pageTitle} | Buttons: [${allButtons.slice(0, 10).join(" | ")}] | Body: ${bodyText}`,
+      stepsCompleted: 0,
+    };
   }
 
   if (applyType === "external") {
