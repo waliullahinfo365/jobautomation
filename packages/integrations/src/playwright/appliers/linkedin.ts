@@ -41,15 +41,20 @@ const EASY_APPLY_BTN = [
 const NEXT_BTN = [
   'button[aria-label="Continue to next step"]',
   'button[aria-label="Review your application"]',
+  'button[aria-label="Next"]',
   'button:has-text("Next")',
   'button:has-text("Review")',
-  'footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"])',
+  'button:has-text("Continue")',
+  'button:has-text("Save and continue")',
+  '.jobs-easy-apply-modal footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
+  '[role="dialog"] footer button:not([aria-label*="Dismiss"]):not([aria-label*="Close"]):not([aria-label*="Back"])',
 ].join(", ");
 
 const SUBMIT_BTN = [
   'button[aria-label="Submit application"]',
   'button:has-text("Submit application")',
   'button:has-text("Submit")',
+  'button[aria-label*="Submit"]',
 ].join(", ");
 
 const DISMISS_BTN = [
@@ -174,10 +179,15 @@ export async function applyViaLinkedIn(input: {
   // Easy Apply modal is now open
   let steps = 0;
   const MAX_STEPS = 15;
+  const stepLog: string[] = [];
 
   while (steps < MAX_STEPS) {
     steps++;
-    await humanDelay(800, 1500);
+    await humanDelay(1000, 1800);
+
+    // Get current modal heading for logging
+    const heading = await page.locator('[role="dialog"] h3, [role="dialog"] h2, .jobs-easy-apply-modal h3').first().innerText().catch(() => `step ${steps}`);
+    stepLog.push(heading.trim().slice(0, 60));
 
     // Check if submit button is visible — final step
     const submitBtn = page.locator(SUBMIT_BTN).first();
@@ -186,27 +196,29 @@ export async function applyViaLinkedIn(input: {
     if (isSubmitStep) {
       if (input.dryRun) {
         await dismissModal(page);
-        return { success: true, message: "DRY RUN — form filled successfully, not submitted", stepsCompleted: steps };
+        return { success: true, message: `DRY RUN — filled ${steps} steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
       }
 
       await submitBtn.click();
       await humanDelay(2000, 3000);
 
-      // Check for confirmation
       const confirmed =
         (await page.locator('h2:has-text("Your application was sent")').isVisible().catch(() => false)) ||
         (await page.locator('[data-test-modal-id="application-submitted-modal"]').isVisible().catch(() => false)) ||
-        (await page.locator('text="Application submitted"').isVisible().catch(() => false));
+        (await page.locator('text="Application submitted"').isVisible().catch(() => false)) ||
+        (await page.locator('text="applied"').isVisible().catch(() => false));
 
       return {
         success: confirmed,
-        message: confirmed ? "Application submitted successfully" : "Submit clicked but confirmation not detected",
+        message: confirmed
+          ? `Application submitted after ${steps} steps: ${stepLog.join(" → ")}`
+          : `Submit clicked but confirmation not detected. Steps: ${stepLog.join(" → ")}`,
         stepsCompleted: steps,
       };
     }
 
     // Fill current step's form fields
-    const fillResult = await fillFormPage({
+    await fillFormPage({
       page,
       profile: input.profile,
       jobContext: input.jobContext,
@@ -222,18 +234,26 @@ export async function applyViaLinkedIn(input: {
       }
     }
 
-    void fillResult; // logged by caller
+    await humanDelay(600, 1000);
+
+    // Check for validation errors before clicking Next
+    const hasError = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().isVisible().catch(() => false);
+    if (hasError) {
+      const errorText = await page.locator('.artdeco-inline-feedback--error, [data-test-form-element-error-message], .fb-form-element__error-text').first().innerText().catch(() => "unknown error");
+      return { success: false, message: `Validation error on step ${steps} (${heading.trim()}): ${errorText.trim()}. Steps so far: ${stepLog.join(" → ")}`, stepsCompleted: steps };
+    }
 
     // Click Next
     const nextBtn = page.locator(NEXT_BTN).first();
     if (await nextBtn.isVisible().catch(() => false)) {
       await nextBtn.click();
-      await humanDelay(1000, 2000);
+      await humanDelay(1200, 2000);
     } else {
-      // No next button and no submit — might be stuck
-      break;
+      // Log all visible buttons for debugging
+      const visibleBtns = await page.locator('[role="dialog"] button, .jobs-easy-apply-modal button').allInnerTexts().catch(() => [] as string[]);
+      return { success: false, message: `No Next/Submit button on step ${steps} (${heading.trim()}). Visible buttons: [${visibleBtns.join(" | ")}]. Steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
     }
   }
 
-  return { success: false, message: `Modal not submitted after ${steps} steps`, stepsCompleted: steps };
+  return { success: false, message: `Reached max steps (${MAX_STEPS}). Steps: ${stepLog.join(" → ")}`, stepsCompleted: steps };
 }
