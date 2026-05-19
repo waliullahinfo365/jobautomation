@@ -34,6 +34,7 @@ export interface RunApplyInput {
   coverLetterUrl?: string;
   additionalContext?: string;
   dryRun?: boolean;
+  proxyUrl?: string;
 }
 
 export interface RunApplyResult {
@@ -98,7 +99,8 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
     description: input.additionalContext,
   };
 
-  const session = await launchBrowser({ headless: true, storageState });
+  const proxyUrl = input.proxyUrl ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+  const session = await launchBrowser({ headless: true, storageState, proxyUrl });
 
   try {
     let result: RunApplyResult;

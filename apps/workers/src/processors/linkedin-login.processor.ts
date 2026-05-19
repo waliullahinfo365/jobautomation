@@ -32,7 +32,8 @@ export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promi
 
   await writeLoginResult(payload.tenantId, "pending", "Login in progress…");
 
-  const session = await launchBrowser({ headless: true });
+  const proxyUrl = process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+  const session = await launchBrowser({ headless: true, ...(proxyUrl ? { proxyUrl } : {}) });
   const { page, context } = session;
 
   try {

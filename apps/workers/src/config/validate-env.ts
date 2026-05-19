@@ -31,4 +31,16 @@ export function validateWorkerEnv(): void {
       "QUEUE_MODE is memory in production — jobs are not durable across restarts. Use Redis + bullmq for production queues.",
     );
   }
+
+  const proxyUrl = process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+  if (proxyUrl) {
+    try {
+      const u = new URL(proxyUrl);
+      console.info(`[workers env] Residential proxy configured: ${u.protocol}//${u.hostname}:${u.port} (auth: ${u.username ? "yes" : "no"})`);
+    } catch {
+      warn("PROXY_URL is set but could not be parsed as a valid URL — Playwright will use direct connection");
+    }
+  } else {
+    warn("PROXY_URL not set — Playwright will use the server's IP directly (LinkedIn sessions may expire quickly)");
+  }
 }

@@ -18,16 +18,38 @@ export interface BrowserSession {
   close: () => Promise<void>;
 }
 
+/** Parse a proxy URL into Playwright's proxy config format.
+ *  Supports: http://user:pass@host:port  or  http://host:port */
+function parseProxyUrl(proxyUrl: string): { server: string; username?: string; password?: string } | null {
+  try {
+    const u = new URL(proxyUrl);
+    const server = `${u.protocol}//${u.hostname}:${u.port}`;
+    return {
+      server,
+      username: u.username || undefined,
+      password: u.password || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function launchBrowser(options: {
   headless: boolean;
   storageState?: object;
   slowMo?: number;
+  proxyUrl?: string;
 }): Promise<BrowserSession> {
   const { chromium } = await import("playwright");
+
+  // Resolve proxy — explicit arg takes priority, then PROXY_URL env var
+  const rawProxy = options.proxyUrl ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+  const proxy = rawProxy ? parseProxyUrl(rawProxy) : null;
 
   const browser = await chromium.launch({
     headless: options.headless,
     slowMo: options.slowMo ?? (options.headless ? 0 : 80),
+    ...(proxy ? { proxy } : {}),
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
