@@ -1,7 +1,8 @@
 import { TenantModel, IntegrationConnectionModel } from "@jobflow/database/models";
 import type { EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
 import { enqueueManyAutomationJobs } from "../queues/automation.queue";
-import { loadLinkedInCredentials, processLinkedInLogin } from "../processors/linkedin-login.processor";
+import { loadSession, saveSession } from "@jobflow/integrations/playwright/session-store";
+import { launchBrowser, humanDelay } from "@jobflow/integrations/playwright/browser";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -162,26 +163,39 @@ export async function scheduleJobIntakeSweep() {
 }
 
 /**
- * Keep LinkedIn sessions alive by re-logging in with stored credentials every 12h.
- * This prevents sessions from expiring silently between apply runs.
+ * Keep LinkedIn sessions alive by visiting the feed with existing cookies every 12h.
+ * Does NOT re-login (which gets blocked by LinkedIn's cloud-server IP detection).
+ * Just opens a headless browser with the stored session and navigates to /feed so
+ * LinkedIn sees activity and resets its session expiry clock.
  */
 export async function scheduleLinkedInSessionKeepAlive() {
   const tenantIds = await activeTenantIds();
   for (const tenantId of tenantIds) {
+    let session: Awaited<ReturnType<typeof launchBrowser>> | null = null;
     try {
-      const sessionRow = await IntegrationConnectionModel.findOne({
-        tenantId,
-        provider: "playwright-session-linkedin",
-        status: "Connected",
-      }).lean() as Record<string, unknown> | null;
-      if (!sessionRow) continue;
+      const storageState = await loadSession({ tenantId, platform: "linkedin" });
+      if (!storageState) continue;
 
-      const creds = await loadLinkedInCredentials(tenantId);
-      if (!creds) continue;
+      const proxyUrl = process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+      session = await launchBrowser({ headless: true, storageState, proxyUrl });
 
-      const result = await processLinkedInLogin({ tenantId, ...creds, operationId: `keepalive-${Date.now()}`, requestedAt: new Date().toISOString(), source: "scheduler" as const });
-      if (result.success) {
-        // Clear any expired flag set by a previous failed apply
+      // Visit feed to signal activity to LinkedIn — this resets session expiry
+      await session.page.goto("https://www.linkedin.com/feed/", {
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
+      });
+      await humanDelay(2000, 4000);
+
+      const url = session.page.url();
+      const title = await session.page.title().catch(() => "");
+      const isAlive = !url.includes("/login") && !url.includes("/authwall") &&
+        !/log in or sign up/i.test(title) && !/^https?:\/\/www\.linkedin\.com\/?(\?.*)?$/.test(url);
+
+      if (isAlive) {
+        // Save refreshed cookies back to DB
+        const freshState = await session.context.storageState();
+        await saveSession({ tenantId, platform: "linkedin", storageState: freshState });
+        // Clear any expired flag
         await IntegrationConnectionModel.updateOne(
           { tenantId, provider: "playwright-session-linkedin" },
           { $unset: { "metadata.sessionExpired": "", "metadata.expiredAt": "" } }
@@ -189,6 +203,8 @@ export async function scheduleLinkedInSessionKeepAlive() {
       }
     } catch {
       // Non-fatal — just skip this tenant
+    } finally {
+      await session?.close().catch(() => void 0);
     }
   }
 }
