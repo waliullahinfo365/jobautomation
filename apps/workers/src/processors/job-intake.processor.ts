@@ -70,7 +70,7 @@ function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): str
     process.env.GMAIL_JOB_QUERY ||
     process.env.GMAIL_JOB_ALERT_QUERY ||
     String(metadata?.jobIntakeQuery ?? "");
-  return configured.trim() || 'label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
+  return configured.trim() || 'label:job-alerts OR label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
 }
 
 /** Returns true when the query is pre-filtered enough to use the relaxed confidence threshold */
