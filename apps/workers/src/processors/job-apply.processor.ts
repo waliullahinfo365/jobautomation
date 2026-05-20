@@ -10,7 +10,7 @@
  * 3. Playwright Chromium is installed in the worker Docker image.
  */
 
-import { JobModel, UserModel, AutomationLogModel, IntegrationConnectionModel } from "@jobflow/database/models";
+import { JobModel, UserModel, AutomationLogModel, IntegrationConnectionModel, ApplicationModel } from "@jobflow/database/models";
 import { runApply } from "@jobflow/integrations/playwright";
 import { detectPlatform } from "@jobflow/integrations/playwright";
 import type { JobApplyPayload } from "@jobflow/shared/types/queue";
@@ -156,11 +156,23 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
 
   // Update job based on result
   if (result.success) {
+    const now = new Date();
     await JobModel.findByIdAndUpdate(payload.jobId, {
       status: "Applied",
-      dateApplied: new Date().toISOString(),
-      lastUpdated: new Date(),
+      dateApplied: now.toISOString(),
+      lastUpdated: now,
     });
+    // Also update the linked Application record so the Applications pipeline reflects the change
+    await ApplicationModel.findOneAndUpdate(
+      { tenantId: payload.tenantId, jobId: payload.jobId },
+      {
+        applicationStatus: "Applied",
+        dateApplied: now,
+        appliedAutomationStatus: "Completed",
+        appliedAutomationCompletedAt: now,
+        lastStatusChangedAt: now,
+      }
+    ).catch(() => void 0);
   } else if (result.sessionExpired) {
     await JobModel.findByIdAndUpdate(payload.jobId, {
       status: "New",
