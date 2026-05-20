@@ -7,6 +7,7 @@ export {
   scheduleNetworkFollowUpSweep,
   scheduleOfferTrackingSweep,
   scheduleWeeklyReportsForAllTenants,
+  scheduleLinkedInSessionKeepAlive,
 } from "./automation.scheduler";
 
 import {
@@ -18,6 +19,7 @@ import {
   scheduleNetworkFollowUpSweep,
   scheduleOfferTrackingSweep,
   scheduleWeeklyReportsForAllTenants,
+  scheduleLinkedInSessionKeepAlive,
 } from "./automation.scheduler";
 
 export function registerSchedulers() {
@@ -27,6 +29,7 @@ export function registerSchedulers() {
   const reminderEveryMs = Number(process.env.REMINDER_INTERVAL_MS ?? 60 * 60_000);
   const dailyDigestEveryMs = Number(process.env.DAILY_DIGEST_INTERVAL_MS ?? 24 * 60 * 60_000);
   const weeklyEveryMs = Number(process.env.WEEKLY_REPORT_INTERVAL_MS ?? 7 * 24 * 60 * 60_000);
+  const keepAliveEveryMs = Number(process.env.LINKEDIN_KEEPALIVE_INTERVAL_MS ?? 12 * 60 * 60_000);
 
   setInterval(() => void scheduleFollowUpReminderSweep(), reminderEveryMs);
   setInterval(() => void scheduleDeadlineAlertSweep(), reminderEveryMs);
@@ -36,6 +39,8 @@ export function registerSchedulers() {
   setInterval(() => void scheduleDailyDigestForAllTenants(), dailyDigestEveryMs);
   setInterval(() => void scheduleWeeklyReportsForAllTenants(), weeklyEveryMs);
   setInterval(() => void scheduleJobIntakeSweep(), intakeEveryMs);
+  setInterval(() => void scheduleLinkedInSessionKeepAlive(), keepAliveEveryMs);
 
   void scheduleJobIntakeSweep();
+  void scheduleLinkedInSessionKeepAlive();
 }

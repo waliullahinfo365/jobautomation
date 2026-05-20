@@ -15,6 +15,7 @@ import { runApply } from "@jobflow/integrations/playwright";
 import { detectPlatform } from "@jobflow/integrations/playwright";
 import type { JobApplyPayload } from "@jobflow/shared/types/queue";
 import type { UserProfile } from "@jobflow/integrations/playwright";
+import { loadLinkedInCredentials, processLinkedInLogin } from "./linkedin-login.processor";
 import { logger } from "../utils/logger";
 import { serializeWorkerError } from "../utils/worker-error";
 
@@ -174,15 +175,65 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
       }
     ).catch(() => void 0);
   } else if (result.sessionExpired) {
-    await JobModel.findByIdAndUpdate(payload.jobId, {
-      status: "New",
-      lastUpdated: new Date(),
-    });
-    // Mark the LinkedIn session as expired so the Integrations panel shows a warning
-    await IntegrationConnectionModel.findOneAndUpdate(
-      { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
-      { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
-    ).catch(() => void 0);
+    // Try to auto-re-login using stored credentials, then retry the apply once
+    const creds = platform === "linkedin" ? await loadLinkedInCredentials(payload.tenantId) : null;
+    if (creds) {
+      logger.info({ jobId: payload.jobId }, "Session expired — attempting auto-re-login");
+      const loginResult = await processLinkedInLogin({ tenantId: payload.tenantId, ...creds, operationId: `auto-relogin-${Date.now()}`, requestedAt: new Date().toISOString(), source: "system" as const }).catch((e) => ({
+        success: false,
+        message: String(e),
+      }));
+      if (loginResult.success) {
+        logger.info({ jobId: payload.jobId }, "Auto-re-login succeeded — retrying apply");
+        // Retry apply with fresh session
+        const retryResult = await runApply({
+          tenantId: payload.tenantId,
+          jobId: payload.jobId,
+          jobUrl,
+          platform,
+          profile,
+          company: String(j.company ?? ""),
+          position: String(j.position ?? j.title ?? ""),
+          cvUrl: cvUrl || undefined,
+          coverLetterUrl: coverLetterUrl || undefined,
+          additionalContext: additionalContext || undefined,
+          dryRun: false,
+        }).catch((e) => ({
+          success: false,
+          message: String(e),
+          platform,
+          stepsCompleted: 0,
+          sessionExpired: false,
+        }));
+        if (retryResult.success) {
+          const now = new Date();
+          await JobModel.findByIdAndUpdate(payload.jobId, { status: "Applied", dateApplied: now.toISOString(), lastUpdated: now });
+          await ApplicationModel.findOneAndUpdate(
+            { tenantId: payload.tenantId, jobId: payload.jobId },
+            { applicationStatus: "Applied", dateApplied: now, appliedAutomationStatus: "Completed", appliedAutomationCompletedAt: now, lastStatusChangedAt: now }
+          ).catch(() => void 0);
+          result = { ...retryResult };
+        } else {
+          result = { ...retryResult };
+          await JobModel.findByIdAndUpdate(payload.jobId, { status: "Ready to Apply", lastUpdated: new Date() });
+        }
+      } else {
+        // Re-login failed — mark session expired so UI shows warning
+        logger.warn({ jobId: payload.jobId, msg: loginResult.message }, "Auto-re-login failed");
+        await JobModel.findByIdAndUpdate(payload.jobId, { status: "New", lastUpdated: new Date() });
+        await IntegrationConnectionModel.findOneAndUpdate(
+          { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
+          { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
+        ).catch(() => void 0);
+      }
+    } else {
+      // No stored credentials — fall back to manual reconnect
+      await JobModel.findByIdAndUpdate(payload.jobId, { status: "New", lastUpdated: new Date() });
+      await IntegrationConnectionModel.findOneAndUpdate(
+        { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
+        { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
+      ).catch(() => void 0);
+    }
   } else {
     // Failed for any other reason — revert from "Applying" back to "Ready to Apply"
     // so the job doesn't get stuck in the pipeline and the chart stays accurate

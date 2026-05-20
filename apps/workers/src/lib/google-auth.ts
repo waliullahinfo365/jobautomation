@@ -11,7 +11,7 @@ function encryptionKeyBytes(): Buffer | null {
   return crypto.createHash("sha256").update(raw, "utf8").digest();
 }
 
-function encryptSecretForWorker(value: string): string {
+export function encryptSecretForWorker(value: string): string {
   const key = encryptionKeyBytes();
   if (!key) {
     if ((process.env.NODE_ENV ?? "development") === "development") {

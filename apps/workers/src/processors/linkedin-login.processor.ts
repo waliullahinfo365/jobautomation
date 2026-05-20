@@ -2,7 +2,26 @@ import { IntegrationConnectionModel } from "@jobflow/database/models";
 import { saveSession } from "@jobflow/integrations/playwright/session-store";
 import { launchBrowser, humanDelay } from "@jobflow/integrations/playwright/browser";
 import type { LinkedInLoginPayload } from "@jobflow/shared/types/queue";
+import { encryptSecretForWorker, decryptSecretForWorker } from "../lib/google-auth";
 import { logger } from "../utils/logger";
+
+/** Load stored LinkedIn credentials for this tenant (for auto-re-login) */
+export async function loadLinkedInCredentials(tenantId: string): Promise<{ email: string; password: string } | null> {
+  const row = await IntegrationConnectionModel.findOne({
+    tenantId,
+    provider: "playwright-session-linkedin",
+  }).lean() as Record<string, unknown> | null;
+  if (!row) return null;
+  const meta = (row.metadata as Record<string, unknown>) ?? {};
+  const emailEnc = meta.emailEncrypted as string | undefined;
+  const passEnc = meta.passwordEncrypted as string | undefined;
+  if (!emailEnc || !passEnc) return null;
+  try {
+    return { email: decryptSecretForWorker(emailEnc), password: decryptSecretForWorker(passEnc) };
+  } catch {
+    return null;
+  }
+}
 
 const LOGIN_URL = "https://www.linkedin.com/login";
 const TIMEOUT = 45_000;
@@ -152,6 +171,22 @@ export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promi
     // Save session cookies + localStorage to MongoDB
     const storageState = await context.storageState();
     await saveSession({ tenantId: payload.tenantId, platform: "linkedin", storageState });
+
+    // Persist encrypted credentials so the worker can auto-re-login when the session expires
+    try {
+      await IntegrationConnectionModel.updateOne(
+        { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
+        {
+          $set: {
+            "metadata.emailEncrypted": encryptSecretForWorker(payload.email),
+            "metadata.passwordEncrypted": encryptSecretForWorker(payload.password),
+          },
+        }
+      );
+    } catch (credErr) {
+      logger.warn({ tenantId: payload.tenantId, err: String(credErr) }, "Failed to persist LinkedIn credentials — auto-relogin disabled");
+    }
+
     await writeLoginResult(payload.tenantId, "connected", "LinkedIn session connected successfully.");
 
     await session.close();

@@ -1,6 +1,7 @@
-import { TenantModel } from "@jobflow/database/models";
+import { TenantModel, IntegrationConnectionModel } from "@jobflow/database/models";
 import type { EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
 import { enqueueManyAutomationJobs } from "../queues/automation.queue";
+import { loadLinkedInCredentials, processLinkedInLogin } from "../processors/linkedin-login.processor";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -158,4 +159,36 @@ export async function scheduleJobIntakeSweep() {
       },
     }))
   );
+}
+
+/**
+ * Keep LinkedIn sessions alive by re-logging in with stored credentials every 12h.
+ * This prevents sessions from expiring silently between apply runs.
+ */
+export async function scheduleLinkedInSessionKeepAlive() {
+  const tenantIds = await activeTenantIds();
+  for (const tenantId of tenantIds) {
+    try {
+      const sessionRow = await IntegrationConnectionModel.findOne({
+        tenantId,
+        provider: "playwright-session-linkedin",
+        status: "Connected",
+      }).lean() as Record<string, unknown> | null;
+      if (!sessionRow) continue;
+
+      const creds = await loadLinkedInCredentials(tenantId);
+      if (!creds) continue;
+
+      const result = await processLinkedInLogin({ tenantId, ...creds, operationId: `keepalive-${Date.now()}`, requestedAt: new Date().toISOString(), source: "scheduler" as const });
+      if (result.success) {
+        // Clear any expired flag set by a previous failed apply
+        await IntegrationConnectionModel.updateOne(
+          { tenantId, provider: "playwright-session-linkedin" },
+          { $unset: { "metadata.sessionExpired": "", "metadata.expiredAt": "" } }
+        );
+      }
+    } catch {
+      // Non-fatal — just skip this tenant
+    }
+  }
 }
