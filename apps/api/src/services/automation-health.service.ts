@@ -18,6 +18,7 @@ const MODULE_DEFS = [
   ["job-intake", "Job intake & parsing", "Jobs", "Normalize inbound alerts into structured job records."],
   ["duplicate-protection", "Duplicate protection", "Jobs", "Fingerprint and block duplicate listings automatically."],
   ["folder-automation", "Google Drive folders", "Documents", "Provision per-job folders in Drive for application assets."],
+  ["job-apply", "Auto-apply", "Applications", "Automate job applications via LinkedIn Easy Apply and other platforms."],
   ["applied-status", "Applied status", "Applications", "Track application send and applied automation health."],
   ["interview-scheduling", "Interview scheduling", "Interviews", "Create calendar events and prep tasks for interviews."],
   ["cv-routing", "CV routing", "Documents", "Route CV artifacts into the correct Drive folders."],
@@ -35,6 +36,7 @@ const MODULE_DEFS = [
 ] as const;
 
 const REQUIRED: Record<string, string[]> = {
+  "job-apply": ["ai_provider"],
   "job-intake": ["gmail", "ai_provider"],
   "email-reply-detection": ["gmail", "ai_provider"],
   "folder-automation": ["google_drive"],

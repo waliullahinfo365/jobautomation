@@ -4,6 +4,7 @@ type ModuleKey =
   | "job-intake"
   | "duplicate-protection"
   | "folder-automation"
+  | "job-apply"
   | "applied-status"
   | "interview-scheduling"
   | "cv-routing"
@@ -42,6 +43,12 @@ const MODULE_DEFS: Array<{
     name: "Google Drive folders",
     category: "Documents",
     description: "Provision per-job folders in Drive for assets.",
+  },
+  {
+    moduleKey: "job-apply",
+    name: "Auto-apply",
+    category: "Applications",
+    description: "Automate job applications via LinkedIn Easy Apply and other platforms.",
   },
   {
     moduleKey: "applied-status",

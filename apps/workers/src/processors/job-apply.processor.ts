@@ -183,8 +183,14 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
       { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
       { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
     ).catch(() => void 0);
+  } else {
+    // Failed for any other reason — revert from "Applying" back to "Ready to Apply"
+    // so the job doesn't get stuck in the pipeline and the chart stays accurate
+    await JobModel.findByIdAndUpdate(payload.jobId, {
+      status: "Ready to Apply",
+      lastUpdated: new Date(),
+    });
   }
-  // If failed for other reason, leave as "Applying" so user can see
 
   await logResult({
     tenantId: payload.tenantId,
