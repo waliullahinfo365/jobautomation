@@ -82,7 +82,14 @@ const DISMISS_BTN = [
 
 async function isLoggedIn(page: Page): Promise<boolean> {
   const url = page.url();
-  return !url.includes("/login") && !url.includes("/authwall") && !url.includes("/checkpoint");
+  // Explicit session-expired URL patterns
+  if (url.includes("/login") || url.includes("/authwall") || url.includes("/checkpoint") || url.includes("/uas/")) return false;
+  // LinkedIn redirects logged-out users to the root homepage — detect by title
+  const title = await page.title().catch(() => "");
+  if (/log in or sign up/i.test(title) || /join linkedin/i.test(title)) return false;
+  // Root domain with no meaningful path = logged-out redirect
+  if (/^https?:\/\/www\.linkedin\.com\/?(\?.*)?$/.test(url)) return false;
+  return true;
 }
 
 async function clickEasyApply(page: Page): Promise<"easy-apply" | "external" | "not-found" | "session-expired"> {
