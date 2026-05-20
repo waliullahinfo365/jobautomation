@@ -219,12 +219,31 @@ export async function applyViaLinkedIn(input: {
 }): Promise<LinkedInApplyResult> {
   const { page } = input;
 
+  // Warm up the session by visiting /feed first — LinkedIn is less suspicious of
+  // subsequent navigation when there's prior activity on the domain.
+  try {
+    await page.goto("https://www.linkedin.com/feed/", { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await humanDelay(2000, 3500);
+  } catch {
+    // If feed load fails, continue anyway — we'll detect expiry on the job page
+  }
+
+  if (!(await isLoggedIn(page))) {
+    return { success: false, message: "LinkedIn session expired — please re-import your cookies from Settings → Integrations.", stepsCompleted: 0 };
+  }
+
   // Navigate to job — use "load" so JS-rendered content (Apply button) is present
   await page.goto(input.jobUrl, { waitUntil: "load", timeout: 45_000 });
   await humanDelay(2500, 4000);
 
   if (!(await isLoggedIn(page))) {
-    return { success: false, message: "LinkedIn session expired — re-run save-session to log in again", stepsCompleted: 0 };
+    const currentUrl = page.url();
+    const title = await page.title().catch(() => "");
+    return {
+      success: false,
+      message: `LinkedIn blocked navigation to job page (redirected to: ${currentUrl}, title: "${title}"). Session may be valid but LinkedIn is blocking this server. Try setting PROXY_URL in Railway env.`,
+      stepsCompleted: 0,
+    };
   }
 
   const applyType = await clickEasyApply(page);
