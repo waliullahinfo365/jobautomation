@@ -64,13 +64,26 @@ function parseProcessedMessageIds(metadata: Record<string, unknown> | undefined)
 }
 
 function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): string {
-  const configured = process.env.GMAIL_JOB_ALERT_QUERY || String(metadata?.jobIntakeQuery ?? "");
+  // Support both names — GMAIL_JOB_QUERY (documented in .env.example) and
+  // GMAIL_JOB_ALERT_QUERY (legacy name used in earlier releases)
+  const configured =
+    process.env.GMAIL_JOB_QUERY ||
+    process.env.GMAIL_JOB_ALERT_QUERY ||
+    String(metadata?.jobIntakeQuery ?? "");
   return configured.trim() || 'label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
+}
+
+/** Returns true when the query is pre-filtered enough to use the relaxed confidence threshold */
+function isPreFilteredQuery(query: string): boolean {
+  // A query is pre-filtered if it came from the env var, OR if it targets a specific label
+  const hasLabel = /\blabel:/i.test(query);
+  const envSet = Boolean(process.env.GMAIL_JOB_QUERY?.trim() || process.env.GMAIL_JOB_ALERT_QUERY?.trim());
+  return envSet || hasLabel;
 }
 
 function buildBackfillQuery(input: { label?: string; days?: number; metadata?: Record<string, unknown> }) {
   // If a custom query is configured via env var, use it directly for backfill too
-  const envQuery = process.env.GMAIL_JOB_ALERT_QUERY?.trim();
+  const envQuery = (process.env.GMAIL_JOB_QUERY || process.env.GMAIL_JOB_ALERT_QUERY)?.trim();
   if (envQuery) return envQuery;
   const days = Math.max(1, Math.min(30, Number(input.days ?? 7) || 7));
   const label = String(input.label || "job alerts").trim();
@@ -174,12 +187,11 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
 
     // Classify before extraction — skip non-job emails early
     const classification = isRealJobOpportunity(normalized);
-    // When the user has set a custom Gmail query (e.g. a dedicated "job-alerts" label),
-    // they've already pre-filtered their inbox — trust it with a lower threshold (0.35).
-    // The default 0.85 is for the generic fallback query that scans the whole inbox.
-    const usingCustomQuery = Boolean(process.env.GMAIL_JOB_ALERT_QUERY?.trim());
+    // When the query targets a specific label (or came from an env var), the inbox is
+    // already pre-filtered — use the relaxed 0.35 threshold. The strict 0.85 is only
+    // for the generic "whole inbox" fallback query.
     const envThreshold = process.env.JOB_INTAKE_MIN_CONFIDENCE ? Number(process.env.JOB_INTAKE_MIN_CONFIDENCE) : null;
-    const CONFIDENCE_THRESHOLD = envThreshold ?? (usingCustomQuery ? 0.35 : 0.85);
+    const CONFIDENCE_THRESHOLD = envThreshold ?? (isPreFilteredQuery(query) ? 0.35 : 0.85);
     if (!classification.isJob || classification.confidence < CONFIDENCE_THRESHOLD) {
       processedMessageIds.add(normalized.providerMessageId);
       nonJobSkipped += 1;
