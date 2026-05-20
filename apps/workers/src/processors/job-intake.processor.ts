@@ -66,10 +66,8 @@ function parseProcessedMessageIds(metadata: Record<string, unknown> | undefined)
 function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): string {
   // Support both names — GMAIL_JOB_QUERY (documented in .env.example) and
   // GMAIL_JOB_ALERT_QUERY (legacy name used in earlier releases)
-  const configured =
-    process.env.GMAIL_JOB_QUERY ||
-    process.env.GMAIL_JOB_ALERT_QUERY ||
-    String(metadata?.jobIntakeQuery ?? "");
+  // Only read from env vars — never from stored metadata (stale DB values caused wrong queries)
+  const configured = process.env.GMAIL_JOB_QUERY || process.env.GMAIL_JOB_ALERT_QUERY || "";
   return configured.trim() || 'label:job-alerts OR label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
 }
 
@@ -391,7 +389,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       ...(gmailConn.metadata as Record<string, unknown>),
       lastHistoryId: maxHistoryId ? String(maxHistoryId) : lastHistoryId,
       processedMessageIds: Array.from(processedMessageIds).slice(-500),
-      jobIntakeQuery: query,
+      jobIntakeQuery: undefined, // never persist — always derive fresh from env var or default
     };
     await gmailConn.save();
   }
