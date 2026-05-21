@@ -25,6 +25,7 @@ export async function scheduleDailyDigestForAllTenants() {
       requestedAt: new Date().toISOString(),
       source: "scheduler",
       date,
+      send: true,
     },
   }));
   return enqueueManyAutomationJobs(jobs);
@@ -50,6 +51,7 @@ export async function scheduleWeeklyReportsForAllTenants() {
       source: "scheduler",
       weekStart: weekStart.toISOString(),
       weekEnd: weekEnd.toISOString(),
+      send: true,
     },
   }));
   return enqueueManyAutomationJobs(jobs);
@@ -201,6 +203,46 @@ export async function scheduleAutoApplySweep() {
             coverLetterUrl: String(job.generatedCoverLetterLink ?? ""),
             operationId: `auto-apply-${jobId}-${date}`,
             idempotencyKey: `auto-apply:${jobId}:${date}`,
+            requestedAt: new Date().toISOString(),
+            source: "scheduler",
+          },
+        });
+      }
+    } catch {
+      // Non-fatal — skip this tenant
+    }
+  }
+}
+
+/**
+ * Applied-status sweep: finds Application records still in "Applying" or recently
+ * set to "Applied" without a corresponding applied-status run and queues them.
+ * Catches jobs that moved to Applied via auto-apply but didn't fire the event.
+ */
+export async function scheduleAppliedStatusSweep() {
+  const tenantIds = await activeTenantIds();
+  const cutoff = new Date(Date.now() - 24 * 60 * 60_000); // last 24h
+
+  for (const tenantId of tenantIds) {
+    try {
+      const { ApplicationModel } = await import("@jobflow/database/models");
+      const apps = await ApplicationModel.find({
+        tenantId,
+        applicationStatus: "Applied",
+        appliedAutomationStatus: "Completed",
+        // Only process applications that were recently applied
+        dateApplied: { $gte: cutoff },
+      }).select("_id").lean() as Array<{ _id: unknown }>;
+
+      for (const app of apps) {
+        const appId = String(app._id);
+        await enqueueAutomationJob({
+          name: "applied-status",
+          payload: {
+            tenantId,
+            applicationId: appId,
+            operationId: `applied-status-sweep-${appId}`,
+            idempotencyKey: `applied-status:${appId}:${todayKey()}`,
             requestedAt: new Date().toISOString(),
             source: "scheduler",
           },
