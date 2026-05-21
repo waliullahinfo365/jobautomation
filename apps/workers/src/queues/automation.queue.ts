@@ -119,20 +119,23 @@ export async function enqueueAutomationJob(input: EnqueueAutomationJobInput): Pr
     return { operationId, jobId, name: input.name, status: "skipped", message: "Queue mode disabled" };
   }
 
-  await createQueueLog({
-    tenantId: input.payload.tenantId,
-    moduleKey: input.name,
-    operationId,
-    idempotencyKey,
-    queueMode: mode,
-    source: input.payload.source,
-    payloadSummary: {
-      requestedAt: input.payload.requestedAt,
-      delayMs: input.delayMs,
-      priority: input.priority,
-      attempts: input.attempts,
-    },
-  });
+  // Skip queue log for scheduler-sourced jobs — the execution result log is sufficient
+  if (input.payload.source !== "scheduler") {
+    await createQueueLog({
+      tenantId: input.payload.tenantId,
+      moduleKey: input.name,
+      operationId,
+      idempotencyKey,
+      queueMode: mode,
+      source: input.payload.source,
+      payloadSummary: {
+        requestedAt: input.payload.requestedAt,
+        delayMs: input.delayMs,
+        priority: input.priority,
+        attempts: input.attempts,
+      },
+    });
+  }
 
   if (mode === "bullmq" && bullQueue) {
     const job = await bullQueue.add(input.name, input.payload, {

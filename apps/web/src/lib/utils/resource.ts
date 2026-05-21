@@ -947,7 +947,7 @@ function mapAutomationLogStatusBackendToUi(s: string): AutomationLog["status"] {
     case "Warning":
       return "Warning";
     case "Running":
-      return "Warning";
+      return "Success";
     default:
       return "Success";
   }
