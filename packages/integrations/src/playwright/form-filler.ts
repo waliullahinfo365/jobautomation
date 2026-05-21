@@ -158,6 +158,53 @@ export async function extractFormFields(page: Page): Promise<FormField[]> {
       fields.push({ label, type, required, options, selector, currentValue, min, max });
     });
 
+    // LinkedIn uses custom role="radiogroup" + role="radio" divs (not native <input type="radio">)
+    // Capture each group as a single "radio" field with all option labels
+    document.querySelectorAll('[role="radiogroup"]').forEach((group) => {
+      if (!(group instanceof HTMLElement)) return;
+      const rect = group.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+
+      const groupSelector = makeSelector(group);
+      if (seen.has(groupSelector)) return;
+      seen.add(groupSelector);
+
+      // Get group label from legend, aria-labelledby, or first child heading
+      let label = group.getAttribute("aria-label") || "";
+      const labelledBy = group.getAttribute("aria-labelledby");
+      if (labelledBy) {
+        const labelEl = document.getElementById(labelledBy);
+        if (labelEl) label = labelEl.textContent?.trim() || label;
+      }
+      if (!label) {
+        const legend = group.querySelector("legend, h3, h4, label");
+        label = legend?.textContent?.trim() || "";
+      }
+
+      const options: string[] = [];
+      const checkedOption = { value: "" };
+      group.querySelectorAll('[role="radio"]').forEach((opt) => {
+        const text = opt.textContent?.trim() || opt.getAttribute("aria-label") || "";
+        if (text) options.push(text);
+        if (opt.getAttribute("aria-checked") === "true") checkedOption.value = text;
+      });
+
+      if (options.length === 0) return;
+
+      const required =
+        group.hasAttribute("required") ||
+        group.getAttribute("aria-required") === "true";
+
+      fields.push({
+        label,
+        type: "radio",
+        required,
+        options,
+        selector: groupSelector,
+        currentValue: checkedOption.value,
+      });
+    });
+
     return fields;
   }) as Promise<FormField[]>;
 }
@@ -276,18 +323,34 @@ async function applyFills(page: Page, instructions: FillInstruction[]): Promise<
           await page.selectOption(ins.selector, { value: ins.value });
         });
       } else if (ins.type === "radio") {
-        const radios = page.locator(`input[type="radio"]`);
-        const count = await radios.count();
-        for (let i = 0; i < count; i++) {
-          const radio = radios.nth(i);
-          const label = await radio.evaluate((el: HTMLInputElement) => {
-            const id = el.getAttribute("id");
-            const labelEl = id ? document.querySelector(`label[for="${id}"]`) : null;
-            return labelEl?.textContent?.trim() || el.getAttribute("value") || "";
-          });
-          if (label.toLowerCase().includes(ins.value.toLowerCase())) {
-            await radio.check();
-            break;
+        // Handle LinkedIn custom role="radiogroup" + role="radio" (not native <input type="radio">)
+        const isRoleGroup = await page.locator(ins.selector).getAttribute("role").catch(() => null);
+        if (isRoleGroup === "radiogroup") {
+          const options = page.locator(`${ins.selector} [role="radio"]`);
+          const count = await options.count();
+          for (let i = 0; i < count; i++) {
+            const opt = options.nth(i);
+            const text = await opt.innerText().catch(async () => await opt.getAttribute("aria-label") ?? "");
+            if (text.toLowerCase().includes(ins.value.toLowerCase())) {
+              await opt.click({ force: true }).catch(() => void 0);
+              break;
+            }
+          }
+        } else {
+          // Native input[type="radio"] fallback
+          const radios = page.locator(`input[type="radio"]`);
+          const count = await radios.count();
+          for (let i = 0; i < count; i++) {
+            const radio = radios.nth(i);
+            const label = await radio.evaluate((el: HTMLInputElement) => {
+              const id = el.getAttribute("id");
+              const labelEl = id ? document.querySelector(`label[for="${id}"]`) : null;
+              return labelEl?.textContent?.trim() || el.getAttribute("value") || "";
+            });
+            if (label.toLowerCase().includes(ins.value.toLowerCase())) {
+              await radio.check();
+              break;
+            }
           }
         }
       } else if (ins.type === "checkbox") {
