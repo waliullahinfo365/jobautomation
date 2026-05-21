@@ -6,6 +6,7 @@ import { registerQueues } from "./queues";
 import { registerProcessors } from "./processors";
 import { drainMemoryQueue, getQueueMode } from "./queues/automation.queue";
 import { logger } from "./utils/logger";
+import { bootstrapEnvIntegrations } from "./lib/bootstrap-integrations";
 
 let started = false;
 
@@ -38,6 +39,9 @@ async function main() {
   logger.info({ queueMode: process.env.QUEUE_MODE }, "Worker queue mode loaded");
   validateWorkerEnv();
   await connectDatabase();
+  // Auto-connect integrations whose credentials are already in env vars
+  // (Telegram, Slack) so tenants don't need to click "Enable" manually.
+  await bootstrapEnvIntegrations().catch((e) => logger.warn({ err: e }, "bootstrap-integrations partial failure"));
   await startWorkers();
 }
 
