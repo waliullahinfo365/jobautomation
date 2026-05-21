@@ -82,11 +82,18 @@ const DISMISS_BTN = [
 
 async function isLoggedIn(page: Page): Promise<boolean> {
   const url = page.url();
-  // Explicit session-expired URL patterns
-  if (url.includes("/login") || url.includes("/authwall") || url.includes("/checkpoint") || url.includes("/uas/")) return false;
+  // Explicit session-expired / auth-wall URL patterns
+  if (
+    url.includes("/uas/login") ||
+    url.includes("/uas/") ||
+    url.includes("/login") ||
+    url.includes("/authwall") ||
+    url.includes("/checkpoint") ||
+    url.includes("session_redirect")
+  ) return false;
   // LinkedIn redirects logged-out users to the root homepage — detect by title
   const title = await page.title().catch(() => "");
-  if (/log in or sign up/i.test(title) || /join linkedin/i.test(title)) return false;
+  if (/log in or sign up/i.test(title) || /join linkedin/i.test(title) || /sign in/i.test(title)) return false;
   // Root domain with no meaningful path = logged-out redirect
   if (/^https?:\/\/www\.linkedin\.com\/?(\?.*)?$/.test(url)) return false;
   return true;
@@ -208,6 +215,17 @@ async function dismissModal(page: Page): Promise<void> {
   }
 }
 
+/** Strip LinkedIn tracking params that trigger bot detection (trackingId, refId, etc.) */
+function cleanLinkedInUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    ["trackingId", "refId", "trk", "src", "lipi", "lici"].forEach((p) => u.searchParams.delete(p));
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 export async function applyViaLinkedIn(input: {
   page: Page;
   jobUrl: string;
@@ -218,30 +236,38 @@ export async function applyViaLinkedIn(input: {
   dryRun?: boolean;
 }): Promise<LinkedInApplyResult> {
   const { page } = input;
+  const jobUrl = cleanLinkedInUrl(input.jobUrl);
 
-  // Warm up the session by visiting /feed first — LinkedIn is less suspicious of
-  // subsequent navigation when there's prior activity on the domain.
+  // Warm up the session — visit /feed with networkidle so all redirects complete
+  // before we check login state. LinkedIn is less suspicious of subsequent
+  // navigation when there's prior activity on the domain.
   try {
-    await page.goto("https://www.linkedin.com/feed/", { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto("https://www.linkedin.com/feed/", { waitUntil: "networkidle", timeout: 30_000 });
     await humanDelay(2000, 3500);
   } catch {
-    // If feed load fails, continue anyway — we'll detect expiry on the job page
+    // networkidle timeout is acceptable on slow connections — fall back to URL check
+    await humanDelay(1000, 2000);
   }
 
   if (!(await isLoggedIn(page))) {
     return { success: false, message: "LinkedIn session expired — please re-import your cookies from Settings → Integrations.", stepsCompleted: 0 };
   }
 
-  // Navigate to job — use "load" so JS-rendered content (Apply button) is present
-  await page.goto(input.jobUrl, { waitUntil: "load", timeout: 45_000 });
+  // Navigate to job page using the cleaned URL (no tracking params)
+  await page.goto(jobUrl, { waitUntil: "load", timeout: 45_000 });
   await humanDelay(2500, 4000);
 
   if (!(await isLoggedIn(page))) {
     const currentUrl = page.url();
     const title = await page.title().catch(() => "");
+    // If redirected to /uas/login with session_redirect, the session cookie is not
+    // being accepted for job pages — likely a cookie scope or IP block issue.
+    const isUasLogin = currentUrl.includes("/uas/login") || currentUrl.includes("/uas/");
     return {
       success: false,
-      message: `LinkedIn blocked navigation to job page (redirected to: ${currentUrl}, title: "${title}"). Session may be valid but LinkedIn is blocking this server. Try setting PROXY_URL in Railway env.`,
+      message: isUasLogin
+        ? "LinkedIn session expired — please re-import your cookies from Settings → Integrations."
+        : `LinkedIn blocked navigation to job page (redirected to: ${currentUrl}, title: "${title}"). Try setting PROXY_URL in Railway env.`,
       stepsCompleted: 0,
     };
   }

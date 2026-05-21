@@ -134,7 +134,7 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
           message: r.message,
           platform,
           stepsCompleted: r.stepsCompleted,
-          sessionExpired: r.message.toLowerCase().includes("session expired") && !r.message.includes("blocking this server"),
+          sessionExpired: r.message.toLowerCase().includes("session expired"),
         };
       }
     } else if (platform === "indeed") {
@@ -152,7 +152,7 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
         message: r.message,
         platform,
         stepsCompleted: r.stepsCompleted,
-        sessionExpired: r.message.toLowerCase().includes("session expired") && !r.message.includes("blocking this server"),
+        sessionExpired: r.message.toLowerCase().includes("session expired"),
       };
     } else {
       const r = await applyViaExternal({
