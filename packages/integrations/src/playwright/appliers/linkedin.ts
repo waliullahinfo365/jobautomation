@@ -238,6 +238,16 @@ export async function applyViaLinkedIn(input: {
   const { page } = input;
   const jobUrl = cleanLinkedInUrl(input.jobUrl);
 
+  // Log which IP the proxy is routing through — visible in Railway logs
+  try {
+    await page.goto("https://api.ipify.org?format=json", { waitUntil: "domcontentloaded", timeout: 10_000 });
+    const ipBody = await page.locator("body").innerText().catch(() => "{}");
+    const ip = (JSON.parse(ipBody) as { ip?: string }).ip ?? "unknown";
+    console.log(`[linkedin-apply] outbound IP: ${ip}`);
+  } catch {
+    console.log("[linkedin-apply] could not detect outbound IP");
+  }
+
   // Warm up the session — visit /feed with networkidle so all redirects complete
   // before we check login state. LinkedIn is less suspicious of subsequent
   // navigation when there's prior activity on the domain.
@@ -249,8 +259,11 @@ export async function applyViaLinkedIn(input: {
     await humanDelay(1000, 2000);
   }
 
+  const feedUrl = page.url();
+  console.log(`[linkedin-apply] after /feed warm-up, URL: ${feedUrl}`);
+
   if (!(await isLoggedIn(page))) {
-    return { success: false, message: "LinkedIn session expired — please re-import your cookies from Settings → Integrations.", stepsCompleted: 0 };
+    return { success: false, message: `LinkedIn session expired or blocked — URL after /feed: ${feedUrl}. Please re-import your cookies from Settings → Integrations.`, stepsCompleted: 0 };
   }
 
   // Navigate to job page using the cleaned URL (no tracking params)

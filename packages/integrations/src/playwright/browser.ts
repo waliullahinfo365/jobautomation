@@ -23,13 +23,17 @@ export interface BrowserSession {
 function parseProxyUrl(proxyUrl: string): { server: string; username?: string; password?: string } | null {
   try {
     const u = new URL(proxyUrl);
-    const server = `${u.protocol}//${u.hostname}:${u.port}`;
-    return {
+    if (!u.hostname) throw new Error("no hostname");
+    const server = `${u.protocol}//${u.hostname}${u.port ? `:${u.port}` : ""}`;
+    const result = {
       server,
-      username: u.username || undefined,
-      password: u.password || undefined,
+      username: u.username ? decodeURIComponent(u.username) : undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
     };
-  } catch {
+    console.log(`[browser] proxy parsed OK — server: ${server}, user: ${result.username ? "set" : "none"}`);
+    return result;
+  } catch (e) {
+    console.error(`[browser] PROXY_URL parse failed — browser will run WITHOUT proxy. Error: ${e instanceof Error ? e.message : String(e)}. URL was: ${proxyUrl.slice(0, 40)}...`);
     return null;
   }
 }
