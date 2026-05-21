@@ -27,7 +27,7 @@ function buildTestJobFilter(): Record<string, unknown> {
   };
 }
 
-const PIPELINE_STATUSES = ["New", "Research", "Drafting", "Ready to Apply", "Applied", "Applying", "Interview", "Offer", "Rejected"];
+const PIPELINE_STATUSES = ["New", "Research", "Drafting", "Ready to Apply", "Applying", "Applied", "External Apply Required", "Interview", "Offer", "Rejected"];
 
 export const getPipelineSummary = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);

@@ -162,7 +162,6 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
       dateApplied: now.toISOString(),
       lastUpdated: now,
     });
-    // Also update the linked Application record so the Applications pipeline reflects the change
     await ApplicationModel.findOneAndUpdate(
       { tenantId: payload.tenantId, jobId: payload.jobId },
       {
@@ -173,20 +172,26 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
         lastStatusChangedAt: now,
       }
     ).catch(() => void 0);
+  } else if (result.isExternalOnly) {
+    // Job only has an external Apply button — cannot automate. Mark for manual action.
+    await JobModel.findByIdAndUpdate(payload.jobId, {
+      status: "External Apply Required",
+      lastUpdated: new Date(),
+    });
+    await ApplicationModel.findOneAndUpdate(
+      { tenantId: payload.tenantId, jobId: payload.jobId },
+      { appliedAutomationStatus: "External", lastStatusChangedAt: new Date() }
+    ).catch(() => void 0);
   } else if (result.sessionExpired) {
-    {
-      // LinkedIn blocks re-login from cloud server IPs — session must be refreshed
-      // via the keep-alive scheduler (which visits /feed with existing cookies) or
-      // manually via cookie import in the UI. Mark session expired and reset job status.
-      await JobModel.findByIdAndUpdate(payload.jobId, { status: "New", lastUpdated: new Date() });
-      await IntegrationConnectionModel.findOneAndUpdate(
-        { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
-        { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
-      ).catch(() => void 0);
-    }
+    // LinkedIn blocks re-login from cloud server IPs — session must be refreshed
+    // via the keep-alive scheduler or manually via cookie import in the UI.
+    await JobModel.findByIdAndUpdate(payload.jobId, { status: "Ready to Apply", lastUpdated: new Date() });
+    await IntegrationConnectionModel.findOneAndUpdate(
+      { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
+      { $set: { "metadata.sessionExpired": true, "metadata.expiredAt": new Date().toISOString() } }
+    ).catch(() => void 0);
   } else {
     // Failed for any other reason — revert from "Applying" back to "Ready to Apply"
-    // so the job doesn't get stuck in the pipeline and the chart stays accurate
     await JobModel.findByIdAndUpdate(payload.jobId, {
       status: "Ready to Apply",
       lastUpdated: new Date(),

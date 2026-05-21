@@ -84,6 +84,12 @@ export const importLinkedInCookies = asyncHandler(async (req: Request, res) => {
     storageState: { cookies: normalised, origins: [] },
   });
 
+  // Clear any session-expired flag so the next auto-apply attempt proceeds immediately
+  await IntegrationConnectionModel.updateOne(
+    { tenantId, provider: "playwright-session-linkedin" },
+    { $unset: { "metadata.sessionExpired": "", "metadata.expiredAt": "" } }
+  );
+
   return successResponse(res, { connected: true, cookieCount: normalised.length }, "LinkedIn cookies imported");
 });
 

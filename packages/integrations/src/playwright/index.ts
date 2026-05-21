@@ -43,6 +43,8 @@ export interface RunApplyResult {
   platform: ApplyPlatform;
   stepsCompleted: number;
   sessionExpired?: boolean;
+  /** True when the job only has an external Apply button — must be completed manually */
+  isExternalOnly?: boolean;
 }
 
 /** Download a file from a URL to a temp path and return the path */
@@ -116,20 +118,16 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
         dryRun: input.dryRun,
       });
 
-      // If LinkedIn redirected to external ATS, apply via that
+      // If LinkedIn redirected to external ATS, mark as external-only (Option A)
       if (!r.success && r.appliedViaExternalUrl) {
-        const extPlatform = detectPlatform(r.appliedViaExternalUrl);
-        const extResult = await applyViaExternal({
-          page: session.page,
-          jobUrl: r.appliedViaExternalUrl,
-          platform: extPlatform,
-          profile: input.profile,
-          cvPath,
-          coverLetterPath,
-          jobContext,
-          dryRun: input.dryRun,
-        });
-        result = { ...extResult, sessionExpired: false };
+        result = {
+          success: false,
+          message: `Job requires applying on company website: ${r.appliedViaExternalUrl}`,
+          platform,
+          stepsCompleted: 0,
+          sessionExpired: false,
+          isExternalOnly: true,
+        };
       } else {
         result = {
           success: r.success,

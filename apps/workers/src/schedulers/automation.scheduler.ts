@@ -1,6 +1,6 @@
-import { TenantModel, IntegrationConnectionModel } from "@jobflow/database/models";
+import { TenantModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
 import type { EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
-import { enqueueManyAutomationJobs } from "../queues/automation.queue";
+import { enqueueManyAutomationJobs, enqueueAutomationJob } from "../queues/automation.queue";
 import { loadSession, saveSession } from "@jobflow/integrations/playwright/session-store";
 import { launchBrowser, humanDelay } from "@jobflow/integrations/playwright/browser";
 
@@ -160,6 +160,56 @@ export async function scheduleJobIntakeSweep() {
       },
     }))
   );
+}
+
+/**
+ * Auto-apply sweep: finds all jobs with status "Ready to Apply" that have a jobUrl
+ * and queues a job-apply task for each. Skips jobs already in "Applying" state.
+ * Only runs for tenants that have an active (non-expired) LinkedIn session.
+ */
+export async function scheduleAutoApplySweep() {
+  const tenantIds = await activeTenantIds();
+  const date = todayKey();
+
+  for (const tenantId of tenantIds) {
+    try {
+      // Only queue if the tenant has an active LinkedIn session
+      const sessionRow = await IntegrationConnectionModel.findOne({
+        tenantId,
+        provider: "playwright-session-linkedin",
+        status: "Connected",
+      }).lean() as Record<string, unknown> | null;
+      if (!sessionRow) continue;
+      const meta = (sessionRow?.metadata as Record<string, unknown>) ?? {};
+      if (meta.sessionExpired === true) continue;
+
+      // Find all Ready to Apply jobs with a URL
+      const jobs = await JobModel.find({
+        tenantId,
+        status: "Ready to Apply",
+        jobUrl: { $exists: true, $ne: "" },
+      }).select("_id jobUrl generatedCoverLetterLink").lean() as Array<Record<string, unknown>>;
+
+      for (const job of jobs) {
+        const jobId = String(job._id);
+        await enqueueAutomationJob({
+          name: "job-apply",
+          payload: {
+            tenantId,
+            jobId,
+            jobUrl: String(job.jobUrl ?? ""),
+            coverLetterUrl: String(job.generatedCoverLetterLink ?? ""),
+            operationId: `auto-apply-${jobId}-${date}`,
+            idempotencyKey: `auto-apply:${jobId}:${date}`,
+            requestedAt: new Date().toISOString(),
+            source: "scheduler",
+          },
+        });
+      }
+    } catch {
+      // Non-fatal — skip this tenant
+    }
+  }
 }
 
 /**

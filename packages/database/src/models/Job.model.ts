@@ -5,7 +5,7 @@ const JobSchema = new Schema(
     company: { type: String, required: true },
     position: { type: String, required: true },
     source: String,
-    status: { type: String, enum: ["New", "Research", "Drafting", "Ready to Apply", "Applied", "Interview", "Offer", "Rejected", "Archived"], required: true },
+    status: { type: String, enum: ["New", "Research", "Drafting", "Ready to Apply", "Applying", "Applied", "External Apply Required", "Interview", "Offer", "Rejected", "Archived"], required: true },
     priority: { type: String, enum: ["Low", "Medium", "High", "Urgent"], default: "Medium" },
     location: String,
     jobUrl: String,
