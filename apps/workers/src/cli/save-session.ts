@@ -69,9 +69,23 @@ async function main() {
   console.log(`\n🚀 Launching Chrome for ${platform} login...`);
   console.log("   A browser window will open. Log in manually, then come back here.");
 
+  // If PROXY_URL is set, use the same proxy that the Railway worker uses.
+  // This is critical: LinkedIn binds session cookies to the IP that logged in.
+  // If you log in without proxy and the worker uses a proxy, the session will
+  // be rejected immediately. Always use the same proxy here as in production.
+  const proxyUrl = process.env.PROXY_URL?.trim();
+  if (proxyUrl) {
+    console.log(`\n   Proxy detected: ${proxyUrl.replace(/:\/\/[^@]+@/, "://<credentials>@")}`);
+    console.log("   The browser will log in through the proxy — same IP the worker will use.");
+  } else {
+    console.log("\n⚠️  No PROXY_URL set — session will be bound to your local IP.");
+    console.log("   If Railway uses a different IP, the session will expire immediately.");
+    console.log("   Set PROXY_URL in your .env to match production before running this.");
+  }
+
   await connectDatabase();
 
-  const session = await launchBrowser({ headless: false, slowMo: 50 });
+  const session = await launchBrowser({ headless: false, slowMo: 50, proxyUrl });
 
   try {
     const loginUrl = LOGIN_URLS[platform];
