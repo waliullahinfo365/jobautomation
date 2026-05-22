@@ -44,7 +44,10 @@ export async function launchBrowser(options: {
   slowMo?: number;
   proxyUrl?: string;
 }): Promise<BrowserSession> {
-  const { chromium } = await import("playwright");
+  // Use playwright-extra + stealth plugin to bypass LinkedIn bot detection
+  const { chromium } = await import("playwright-extra");
+  const StealthPlugin = (await import("puppeteer-extra-plugin-stealth")).default;
+  chromium.use(StealthPlugin());
 
   // Resolve proxy — explicit arg takes priority, then PROXY_URL env var
   const rawProxy = options.proxyUrl ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
@@ -71,7 +74,7 @@ export async function launchBrowser(options: {
       "--mute-audio",
       "--lang=en-US",
     ],
-  });
+  }) as import("playwright").Browser;
 
   // Randomise viewport slightly to avoid fingerprint clustering
   const w = 1280 + Math.floor(Math.random() * 120);
@@ -94,26 +97,7 @@ export async function launchBrowser(options: {
 
   const context = await browser.newContext(contextOptions as Parameters<Browser["newContext"]>[0]);
 
-  // Full stealth: hide all automation signals
-  await context.addInitScript(() => {
-    // webdriver flag
-    Object.defineProperty(navigator, "webdriver", { get: () => false });
-    // plugins array (headless Chrome has 0)
-    Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
-    // languages
-    Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
-    // chrome object expected by sites
-    // @ts-expect-error runtime injection
-    window.chrome = { runtime: {} };
-    // permissions API — headless returns "denied" for notifications; override to look normal
-    const originalQuery = window.navigator.permissions?.query?.bind(window.navigator.permissions);
-    if (originalQuery) {
-      window.navigator.permissions.query = (parameters: PermissionDescriptor) =>
-        (parameters.name as string) === "notifications"
-          ? Promise.resolve({ state: "prompt" } as PermissionStatus)
-          : originalQuery(parameters);
-    }
-  });
+  // Stealth is handled by puppeteer-extra-plugin-stealth (covers 30+ detection vectors)
 
   const page = await context.newPage();
 
