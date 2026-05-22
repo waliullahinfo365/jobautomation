@@ -118,8 +118,8 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
   }
 
   function handleDragEnd(_: unknown, info: { offset: { x: number; y: number }; velocity: { x: number; y: number } }) {
-    const ox = info.offset.x;
-    const oy = info.offset.y;
+    const ox = x.get() || info.offset.x;
+    const oy = y.get() || info.offset.y;
     const vx = Math.abs(info.velocity.x);
     const vy = Math.abs(info.velocity.y);
     const passedX = Math.abs(ox) > SWIPE_THRESHOLD || vx > SWIPE_VELOCITY_THRESHOLD;
@@ -216,7 +216,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
         <div className="border-t border-[var(--border)]" />
 
         {/* AI insights */}
-        <div className="px-5 py-4 space-y-3 max-h-[40vh] overflow-y-auto overscroll-contain">
+        <div className="px-5 py-4 space-y-3 max-h-[40vh] overflow-hidden">
           {ai ? (
             <>
               {ai.reasons.length > 0 && (
