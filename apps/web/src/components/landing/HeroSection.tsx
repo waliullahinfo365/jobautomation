@@ -545,9 +545,39 @@ export function HeroSection() {
               <MobileAppPreview />
             </div>
 
-            {/* Desktop dashboard */}
+            {/* Desktop dashboard — lanyard drop */}
             <div className="hidden lg:block relative">
-              <DesktopMockup />
+              {/* Lanyard hook + cord */}
+              <div className="absolute left-1/2 -translate-x-1/2 -top-14 flex flex-col items-center z-20 pointer-events-none">
+                {/* Metal hook */}
+                <svg width="28" height="36" viewBox="0 0 28 36" fill="none" className="drop-shadow-lg">
+                  <path d="M14 2 C14 2 14 8 14 10 C14 16 4 18 4 26 C4 31 8.5 34 14 34 C19.5 34 24 31 24 26 C24 18 14 16 14 10" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+                  <circle cx="14" cy="5" r="3.5" fill="#9ca3af" stroke="#6b7280" strokeWidth="1.5"/>
+                  <rect x="11" y="0" width="6" height="5" rx="1" fill="#4b5563"/>
+                </svg>
+                {/* Cord */}
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: 0.1, duration: 0.4, ease: "easeIn" }}
+                  style={{ transformOrigin: "top" }}
+                  className="w-px h-8 bg-gradient-to-b from-gray-500 to-gray-600 opacity-70"
+                />
+              </div>
+
+              {/* Mockup with drop + swing on load */}
+              <motion.div
+                initial={{ y: -180, rotate: -8, opacity: 0 }}
+                animate={{ y: 0, rotate: [null, 6, -4, 2.5, -1, 0], opacity: 1 }}
+                transition={{
+                  y: { delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] },
+                  rotate: { delay: 0.35, duration: 2.2, ease: "easeOut", times: [0, 0.35, 0.6, 0.78, 0.9, 1] },
+                  opacity: { delay: 0.3, duration: 0.25 },
+                }}
+                style={{ transformOrigin: "top center", paddingTop: "2.5rem" }}
+              >
+                <DesktopMockup />
+              </motion.div>
 
               {/* Floating card — top left */}
               <motion.div
