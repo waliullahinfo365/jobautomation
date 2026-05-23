@@ -40,7 +40,7 @@ export function Navbar() {
             style={
               scrolled
                 ? {
-                    background: "linear-gradient(135deg, rgba(59,130,246,0.35), rgba(139,92,246,0.25), rgba(6,182,212,0.2))",
+                    background: "linear-gradient(135deg, rgba(59,130,246,0.4), rgba(139,92,246,0.3), rgba(6,182,212,0.25))",
                     padding: "1px",
                   }
                 : { padding: "1px", background: "transparent" }
@@ -49,9 +49,12 @@ export function Navbar() {
             <div
               className="rounded-[15px] flex items-center justify-between h-14 px-4 sm:px-5 transition-all duration-300"
               style={{
-                background: scrolled ? "var(--lp-nav)" : "transparent",
-                backdropFilter: scrolled ? "blur(24px) saturate(180%)" : "none",
-                boxShadow: scrolled ? "0 8px 40px rgba(0,0,0,0.12)" : "none",
+                background: scrolled
+                  ? "rgba(0,0,0,0.75)"
+                  : "rgba(0,0,0,0.35)",
+                backdropFilter: "blur(20px) saturate(160%)",
+                WebkitBackdropFilter: "blur(20px) saturate(160%)",
+                boxShadow: scrolled ? "0 8px 40px rgba(0,0,0,0.4)" : "none",
               }}
             >
               {/* Logo */}
@@ -65,7 +68,7 @@ export function Navbar() {
                     transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 4 }}
                   />
                 </div>
-                <span className="font-bold text-[17px] tracking-tight hidden sm:block" style={{ color: "var(--lp-t1)" }}>
+                <span className="font-bold text-[17px] tracking-tight hidden sm:block text-white">
                   NewJob{" "}
                   <span
                     style={{
@@ -87,9 +90,9 @@ export function Navbar() {
                     key={label}
                     href={href}
                     className="relative group text-sm px-4 py-2 rounded-lg transition-colors duration-150"
-                    style={{ color: "var(--lp-t3)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--lp-t1)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--lp-t3)")}
+                    style={{ color: "rgba(255,255,255,0.6)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.6)")}
                   >
                     {label}
                     <span className="absolute inset-x-3 bottom-1 h-px scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-center" style={{ background: "linear-gradient(90deg, #3b82f6, #8b5cf6)" }} />
@@ -104,7 +107,7 @@ export function Navbar() {
                   whileHover={{ scale: 1.1, rotate: 15 }}
                   whileTap={{ scale: 0.9 }}
                   className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                  style={{ color: "var(--lp-t4)" }}
+                  style={{ color: "rgba(255,255,255,0.5)" }}
                   aria-label="Toggle theme"
                 >
                   <AnimatePresence mode="wait">
@@ -122,8 +125,8 @@ export function Navbar() {
 
                 <Link
                   href="/login"
-                  className="text-sm px-4 py-2 rounded-lg transition-colors duration-150"
-                  style={{ color: "var(--lp-t3)" }}
+                  className="text-sm px-4 py-2 rounded-lg transition-colors duration-150 hover:text-white"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
                 >
                   Login
                 </Link>
@@ -155,13 +158,13 @@ export function Navbar() {
                 <button
                   onClick={toggle}
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ color: "var(--lp-t3)" }}
+                  style={{ color: "rgba(255,255,255,0.55)" }}
                 >
                   {isDark ? <Sun size={15} /> : <Moon size={15} />}
                 </button>
                 <button
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
-                  style={{ color: "var(--lp-t2)" }}
+                  style={{ color: "rgba(255,255,255,0.8)" }}
                   onClick={() => setMobileOpen(!mobileOpen)}
                   aria-label="Toggle menu"
                 >
@@ -193,10 +196,11 @@ export function Navbar() {
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="fixed inset-x-4 top-[72px] z-40 md:hidden rounded-2xl overflow-hidden"
             style={{
-              background: "var(--lp-nav)",
-              border: "1px solid var(--lp-bd2)",
-              backdropFilter: "blur(28px) saturate(180%)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+              background: "rgba(0,0,0,0.82)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              backdropFilter: "blur(28px) saturate(160%)",
+              WebkitBackdropFilter: "blur(28px) saturate(160%)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
             }}
           >
             <div className="px-4 py-4 space-y-0.5">
@@ -207,19 +211,19 @@ export function Navbar() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3 py-3 px-3 rounded-xl text-sm font-medium transition-colors hover:text-blue-500"
-                  style={{ color: "var(--lp-t2)" }}
+                  className="flex items-center gap-3 py-3 px-3 rounded-xl text-sm font-medium transition-colors hover:text-white"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
                   onClick={() => setMobileOpen(false)}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
                   {label}
                 </motion.a>
               ))}
-              <div className="pt-4 pb-1 flex flex-col gap-2.5 mt-2" style={{ borderTop: "1px solid var(--lp-bd)" }}>
+              <div className="pt-4 pb-1 flex flex-col gap-2.5 mt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
                 <Link
                   href="/login"
                   className="text-center py-3 rounded-xl text-sm font-medium transition-colors"
-                  style={{ color: "var(--lp-t2)", border: "1px solid var(--lp-bd2)", background: "var(--lp-card2)" }}
+                  style={{ color: "rgba(255,255,255,0.75)", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }}
                   onClick={() => setMobileOpen(false)}
                 >
                   Login
