@@ -486,32 +486,57 @@ export function HeroSection() {
               transition={{ duration: 0.6, delay: 0.44 }}
               className="flex flex-col sm:flex-row items-start gap-3 mb-7"
             >
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <motion.div
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              >
                 <Link
                   href="/login"
                   className="group relative overflow-hidden flex items-center gap-2.5 px-7 py-3.5 rounded-2xl text-white font-semibold text-base"
                   style={{
                     background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
                     boxShadow: "0 0 36px rgba(99,102,241,0.35), 0 4px 16px rgba(0,0,0,0.18)",
+                    transition: "box-shadow 0.25s ease",
                   }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 0 52px rgba(99,102,241,0.6), 0 8px 24px rgba(0,0,0,0.25)")}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 36px rgba(99,102,241,0.35), 0 4px 16px rgba(0,0,0,0.18)")}
                 >
+                  {/* Shimmer sweep */}
                   <motion.div
                     className="absolute inset-0"
-                    style={{ background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.18) 50%, transparent 65%)" }}
+                    style={{ background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%)" }}
                     animate={{ x: ["-100%", "200%"] }}
                     transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 4.5 }}
                   />
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.08), transparent)" }} />
                   <span className="relative z-10">Get started free</span>
-                  <ArrowRight size={15} className="relative z-10 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={15} className="relative z-10 group-hover:translate-x-1.5 transition-transform duration-200" />
                 </Link>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+
+              <motion.div
+                whileHover={{ scale: 1.04, y: -2 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              >
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold text-base"
+                  className="group relative overflow-hidden flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold text-base transition-all duration-250"
                   style={{ color: "var(--lp-t2)", border: "1px solid var(--lp-bd2)", background: "var(--lp-card)" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = "rgba(99,102,241,0.5)";
+                    e.currentTarget.style.boxShadow = "0 0 20px rgba(99,102,241,0.15), 0 4px 12px rgba(0,0,0,0.1)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = "";
+                    e.currentTarget.style.boxShadow = "";
+                  }}
                 >
-                  See how it works
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04))" }} />
+                  <span className="relative z-10">See how it works</span>
+                  <ArrowRight size={14} className="relative z-10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200" />
                 </Link>
               </motion.div>
             </motion.div>
@@ -545,36 +570,42 @@ export function HeroSection() {
               <MobileAppPreview />
             </div>
 
-            {/* Desktop dashboard — lanyard drop */}
-            <div className="hidden lg:block relative">
-              {/* Lanyard hook + cord */}
-              <div className="absolute left-1/2 -translate-x-1/2 -top-14 flex flex-col items-center z-20 pointer-events-none">
-                {/* Metal hook */}
-                <svg width="28" height="36" viewBox="0 0 28 36" fill="none" className="drop-shadow-lg">
-                  <path d="M14 2 C14 2 14 8 14 10 C14 16 4 18 4 26 C4 31 8.5 34 14 34 C19.5 34 24 31 24 26 C24 18 14 16 14 10" stroke="#6b7280" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-                  <circle cx="14" cy="5" r="3.5" fill="#9ca3af" stroke="#6b7280" strokeWidth="1.5"/>
-                  <rect x="11" y="0" width="6" height="5" rx="1" fill="#4b5563"/>
-                </svg>
-                {/* Cord */}
+            {/* Desktop dashboard — cord drop */}
+            <div className="hidden lg:block relative" style={{ paddingTop: "3.5rem" }}>
+
+              {/* Cord — extends from above viewport down to the clip */}
+              <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center" style={{ top: "-120px", height: "120px" }}>
                 <motion.div
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
-                  transition={{ delay: 0.1, duration: 0.4, ease: "easeIn" }}
-                  style={{ transformOrigin: "top" }}
-                  className="w-px h-8 bg-gradient-to-b from-gray-500 to-gray-600 opacity-70"
+                  transition={{ delay: 0.05, duration: 0.45, ease: "easeIn" }}
+                  style={{ transformOrigin: "top", height: "100%", width: "2px", background: "linear-gradient(180deg, transparent 0%, #4b5563 30%, #6b7280 100%)" }}
                 />
               </div>
 
-              {/* Mockup with drop + swing on load */}
+              {/* Clip at the top edge of the card */}
+              <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ top: "3.5rem", marginTop: "-18px" }}>
+                <svg width="36" height="20" viewBox="0 0 36 20" fill="none">
+                  {/* Clip body */}
+                  <rect x="6" y="6" width="24" height="10" rx="5" fill="#374151" stroke="#4b5563" strokeWidth="1.5"/>
+                  {/* Clip opening slit */}
+                  <rect x="14" y="9" width="8" height="4" rx="2" fill="#1f2937"/>
+                  {/* Two screw dots */}
+                  <circle cx="10" cy="11" r="1.5" fill="#6b7280"/>
+                  <circle cx="26" cy="11" r="1.5" fill="#6b7280"/>
+                </svg>
+              </div>
+
+              {/* Mockup with drop + pendulum swing */}
               <motion.div
-                initial={{ y: -180, rotate: -8, opacity: 0 }}
-                animate={{ y: 0, rotate: [null, 6, -4, 2.5, -1, 0], opacity: 1 }}
+                initial={{ y: -260, rotate: -10, opacity: 0 }}
+                animate={{ y: 0, rotate: [null, 7, -5, 3, -1.5, 0.5, 0], opacity: 1 }}
                 transition={{
-                  y: { delay: 0.35, duration: 0.9, ease: [0.22, 1, 0.36, 1] },
-                  rotate: { delay: 0.35, duration: 2.2, ease: "easeOut", times: [0, 0.35, 0.6, 0.78, 0.9, 1] },
-                  opacity: { delay: 0.3, duration: 0.25 },
+                  y: { delay: 0.3, duration: 1.05, ease: [0.16, 1, 0.3, 1] },
+                  rotate: { delay: 0.3, duration: 2.6, ease: "easeOut", times: [0, 0.3, 0.52, 0.68, 0.8, 0.92, 1] },
+                  opacity: { delay: 0.25, duration: 0.2 },
                 }}
-                style={{ transformOrigin: "top center", paddingTop: "2.5rem" }}
+                style={{ transformOrigin: "top center" }}
               >
                 <DesktopMockup />
               </motion.div>
