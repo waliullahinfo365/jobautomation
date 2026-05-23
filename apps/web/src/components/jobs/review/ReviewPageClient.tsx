@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getReviewQueue } from "@/lib/api/jobs.api";
 import type { ReviewableJob, ReviewQueueResponse } from "@/types/job";
+import { normalizeJobForUi } from "@/lib/utils/resource";
 import { SwipeReviewSession } from "./SwipeReviewSession";
 
 function EmptyQueue({ onBack }: { onBack: () => void }) {
@@ -38,7 +39,8 @@ export function ReviewPageClient() {
     setError(null);
     try {
       const payload = await getReviewQueue(50) as ReviewQueueResponse;
-      setJobs(payload.jobs);
+      const normalized = payload.jobs.map((j) => ({ ...normalizeJobForUi(j), ...j } as ReviewableJob));
+      setJobs(normalized);
       setTotal(payload.total);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load review queue");
