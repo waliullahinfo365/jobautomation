@@ -570,29 +570,63 @@ export function HeroSection() {
               <MobileAppPreview />
             </div>
 
-            {/* Desktop dashboard — cord drop */}
-            <div className="hidden lg:block relative" style={{ paddingTop: "3.5rem" }}>
+            {/* Desktop dashboard — lanyard drop */}
+            <div className="hidden lg:block relative" style={{ paddingTop: "7rem" }}>
 
-              {/* Cord — extends from above viewport down to the clip */}
-              <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center" style={{ top: "-120px", height: "120px" }}>
+              {/* Full lanyard assembly — strap + O-ring + swivel clip */}
+              <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center" style={{ top: "-140px" }}>
+
+                {/* Wide fabric strap */}
                 <motion.div
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
-                  transition={{ delay: 0.05, duration: 0.45, ease: "easeIn" }}
-                  style={{ transformOrigin: "top", height: "100%", width: "2px", background: "linear-gradient(180deg, transparent 0%, #4b5563 30%, #6b7280 100%)" }}
+                  transition={{ delay: 0.05, duration: 0.4, ease: "easeIn" }}
+                  style={{ transformOrigin: "top", width: "14px", height: "110px", background: "linear-gradient(180deg, #111 0%, #1c1c1e 40%, #2a2a2e 100%)", borderRadius: "2px", boxShadow: "inset -2px 0 4px rgba(0,0,0,0.6), inset 2px 0 3px rgba(255,255,255,0.04), 2px 0 6px rgba(0,0,0,0.4)" }}
                 />
-              </div>
 
-              {/* Clip at the top edge of the card */}
-              <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ top: "3.5rem", marginTop: "-18px" }}>
-                <svg width="36" height="20" viewBox="0 0 36 20" fill="none">
-                  {/* Clip body */}
-                  <rect x="6" y="6" width="24" height="10" rx="5" fill="#374151" stroke="#4b5563" strokeWidth="1.5"/>
-                  {/* Clip opening slit */}
-                  <rect x="14" y="9" width="8" height="4" rx="2" fill="#1f2937"/>
-                  {/* Two screw dots */}
-                  <circle cx="10" cy="11" r="1.5" fill="#6b7280"/>
-                  <circle cx="26" cy="11" r="1.5" fill="#6b7280"/>
+                {/* Full badge clip SVG — O-ring + swivel clip body + jaw */}
+                <svg width="44" height="80" viewBox="0 0 44 80" fill="none" style={{ marginTop: "-2px", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.7))" }}>
+                  <defs>
+                    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#9ca3af"/>
+                      <stop offset="40%" stopColor="#6b7280"/>
+                      <stop offset="100%" stopColor="#374151"/>
+                    </linearGradient>
+                    <linearGradient id="clipBodyGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#6b7280"/>
+                      <stop offset="50%" stopColor="#4b5563"/>
+                      <stop offset="100%" stopColor="#374151"/>
+                    </linearGradient>
+                    <linearGradient id="clipShine" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgba(255,255,255,0.12)"/>
+                      <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+                    </linearGradient>
+                  </defs>
+
+                  {/* O-ring */}
+                  <ellipse cx="22" cy="14" rx="10" ry="11" stroke="url(#ringGrad)" strokeWidth="4" fill="none"/>
+                  {/* O-ring inner highlight */}
+                  <ellipse cx="22" cy="14" rx="10" ry="11" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" fill="none"/>
+
+                  {/* Swivel neck connecting ring to clip body */}
+                  <rect x="18" y="23" width="8" height="7" rx="2" fill="#4b5563"/>
+                  <rect x="19" y="23" width="3" height="7" rx="1" fill="rgba(255,255,255,0.07)"/>
+
+                  {/* Clip body — rounded rectangle */}
+                  <rect x="10" y="29" width="24" height="34" rx="5" fill="url(#clipBodyGrad)" stroke="#374151" strokeWidth="1"/>
+                  {/* Clip body shine */}
+                  <rect x="11" y="30" width="22" height="32" rx="4" fill="url(#clipShine)"/>
+                  {/* Left edge highlight */}
+                  <rect x="11" y="30" width="3" height="32" rx="2" fill="rgba(255,255,255,0.08)"/>
+                  {/* Centre slot on clip body */}
+                  <rect x="17" y="38" width="10" height="18" rx="3" fill="#1f2937" stroke="#374151" strokeWidth="0.75"/>
+
+                  {/* Curved jaw / hook at bottom */}
+                  <path d="M22 63 C22 63 22 68 16 72 C12 74.5 9 73 8 70" stroke="url(#ringGrad)" strokeWidth="4" strokeLinecap="round" fill="none"/>
+                  {/* Jaw tip */}
+                  <circle cx="8" cy="70" r="2.5" fill="#6b7280"/>
+                  {/* Jaw inner highlight */}
+                  <path d="M22 63 C22 63 22 68 16 72" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
                 </svg>
               </div>
 
