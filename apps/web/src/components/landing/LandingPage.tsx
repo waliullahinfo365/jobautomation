@@ -10,8 +10,6 @@ import { HeroSection } from "./HeroSection";
 import { SocialProofSection } from "./SocialProofSection";
 import { FeaturesSection } from "./FeaturesSection";
 import { HowItWorksSection } from "./HowItWorksSection";
-import { ProductPreviewSection } from "./ProductPreviewSection";
-import { AutomationSection } from "./AutomationSection";
 import { PricingSection } from "./PricingSection";
 import { FAQSection } from "./FAQSection";
 import { CTASection } from "./CTASection";
@@ -45,30 +43,30 @@ const DARK_VARS = `
 `;
 
 const LIGHT_VARS = `
-  --lp-bg: #f5f3ff;
-  --lp-bg2: rgba(250,248,255,0.99);
+  --lp-bg: #ffffff;
+  --lp-bg2: rgba(255,255,255,0.99);
   --lp-nav: rgba(30,15,60,0.88);
   --lp-nav-bd: rgba(139,92,246,0.2);
-  --lp-card: rgba(255,255,255,0.92);
-  --lp-card2: rgba(245,243,255,0.9);
-  --lp-card3: rgba(255,255,255,0.75);
-  --lp-bd: rgba(109,40,217,0.1);
-  --lp-bd2: rgba(109,40,217,0.18);
-  --lp-bd3: rgba(109,40,217,0.06);
-  --lp-t1: #1e0b3e;
-  --lp-t2: #2e1a5e;
-  --lp-t3: #5b4190;
-  --lp-t4: #7c5bb5;
-  --lp-t5: #a890d0;
-  --lp-grid: rgba(109,40,217,1);
+  --lp-card: #ffffff;
+  --lp-card2: #f8fafc;
+  --lp-card3: #f1f5f9;
+  --lp-bd: rgba(15,23,42,0.08);
+  --lp-bd2: rgba(15,23,42,0.13);
+  --lp-bd3: rgba(15,23,42,0.05);
+  --lp-t1: #0f172a;
+  --lp-t2: #1e293b;
+  --lp-t3: #475569;
+  --lp-t4: #64748b;
+  --lp-t5: #94a3b8;
+  --lp-grid: rgba(15,23,42,1);
   --lp-grid-o: 0.04;
-  --lp-hero-glow: rgba(99,102,241,0.18);
-  --lp-hero-glow2: rgba(139,92,246,0.10);
-  --lp-shadow: 0 4px 24px rgba(109,40,217,0.1), 0 1px 3px rgba(0,0,0,0.04);
-  --lp-shadow-sm: 0 1px 4px rgba(109,40,217,0.08);
-  --lp-shadow-lg: 0 12px 48px rgba(109,40,217,0.12), 0 2px 8px rgba(0,0,0,0.06);
-  --lp-particle: rgba(139,92,246,0.3);
-  --lp-section-sep: rgba(109,40,217,0.08);
+  --lp-hero-glow: rgba(99,102,241,0.1);
+  --lp-hero-glow2: rgba(139,92,246,0.06);
+  --lp-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
+  --lp-shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+  --lp-shadow-lg: 0 12px 48px rgba(0,0,0,0.09), 0 2px 8px rgba(0,0,0,0.05);
+  --lp-particle: rgba(99,102,241,0.2);
+  --lp-section-sep: rgba(15,23,42,0.07);
 `;
 
 function MobileStickyBar() {
@@ -140,8 +138,6 @@ function Inner() {
         <SocialProofSection />
         <FeaturesSection />
         <HowItWorksSection />
-        <ProductPreviewSection />
-        <AutomationSection />
         <PricingSection />
         <FAQSection />
         <CTASection />
