@@ -20,7 +20,7 @@ function EmptyQueue({ onBack }: { onBack: () => void }) {
         onClick={onBack}
         className="rounded-xl bg-[var(--surface-2)] px-5 py-2.5 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--border)] transition-colors"
       >
-        Back to Dashboard
+        Go to Dashboard
       </button>
     </div>
   );

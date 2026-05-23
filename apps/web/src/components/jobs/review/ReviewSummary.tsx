@@ -37,8 +37,8 @@ export function ReviewSummary({ stats, onRestart }: Props) {
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold text-[var(--text-1)]">Review Complete</h2>
-        <p className="mt-1 text-sm text-[var(--text-3)]">You reviewed {stats.total} job{stats.total !== 1 ? "s" : ""} today</p>
+        <h2 className="text-2xl font-bold text-[var(--text-1)]">You're done for today</h2>
+        <p className="mt-1 text-sm text-[var(--text-3)]">We'll notify you when new matching jobs are found.</p>
       </div>
 
       <div className="w-full max-w-xs rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-1">
@@ -70,7 +70,7 @@ export function ReviewSummary({ stats, onRestart }: Props) {
           onClick={() => router.push("/dashboard")}
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
         >
-          Back to Dashboard
+          Go to Dashboard
         </button>
         {onRestart && (
           <button
