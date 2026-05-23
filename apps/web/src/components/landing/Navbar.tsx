@@ -50,8 +50,8 @@ export function Navbar() {
               className="rounded-[15px] flex items-center justify-between h-14 px-4 sm:px-5 transition-all duration-300"
               style={{
                 background: scrolled
-                  ? "rgba(0,0,0,0.75)"
-                  : "rgba(0,0,0,0.35)",
+                  ? "rgba(30,15,60,0.82)"
+                  : "rgba(30,15,60,0.45)",
                 backdropFilter: "blur(20px) saturate(160%)",
                 WebkitBackdropFilter: "blur(20px) saturate(160%)",
                 boxShadow: scrolled ? "0 8px 40px rgba(0,0,0,0.4)" : "none",
@@ -196,7 +196,7 @@ export function Navbar() {
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className="fixed inset-x-4 top-[72px] z-40 md:hidden rounded-2xl overflow-hidden"
             style={{
-              background: "rgba(0,0,0,0.82)",
+              background: "rgba(30,15,60,0.92)",
               border: "1px solid rgba(255,255,255,0.1)",
               backdropFilter: "blur(28px) saturate(160%)",
               WebkitBackdropFilter: "blur(28px) saturate(160%)",
