@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ApplicationStatsCards } from "./ApplicationStatsCards";
 import { ApplicationFilters, type ApplicationFilterState } from "./ApplicationFilters";
 import { ApplicationsTable } from "./ApplicationsTable";
+import { ApplicationCard } from "./ApplicationCard";
 import { ApplicationDetailPanel } from "./ApplicationDetailPanel";
 import { LogApplicationModal } from "./LogApplicationModal";
 import type { Application } from "@/types/application";
@@ -104,11 +105,22 @@ function filterApplications(applications: Application[], filters: ApplicationFil
   });
 }
 
+type AppTab = "applied" | "waiting" | "interview" | "closed" | "all";
+
+const APP_TAB_STATUSES: Record<AppTab, string[] | null> = {
+  applied: ["Applied"],
+  waiting: ["Follow-Up Due"],
+  interview: ["Interview"],
+  closed: ["Offer", "Rejected", "Archived"],
+  all: null,
+};
+
 export function ApplicationsPageClient() {
   const { t } = useTranslation();
   const applicationsApi = useApplicationsApi({ fallbackToMock: false });
   const integrationsApi = useIntegrationsApi({ fallbackToMock: false });
 
+  const [activeTab, setActiveTab] = useState<AppTab>("all");
   const [filters, setFilters] = useState<ApplicationFilterState>(initialFilters);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -163,7 +175,13 @@ export function ApplicationsPageClient() {
     }
   }, [applications, selectedApplication]);
 
-  const filteredApplications = useMemo(() => filterApplications(applications, filters), [applications, filters]);
+  const tabFilteredApplications = useMemo(() => {
+    const allowed = APP_TAB_STATUSES[activeTab];
+    if (!allowed) return applications;
+    return applications.filter((a) => allowed.includes(a.applicationStatus));
+  }, [applications, activeTab]);
+
+  const filteredApplications = useMemo(() => filterApplications(tabFilteredApplications, filters), [tabFilteredApplications, filters]);
 
   const stats = useMemo(() => {
     return {
@@ -423,6 +441,36 @@ export function ApplicationsPageClient() {
 
         <ApplicationStatsCards stats={stats} />
 
+        {/* Status tabs */}
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-1">
+          {(["all", "applied", "waiting", "interview", "closed"] as AppTab[]).map((tab) => {
+            const labels: Record<AppTab, string> = { all: "All", applied: "Applied", waiting: "Follow-up", interview: "Interview", closed: "Closed" };
+            const counts: Record<AppTab, number> = {
+              all: applications.length,
+              applied: applications.filter((a) => a.applicationStatus === "Applied").length,
+              waiting: applications.filter((a) => a.applicationStatus === "Follow-Up Due").length,
+              interview: applications.filter((a) => a.applicationStatus === "Interview").length,
+              closed: applications.filter((a) => ["Offer","Rejected","Archived"].includes(a.applicationStatus)).length,
+            };
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex shrink-0 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors ${
+                  activeTab === tab
+                    ? "bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm"
+                    : "text-[var(--text-3)] hover:text-[var(--text-2)]"
+                }`}
+              >
+                {labels[tab]}
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${activeTab === tab ? "bg-[var(--accent-bg)] text-[var(--accent-hi)]" : "bg-[var(--surface-3)] text-[var(--text-4)]"}`}>
+                  {counts[tab]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <ApplicationFilters
           filters={filters}
           onChange={setFilters}
@@ -443,11 +491,27 @@ export function ApplicationsPageClient() {
             onAction={() => setFilters(initialFilters)}
           />
         ) : (
-          <ApplicationsTable
-            applications={filteredApplications}
-            onView={handleView}
-            onMarkFollowUpSent={(id) => void handleMarkFollowUpSent(id)}
-          />
+          <>
+            {/* Mobile: card grid */}
+            <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+              {filteredApplications.map((app) => (
+                <ApplicationCard
+                  key={app.id}
+                  application={app}
+                  onView={handleView}
+                  onMarkFollowUpSent={(id) => void handleMarkFollowUpSent(id)}
+                />
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block">
+              <ApplicationsTable
+                applications={filteredApplications}
+                onView={handleView}
+                onMarkFollowUpSent={(id) => void handleMarkFollowUpSent(id)}
+              />
+            </div>
+          </>
         )}
       </div>
 

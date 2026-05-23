@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { AddJobModal } from "@/components/jobs/AddJobModal";
 import { JobTable } from "@/components/jobs/JobTable";
 import { JobBoard } from "@/components/jobs/JobBoard";
+import { JobCard } from "@/components/jobs/JobCard";
 import { JobFilters } from "@/components/jobs/JobFilters";
 import { ViewToggle, type ViewMode } from "@/components/shared/ViewToggle";
 import { LoadingState } from "@/components/shared/LoadingState";
@@ -62,10 +63,19 @@ function buildLocalDemoJob(input: CreateJobFormPayload): Job {
   });
 }
 
+type JobTab = "new" | "saved" | "all";
+
+const TAB_STATUSES: Record<JobTab, string[] | null> = {
+  new: ["New"],
+  saved: ["Research", "Drafting", "Ready to Apply"],
+  all: null,
+};
+
 export default function JobsPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<JobFiltersType>(initialFilters);
   const [view, setView] = useState<ViewMode>("table");
+  const [activeTab, setActiveTab] = useState<JobTab>("new");
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [localJobsOverlay, setLocalJobsOverlay] = useState<Job[]>([]);
 
@@ -86,8 +96,14 @@ export default function JobsPage() {
     return [...extra, ...base];
   }, [jobsApi.data, localJobsOverlay]);
 
+  const tabFilteredJobs = useMemo(() => {
+    const allowed = TAB_STATUSES[activeTab];
+    if (!allowed) return jobs;
+    return jobs.filter((j) => allowed.includes(j.status));
+  }, [jobs, activeTab]);
+
   const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
+    return tabFilteredJobs.filter((job) => {
       const matchesQuery = !filters.query
         ? true
         : `${job.company} ${job.position} ${job.source}`.toLowerCase().includes(filters.query.toLowerCase());
@@ -96,7 +112,7 @@ export default function JobsPage() {
       const matchesSource = !filters.source || filters.source === "All" ? true : job.source === filters.source;
       return matchesQuery && matchesStatus && matchesPriority && matchesSource;
     });
-  }, [jobs, filters]);
+  }, [tabFilteredJobs, filters]);
 
   const handleArchive = useCallback(
     async (id: string) => {
@@ -209,23 +225,64 @@ export default function JobsPage() {
         <KpiCard label={t("jobs.kpiRejected")} value={jobs.filter((j) => j.status === "Rejected").length} />
       </div>
 
+      {/* Status tabs */}
+      <div className="flex gap-1 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-1">
+        {(["new", "saved", "all"] as JobTab[]).map((tab) => {
+          const labels: Record<JobTab, string> = { new: "New", saved: "Saved", all: "All Jobs" };
+          const counts: Record<JobTab, number> = {
+            new: jobs.filter((j) => TAB_STATUSES.new!.includes(j.status)).length,
+            saved: jobs.filter((j) => TAB_STATUSES.saved!.includes(j.status)).length,
+            all: jobs.length,
+          };
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+                activeTab === tab
+                  ? "bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm"
+                  : "text-[var(--text-3)] hover:text-[var(--text-2)]"
+              }`}
+            >
+              {labels[tab]}
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${activeTab === tab ? "bg-[var(--accent-bg)] text-[var(--accent-hi)]" : "bg-[var(--surface-3)] text-[var(--text-4)]"}`}>
+                {counts[tab]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="space-y-4">
         <JobFilters filters={filters} onChange={setFilters} onClear={() => setFilters(initialFilters)} />
-        <div className="flex justify-end">
+        <div className="hidden justify-end md:flex">
           <ViewToggle value={view} onChange={setView} />
         </div>
       </div>
 
-      {view === "table" ? (
-        <JobTable
-          jobs={filteredJobs}
-          onArchive={handleArchive}
-          onGenerateResearch={handleGenerateResearch}
-          onGenerateDraft={handleGenerateDraft}
-        />
-      ) : (
-        <JobBoard jobs={filteredJobs} />
-      )}
+      {/* Mobile: card grid always */}
+      <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+        {filteredJobs.map((job) => (
+          <JobCard key={job.id} job={job} />
+        ))}
+        {filteredJobs.length === 0 && (
+          <p className="col-span-2 py-8 text-center text-[13px] text-[var(--text-4)]">No jobs in this category yet.</p>
+        )}
+      </div>
+
+      {/* Desktop: table or board */}
+      <div className="hidden md:block">
+        {view === "table" ? (
+          <JobTable
+            jobs={filteredJobs}
+            onArchive={handleArchive}
+            onGenerateResearch={handleGenerateResearch}
+            onGenerateDraft={handleGenerateDraft}
+          />
+        ) : (
+          <JobBoard jobs={filteredJobs} />
+        )}
+      </div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { ContactStatsCards } from "./ContactStatsCards";
 import { ContactTabs } from "./ContactTabs";
 import { ContactFilters, type ContactFilterState } from "./ContactFilters";
 import { ContactsTable } from "./ContactsTable";
+import { ContactCard } from "./ContactCard";
 import { ContactDetailPanel } from "./ContactDetailPanel";
 import { FollowUpsDueSection } from "./FollowUpsDueSection";
 import { ImportContactsModal } from "./ImportContactsModal";
@@ -369,14 +370,33 @@ export function ContactsPageClient() {
         ) : tab === "followUpsDue" ? (
           <FollowUpsDueSection contacts={dueContacts} onMarkDone={(id) => void handleMarkFollowedUp(id)} />
         ) : (
-          <ContactsTable
-            contacts={filteredContacts}
-            onView={(c) => {
-              setSelectedContact(c);
-              setPanelOpen(true);
-            }}
-            onMarkFollowedUp={(id) => void handleMarkFollowedUp(id)}
-          />
+          <>
+            {/* Mobile: card grid */}
+            <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+              {filteredContacts.map((c) => (
+                <ContactCard
+                  key={c.id}
+                  contact={c}
+                  onView={(contact) => {
+                    setSelectedContact(contact);
+                    setPanelOpen(true);
+                  }}
+                  onMarkFollowedUp={(id) => void handleMarkFollowedUp(id)}
+                />
+              ))}
+            </div>
+            {/* Desktop: table */}
+            <div className="hidden md:block">
+              <ContactsTable
+                contacts={filteredContacts}
+                onView={(c) => {
+                  setSelectedContact(c);
+                  setPanelOpen(true);
+                }}
+                onMarkFollowedUp={(id) => void handleMarkFollowedUp(id)}
+              />
+            </div>
+          </>
         )}
       </div>
 
