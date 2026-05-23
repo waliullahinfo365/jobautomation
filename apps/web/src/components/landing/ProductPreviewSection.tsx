@@ -201,15 +201,15 @@ export function ProductPreviewSection() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-1 px-4 py-3" style={{ background: "var(--lp-card3)", borderBottom: "1px solid var(--lp-bd3)" }}>
+          {/* Tabs — scrollable on mobile */}
+          <div className="flex items-center gap-1 px-4 py-3 overflow-x-auto" style={{ background: "var(--lp-card3)", borderBottom: "1px solid var(--lp-bd3)", scrollbarWidth: "none" }}>
             {TABS.map(({ id, label, icon: Icon }) => (
               <motion.button
                 key={id}
                 onClick={() => setActiveTab(id)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all shrink-0"
                 style={
                   activeTab === id
                     ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }

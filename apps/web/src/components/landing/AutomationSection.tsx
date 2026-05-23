@@ -41,7 +41,7 @@ export function AutomationSection() {
 
         {/* Pipeline flow */}
         <div className="relative mb-16">
-          <div className="flex flex-wrap justify-center gap-3 lg:gap-0 lg:flex-nowrap lg:items-center">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 lg:gap-0 lg:flex lg:flex-nowrap lg:items-center justify-center">
             {NODES.map(({ icon: Icon, label, sublabel, iconColor, bg, border, glow, dot }, i) => (
               <div key={label} className="flex items-center">
                 <motion.div
@@ -73,7 +73,7 @@ export function AutomationSection() {
                     whileInView={{ opacity: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1 + 0.2 }}
-                    className="hidden lg:flex items-center mx-1.5 shrink-0 gap-0.5"
+                    className="hidden sm:flex items-center mx-1.5 shrink-0 gap-0.5"
                   >
                     {[0, 1, 2].map((j) => (
                       <motion.div key={j} className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--lp-bd2)" }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: j * 0.2 }} />

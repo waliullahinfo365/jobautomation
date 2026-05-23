@@ -85,7 +85,7 @@ export function PricingSection() {
           </div>
         </motion.div>
 
-        {/* Cards */}
+        {/* Cards — Professional shown first on mobile via order */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
           {PLANS.map(({ name, monthlyPrice, annualPrice, description, badge, features, missing, cta, recommended }, i) => (
             <motion.div
@@ -95,7 +95,7 @@ export function PricingSection() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
               whileHover={{ y: recommended ? -8 : -4 }}
-              className={`relative rounded-2xl flex flex-col overflow-hidden ${recommended ? "md:-mt-4 md:mb-4" : ""}`}
+              className={`relative rounded-2xl flex flex-col overflow-hidden ${recommended ? "order-first md:order-none md:-mt-4 md:mb-4" : ""}`}
               style={{
                 background: "var(--lp-card)",
                 border: recommended ? "1px solid rgba(59,130,246,0.4)" : "1px solid var(--lp-bd)",

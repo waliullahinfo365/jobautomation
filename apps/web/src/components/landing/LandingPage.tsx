@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { LandingThemeProvider, useLandingTheme } from "./LandingThemeContext";
 import { Navbar } from "./Navbar";
 import { HeroSection } from "./HeroSection";
@@ -68,6 +71,44 @@ const LIGHT_VARS = `
   --lp-section-sep: rgba(15,23,42,0.06);
 `;
 
+function MobileStickyBar() {
+  return (
+    <motion.div
+      initial={{ y: 100 }}
+      animate={{ y: 0 }}
+      transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
+      style={{
+        background: "var(--lp-nav)",
+        borderTop: "1px solid var(--lp-bd2)",
+        backdropFilter: "blur(24px)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      <div className="px-4 py-3 flex items-center gap-3">
+        <Link
+          href="/login"
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-semibold text-sm"
+          style={{
+            background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+            boxShadow: "0 0 30px rgba(99,102,241,0.3)",
+          }}
+        >
+          Start Free — No Credit Card
+          <ArrowRight size={15} />
+        </Link>
+        <Link
+          href="/login"
+          className="px-5 py-3.5 rounded-2xl text-sm font-semibold"
+          style={{ color: "var(--lp-t2)", border: "1px solid var(--lp-bd2)", background: "var(--lp-card)" }}
+        >
+          Login
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
 function Inner() {
   const { isDark } = useLandingTheme();
 
@@ -82,6 +123,13 @@ function Inner() {
         .lp-root { ${isDark ? DARK_VARS : LIGHT_VARS} }
         .lp-root * { transition: background-color 0.25s, border-color 0.25s, color 0.25s; }
         .lp-root a, .lp-root button { transition: all 0.2s !important; }
+        .lp-root .no-transition { transition: none !important; }
+        /* Mobile scroll snap for testimonials */
+        .testimonial-scroll { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .testimonial-scroll > * { scroll-snap-align: start; }
+        /* Hide scrollbar on testimonial row */
+        .testimonial-scroll::-webkit-scrollbar { display: none; }
+        .testimonial-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       <div
         className={`lp-root min-h-screen overflow-x-hidden selection:bg-blue-500/30 selection:text-blue-200 font-sans ${isDark ? "dark" : ""}`}
@@ -97,7 +145,10 @@ function Inner() {
         <PricingSection />
         <FAQSection />
         <CTASection />
+        {/* Extra bottom padding on mobile so last section isn't covered by sticky bar */}
+        <div className="h-20 md:hidden" />
         <LandingFooter />
+        <MobileStickyBar />
       </div>
     </>
   );

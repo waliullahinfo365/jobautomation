@@ -191,8 +191,8 @@ export function SocialProofSection() {
           </motion.p>
         </div>
 
-        {/* Testimonials */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Testimonials — horizontal scroll on mobile, grid on sm+ */}
+        <div className="testimonial-scroll flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
           {TESTIMONIALS.map(({ quote, name, title, location, avatar, avatarBg, stars }, i) => (
             <motion.div
               key={name}
@@ -201,7 +201,7 @@ export function SocialProofSection() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.08, duration: 0.5 }}
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className="rounded-2xl p-6 flex flex-col gap-4 cursor-default"
+              className="rounded-2xl p-6 flex flex-col gap-4 cursor-default shrink-0 w-[80vw] sm:w-auto"
               style={{ background: "var(--lp-card)", border: "1px solid var(--lp-bd)", boxShadow: "var(--lp-shadow-sm)" }}
             >
               <StarRating count={stars} />
@@ -218,6 +218,8 @@ export function SocialProofSection() {
             </motion.div>
           ))}
         </div>
+        {/* Swipe hint — mobile only */}
+        <p className="text-center text-xs mt-3 sm:hidden" style={{ color: "var(--lp-t5)" }}>Swipe to see more →</p>
       </div>
 
       <style>{`
