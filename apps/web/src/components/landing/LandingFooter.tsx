@@ -43,7 +43,7 @@ const SOCIAL_LINKS = [
 
 export function LandingFooter() {
   return (
-    <footer style={{ borderTop: "1px solid var(--lp-bd)", background: "var(--lp-card3)" }}>
+    <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#000000" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Top */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-10 mb-14">
@@ -53,11 +53,11 @@ export function LandingFooter() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
                 <Zap size={15} className="text-white" fill="white" />
               </div>
-              <span className="font-bold text-[17px] tracking-tight" style={{ color: "var(--lp-t1)" }}>
-                NewJob <span className="text-blue-500">Guru</span>
+              <span className="font-bold text-[17px] tracking-tight text-white">
+                NewJob <span className="text-blue-400">Guru</span>
               </span>
             </Link>
-            <p className="text-sm leading-relaxed mb-5 max-w-[220px]" style={{ color: "var(--lp-t4)" }}>
+            <p className="text-sm leading-relaxed mb-5 max-w-[220px]" style={{ color: "rgba(255,255,255,0.5)" }}>
               AI-powered job search automation. Stop managing. Start landing.
             </p>
             <div className="flex gap-3">
@@ -66,8 +66,8 @@ export function LandingFooter() {
                   key={label}
                   href={href}
                   aria-label={label}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:text-blue-500 hover:scale-110"
-                  style={{ color: "var(--lp-t4)", border: "1px solid var(--lp-bd)", background: "var(--lp-card2)" }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:text-blue-400 hover:scale-110"
+                  style={{ color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)" }}
                 >
                   <Icon size={15} />
                 </a>
@@ -78,11 +78,11 @@ export function LandingFooter() {
           {/* Links */}
           {Object.entries(FOOTER_LINKS).map(([category, links]) => (
             <div key={category}>
-              <h4 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "var(--lp-t3)" }}>{category}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.35)" }}>{category}</h4>
               <ul className="space-y-2.5">
                 {links.map(({ label, href }) => (
                   <li key={label}>
-                    <a href={href} className="text-sm hover:text-blue-500 transition-colors" style={{ color: "var(--lp-t5)" }}>
+                    <a href={href} className="text-sm hover:text-blue-400 transition-colors" style={{ color: "rgba(255,255,255,0.55)" }}>
                       {label}
                     </a>
                   </li>
@@ -93,17 +93,17 @@ export function LandingFooter() {
         </div>
 
         {/* Bottom bar */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderTop: "1px solid var(--lp-bd3)" }}>
-          <p className="text-sm" style={{ color: "var(--lp-t5)" }}>
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
             © {new Date().getFullYear()} NewJob Guru. All rights reserved.
           </p>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-xs" style={{ color: "var(--lp-t5)" }}>All systems operational</span>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>All systems operational</span>
           </div>
           <div className="flex items-center gap-6">
             {["Privacy", "Terms", "Cookies"].map((l) => (
-              <a key={l} href="#" className="text-xs hover:text-blue-500 transition-colors" style={{ color: "var(--lp-t5)" }}>{l}</a>
+              <a key={l} href="#" className="text-xs hover:text-blue-400 transition-colors" style={{ color: "rgba(255,255,255,0.35)" }}>{l}</a>
             ))}
           </div>
         </div>
