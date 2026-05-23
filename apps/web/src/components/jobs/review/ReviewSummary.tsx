@@ -18,7 +18,7 @@ interface Props {
 }
 
 const StatRow = ({ label, value, color }: { label: string; value: number; color: string }) => (
-  <div className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+  <div className="flex items-center justify-between py-2 border-b border-[var(--border-default)] last:border-0">
     <span className="text-sm text-[var(--text-2)]">{label}</span>
     <span className={`text-sm font-bold tabular-nums ${color}`}>{value}</span>
   </div>
@@ -41,7 +41,7 @@ export function ReviewSummary({ stats, onRestart }: Props) {
         <p className="mt-1 text-sm text-[var(--text-3)]">We'll notify you when new matching jobs are found.</p>
       </div>
 
-      <div className="w-full max-w-xs rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-1">
+      <div className="w-full max-w-xs rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-1">
         <StatRow label="Jobs reviewed"     value={stats.total}    color="text-[var(--text-1)]" />
         <StatRow label="Saved"             value={stats.saved}    color="text-green-600 dark:text-green-400" />
         <StatRow label="Ready to apply"    value={stats.applied}  color="text-blue-600 dark:text-blue-400" />
@@ -68,7 +68,7 @@ export function ReviewSummary({ stats, onRestart }: Props) {
         )}
         <button
           onClick={() => router.push("/dashboard")}
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-5 py-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
+          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
         >
           Go to Dashboard
         </button>

@@ -19,10 +19,10 @@ const ACTION_TO_STATUS: Record<ReviewAction, ReviewStatus> = {
 };
 
 const ACTION_LABELS: Record<ReviewAction, { text: string; icon: string; active: string; inactive: string }> = {
-  reject: { text: "Reject", icon: "✕", active: "bg-red-500 text-white scale-110", inactive: "border border-[var(--border)] text-[var(--text-2)] hover:border-red-400 hover:text-red-500" },
-  later:  { text: "Later",  icon: "↓", active: "bg-amber-500 text-white scale-110", inactive: "border border-[var(--border)] text-[var(--text-2)] hover:border-amber-400 hover:text-amber-500" },
-  save:   { text: "Save",   icon: "♥", active: "bg-green-500 text-white scale-110", inactive: "border border-[var(--border)] text-[var(--text-2)] hover:border-green-400 hover:text-green-500" },
-  apply:  { text: "Apply",  icon: "↑", active: "bg-blue-600 text-white scale-110", inactive: "border border-[var(--border)] text-[var(--text-2)] hover:border-blue-500 hover:text-blue-600" },
+  reject: { text: "Reject", icon: "✕", active: "bg-red-500 text-white scale-110", inactive: "border border-[var(--border-default)] text-[var(--text-2)] hover:border-red-400 hover:text-red-500" },
+  later:  { text: "Later",  icon: "↓", active: "bg-amber-500 text-white scale-110", inactive: "border border-[var(--border-default)] text-[var(--text-2)] hover:border-amber-400 hover:text-amber-500" },
+  save:   { text: "Save",   icon: "♥", active: "bg-green-500 text-white scale-110", inactive: "border border-[var(--border-default)] text-[var(--text-2)] hover:border-green-400 hover:text-green-500" },
+  apply:  { text: "Apply",  icon: "↑", active: "bg-blue-600 text-white scale-110", inactive: "border border-[var(--border-default)] text-[var(--text-2)] hover:border-blue-500 hover:text-blue-600" },
 };
 
 // ── Undo toast ────────────────────────────────────────────────────────────────

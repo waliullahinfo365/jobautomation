@@ -54,7 +54,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative flex h-14 w-14 items-center justify-center shrink-0">
       <svg className="-rotate-90" width="56" height="56" viewBox="0 0 56 56">
-        <circle cx="28" cy="28" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-[var(--border)]" />
+        <circle cx="28" cy="28" r="20" fill="none" stroke="currentColor" strokeWidth="4" className="text-[var(--border-default)]" />
         <circle
           cx="28" cy="28" r="20" fill="none" strokeWidth="4"
           strokeDasharray={circumference} strokeDashoffset={offset}
@@ -145,7 +145,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
     const translateY = stackIndex * 10;
     return (
       <div
-        className="absolute inset-x-0 top-0 h-full rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-sm"
+        className="absolute inset-x-0 top-0 h-full rounded-2xl bg-[var(--surface-1)] border border-[var(--border-default)] shadow-sm"
         style={{ transform: `scale(${scale}) translateY(${translateY}px)`, transformOrigin: "top center", zIndex: 10 - stackIndex }}
       />
     );
@@ -167,7 +167,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
       <SwipeIndicator action="apply"  opacity={applyOpacity} />
       <SwipeIndicator action="later"  opacity={laterOpacity} />
 
-      <div className="rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xl overflow-hidden">
+      <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border-default)] shadow-xl overflow-hidden">
         {/* Header strip */}
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-start gap-3">
@@ -177,7 +177,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
             </div>
             {ai?.score != null && <ScoreRing score={ai.score} />}
             {aiLoading && (
-              <div className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--border)] flex items-center justify-center">
+              <div className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--border-default)] flex items-center justify-center">
                 <span className="text-[10px] text-[var(--text-3)] animate-pulse">AI…</span>
               </div>
             )}
@@ -213,7 +213,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
           </div>
         </div>
 
-        <div className="border-t border-[var(--border)]" />
+        <div className="border-t border-[var(--border-default)]" />
 
         {/* AI insights */}
         <div className="px-5 py-4 space-y-3 max-h-[40vh] overflow-hidden">
@@ -264,7 +264,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
         </div>
 
         {/* Swipe hint */}
-        <div className="border-t border-[var(--border)] bg-[var(--surface-2)] px-5 py-2.5">
+        <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-5 py-2.5">
           <p className="text-center text-[10px] text-[var(--text-3)] tracking-wide">
             ← Reject &nbsp;·&nbsp; Save → &nbsp;·&nbsp; ↑ Apply &nbsp;·&nbsp; ↓ Later
           </p>
