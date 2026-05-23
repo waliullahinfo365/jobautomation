@@ -170,7 +170,7 @@ export function DashboardPageClient() {
     {
       id: "telegram",
       label: "Telegram",
-      status: modules.some((m) => m.key?.includes("telegram") || m.category === "Notification") ? "connected" : "not-connected",
+      status: modules.some((m) => m.key?.includes("telegram") || m.category === "Communication") ? "connected" : "not-connected",
     },
     {
       id: "cv",
