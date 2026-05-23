@@ -412,23 +412,17 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full mb-7 cursor-default"
-              style={{ background: "var(--lp-card2)", border: "1px solid var(--lp-bd2)" }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6 cursor-default"
+              style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)" }}
             >
-              <div className="flex gap-0.5">
-                {[0,1,2,3,4].map(i => (
-                  <svg key={i} className="w-2.5 h-2.5 fill-amber-400" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                  </svg>
-                ))}
-              </div>
-              <span className="text-xs sm:text-sm font-medium" style={{ color: "var(--lp-t2)" }}>
-                Loved by <span className="font-bold" style={{ color: "var(--lp-t1)" }}>10,000+</span> job seekers in 40+ countries
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#a5b4fc" }}>
+                AI-Powered Job Application Automation
               </span>
             </motion.div>
 
             {/* Headline */}
-            <h1 className="text-[2.2rem] leading-[1.1] sm:text-5xl lg:text-[56px] xl:text-[62px] font-bold lg:leading-[1.08] tracking-tight mb-5">
+            <h1 className="text-[2.4rem] leading-[1.08] sm:text-5xl lg:text-[56px] xl:text-[64px] font-bold lg:leading-[1.06] tracking-tight mb-5">
               <motion.span
                 initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -436,7 +430,7 @@ export function HeroSection() {
                 className="block"
                 style={{ color: "var(--lp-t1)" }}
               >
-                Stop losing track
+                Your AI-Powered
               </motion.span>
               <motion.span
                 initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
@@ -445,16 +439,21 @@ export function HeroSection() {
                 className="block"
                 style={{ color: "var(--lp-t1)" }}
               >
-                of your applications.
+                Job Search
               </motion.span>
               <motion.span
                 initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 transition={{ delay: 0.26, duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-                className="block mt-2 text-[1.65rem] sm:text-4xl lg:text-[38px] xl:text-[44px] font-semibold"
-                style={{ color: "var(--lp-t3)" }}
+                className="block"
+                style={{
+                  background: "linear-gradient(135deg, #818cf8 0%, #a78bfa 40%, #c084fc 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
               >
-                Finally land <RotatingOutcome />
+                Command Center
               </motion.span>
             </h1>
 
@@ -466,7 +465,7 @@ export function HeroSection() {
               className="text-base sm:text-lg max-w-lg mb-8 leading-relaxed"
               style={{ color: "var(--lp-t3)" }}
             >
-              NewJob Guru tracks every application, writes personalized cover letters, and follows up automatically — so you spend less time on admin and more time getting hired.
+              Track applications, organize interviews, generate AI-powered cover letters, automate follow-ups, and manage your entire job pipeline from one intelligent workspace.
             </motion.p>
 
             {/* CTAs */}
@@ -474,7 +473,7 @@ export function HeroSection() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.44 }}
-              className="flex flex-col sm:flex-row items-start gap-3 mb-7"
+              className="flex flex-col sm:flex-row items-start gap-3 mb-8"
             >
               <motion.div
                 whileHover={{ scale: 1.05, y: -2 }}
@@ -485,23 +484,21 @@ export function HeroSection() {
                   href="/login"
                   className="group relative overflow-hidden flex items-center gap-2.5 px-7 py-3.5 rounded-2xl text-white font-semibold text-base"
                   style={{
-                    background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-                    boxShadow: "0 0 36px rgba(99,102,241,0.35), 0 4px 16px rgba(0,0,0,0.18)",
+                    background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                    boxShadow: "0 0 36px rgba(99,102,241,0.4), 0 4px 16px rgba(0,0,0,0.2)",
                     transition: "box-shadow 0.25s ease",
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 0 52px rgba(99,102,241,0.6), 0 8px 24px rgba(0,0,0,0.25)")}
-                  onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 36px rgba(99,102,241,0.35), 0 4px 16px rgba(0,0,0,0.18)")}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = "0 0 52px rgba(99,102,241,0.65), 0 8px 24px rgba(0,0,0,0.28)")}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 36px rgba(99,102,241,0.4), 0 4px 16px rgba(0,0,0,0.2)")}
                 >
-                  {/* Shimmer sweep */}
                   <motion.div
                     className="absolute inset-0"
-                    style={{ background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.22) 50%, transparent 65%)" }}
+                    style={{ background: "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.2) 50%, transparent 65%)" }}
                     animate={{ x: ["-100%", "200%"] }}
                     transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 4.5 }}
                   />
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.08), transparent)" }} />
-                  <span className="relative z-10">Get started free</span>
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <span className="relative z-10">Start Free</span>
                   <ArrowRight size={15} className="relative z-10 group-hover:translate-x-1.5 transition-transform duration-200" />
                 </Link>
               </motion.div>
@@ -512,36 +509,46 @@ export function HeroSection() {
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
               >
                 <Link
-                  href="/login"
-                  className="group relative overflow-hidden flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold text-base transition-all duration-250"
-                  style={{ color: "var(--lp-t2)", border: "1px solid var(--lp-bd2)", background: "var(--lp-card)" }}
+                  href="#how-it-works"
+                  className="group relative overflow-hidden flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold text-base"
+                  style={{ color: "var(--lp-t2)", border: "1px solid var(--lp-bd2)", background: "var(--lp-card)", transition: "border-color 0.2s, box-shadow 0.2s" }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = "rgba(99,102,241,0.5)";
-                    e.currentTarget.style.boxShadow = "0 0 20px rgba(99,102,241,0.15), 0 4px 12px rgba(0,0,0,0.1)";
+                    e.currentTarget.style.borderColor = "rgba(139,92,246,0.5)";
+                    e.currentTarget.style.boxShadow = "0 0 20px rgba(139,92,246,0.15)";
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.borderColor = "";
                     e.currentTarget.style.boxShadow = "";
                   }}
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04))" }} />
-                  <span className="relative z-10">See how it works</span>
-                  <ArrowRight size={14} className="relative z-10 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-200" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{ background: "rgba(139,92,246,0.06)" }} />
+                  {/* Play icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="relative z-10 opacity-70"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  <span className="relative z-10">View Demo</span>
                 </Link>
               </motion.div>
             </motion.div>
 
-            {/* Trust row */}
+            {/* Stats row */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.54 }}
-              className="flex flex-wrap items-center gap-x-5 gap-y-2"
+              className="flex flex-wrap items-center gap-x-6 gap-y-3"
             >
-              {["No credit card required", "Setup in 5 minutes", "Cancel anytime"].map((point) => (
-                <div key={point} className="flex items-center gap-1.5">
-                  <CheckCircle2 size={13} className="text-green-500 shrink-0" />
-                  <span className="text-sm" style={{ color: "var(--lp-t4)" }}>{point}</span>
+              {[
+                { icon: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z", label: "10K+", sub: "Applications Tracked", color: "#818cf8" },
+                { icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2", label: "95%", sub: "Automation Success", color: "#4ade80" },
+                { icon: "M13 10V3L4 14h7v7l9-11h-7z", label: "4x", sub: "Faster Job Workflow", color: "#f59e0b" },
+              ].map(({ icon, label, sub, color }) => (
+                <div key={sub} className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}18`, border: `1px solid ${color}30` }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={icon}/></svg>
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold leading-none" style={{ color: "var(--lp-t1)" }}>{label}</div>
+                    <div className="text-[11px] leading-tight mt-0.5" style={{ color: "var(--lp-t4)" }}>{sub}</div>
+                  </div>
                 </div>
               ))}
             </motion.div>
