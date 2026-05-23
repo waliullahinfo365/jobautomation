@@ -10,7 +10,7 @@ interface LandingThemeCtx {
 const Ctx = createContext<LandingThemeCtx>({ isDark: false, toggle: () => {} });
 
 export function LandingThemeProvider({ children }: { children: ReactNode }) {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   return (
     <Ctx.Provider value={{ isDark, toggle: () => setIsDark((d) => !d) }}>
       {children}
