@@ -291,34 +291,36 @@ export const BrandMark = (p: IconProps) => (
    NAV CONFIG — drop straight into your sidebar
    ============================================================= */
 
-export const SIDEBAR_NAV = [
+/** Primary nav items shown in sidebar main section and mobile bottom bar */
+export const SIDEBAR_NAV_PRIMARY = [
   {
-    sectionKey: "navSection.workspace",
+    sectionKey: "navSection.main",
     items: [
-      { labelKey: "nav.dashboard", icon: DashboardIcon, href: "/dashboard" },
-      { labelKey: "nav.jobs", icon: JobsIcon, href: "/jobs", badge: 12 },
+      { labelKey: "nav.today", icon: DashboardIcon, href: "/dashboard" },
+      { labelKey: "nav.jobs", icon: JobsIcon, href: "/jobs" },
       { labelKey: "nav.applications", icon: ApplicationsIcon, href: "/applications" },
-      { labelKey: "nav.contacts", icon: ContactsIcon, href: "/contacts" },
-      { labelKey: "nav.interviews", icon: InterviewsIcon, href: "/interviews", badge: 2 },
       { labelKey: "nav.documents", icon: DocumentsIcon, href: "/documents" },
-    ],
-  },
-  {
-    sectionKey: "navSection.insights",
-    items: [
-      { labelKey: "nav.reports", icon: ReportsIcon, href: "/reports" },
-      { labelKey: "nav.automation", icon: AutomationIcon, href: "/automation" },
-    ],
-  },
-  {
-    sectionKey: "navSection.account",
-    items: [
-      { labelKey: "nav.settings", icon: SettingsIcon, href: "/settings" },
-      { labelKey: "nav.demo", icon: DemoIcon, href: "/demo" },
-      { labelKey: "nav.systemStatus", icon: StatusIcon, href: "/system-status" },
+      { labelKey: "nav.profile", icon: UserIcon, href: "/profile" },
     ],
   },
 ] as const;
+
+/** Secondary nav items shown below primary in sidebar, hidden in mobile bottom bar */
+export const SIDEBAR_NAV_SECONDARY = [
+  {
+    sectionKey: "navSection.more",
+    items: [
+      { labelKey: "nav.contacts", icon: ContactsIcon, href: "/contacts" },
+      { labelKey: "nav.interviews", icon: InterviewsIcon, href: "/interviews" },
+      { labelKey: "nav.insights", icon: ReportsIcon, href: "/reports" },
+      { labelKey: "nav.jobAssistant", icon: AutomationIcon, href: "/automation" },
+      { labelKey: "nav.settings", icon: SettingsIcon, href: "/settings" },
+    ],
+  },
+] as const;
+
+/** Combined nav for backward compat (mobile drawer, etc.) */
+export const SIDEBAR_NAV = [...SIDEBAR_NAV_PRIMARY, ...SIDEBAR_NAV_SECONDARY] as const;
 
 export type SidebarNavItem = (typeof SIDEBAR_NAV)[number]["items"][number];
 

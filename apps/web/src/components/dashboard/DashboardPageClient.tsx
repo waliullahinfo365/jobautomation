@@ -1,66 +1,52 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DashboardHero } from "@/components/dashboard/DashboardHero";
-import { JobMatchBlock } from "@/components/dashboard/JobMatchBlock";
-import { StatsCards } from "@/components/dashboard/StatsCards";
+import Link from "next/link";
 import { ApplicationPipelineChart } from "@/components/dashboard/ApplicationPipelineChart";
-import { RecentJobsTable } from "@/components/dashboard/RecentJobsTable";
-import { UpcomingDeadlines } from "@/components/dashboard/UpcomingDeadlines";
-import { AutomationHealth } from "@/components/dashboard/AutomationHealth";
-import { FollowUpReminders } from "@/components/dashboard/FollowUpReminders";
-import { AutomationLogTable } from "@/components/automation/AutomationLogTable";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { useDashboardOverview } from "@/hooks/api/useDashboardOverview";
 import { useTranslation } from "@/i18n/useTranslation";
-import type { FollowUpReminderItem } from "@/data/mockApplications";
-import type { AutomationLog, AutomationModule } from "@/types/automation";
-import type { Job, JobSummary } from "@/types/job";
+import type { AutomationModule } from "@/types/automation";
+import type { Job } from "@/types/job";
 import type { Application } from "@/types/application";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
-import { normalizeAutomationLogForUi, normalizeAutomationModuleForUi, normalizeJobForUi } from "@/lib/utils/resource";
+import { normalizeAutomationModuleForUi, normalizeJobForUi } from "@/lib/utils/resource";
 import * as automationApi from "@/lib/api/automation.api";
 import { getJobPipelineSummary } from "@/lib/api/jobs.api";
 import { showError, showSuccess } from "@/lib/ui/toast";
+import { Button } from "@/components/ui/button";
+import {
+  JobsIcon,
+  ApplicationsIcon,
+  DocumentsIcon,
+  AutomationIcon,
+  SparkleIcon,
+  ArrowRightIcon,
+  InterviewsIcon,
+  FollowUpIcon,
+} from "@/components/icons";
+import { cn } from "@/lib/utils";
 
-function toJobSummary(job: Job): JobSummary {
-  return {
-    id: job.id,
-    _id: job._id,
-    position: job.position,
-    title: job.title,
-    company: job.company,
-    location: job.location,
-    source: job.source,
-    status: job.status,
-    priority: job.priority,
-    salaryRange: job.salaryRange,
-    deadline: job.deadline,
-    dateFound: job.dateFound,
-    lastUpdated: job.lastUpdated,
-    createdAt: job.createdAt,
-    updatedAt: job.updatedAt,
-    applicationCount: 0,
-  };
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
-function computeFollowUpsDue(applications: Application[]): FollowUpReminderItem[] {
-  return applications
-    .filter((app) => app.followUpDate && (app.followUpStatus === "Due Today" || app.followUpStatus === "Overdue" || app.followUpStatus === "Scheduled"))
-    .slice(0, 5)
-    .map((app): FollowUpReminderItem => ({
-      id: `fup_${app.id}`,
-      company: app.company,
-      position: app.position,
-      followUpDate: String(app.followUpDate),
-      contactEmail: app.contactEmail,
-      reminderStatus: app.followUpStatus === "Due Today" ? "Due Today" : app.followUpStatus === "Overdue" ? "Overdue" : "Scheduled",
-    }));
+interface ActionCard {
+  id: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  buttonLabel: string;
+  href: string;
+  urgent?: boolean;
 }
 
 export function DashboardPageClient() {
   const { t } = useTranslation();
-  const { jobsQuery, applicationsQuery: appsQuery, automationQuery, refetchAll } = useDashboardOverview({ fallbackToMock: false });
+  const { jobsQuery, applicationsQuery: appsQuery, automationQuery } = useDashboardOverview({ fallbackToMock: false });
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [pipelineData, setPipelineData] = useState<{ status: string; count: number }[] | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState(true);
@@ -86,56 +72,135 @@ export function DashboardPageClient() {
     return raw.map(normalizeAutomationModuleForUi);
   }, [automationQuery.data]);
 
-  const automationLogs = useMemo((): AutomationLog[] => {
-    return normalizeListResponse(automationQuery.logs.data).map(normalizeAutomationLogForUi);
-  }, [automationQuery.logs.data]);
+  const newJobs = jobs.filter((j) => j.status === "New").length;
+  const followUpsDue = applications.filter(
+    (a) => a.followUpStatus === "Due Today" || a.followUpStatus === "Overdue"
+  ).length;
+  const interviews = applications.filter(
+    (a) => a.applicationStatus === "Interview" || a.status === "Interview"
+  ).length;
+  const hasCv = modules.some((m) => m.key === "cv-file-routing-automation" && m.status === "Healthy");
 
-  const jobSummaries = useMemo(() => jobs.map(toJobSummary), [jobs]);
+  const actionCards: ActionCard[] = useMemo(() => {
+    const cards: ActionCard[] = [];
 
-  const followUpReminders = useMemo((): FollowUpReminderItem[] => {
-    if (applications.length > 0) return computeFollowUpsDue(applications);
-    return [];
-  }, [applications]);
+    if (newJobs > 0) {
+      cards.push({
+        id: "new-jobs",
+        icon: <JobsIcon size={20} />,
+        title: `${newJobs} new job${newJobs > 1 ? "s" : ""} to review`,
+        description: "New job opportunities are waiting for your decision.",
+        buttonLabel: "Review Jobs",
+        href: "/jobs/review",
+      });
+    }
 
-  const stats = useMemo(() => {
-    const activeModules = modules.filter((m) => m.status === "Healthy" || m.status === "Ready");
-    const totalRuns = modules.reduce((sum, m) => sum + (m.totalRuns ?? 0), 0);
-    const failedRuns = modules.reduce((sum, m) => sum + (m.failedRuns ?? 0), 0);
-    const automationSuccessRate = totalRuns > 0
-      ? Math.round(((totalRuns - failedRuns) / totalRuns) * 100)
-      : modules.length > 0 ? 100 : null;
+    if (followUpsDue > 0) {
+      cards.push({
+        id: "followups",
+        icon: <FollowUpIcon size={20} />,
+        title: `${followUpsDue} application${followUpsDue > 1 ? "s" : ""} need${followUpsDue === 1 ? "s" : ""} follow-up`,
+        description: `You applied and have not received a reply yet.`,
+        buttonLabel: "Send Follow-up",
+        href: "/applications",
+        urgent: true,
+      });
+    }
 
-    return {
-      totalJobsTracked: jobs.length,
-      applicationsSent: applications.filter((app) => app.appliedAt).length || applications.filter((app) => app.applicationStatus === "Applied" || app.status === "Applied").length,
-      interviewsScheduled: applications.filter((app) => (app.interviewIds ?? []).length > 0 || app.applicationStatus === "Interview" || app.status === "Interview").length,
-      offersReceived: jobs.filter((job) => job.status === "Offer").length,
-      followUpsDue: followUpReminders.length,
-      automationsActive: activeModules.length,
-      automationSuccessRate,
-    };
-  }, [jobs, applications, modules, followUpReminders]);
+    if (interviews > 0) {
+      cards.push({
+        id: "interviews",
+        icon: <InterviewsIcon size={20} />,
+        title: `${interviews} interview${interviews > 1 ? "s" : ""} to prepare`,
+        description: "Your next interview is coming up soon.",
+        buttonLabel: "Prepare Interview",
+        href: "/interviews",
+      });
+    }
+
+    if (!hasCv) {
+      cards.push({
+        id: "cv",
+        icon: <DocumentsIcon size={20} />,
+        title: "Your CV is missing",
+        description: "Upload your CV so the assistant can prepare better applications.",
+        buttonLabel: "Upload CV",
+        href: "/documents",
+      });
+    }
+
+    if (cards.length === 0) {
+      cards.push({
+        id: "all-good",
+        icon: <SparkleIcon size={20} />,
+        title: "You're all caught up",
+        description: "No actions needed right now. We'll notify you when something needs attention.",
+        buttonLabel: "Review new jobs",
+        href: "/jobs/review",
+      });
+    }
+
+    return cards;
+  }, [newJobs, followUpsDue, interviews, hasCv]);
+
+  const pipelineBreakdown = pipelineData ?? [];
+
+  const PIPELINE_STAGES = [
+    { key: "New", label: "New" },
+    { key: "Research", label: "Saved" },
+    { key: "Drafting", label: "Drafting" },
+    { key: "Ready to Apply", label: "Ready" },
+    { key: "Applied", label: "Applied" },
+    { key: "Interview", label: "Interview" },
+    { key: "Offer", label: "Offer" },
+    { key: "Rejected", label: "Closed" },
+  ];
+
+  const pipelineCounts = PIPELINE_STAGES.map((stage) => ({
+    ...stage,
+    count: pipelineBreakdown.find((p) => p.status === stage.key)?.count ?? 0,
+  }));
+
+  const connectedServices = [
+    {
+      id: "gmail",
+      label: "Job Email Scanner",
+      status: modules.some((m) => m.key === "job-intake-engine" && m.status === "Healthy") ? "connected" : "action-needed",
+    },
+    {
+      id: "telegram",
+      label: "Telegram",
+      status: modules.some((m) => m.key?.includes("telegram") || m.category === "Notification") ? "connected" : "not-connected",
+    },
+    {
+      id: "cv",
+      label: "CV",
+      status: hasCv ? "connected" : "action-needed",
+    },
+    {
+      id: "calendar",
+      label: "Calendar",
+      status: modules.some((m) => m.key === "interview-scheduling-automation" && m.status === "Healthy") ? "connected" : "not-connected",
+    },
+    {
+      id: "alerts",
+      label: "Job alerts",
+      status: modules.some((m) => m.key === "job-intake-engine") ? "connected" : "not-connected",
+    },
+  ];
 
   const importLastSevenDays = useCallback(async () => {
     setBackfillLoading(true);
     try {
       await automationApi.backfillJobIntake({ label: "job alerts", days: 7, dryRun: false, enqueueDownstream: true });
       showSuccess(t("dashboard.emptyJobs.backfillStarted"));
-      await refetchAll();
     } catch (error) {
       showError(error instanceof Error ? error.message : t("dashboard.emptyJobs.backfillFailed"));
     } finally {
       setBackfillLoading(false);
     }
-  }, [refetchAll, t]);
+  }, [t]);
 
-  const pipelineBreakdown = pipelineData ?? [];
-
-  const isUsingAnyFallback =
-    jobsQuery.isUsingFallback ||
-    appsQuery.isUsingFallback ||
-    automationQuery.isUsingFallback ||
-    automationQuery.logs.isUsingFallback;
   const isInitialLoading = (jobsQuery.loading && !jobsQuery.data) || (appsQuery.loading && !appsQuery.data);
 
   if (isInitialLoading) {
@@ -147,40 +212,169 @@ export function DashboardPageClient() {
   }
 
   return (
-    <div className="section-spacing min-w-0">
-      <DashboardHero showMockIndicator={isUsingAnyFallback} />
+    <div className="section-spacing min-w-0 space-y-8">
 
-      <StatsCards stats={stats} />
+      {/* Greeting */}
+      <div>
+        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[var(--text-1)] sm:text-[26px]">
+          {getGreeting()}. {newJobs > 0 ? `You have ${newJobs} job${newJobs > 1 ? "s" : ""} to review today.` : "Welcome back."}
+        </h1>
+        <p className="mt-1 text-sm text-[var(--text-3)]">Here's what needs your attention.</p>
+      </div>
 
-      <JobMatchBlock />
+      {/* A. Today's Actions */}
+      <section>
+        <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
+          Today&apos;s Actions
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {actionCards.map((card) => (
+            <div
+              key={card.id}
+              className={cn(
+                "flex flex-col gap-3 rounded-xl border bg-[var(--surface-1)] p-4 shadow-sm transition-shadow hover:shadow-md",
+                card.urgent ? "border-amber-500/40 bg-amber-500/5" : "border-[var(--border-default)]"
+              )}
+            >
+              <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg",
+                card.urgent ? "bg-amber-500/15 text-amber-600" : "bg-[var(--accent-bg)] text-[var(--accent-hi)]"
+              )}>
+                {card.icon}
+              </div>
+              <div className="flex-1">
+                <p className="text-[14px] font-semibold text-[var(--text-1)]">{card.title}</p>
+                <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">{card.description}</p>
+              </div>
+              <Link
+                href={card.href}
+                className={cn(
+                  "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-semibold transition-colors",
+                  card.urgent
+                    ? "bg-amber-500/15 text-amber-700 hover:bg-amber-500/25"
+                    : "bg-[var(--accent-bg)] text-[var(--accent-hi)] hover:bg-[var(--accent-ring)]"
+                )}
+              >
+                {card.buttonLabel}
+                <ArrowRightIcon size={13} />
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      <div className="jf-row-2 min-w-0">
+      {/* B. Your Pipeline */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[13px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
+            Your Pipeline
+          </h2>
+          <Link href="/applications" className="text-[12px] text-[var(--accent-hi)] hover:underline">
+            View all
+          </Link>
+        </div>
+
+        {/* Pipeline stage counts */}
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          {pipelineCounts.map((stage, idx) => (
+            <div key={stage.key} className="flex shrink-0 items-center gap-2">
+              <div className="flex min-w-[72px] flex-col items-center rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2.5 text-center shadow-sm">
+                <span className="text-[20px] font-bold text-[var(--text-1)]">{stage.count}</span>
+                <span className="mt-0.5 text-[11px] text-[var(--text-3)]">{stage.label}</span>
+              </div>
+              {idx < pipelineCounts.length - 1 && (
+                <ArrowRightIcon size={12} className="shrink-0 text-[var(--text-4)]" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Pipeline chart */}
         <ApplicationPipelineChart
           data={pipelineBreakdown}
           loading={pipelineLoading}
           error={pipelineData === null && !pipelineLoading ? new Error("Failed to load") : null}
           isUsingFallback={false}
         />
-        <UpcomingDeadlines jobs={jobSummaries} />
-      </div>
+      </section>
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2">
-          <RecentJobsTable jobs={jobSummaries} />
+      {/* C. Assistant Status */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[13px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
+            Connected Services
+          </h2>
+          <Link href="/settings" className="text-[12px] text-[var(--accent-hi)] hover:underline">
+            Manage
+          </Link>
         </div>
-        <div className="min-w-0">
-          <FollowUpReminders reminders={followUpReminders} />
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {connectedServices.map((svc) => (
+            <div
+              key={svc.id}
+              className="flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 shadow-sm"
+            >
+              <span
+                className={cn("h-2 w-2 shrink-0 rounded-full", {
+                  "bg-emerald-500": svc.status === "connected",
+                  "bg-amber-400": svc.status === "action-needed",
+                  "bg-[var(--surface-4)]": svc.status === "not-connected",
+                })}
+              />
+              <span className="flex-1 text-[13px] font-medium text-[var(--text-1)]">{svc.label}</span>
+              <span className={cn("text-[11.5px] font-semibold", {
+                "text-emerald-600": svc.status === "connected",
+                "text-amber-600": svc.status === "action-needed",
+                "text-[var(--text-4)]": svc.status === "not-connected",
+              })}>
+                {svc.status === "connected" ? "Connected" : svc.status === "action-needed" ? "Action needed" : "Not connected"}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
 
-      <AutomationHealth
-        modules={modules}
-        jobsCount={jobs.length}
-        onImportGmail={importLastSevenDays}
-        importLoading={backfillLoading}
-      />
+        {/* Quick import if no jobs */}
+        {jobs.length === 0 && (
+          <div className="mt-4 rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--surface-1)] p-6 text-center">
+            <ApplicationsIcon size={32} className="mx-auto mb-2 text-[var(--text-4)]" />
+            <p className="text-[14px] font-semibold text-[var(--text-1)]">No jobs found yet</p>
+            <p className="mt-1 text-[13px] text-[var(--text-3)]">
+              Connect your email or add a job manually to start building your pipeline.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => void importLastSevenDays()}
+                disabled={backfillLoading}
+              >
+                {backfillLoading ? "Importing…" : "Connect Gmail"}
+              </Button>
+              <Link
+                href="/jobs"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-default)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+              >
+                Add job manually
+              </Link>
+            </div>
+          </div>
+        )}
+      </section>
 
-      <AutomationLogTable logs={automationLogs} />
+      {/* Quick actions footer */}
+      <section className="flex flex-wrap gap-2 border-t border-[var(--border-subtle)] pt-6">
+        <Link href="/jobs/review" className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-b from-[#7488FF] to-[#4D63E0] px-4 py-2 text-[13px] font-semibold text-white shadow-sm hover:from-[#8499FF] hover:to-[#5a72e8]">
+          <SparkleIcon size={14} />
+          Start Quick Review
+        </Link>
+        <Link href="/automation" className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 py-2 text-[13px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]">
+          <AutomationIcon size={14} />
+          Job Assistant
+        </Link>
+        <Link href="/documents" className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 py-2 text-[13px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]">
+          <DocumentsIcon size={14} />
+          My Documents
+        </Link>
+      </section>
     </div>
   );
 }

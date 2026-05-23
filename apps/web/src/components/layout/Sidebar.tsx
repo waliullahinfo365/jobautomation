@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LiveIcon, SIDEBAR_NAV } from "@/components/icons";
+import { LiveIcon, SIDEBAR_NAV_PRIMARY, SIDEBAR_NAV_SECONDARY } from "@/components/icons";
 import { BRAND } from "@/lib/brand";
 import { useInterviewsApi } from "@/hooks/api/useInterviewsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
@@ -36,25 +36,21 @@ export function Sidebar() {
               </span>
             </div>
             <p className="mt-0.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--text-4)]">
-              {t("sidebar.applicationAutomation")}
+              {t("sidebar.assistantLine")}
             </p>
           </div>
         </div>
       </div>
 
       <nav className="jf-nav">
-        {SIDEBAR_NAV.map((section) => (
+        {/* Primary navigation */}
+        {SIDEBAR_NAV_PRIMARY.map((section) => (
           <div key={section.sectionKey}>
-            <div className="jf-nav-section-title jf-sidebar-collapsed-text">{t(section.sectionKey)}</div>
             <div className="flex flex-col gap-px">
               {section.items.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
-                const dynamicBadge =
-                  item.href === "/jobs" ? jobsCount : item.href === "/interviews" ? interviewsCount : undefined;
-                const staticBadge = "badge" in item ? item.badge : undefined;
-                const badge = dynamicBadge !== undefined ? dynamicBadge : staticBadge;
-
+                const badge = item.href === "/jobs" ? jobsCount : undefined;
                 return (
                   <Link key={item.href} href={item.href} className={cn("jf-nav-item", isActive && "is-active")}>
                     <Icon size={16} />
@@ -68,6 +64,27 @@ export function Sidebar() {
             </div>
           </div>
         ))}
+
+        {/* Secondary navigation */}
+        <div className="jf-sidebar-collapsed-text mt-3 border-t border-[var(--border-subtle)] pt-3">
+          <div className="jf-nav-section-title mb-1 text-[10px] uppercase tracking-widest text-[var(--text-4)]">{t("navSection.more")}</div>
+          <div className="flex flex-col gap-px">
+            {SIDEBAR_NAV_SECONDARY.flatMap((s) => s.items).map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const Icon = item.icon;
+              const badge = item.href === "/interviews" ? interviewsCount : undefined;
+              return (
+                <Link key={item.href} href={item.href} className={cn("jf-nav-item", isActive && "is-active")}>
+                  <Icon size={16} />
+                  <span className="jf-nav-label flex-1 truncate">{t(item.labelKey)}</span>
+                  {typeof badge === "number" && badge > 0 ? (
+                    <span className="jf-nav-badge jf-sidebar-collapsed-text">{badge}</span>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
       <div className="jf-sys-card jf-sidebar-collapsed-text">
@@ -76,8 +93,8 @@ export function Sidebar() {
             <LiveIcon size={13} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-semibold leading-none text-[var(--text-1)]">{t("sidebar.systemOnline")}</p>
-            <p className="mt-0.5 text-[11px] text-[var(--text-3)]">{t("sidebar.modulesLine")}</p>
+            <p className="text-[12.5px] font-semibold leading-none text-[var(--text-1)]">{t("sidebar.assistantOnline")}</p>
+            <p className="mt-0.5 text-[11px] text-[var(--text-3)]">{t("sidebar.assistantLine")}</p>
           </div>
           <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-[rgba(56,199,147,0.22)] bg-[var(--emerald-bg)] px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide text-[var(--emerald)]">
             <span className="jf-live-dot" />
@@ -88,8 +105,8 @@ export function Sidebar() {
           <div className="jf-progress-fill relative h-full w-full rounded-full bg-gradient-to-r from-[#38C793] to-[#4FC2D8]" />
         </div>
         <div className="mt-2 flex justify-between font-mono text-[10.5px] text-[var(--text-3)]">
-          <span>{t("sidebar.healthy")}</span>
-          <span>{t("sidebar.queueOk")}</span>
+          <span>{t("sidebar.active")}</span>
+          <span>{t("sidebar.allGood")}</span>
         </div>
       </div>
     </aside>
