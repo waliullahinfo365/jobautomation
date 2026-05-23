@@ -114,6 +114,30 @@ function StarRating({ count }: { count: number }) {
   );
 }
 
+function TestimonialCard({ quote, name, title, location, avatar, avatarBg, stars }: {
+  quote: string; name: string; title: string; location: string;
+  avatar: string; avatarBg: string; stars: number;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-5 flex flex-col gap-3 cursor-default shrink-0 w-[320px] sm:w-[360px]"
+      style={{ background: "var(--lp-card)", border: "1px solid var(--lp-bd)", boxShadow: "var(--lp-shadow-sm)" }}
+    >
+      <StarRating count={stars} />
+      <p className="text-sm leading-relaxed flex-1" style={{ color: "var(--lp-t2)" }}>&ldquo;{quote}&rdquo;</p>
+      <div className="flex items-center gap-3 pt-2" style={{ borderTop: "1px solid var(--lp-bd3)" }}>
+        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-lg" style={{ background: avatarBg }}>
+          {avatar}
+        </div>
+        <div>
+          <div className="text-sm font-semibold" style={{ color: "var(--lp-t1)" }}>{name}</div>
+          <div className="text-[11px]" style={{ color: "var(--lp-t4)" }}>{title} · {location}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SocialProofSection() {
   return (
     <section className="py-20 overflow-hidden" style={{ borderTop: "1px solid var(--lp-section-sep)" }}>
@@ -191,41 +215,48 @@ export function SocialProofSection() {
           </motion.p>
         </div>
 
-        {/* Testimonials — horizontal scroll on mobile, grid on sm+ */}
-        <div className="testimonial-scroll flex gap-4 overflow-x-auto pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible">
-          {TESTIMONIALS.map(({ quote, name, title, location, avatar, avatarBg, stars }, i) => (
-            <motion.div
-              key={name}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, duration: 0.5 }}
-              whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className="rounded-2xl p-6 flex flex-col gap-4 cursor-default shrink-0 w-[80vw] sm:w-auto"
-              style={{ background: "var(--lp-card)", border: "1px solid var(--lp-bd)", boxShadow: "var(--lp-shadow-sm)" }}
-            >
-              <StarRating count={stars} />
-              <p className="text-sm leading-relaxed flex-1" style={{ color: "var(--lp-t2)" }}>&ldquo;{quote}&rdquo;</p>
-              <div className="flex items-center gap-3 pt-2" style={{ borderTop: "1px solid var(--lp-bd3)" }}>
-                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-lg" style={{ background: avatarBg }}>
-                  {avatar}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold" style={{ color: "var(--lp-t1)" }}>{name}</div>
-                  <div className="text-[11px]" style={{ color: "var(--lp-t4)" }}>{title} · {location}</div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+      </div>
+
+      {/* Testimonial marquee — full bleed, outside max-width container */}
+      <div className="mt-4 space-y-4 overflow-hidden">
+        {/* Row 1 — left to right scroll */}
+        <div className="relative">
+          <div className="flex gap-4" style={{ animation: "scrollTestimonials 40s linear infinite" }}>
+            {[...TESTIMONIALS, ...TESTIMONIALS].map(({ quote, name, title, location, avatar, avatarBg, stars }, i) => (
+              <TestimonialCard key={`r1-${i}`} quote={quote} name={name} title={title} location={location} avatar={avatar} avatarBg={avatarBg} stars={stars} />
+            ))}
+          </div>
+          <div className="absolute inset-y-0 left-0 w-32 pointer-events-none z-10" style={{ background: "linear-gradient(90deg, var(--lp-bg), transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-32 pointer-events-none z-10" style={{ background: "linear-gradient(-90deg, var(--lp-bg), transparent)" }} />
         </div>
-        {/* Swipe hint — mobile only */}
-        <p className="text-center text-xs mt-3 sm:hidden" style={{ color: "var(--lp-t5)" }}>Swipe to see more →</p>
+
+        {/* Row 2 — right to left scroll (reverse), offset for masonry feel */}
+        <div className="relative">
+          <div className="flex gap-4" style={{ animation: "scrollTestimonialsReverse 50s linear infinite" }}>
+            {[...TESTIMONIALS.slice().reverse(), ...TESTIMONIALS.slice().reverse()].map(({ quote, name, title, location, avatar, avatarBg, stars }, i) => (
+              <TestimonialCard key={`r2-${i}`} quote={quote} name={name} title={title} location={location} avatar={avatar} avatarBg={avatarBg} stars={stars} />
+            ))}
+          </div>
+          <div className="absolute inset-y-0 left-0 w-32 pointer-events-none z-10" style={{ background: "linear-gradient(90deg, var(--lp-bg), transparent)" }} />
+          <div className="absolute inset-y-0 right-0 w-32 pointer-events-none z-10" style={{ background: "linear-gradient(-90deg, var(--lp-bg), transparent)" }} />
+        </div>
       </div>
 
       <style>{`
         @keyframes scrollLogos {
           from { transform: translateX(0); }
           to { transform: translateX(-50%); }
+        }
+        @keyframes scrollTestimonials {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @keyframes scrollTestimonialsReverse {
+          from { transform: translateX(-50%); }
+          to { transform: translateX(0); }
+        }
+        .testimonial-marquee-row:hover > div {
+          animation-play-state: paused;
         }
       `}</style>
     </section>
