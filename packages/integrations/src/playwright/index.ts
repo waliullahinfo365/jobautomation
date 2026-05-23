@@ -116,6 +116,7 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
         coverLetterPath,
         jobContext,
         dryRun: input.dryRun,
+        proxyUrl,
       });
 
       // If LinkedIn redirected to external ATS, mark as external-only (Option A)

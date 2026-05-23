@@ -60,7 +60,7 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Import from Browser ✓ Recommended
+            Import Cookies
           </button>
           <button
             onClick={() => setTab("credentials")}
@@ -78,7 +78,13 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
         {tab === "cookies" && (
           <form onSubmit={(e) => void handleCookies(e)} className="px-6 py-5 space-y-5">
             <div className="space-y-3 text-sm">
-              <p className="font-medium">Follow these 4 steps — takes about 2 minutes:</p>
+              <p className="font-medium">Import cookies only from the same IP the worker will use.</p>
+
+              <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+                LinkedIn often binds sessions to the login IP. If the worker runs on Railway
+                without the same residential proxy, cookies exported from your normal browser will
+                be rejected immediately.
+              </p>
 
               <ol className="space-y-3 text-muted-foreground">
                 <li className="flex gap-3">
@@ -93,8 +99,8 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
                   <span>
                     Go to{" "}
-                    <strong className="text-foreground">linkedin.com</strong> and make sure you are
-                    logged in.
+                    <strong className="text-foreground">linkedin.com</strong> through the same
+                    network or proxy configured for the worker, then make sure you are logged in.
                   </span>
                 </li>
                 <li className="flex gap-3">
@@ -134,7 +140,8 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
 
             <p className="text-xs text-muted-foreground">
               Your cookies are encrypted (AES-256) and stored only in your workspace database.
-              They are never sent to any third party.
+              They are never sent to any third party. For Railway workers, set PROXY_URL to the
+              same stable residential IP used to create these cookies.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -153,8 +160,8 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
           <form onSubmit={(e) => void handleCredentials(e)} className="px-6 py-5 space-y-4">
             <p className="text-sm text-muted-foreground">
               Enter your LinkedIn credentials. The system will log in on your behalf using a
-              headless browser. This may be blocked if LinkedIn detects a cloud server IP — use
-              the <strong>Import from Browser</strong> tab if this fails.
+              headless browser. This works best when the worker has a stable residential proxy;
+              LinkedIn commonly blocks direct cloud-server logins.
             </p>
 
             <div className="space-y-1">

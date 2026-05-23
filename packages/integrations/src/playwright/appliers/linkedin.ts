@@ -234,9 +234,11 @@ export async function applyViaLinkedIn(input: {
   coverLetterPath?: string;
   jobContext: { company: string; position: string; description?: string };
   dryRun?: boolean;
+  proxyUrl?: string;
 }): Promise<LinkedInApplyResult> {
   const { page } = input;
   const jobUrl = cleanLinkedInUrl(input.jobUrl);
+  const hasConfiguredProxy = Boolean(input.proxyUrl?.trim() || process.env.PROXY_URL || process.env.PLAYWRIGHT_PROXY_URL);
 
   // Log which IP the proxy is routing through — visible in Railway logs
   try {
@@ -263,7 +265,10 @@ export async function applyViaLinkedIn(input: {
   console.log(`[linkedin-apply] after /feed warm-up, URL: ${feedUrl}`);
 
   if (!(await isLoggedIn(page))) {
-    return { success: false, message: `LinkedIn session expired or blocked — URL after /feed: ${feedUrl}. Please re-import your cookies from Settings → Integrations.`, stepsCompleted: 0 };
+    const message = hasConfiguredProxy
+      ? `LinkedIn session expired or blocked on the configured proxy — URL after /feed: ${feedUrl}. Reconnect LinkedIn through the same stable residential proxy used by the worker, or rotate to a trusted residential IP and save a fresh session through that IP.`
+      : `LinkedIn session expired or blocked from the Railway server IP — URL after /feed: ${feedUrl}. Browser-exported cookies are tied to the IP where they were created; set PROXY_URL/PLAYWRIGHT_PROXY_URL to a stable residential proxy and save/import the LinkedIn session through that same proxy before retrying.`;
+    return { success: false, message, stepsCompleted: 0 };
   }
 
   // Navigate to job page using the cleaned URL (no tracking params)
@@ -279,7 +284,9 @@ export async function applyViaLinkedIn(input: {
     return {
       success: false,
       message: isUasLogin
-        ? "LinkedIn session expired — please re-import your cookies from Settings → Integrations."
+        ? hasConfiguredProxy
+          ? "LinkedIn session expired on the configured proxy. Reconnect LinkedIn through the same stable residential proxy used by the worker."
+          : "LinkedIn session expired from the Railway server IP. Configure a stable residential proxy and create the LinkedIn session through that same IP; re-importing home-IP cookies will keep failing."
         : `LinkedIn blocked navigation to job page (redirected to: ${currentUrl}, title: "${title}"). Try setting PROXY_URL in Railway env.`,
       stepsCompleted: 0,
     };

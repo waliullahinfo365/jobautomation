@@ -41,6 +41,6 @@ export function validateWorkerEnv(): void {
       warn("PROXY_URL is set but could not be parsed as a valid URL — Playwright will use direct connection");
     }
   } else {
-    warn("PROXY_URL not set — Playwright will use the server's IP directly (LinkedIn sessions may expire quickly)");
+    warn("PROXY_URL not set — Playwright will use the server's cloud IP directly. LinkedIn usually rejects browser-exported sessions from a different IP.");
   }
 }

@@ -115,7 +115,7 @@ export function LinkedInSessionCard() {
       if (result.connected) {
         await fetchStatus();
         setModalOpen(false);
-        showSuccess(`LinkedIn session imported (${result.cookieCount} cookies). You're connected!`);
+        showSuccess(`LinkedIn session imported (${result.cookieCount} cookies). Use the same IP/proxy for the worker.`);
       }
     } catch (e) {
       setConnecting(false);
