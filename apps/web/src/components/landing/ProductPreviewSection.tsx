@@ -13,30 +13,29 @@ const TABS = [
 
 function PipelinePreview() {
   const stages = [
-    { label: "New", count: 8, color: "bg-slate-500", jobs: ["Senior Dev · Google", "Backend Eng · Meta", "SWE · Stripe"] },
-    { label: "Saved", count: 12, color: "bg-blue-500", jobs: ["Frontend · Vercel", "Full Stack · Linear", "React Dev · Notion"] },
-    { label: "Applied", count: 5, color: "bg-purple-500", jobs: ["Platform Eng · Airbnb", "Senior SWE · Figma"] },
-    { label: "Interview", count: 3, color: "bg-green-500", jobs: ["Staff Eng · Shopify"] },
+    { label: "New", count: 8, dot: "#94a3b8", jobs: ["Senior Dev · Google", "Backend Eng · Meta", "SWE · Stripe"] },
+    { label: "Saved", count: 12, dot: "#60a5fa", jobs: ["Frontend · Vercel", "Full Stack · Linear", "React Dev · Notion"] },
+    { label: "Applied", count: 5, dot: "#a78bfa", jobs: ["Platform Eng · Airbnb", "Senior SWE · Figma"] },
+    { label: "Interview", count: 3, dot: "#4ade80", jobs: ["Staff Eng · Shopify"] },
   ];
-
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4">
-      {stages.map(({ label, count, color, jobs }) => (
-        <div key={label} className="rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
-          <div className={`flex items-center justify-between px-3 py-2 border-b border-white/[0.05]`}>
+      {stages.map(({ label, count, dot, jobs }) => (
+        <div key={label} className="rounded-xl overflow-hidden" style={{ background: "var(--lp-card2)", border: "1px solid var(--lp-bd)" }}>
+          <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: "1px solid var(--lp-bd3)" }}>
             <div className="flex items-center gap-1.5">
-              <div className={`w-2 h-2 rounded-full ${color}`} />
-              <span className="text-[10px] font-semibold text-slate-400">{label}</span>
+              <div className="w-2 h-2 rounded-full" style={{ background: dot }} />
+              <span className="text-[10px] font-semibold" style={{ color: "var(--lp-t3)" }}>{label}</span>
             </div>
-            <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full ${color} bg-opacity-20`}>{count}</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: "var(--lp-t1)", background: "var(--lp-card)" }}>{count}</span>
           </div>
           <div className="p-2 space-y-1.5">
             {jobs.map((job) => (
-              <div key={job} className="text-[9px] text-slate-400 bg-white/[0.03] rounded-lg px-2 py-1.5 border border-white/[0.04] truncate hover:text-slate-300 cursor-default">
+              <div key={job} className="text-[9px] rounded-lg px-2 py-1.5 truncate cursor-default hover:translate-x-0.5 transition-transform" style={{ background: "var(--lp-card)", border: "1px solid var(--lp-bd3)", color: "var(--lp-t3)" }}>
                 {job}
               </div>
             ))}
-            <div className="text-[9px] text-slate-600 text-center py-1">+{count - jobs.length} more</div>
+            <div className="text-[9px] text-center py-1" style={{ color: "var(--lp-t5)" }}>+{count - jobs.length} more</div>
           </div>
         </div>
       ))}
@@ -46,28 +45,25 @@ function PipelinePreview() {
 
 function AnalyticsPreview() {
   const bars = [65, 82, 45, 91, 78, 55, 88, 72, 95, 60, 84, 70];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
+  const months = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
   return (
     <div className="p-4 space-y-4">
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Response Rate", value: "34%", change: "+12%", up: true },
-          { label: "Interview Rate", value: "18%", change: "+7%", up: true },
-          { label: "Avg Time to Reply", value: "4.2d", change: "-1.3d", up: true },
-        ].map(({ label, value, change, up }) => (
-          <div key={label} className="rounded-xl border border-white/[0.06] p-3" style={{ background: "rgba(255,255,255,0.02)" }}>
-            <div className="text-[9px] text-slate-500 mb-1">{label}</div>
-            <div className="text-base font-bold text-white">{value}</div>
-            <div className={`text-[9px] ${up ? "text-green-400" : "text-red-400"}`}>{change} vs last month</div>
+          { label: "Response Rate", value: "34%", change: "+12%", color: "#4ade80" },
+          { label: "Interview Rate", value: "18%", change: "+7%", color: "#60a5fa" },
+          { label: "Avg Reply Time", value: "4.2d", change: "-1.3d", color: "#a78bfa" },
+        ].map(({ label, value, change, color }) => (
+          <div key={label} className="rounded-xl p-3" style={{ background: "var(--lp-card2)", border: "1px solid var(--lp-bd)" }}>
+            <div className="text-[9px] mb-1" style={{ color: "var(--lp-t5)" }}>{label}</div>
+            <div className="text-base font-bold" style={{ color: "var(--lp-t1)" }}>{value}</div>
+            <div className="text-[9px]" style={{ color }}>{change}</div>
           </div>
         ))}
       </div>
-
-      {/* Bar chart */}
-      <div className="rounded-xl border border-white/[0.06] p-3" style={{ background: "rgba(255,255,255,0.02)" }}>
-        <div className="text-[10px] font-semibold text-slate-400 mb-3">Applications per Month</div>
-        <div className="flex items-end gap-1.5 h-20">
+      <div className="rounded-xl p-3" style={{ background: "var(--lp-card2)", border: "1px solid var(--lp-bd)" }}>
+        <div className="text-[10px] font-semibold mb-3" style={{ color: "var(--lp-t3)" }}>Applications per Month</div>
+        <div className="flex items-end gap-1 h-20">
           {bars.map((h, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
               <motion.div
@@ -76,9 +72,9 @@ function AnalyticsPreview() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.04, duration: 0.5 }}
                 className="w-full rounded-t-sm"
-                style={{ background: i === 4 ? "linear-gradient(180deg, #60a5fa, #3b82f6)" : "rgba(148,163,184,0.15)" }}
+                style={{ background: i === 4 ? "linear-gradient(180deg, #60a5fa, #3b82f6)" : "var(--lp-bd2)" }}
               />
-              <span className="text-[7px] text-slate-600">{months[i]}</span>
+              <span className="text-[7px]" style={{ color: "var(--lp-t5)" }}>{months[i]}</span>
             </div>
           ))}
         </div>
@@ -90,25 +86,21 @@ function AnalyticsPreview() {
 function AIDraftPreview() {
   return (
     <div className="p-4 space-y-3">
-      <div className="rounded-xl border border-blue-500/20 p-4" style={{ background: "rgba(59,130,246,0.05)" }}>
+      <div className="rounded-xl p-4" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)" }}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider">AI Cover Letter — Stripe</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Senior Software Engineer · San Francisco</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-500">AI Cover Letter — Stripe</div>
+            <div className="text-[11px] mt-0.5" style={{ color: "var(--lp-t4)" }}>Senior Software Engineer · San Francisco</div>
           </div>
-          <span className="text-[9px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full border border-green-500/20">94% match</span>
+          <span className="text-[9px] px-2 py-0.5 rounded-full text-green-600 dark:text-green-400" style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.20)" }}>94% match</span>
         </div>
         <div className="space-y-1.5">
-          {[
-            "Dear Stripe Engineering Team,",
-            "I am excited to apply for the Senior Software Engineer role. With 6+ years building scalable payment infrastructure at high-growth startups, I bring exactly the expertise your team needs.",
-            "My experience with distributed systems, TypeScript, and API design aligns directly with Stripe's technical requirements. I've led teams that processed $2B+ in transactions annually...",
-          ].map((line, i) => (
-            <p key={i} className={`text-[10px] leading-relaxed ${i === 0 ? "text-white font-medium" : "text-slate-400"}`}>{line}</p>
-          ))}
+          <p className="text-[10px] font-medium" style={{ color: "var(--lp-t1)" }}>Dear Stripe Engineering Team,</p>
+          <p className="text-[10px] leading-relaxed" style={{ color: "var(--lp-t3)" }}>I am excited to apply for the Senior Software Engineer role. With 6+ years building scalable payment infrastructure at high-growth startups, I bring exactly the expertise your team needs.</p>
+          <p className="text-[10px] leading-relaxed" style={{ color: "var(--lp-t4)" }}>My experience with distributed systems, TypeScript, and API design aligns directly with Stripe's technical requirements…</p>
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-1 flex-1 rounded-full overflow-hidden" style={{ background: "var(--lp-bd)" }}>
             <motion.div
               className="h-full rounded-full"
               style={{ background: "linear-gradient(90deg, #3b82f6, #8b5cf6)" }}
@@ -118,7 +110,7 @@ function AIDraftPreview() {
               transition={{ duration: 1.5, ease: "easeOut" }}
             />
           </div>
-          <span className="text-[9px] text-slate-500">94% personalized</span>
+          <span className="text-[9px]" style={{ color: "var(--lp-t5)" }}>94% personalized</span>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -126,11 +118,11 @@ function AIDraftPreview() {
           { role: "Vercel · Frontend Lead", score: "87%", status: "Draft ready" },
           { role: "Linear · Eng Manager", score: "91%", status: "Generating…" },
         ].map(({ role, score, status }) => (
-          <div key={role} className="rounded-xl border border-white/[0.06] p-3" style={{ background: "rgba(255,255,255,0.02)" }}>
-            <div className="text-[10px] font-medium text-white mb-1">{role}</div>
+          <div key={role} className="rounded-xl p-3" style={{ background: "var(--lp-card2)", border: "1px solid var(--lp-bd)" }}>
+            <div className="text-[10px] font-medium mb-1" style={{ color: "var(--lp-t1)" }}>{role}</div>
             <div className="flex items-center justify-between">
-              <span className="text-[9px] text-slate-500">{status}</span>
-              <span className="text-[9px] font-semibold text-purple-400">{score}</span>
+              <span className="text-[9px]" style={{ color: "var(--lp-t4)" }}>{status}</span>
+              <span className="text-[9px] font-semibold text-purple-500">{score}</span>
             </div>
           </div>
         ))}
@@ -141,125 +133,104 @@ function AIDraftPreview() {
 
 function InterviewPreview() {
   const interviews = [
-    { co: "Google", role: "Staff Engineer", date: "Tomorrow", time: "2:00 PM", type: "Technical", status: "Confirmed", statusClass: "text-green-400 bg-green-500/15 border-green-500/20" },
-    { co: "Stripe", role: "Senior SWE", date: "Thu, Jun 12", time: "11:00 AM", type: "System Design", status: "Pending", statusClass: "text-amber-400 bg-amber-500/15 border-amber-500/20" },
-    { co: "Vercel", role: "Frontend Lead", date: "Mon, Jun 16", time: "3:00 PM", type: "Culture Fit", status: "Scheduled", statusClass: "text-blue-400 bg-blue-500/15 border-blue-500/20" },
+    { co: "Google", role: "Staff Engineer", date: "Tomorrow", time: "2:00 PM", type: "Technical", status: "Confirmed", sc: "rgba(34,197,94,0.12)", tc: "#4ade80", bc: "rgba(34,197,94,0.20)" },
+    { co: "Stripe", role: "Senior SWE", date: "Thu Jun 12", time: "11:00 AM", type: "System Design", status: "Pending", sc: "rgba(245,158,11,0.12)", tc: "#fbbf24", bc: "rgba(245,158,11,0.20)" },
+    { co: "Vercel", role: "Frontend Lead", date: "Mon Jun 16", time: "3:00 PM", type: "Culture Fit", status: "Scheduled", sc: "rgba(59,130,246,0.12)", tc: "#60a5fa", bc: "rgba(59,130,246,0.20)" },
   ];
-
   return (
     <div className="p-4 space-y-2.5">
-      {interviews.map(({ co, role, date, time, type, status, statusClass }) => (
-        <div key={co} className="flex items-center justify-between rounded-xl border border-white/[0.06] px-4 py-3 hover:bg-white/[0.02] transition-colors" style={{ background: "rgba(255,255,255,0.02)" }}>
+      {interviews.map(({ co, role, date, time, type, status, sc, tc, bc }) => (
+        <div key={co} className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--lp-card2)", border: "1px solid var(--lp-bd)" }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: "var(--lp-card)", border: "1px solid var(--lp-bd2)", color: "var(--lp-t1)" }}>
               {co.slice(0, 2)}
             </div>
             <div>
-              <div className="text-[11px] font-semibold text-white">{role} · {co}</div>
-              <div className="text-[9px] text-slate-500">{date} at {time} · {type}</div>
+              <div className="text-[11px] font-semibold" style={{ color: "var(--lp-t1)" }}>{role} · {co}</div>
+              <div className="text-[9px]" style={{ color: "var(--lp-t4)" }}>{date} at {time} · {type}</div>
             </div>
           </div>
-          <span className={`text-[9px] font-medium px-2.5 py-1 rounded-full border ${statusClass}`}>{status}</span>
+          <span className="text-[9px] font-medium px-2.5 py-1 rounded-full" style={{ background: sc, color: tc, border: `1px solid ${bc}` }}>{status}</span>
         </div>
       ))}
-      <div className="rounded-xl border border-purple-500/20 p-3 flex items-start gap-3" style={{ background: "rgba(139,92,246,0.05)" }}>
-        <Sparkles size={14} className="text-purple-400 shrink-0 mt-0.5" />
+      <div className="rounded-xl p-3 flex items-start gap-3" style={{ background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.15)" }}>
+        <Sparkles size={14} className="text-purple-500 shrink-0 mt-0.5" />
         <div>
-          <div className="text-[10px] font-semibold text-purple-300 mb-0.5">AI Interview Prep Ready</div>
-          <div className="text-[9px] text-slate-500 leading-relaxed">15 predicted questions for your Google interview, with AI-suggested answers based on your CV and the job description.</div>
+          <div className="text-[10px] font-semibold text-purple-500 mb-0.5">AI Interview Prep Ready</div>
+          <div className="text-[9px] leading-relaxed" style={{ color: "var(--lp-t4)" }}>15 predicted questions for your Google interview, with AI-suggested answers based on your CV and the job description.</div>
         </div>
       </div>
     </div>
   );
 }
 
-const TAB_CONTENT = {
-  pipeline: PipelinePreview,
-  analytics: AnalyticsPreview,
-  ai: AIDraftPreview,
-  interviews: InterviewPreview,
-};
+const TAB_CONTENT: Record<string, React.ComponentType> = { pipeline: PipelinePreview, analytics: AnalyticsPreview, ai: AIDraftPreview, interviews: InterviewPreview };
 
 export function ProductPreviewSection() {
   const [activeTab, setActiveTab] = useState("pipeline");
-
-  const ActiveContent = TAB_CONTENT[activeTab as keyof typeof TAB_CONTENT];
+  const ActiveContent = TAB_CONTENT[activeTab];
 
   return (
-    <section className="py-24 border-t border-white/[0.05]">
+    <section className="py-24" style={{ borderTop: "1px solid var(--lp-section-sep)" }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 mb-5">
-            <LayoutDashboard size={12} className="text-cyan-400" />
-            <span className="text-sm text-cyan-300 font-medium">Live product preview</span>
+            <LayoutDashboard size={12} className="text-cyan-500" />
+            <span className="text-sm text-cyan-600 dark:text-cyan-400 font-medium">Live product preview</span>
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4">
-            See it in action
-          </h2>
-          <p className="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">
-            A powerful, clean interface designed to make your job search effortless.
-          </p>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4" style={{ color: "var(--lp-t1)" }}>See it in action</h2>
+          <p className="text-base sm:text-lg max-w-xl mx-auto" style={{ color: "var(--lp-t3)" }}>A powerful, clean interface designed to make your job search effortless.</p>
         </motion.div>
 
-        {/* Mock browser */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/60"
-          style={{ background: "linear-gradient(135deg, rgba(15,23,42,0.97), rgba(9,14,30,0.99))" }}
+          className="relative rounded-2xl overflow-hidden"
+          style={{ background: "var(--lp-bg2)", border: "1px solid var(--lp-bd)", boxShadow: "var(--lp-shadow-lg)" }}
         >
-          {/* Glow */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-30"
-            style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.25), transparent 60%)" }}
-          />
-
           {/* Chrome */}
-          <div className="relative flex items-center gap-2 px-5 py-3 border-b border-white/[0.07]" style={{ background: "rgba(255,255,255,0.03)" }}>
-            <div className="w-3 h-3 rounded-full bg-red-500/60" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-            <div className="w-3 h-3 rounded-full bg-green-500/60" />
-            <div className="ml-4 h-6 flex-1 max-w-sm bg-white/[0.05] rounded-md flex items-center px-3 gap-2">
+          <div className="flex items-center gap-2 px-5 py-3" style={{ background: "var(--lp-card2)", borderBottom: "1px solid var(--lp-bd)" }}>
+            <div className="w-3 h-3 rounded-full bg-red-400/70" />
+            <div className="w-3 h-3 rounded-full bg-yellow-400/70" />
+            <div className="w-3 h-3 rounded-full bg-green-400/70" />
+            <div className="ml-4 h-6 flex-1 max-w-sm rounded-md flex items-center px-3 gap-2" style={{ background: "var(--lp-card)" }}>
               <div className="w-2 h-2 rounded-full bg-green-400/60" />
-              <span className="text-[10px] text-slate-500">app.newjobguru.com/dashboard</span>
+              <span className="text-[10px]" style={{ color: "var(--lp-t4)" }}>app.newjobguru.com/dashboard</span>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="relative flex items-center gap-1 px-4 py-3 border-b border-white/[0.06]" style={{ background: "rgba(255,255,255,0.015)" }}>
+          <div className="flex items-center gap-1 px-4 py-3" style={{ background: "var(--lp-card3)", borderBottom: "1px solid var(--lp-bd3)" }}>
             {TABS.map(({ id, label, icon: Icon }) => (
-              <button
+              <motion.button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                style={
                   activeTab === id
-                    ? "bg-blue-600/20 text-blue-300 border border-blue-500/30"
-                    : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
-                }`}
+                    ? { background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }
+                    : { color: "var(--lp-t4)", border: "1px solid transparent" }
+                }
               >
                 <Icon size={11} />
                 {label}
-              </button>
+              </motion.button>
             ))}
           </div>
 
           {/* Content */}
-          <div className="relative min-h-[320px]">
+          <div className="min-h-[320px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.25 }}
+                transition={{ duration: 0.22 }}
               >
                 <ActiveContent />
               </motion.div>
