@@ -11,16 +11,6 @@ import { useLandingTheme } from "./LandingThemeContext";
 function AuroraBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Fine grid */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: `linear-gradient(var(--lp-grid) 1px, transparent 1px), linear-gradient(90deg, var(--lp-grid) 1px, transparent 1px)`,
-          backgroundSize: "48px 48px",
-          opacity: "var(--lp-grid-o)",
-        }}
-      />
-
       {/* Aurora orb 1 — blue, top left */}
       <motion.div
         className="absolute rounded-full blur-[120px]"
