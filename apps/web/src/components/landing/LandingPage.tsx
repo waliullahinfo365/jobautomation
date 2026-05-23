@@ -84,8 +84,8 @@ function Inner() {
         .lp-root a, .lp-root button { transition: all 0.2s !important; }
       `}</style>
       <div
-        className={`lp-root min-h-screen overflow-x-hidden selection:bg-blue-500/30 selection:text-blue-200 ${isDark ? "dark" : ""}`}
-        style={{ background: "var(--lp-bg)" }}
+        className={`lp-root min-h-screen overflow-x-hidden selection:bg-blue-500/30 selection:text-blue-200 font-sans ${isDark ? "dark" : ""}`}
+        style={{ background: "var(--lp-bg)", fontFamily: "var(--font-ui), ui-sans-serif, system-ui, sans-serif" }}
       >
         <Navbar />
         <HeroSection />
