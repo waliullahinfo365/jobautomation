@@ -45,8 +45,8 @@ const DARK_VARS = `
 const LIGHT_VARS = `
   --lp-bg: #ffffff;
   --lp-bg2: rgba(255,255,255,0.99);
-  --lp-nav: rgba(30,15,60,0.88);
-  --lp-nav-bd: rgba(139,92,246,0.2);
+  --lp-nav: rgba(255,255,255,0.95);
+  --lp-nav-bd: rgba(15,23,42,0.08);
   --lp-card: #ffffff;
   --lp-card2: #f8fafc;
   --lp-card3: #f1f5f9;
