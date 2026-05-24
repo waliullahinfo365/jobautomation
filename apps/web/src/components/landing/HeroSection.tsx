@@ -1,25 +1,62 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
+const SLIDES = ["/hero-bg.png", "/hero-bg-2.png", "/hero-bg-3.png"];
+
 export function HeroSection() {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrent(prev => (prev + 1) % SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
 
-      {/* Background image */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage: "url('/hero-bg.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
-      {/* Dark overlay to keep text legible */}
-      <div className="absolute inset-0 bg-black/45" />
+      {/* Sliding backgrounds */}
+      <AnimatePresence>
+        <motion.div
+          key={current}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 1.2, ease: "easeInOut" }}
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `url('${SLIDES[current]}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+      </AnimatePresence>
+
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/50" />
+
+      {/* Slide dots */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        {SLIDES.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            className="transition-all duration-300"
+            style={{
+              width: i === current ? "24px" : "8px",
+              height: "8px",
+              borderRadius: "4px",
+              background: i === current ? "#fff" : "rgba(255,255,255,0.35)",
+            }}
+          />
+        ))}
+      </div>
 
       {/* Content — centered */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-10 text-center pt-40 pb-32">
