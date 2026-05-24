@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
 const SLIDES = ["/hero-bg.png", "/hero-bg-2.png", "/hero-bg-3.png"];
@@ -20,39 +20,40 @@ export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
 
-      {/* Sliding backgrounds */}
-      <AnimatePresence>
-        <motion.div
-          key={current}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut" }}
+      {/* All background images stacked — CSS opacity transition only */}
+      {SLIDES.map((src, i) => (
+        <div
+          key={src}
           className="absolute inset-0"
           style={{
-            backgroundImage: `url('${SLIDES[current]}')`,
+            backgroundImage: `url('${src}')`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
+            opacity: i === current ? 1 : 0,
+            transition: "opacity 1.5s ease-in-out",
           }}
         />
-      </AnimatePresence>
+      ))}
 
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/50" />
 
       {/* Slide dots */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         {SLIDES.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
-            className="transition-all duration-300"
             style={{
               width: i === current ? "24px" : "8px",
               height: "8px",
               borderRadius: "4px",
-              background: i === current ? "#fff" : "rgba(255,255,255,0.35)",
+              background: i === current ? "#fff" : "rgba(255,255,255,0.4)",
+              transition: "all 0.4s ease",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
             }}
           />
         ))}
