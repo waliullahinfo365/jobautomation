@@ -47,18 +47,17 @@ export function Navbar() {
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-3">
+      <div className="fixed top-0 left-0 right-0 z-50">
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-6xl mx-auto"
         >
           <div
-            className="flex items-center justify-between h-14 px-5 rounded-2xl transition-all duration-300"
+            className="flex items-center justify-between h-16 px-6 sm:px-10 transition-all duration-300"
             style={{
               background: navBg,
-              border: navBorder,
+              borderBottom: navBorder,
               boxShadow: navShadow,
               backdropFilter: "blur(20px) saturate(180%)",
               WebkitBackdropFilter: "blur(20px) saturate(180%)",
@@ -198,7 +197,7 @@ export function Navbar() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-4 top-[68px] z-40 md:hidden rounded-2xl overflow-hidden"
+            className="fixed inset-x-0 top-[64px] z-40 md:hidden overflow-hidden"
             style={{
               background: isDark ? "rgba(10,6,20,0.97)" : "rgba(255,255,255,0.98)",
               border: navBorder,

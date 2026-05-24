@@ -22,24 +22,7 @@ export function HeroSection() {
       <div className="absolute inset-0 bg-black/45" />
 
       {/* Content — centered */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-10 text-center py-32">
-
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8"
-          style={{
-            background: "rgba(99,102,241,0.15)",
-            border: "1px solid rgba(99,102,241,0.3)",
-          }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-indigo-300">
-            AI-Powered Job Application Automation
-          </span>
-        </motion.div>
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-10 text-center pt-40 pb-32">
 
         {/* Headline */}
         <motion.h1
