@@ -8,27 +8,18 @@ export function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
 
-      {/* Background — deep dark with subtle purple glow */}
-      <div className="absolute inset-0 bg-[#0a0614]" />
-
-      {/* Subtle radial glow center */}
+      {/* Background image */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0"
         style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% 40%, rgba(99,102,241,0.18) 0%, rgba(139,92,246,0.08) 40%, transparent 70%)",
+          backgroundImage: "url('/hero-bg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       />
-
-      {/* Very faint grid */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.035]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
+      {/* Dark overlay to keep text legible */}
+      <div className="absolute inset-0 bg-black/45" />
 
       {/* Content — centered */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-6 sm:px-10 text-center py-32">
