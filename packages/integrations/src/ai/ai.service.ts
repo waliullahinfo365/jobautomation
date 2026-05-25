@@ -688,6 +688,7 @@ export async function generateCoverLetterDraft(input: {
 export async function runCoverLetterGeneration(input: {
   job: { company: string; position: string; description?: string; tone?: "professional" | "confident" | "friendly" };
   config: AiRuntimeConfig;
+  userInstructions?: string;
 }): Promise<AiServiceResult<{
   subject: string;
   cover_letter: string;
@@ -718,6 +719,7 @@ export async function runCoverLetterGeneration(input: {
     `Company: ${input.job.company}`,
     `Position: ${input.job.position}`,
     `Job description:\n${input.job.description ?? "Not provided"}`,
+    ...(input.userInstructions ? ["", `Additional instructions from the user:\n${input.userInstructions}`] : []),
   ].join("\n");
 
   const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 1200, temperature: 0.4 });

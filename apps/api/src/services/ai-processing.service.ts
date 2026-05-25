@@ -18,6 +18,7 @@ type RunInput = {
   jobId: string;
   userId: string;
   operationId?: string;
+  userInstructions?: string;
 };
 
 function safeFileName(company: string, position: string, suffix: string): string {
@@ -257,6 +258,7 @@ export async function runDraftGeneration(input: RunInput): Promise<AiProcessingR
         description: job.description,
       },
       config: aiCfg,
+      userInstructions: input.userInstructions,
     });
     const draft = wrappedDraft.data;
 

@@ -97,10 +97,11 @@ export function generateResearch(id: string, options?: { execute?: boolean }) {
     { method: "POST" }
   );
 }
-export function generateDraft(id: string, options?: { execute?: boolean }) {
+export function generateDraft(id: string, options?: { execute?: boolean; customPrompt?: string }) {
+  const { execute, customPrompt } = options ?? {};
   return apiFetch<JobQueueEnqueueResponse>(
-    withQuery(`/jobs/${id}/generate-draft`, { execute: options?.execute } as Record<string, string | number | boolean | null | undefined>),
-    { method: "POST" }
+    withQuery(`/jobs/${id}/generate-draft`, { execute } as Record<string, string | number | boolean | null | undefined>),
+    { method: "POST", body: customPrompt ? { customPrompt } : undefined }
   );
 }
 export function runAiProcessing(id: string, options?: Record<string, unknown>) {

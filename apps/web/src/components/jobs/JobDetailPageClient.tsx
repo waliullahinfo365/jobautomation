@@ -407,7 +407,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         </div>
 
         <div className="space-y-6">
-          <JobDocumentsCard documents={job.documents} />
+          <JobDocumentsCard documents={job.documents} jobId={id} />
           <JobAutomationActivity logs={job.automationLogs} />
         </div>
       </div>
