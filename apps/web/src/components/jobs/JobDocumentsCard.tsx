@@ -62,19 +62,23 @@ function FormattedCoverLetter({ text }: { text: string }) {
 export function JobDocumentsCard({ documents, jobId }: JobDocumentsCardProps) {
   const { t } = useTranslation();
   const [viewDoc, setViewDoc] = useState<JobDocument | null>(null);
+  const [docContent, setDocContent] = useState<string>("");
   const [editMode, setEditMode] = useState(false);
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
   const [regenerating, setRegenerating] = useState(false);
   const [showPromptBox, setShowPromptBox] = useState(false);
+  const [contentCache, setContentCache] = useState<Record<string, string>>({});
 
   function openDoc(doc: JobDocument) {
     setViewDoc(doc);
     setEditMode(false);
-    setEditText(doc.contentText ?? doc.contentPreview ?? "");
     setCustomPrompt("");
     setShowPromptBox(false);
+    const text = contentCache[doc.id] ?? doc.contentText ?? doc.contentPreview ?? "";
+    setDocContent(text);
+    setEditText(text);
   }
 
   function closeDoc() {
@@ -89,7 +93,8 @@ export function JobDocumentsCard({ documents, jobId }: JobDocumentsCardProps) {
     try {
       await updateDocument(viewDoc.id, { contentText: editText });
       showSuccess("Document saved");
-      setViewDoc({ ...viewDoc, contentText: editText });
+      setDocContent(editText);
+      setContentCache((c) => ({ ...c, [viewDoc.id]: editText }));
       setEditMode(false);
     } catch {
       showError("Failed to save — please try again");
@@ -113,7 +118,7 @@ export function JobDocumentsCard({ documents, jobId }: JobDocumentsCardProps) {
     }
   }
 
-  const docText = viewDoc?.contentText ?? viewDoc?.contentPreview ?? "";
+  const docText = docContent;
   const isCL = viewDoc ? isCoverLetter(viewDoc) : false;
 
   return (
@@ -279,7 +284,6 @@ export function JobDocumentsCard({ documents, jobId }: JobDocumentsCardProps) {
                 ) : (
                   <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-[var(--text-2)]">
                     {docText}
-                    {!viewDoc.contentText && viewDoc.contentPreview ? "…" : ""}
                   </pre>
                 )
               ) : (

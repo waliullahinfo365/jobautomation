@@ -48,6 +48,8 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
   const [showPromptBox, setShowPromptBox] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
   const [regenerating, setRegenerating] = useState(false);
+  // Local cache so saved edits survive modal close/reopen without a page refresh
+  const [contentCache, setContentCache] = useState<Record<string, string>>({});
 
   async function openRecord(r: CoverLetterRecord, openPrompt = false) {
     setViewRecord(r);
@@ -55,23 +57,26 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
     setShowPromptBox(openPrompt);
     setCustomPrompt("");
 
-    // Use cached contentText or fetch full doc
-    const cached = r.contentText ?? "";
-    setDocContent(cached);
-    setEditText(cached);
+    // Always fetch fresh from server to reflect the latest saved state
+    const localOverride = contentCache[r.id];
+    if (localOverride !== undefined) {
+      setDocContent(localOverride);
+      setEditText(localOverride);
+    } else {
+      setDocContent(r.contentText ?? "");
+      setEditText(r.contentText ?? "");
+    }
 
-    if (!cached) {
-      setLoading(true);
-      try {
-        const full = await getDocument(r.id);
-        const text = (full as unknown as Record<string, unknown>).contentText as string ?? "";
-        setDocContent(text);
-        setEditText(text);
-      } catch {
-        // silently ignore — modal still opens
-      } finally {
-        setLoading(false);
-      }
+    setLoading(true);
+    try {
+      const full = await getDocument(r.id);
+      const text = (full as unknown as Record<string, unknown>).contentText as string ?? "";
+      setDocContent(text);
+      setEditText(text);
+    } catch {
+      // silently ignore — modal still shows cached/prop content
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -88,6 +93,7 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
       await updateDocument(viewRecord.id, { contentText: editText });
       showSuccess("Document saved");
       setDocContent(editText);
+      setContentCache((c) => ({ ...c, [viewRecord.id]: editText }));
       setEditMode(false);
     } catch {
       showError("Failed to save — please try again");

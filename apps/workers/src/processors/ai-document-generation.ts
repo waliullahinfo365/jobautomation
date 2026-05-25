@@ -655,6 +655,8 @@ export async function createCoverLetterDocument(input: {
     tenantId: ctx.tenantId,
     createdBy: ctx.userId,
     jobId: ctx.jobId,
+    company: ctx.company,
+    position: ctx.position,
     fileName: title,
     type: "Cover Letter",
     status: "Ready",
