@@ -9,8 +9,8 @@ import type { JobReviewAi } from "@/types/job";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const SWIPE_THRESHOLD = 110;
-const SWIPE_VELOCITY_THRESHOLD = 500;
+const SWIPE_THRESHOLD = 60;
+const SWIPE_VELOCITY_THRESHOLD = 250;
 
 const ACTION_CONFIG: Record<ReviewAction, { label: string; color: string; border: string; bg: string }> = {
   reject: { label: "Reject", color: "text-red-500", border: "border-red-400", bg: "bg-red-50 dark:bg-red-950/30" },
@@ -110,11 +110,11 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
   }, [isTop, ai, job.id]);
 
   function flyOut(direction: "left" | "right" | "up" | "down", action: ReviewAction) {
-    const targetX = direction === "left" ? -800 : direction === "right" ? 800 : 0;
-    const targetY = direction === "up" ? -800 : direction === "down" ? 800 : 0;
-    void animate(x, targetX, { duration: 0.3 });
-    void animate(y, targetY, { duration: 0.3 });
-    setTimeout(() => onAction(action), 280);
+    const targetX = direction === "left" ? -600 : direction === "right" ? 600 : 0;
+    const targetY = direction === "up" ? -600 : direction === "down" ? 600 : 0;
+    void animate(x, targetX, { duration: 0.18 });
+    void animate(y, targetY, { duration: 0.18 });
+    setTimeout(() => onAction(action), 160);
   }
 
   function handleDragEnd(_: unknown, info: { offset: { x: number; y: number }; velocity: { x: number; y: number } }) {
@@ -131,8 +131,8 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
       oy < 0 ? flyOut("up", "apply") : flyOut("down", "later");
     } else {
       // snap back
-      void animate(x, 0, { type: "spring", stiffness: 300, damping: 25 });
-      void animate(y, 0, { type: "spring", stiffness: 300, damping: 25 });
+      void animate(x, 0, { type: "spring", stiffness: 500, damping: 30 });
+      void animate(y, 0, { type: "spring", stiffness: 500, damping: 30 });
     }
   }
 
@@ -157,7 +157,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
       style={{ x, y, rotate }}
       drag
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.7}
+      dragElastic={0.15}
       onDragEnd={handleDragEnd}
       whileTap={{ scale: 1.02 }}
     >
