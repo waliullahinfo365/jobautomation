@@ -551,6 +551,7 @@ export async function createCoverLetterDocument(input: {
   jobId: string;
   operationId?: string;
   logModuleKey?: string;
+  userInstructions?: string;
 }) {
   const started = Date.now();
   const logModule = input.logModuleKey ?? "ai-processing";
@@ -620,6 +621,7 @@ export async function createCoverLetterDocument(input: {
     `Job description:\n${ctx.description ?? "Not provided"}`,
     "",
     profileBlock,
+    ...(input.userInstructions ? ["", `Additional instructions from the user (apply these carefully):\n${input.userInstructions}`] : []),
   ].join("\n");
 
   let generated: ClaudeResult;

@@ -86,6 +86,9 @@ export async function dispatchAutomationJob(name: AutomationJobName, payload: Au
         mode: (payload as { mode?: "research" | "draft" | "full" }).mode ?? "full",
         operationId: payload.operationId,
         correlationId: payload.correlationId,
+        userInstructions: typeof (payload as { userInstructions?: string }).userInstructions === "string"
+          ? (payload as { userInstructions?: string }).userInstructions
+          : undefined,
       });
     case "cover-letter":
       return processAiProcessingJob({

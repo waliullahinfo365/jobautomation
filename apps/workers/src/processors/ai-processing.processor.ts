@@ -7,6 +7,7 @@ export type AiProcessingProcessorPayload = {
   mode: AiProcessingMode;
   operationId?: string;
   correlationId?: string;
+  userInstructions?: string;
 };
 
 import { AutomationLogModel, JobModel } from "@jobflow/database/models";
@@ -33,6 +34,7 @@ export async function processAiProcessingJob(payload: AiProcessingProcessorPaylo
         jobId: payload.jobId,
         operationId,
         logModuleKey: "ai-processing",
+        userInstructions: payload.userInstructions,
       });
     }
 
