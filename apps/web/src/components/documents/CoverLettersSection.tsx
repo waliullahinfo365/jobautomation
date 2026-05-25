@@ -9,14 +9,14 @@ import { useTranslation } from "@/i18n/useTranslation";
 import type { CoverLetterRecord } from "@/types/document";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { ReportStatusBadge } from "@/components/reports/ReportStatusBadge";
-import { updateDocument } from "@/lib/api/documents.api";
+import { updateDocument, getDocument } from "@/lib/api/documents.api";
 import { generateDraft } from "@/lib/api/jobs.api";
 import { showError, showSuccess } from "@/lib/ui/toast";
 
 function FormattedCoverLetter({ text }: { text: string }) {
   const paragraphs = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   return (
-    <div className="space-y-4 font-sans text-sm leading-relaxed text-[var(--text-1)]">
+    <div className="space-y-4 font-sans text-sm leading-relaxed">
       {paragraphs.map((para, i) => {
         const isClosing = /^(sincerely|best regards|regards|yours truly|kind regards|thank you|warm regards)/i.test(para);
         if (isClosing) {
@@ -40,6 +40,8 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
   const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   const [viewRecord, setViewRecord] = useState<CoverLetterRecord | null>(null);
+  const [docContent, setDocContent] = useState<string>("");
+  const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
@@ -47,12 +49,30 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
   const [customPrompt, setCustomPrompt] = useState("");
   const [regenerating, setRegenerating] = useState(false);
 
-  function openRecord(r: CoverLetterRecord) {
+  async function openRecord(r: CoverLetterRecord, openPrompt = false) {
     setViewRecord(r);
     setEditMode(false);
-    setEditText(r.contentText ?? "");
+    setShowPromptBox(openPrompt);
     setCustomPrompt("");
-    setShowPromptBox(false);
+
+    // Use cached contentText or fetch full doc
+    const cached = r.contentText ?? "";
+    setDocContent(cached);
+    setEditText(cached);
+
+    if (!cached) {
+      setLoading(true);
+      try {
+        const full = await getDocument(r.id);
+        const text = (full as unknown as Record<string, unknown>).contentText as string ?? "";
+        setDocContent(text);
+        setEditText(text);
+      } catch {
+        // silently ignore — modal still opens
+      } finally {
+        setLoading(false);
+      }
+    }
   }
 
   function closeRecord() {
@@ -67,7 +87,7 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
     try {
       await updateDocument(viewRecord.id, { contentText: editText });
       showSuccess("Document saved");
-      setViewRecord({ ...viewRecord, contentText: editText });
+      setDocContent(editText);
       setEditMode(false);
     } catch {
       showError("Failed to save — please try again");
@@ -81,7 +101,7 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
     setRegenerating(true);
     try {
       await generateDraft(viewRecord.jobId, { customPrompt: customPrompt.trim() || undefined });
-      showSuccess("Regeneration queued — refresh in a moment");
+      showSuccess("Regeneration queued — refresh in a moment to see the new version");
       setShowPromptBox(false);
       setCustomPrompt("");
     } catch {
@@ -90,8 +110,6 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
       setRegenerating(false);
     }
   }
-
-  const docText = viewRecord?.contentText ?? "";
 
   return (
     <>
@@ -123,14 +141,10 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
                 <TableCell>{dateFmt.format(new Date(r.lastUpdated))}</TableCell>
                 <TableCell className="text-right">
                   <div className="inline-flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => openRecord(r)}>
+                    <Button size="sm" variant="outline" onClick={() => void openRecord(r)}>
                       {t("documents.actions.view")}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => { openRecord(r); setShowPromptBox(true); }}
-                    >
+                    <Button size="sm" variant="secondary" onClick={() => void openRecord(r, true)}>
                       {t("documents.actions.regenerate")}
                     </Button>
                   </div>
@@ -150,6 +164,7 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
       >
         {viewRecord ? (
           <div className="flex flex-col gap-4">
+
             {/* Action bar */}
             <div className="flex items-center gap-2 flex-wrap">
               {!editMode && (
@@ -158,12 +173,12 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={() => { setEditMode(true); setEditText(docText); }}
+                  onClick={() => { setEditMode(true); setEditText(docContent); }}
                 >
                   ✏ Edit
                 </Button>
               )}
-              {viewRecord.jobId && !editMode && (
+              {!editMode && (
                 <Button
                   type="button"
                   variant="outline"
@@ -190,7 +205,7 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
             {showPromptBox && !editMode && (
               <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-2">
                 <p className="text-xs font-medium text-[var(--text-2)]">
-                  Give the AI new instructions (optional) — e.g. "make it more formal", "emphasise leadership experience"
+                  Give the AI new instructions — e.g. "make it more formal", "emphasise leadership experience", "shorter paragraphs"
                 </p>
                 <textarea
                   value={customPrompt}
@@ -199,8 +214,17 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
                   rows={3}
                   className="w-full resize-none rounded-md border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-4)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {!viewRecord.jobId && (
+                  <p className="text-xs text-amber-600">This document is not linked to a job — regeneration is unavailable.</p>
+                )}
                 <div className="flex gap-2">
-                  <Button type="button" size="sm" className="h-8 text-xs" onClick={() => void handleRegenerate()} disabled={regenerating}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => void handleRegenerate()}
+                    disabled={regenerating || !viewRecord.jobId}
+                  >
                     {regenerating ? "Queuing…" : "Regenerate"}
                   </Button>
                   <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => { setShowPromptBox(false); setCustomPrompt(""); }}>
@@ -211,16 +235,23 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
             )}
 
             {/* Content */}
-            <div className="max-h-[55vh] overflow-auto rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-5">
-              {editMode ? (
+            <div className="max-h-[60vh] overflow-auto rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-5">
+              {loading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-3 w-2/3 rounded bg-[var(--surface-2)]" />
+                  <div className="h-3 w-full rounded bg-[var(--surface-2)]" />
+                  <div className="h-3 w-5/6 rounded bg-[var(--surface-2)]" />
+                  <div className="h-3 w-3/4 rounded bg-[var(--surface-2)]" />
+                </div>
+              ) : editMode ? (
                 <textarea
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   rows={24}
                   className="w-full resize-y rounded-md border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-2 font-sans text-sm leading-relaxed text-[var(--text-1)] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-              ) : docText ? (
-                <FormattedCoverLetter text={docText} />
+              ) : docContent ? (
+                <FormattedCoverLetter text={docContent} />
               ) : (
                 <p className="text-sm text-[var(--text-3)]">No text content available for this document.</p>
               )}

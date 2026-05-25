@@ -17,7 +17,7 @@ interface ModalProps {
 const sizeStyles = {
   sm: "max-w-sm",
   md: "max-w-md",
-  lg: "max-w-lg",
+  lg: "max-w-2xl",
 };
 
 export function Modal({
