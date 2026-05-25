@@ -168,8 +168,8 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
     <div className="flex h-full flex-col gap-4">
       <ProgressBar current={currentIndex} total={Math.max(queue.length, total)} />
 
-      {/* Card stack */}
-      <div className="relative flex-1 min-h-[420px]">
+      {/* Card stack — fixed height so buttons are never covered */}
+      <div className="relative" style={{ height: "calc(100dvh - 280px)", minHeight: "360px", maxHeight: "620px" }}>
         <AnimatePresence>
           {nextJob && (
             <SwipeCard key={nextJob.id} job={nextJob} onAction={handleAction} isTop={false} stackIndex={1} />
