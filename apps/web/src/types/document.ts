@@ -47,6 +47,7 @@ export interface DocumentRecord {
   driveFileId?: string;
   extractionStatus?: "Provided" | "Failed" | "Not Required";
   extractionError?: string;
+  contentText?: string;
 }
 
 export interface CVVersion {
@@ -67,10 +68,12 @@ export interface CoverLetterRecord {
   company: string;
   position: string;
   relatedJob: string;
+  jobId?: string;
   status: DocumentStatus;
   aiGenerated: boolean;
   pdfExportStatus: PDFExportStatus;
   lastUpdated: Date | string;
+  contentText?: string;
 }
 
 export interface ResearchDocumentRecord {

@@ -56,10 +56,12 @@ function toCoverLetterRecord(d: DocumentRecord): CoverLetterRecord {
     company: d.company,
     position: d.position,
     relatedJob: d.relatedJob,
+    jobId: d.jobId,
     status: d.status,
     aiGenerated: false,
     pdfExportStatus: d.pdfExportStatus ?? "Pending",
     lastUpdated: d.lastUpdated,
+    contentText: d.contentText,
   };
 }
 
