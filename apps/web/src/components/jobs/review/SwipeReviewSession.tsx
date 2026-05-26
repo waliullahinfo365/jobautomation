@@ -164,12 +164,19 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
     return <ReviewSummary stats={stats} onRestart={queue.length > currentIndex ? () => setDone(false) : undefined} />;
   }
 
+  // 64px navbar + 56px bottom mobile nav + 48px progress + 60px buttons + 32px gaps + 20px buffer = 280px desktop
+  // On mobile add extra 60px for browser chrome → use 340px subtraction, capped at 560px max
+  const cardHeight = "calc(100dvh - 340px)";
+
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <ProgressBar current={currentIndex} total={Math.max(queue.length, total)} />
 
-      {/* Card stack — fixed height so buttons are never covered */}
-      <div className="relative" style={{ height: "calc(100dvh - 280px)", minHeight: "360px", maxHeight: "620px" }}>
+      {/* Card stack */}
+      <div
+        className="relative w-full"
+        style={{ height: cardHeight, minHeight: "320px", maxHeight: "560px" }}
+      >
         <AnimatePresence>
           {nextJob && (
             <SwipeCard key={nextJob.id} job={nextJob} onAction={handleAction} isTop={false} stackIndex={1} />
@@ -181,8 +188,8 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
         </AnimatePresence>
       </div>
 
-      {/* Button fallback */}
-      <div className="grid grid-cols-4 gap-2 pb-2">
+      {/* Action buttons — always visible below the card */}
+      <div className="grid grid-cols-4 gap-2">
         {(["reject", "later", "save", "apply"] as ReviewAction[]).map((action) => {
           const cfg = ACTION_LABELS[action];
           const isActive = activeButton === action;
@@ -191,7 +198,7 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
               key={action}
               onClick={() => void handleAction(action)}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-xl px-3 py-3 text-xs font-semibold transition-all duration-150",
+                "flex flex-col items-center gap-1 rounded-xl px-2 py-3 text-xs font-semibold transition-all duration-150",
                 isActive ? cfg.active : cfg.inactive,
               )}
             >

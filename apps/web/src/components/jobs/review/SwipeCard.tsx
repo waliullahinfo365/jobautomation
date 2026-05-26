@@ -169,7 +169,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
 
       <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border-default)] shadow-xl overflow-hidden">
         {/* Header strip */}
-        <div className="px-5 pt-5 pb-4">
+        <div className="px-4 pt-4 pb-3">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-bold text-[var(--text-1)] leading-snug line-clamp-2">{job.position}</h2>
@@ -216,7 +216,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
         <div className="border-t border-[var(--border-default)]" />
 
         {/* AI insights */}
-        <div className="px-5 py-4 space-y-3 max-h-[40vh] overflow-hidden">
+        <div className="px-4 py-3 space-y-2 max-h-[28vh] overflow-hidden">
           {ai ? (
             <>
               {ai.reasons.length > 0 && (

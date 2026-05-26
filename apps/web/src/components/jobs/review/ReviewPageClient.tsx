@@ -52,7 +52,7 @@ export function ReviewPageClient() {
   useEffect(() => { void load(); }, [load]);
 
   return (
-    <div className="mx-auto flex h-full max-w-md flex-col gap-4 px-4 py-6">
+    <div className="mx-auto flex h-full max-w-md flex-col gap-3 px-4 py-3 sm:py-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
