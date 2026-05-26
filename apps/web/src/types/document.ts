@@ -84,6 +84,8 @@ export interface ResearchDocumentRecord {
   researchStatus: DocumentStatus;
   aiSummarySnippet: string;
   createdAt: Date | string;
+  contentText?: string;
+  jobId?: string;
 }
 
 export interface PDFExportRecord {

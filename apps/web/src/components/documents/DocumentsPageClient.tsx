@@ -74,6 +74,8 @@ function toResearchRecord(d: DocumentRecord): ResearchDocumentRecord {
     researchStatus: d.status,
     aiSummarySnippet: "—",
     createdAt: d.lastUpdated,
+    contentText: d.contentText,
+    jobId: d.jobId,
   };
 }
 
