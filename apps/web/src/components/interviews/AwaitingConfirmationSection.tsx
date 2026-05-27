@@ -8,9 +8,11 @@ import type { AwaitingConfirmationInterview } from "@/types/interview";
 export function AwaitingConfirmationSection({
   items,
   onConfirm,
+  onIgnore,
 }: {
   items: AwaitingConfirmationInterview[];
   onConfirm: (id: string) => void;
+  onIgnore?: (id: string) => void;
 }) {
   const { t, locale } = useTranslation();
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
@@ -28,8 +30,16 @@ export function AwaitingConfirmationSection({
           <p className="mt-2 rounded-md bg-muted/70 p-2 text-xs text-muted-foreground">{item.aiDetectedIntent}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => onConfirm(item.id)}>{t("interviews.awaiting.confirm")}</Button>
-            <Button size="sm" variant="secondary">{t("interviews.awaiting.suggestNewTime")}</Button>
-            <Button size="sm" variant="ghost">{t("interviews.awaiting.ignore")}</Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => window.open(`mailto:${item.contact}?subject=Re: ${encodeURIComponent(item.sourceEmailSubject)}`, "_blank")}
+            >
+              {t("interviews.awaiting.suggestNewTime")}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onIgnore?.(item.id)}>
+              {t("interviews.awaiting.ignore")}
+            </Button>
           </div>
         </MotionCard>
       ))}

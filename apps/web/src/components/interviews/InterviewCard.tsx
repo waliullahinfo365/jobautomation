@@ -18,9 +18,10 @@ interface InterviewCardProps {
   interview: Interview;
   onView: (interview: Interview) => void;
   onMarkComplete: (interviewId: string) => void;
+  onReschedule?: (interview: Interview) => void;
 }
 
-export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCardProps) {
+export function InterviewCard({ interview, onView, onMarkComplete, onReschedule }: InterviewCardProps) {
   const { t, locale } = useTranslation();
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
   const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -60,11 +61,19 @@ export function InterviewCard({ interview, onView, onMarkComplete }: InterviewCa
       <div className="mt-4 flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => onView(interview)}>{t("button.view")}</Button>
         <Button size="sm" variant="secondary" onClick={() => onMarkComplete(interview.id)}>{t("button.markComplete")}</Button>
-        <Button size="sm" variant="ghost">{t("button.reschedule")}</Button>
-        <Button size="sm" variant="ghost">
-          {t("interviews.card.openMeeting")}
-          <ExternalLinkIcon size={14} className="ml-1" />
+        <Button size="sm" variant="ghost" onClick={() => onReschedule ? onReschedule(interview) : onView(interview)}>
+          {t("button.reschedule")}
         </Button>
+        {interview.meetingLink ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => window.open(interview.meetingLink, "_blank", "noopener,noreferrer")}
+          >
+            {t("interviews.card.openMeeting")}
+            <ExternalLinkIcon size={14} className="ml-1" />
+          </Button>
+        ) : null}
       </div>
     </MotionCard>
   );

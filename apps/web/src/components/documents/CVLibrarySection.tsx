@@ -11,9 +11,11 @@ import { DocumentStatusBadge } from "./DocumentStatusBadge";
 export function CVLibrarySection({
   records,
   onSetDefault,
+  onView,
 }: {
   records: CVVersion[];
   onSetDefault: (id: string) => void;
+  onView?: (cv: CVVersion) => void;
 }) {
   const { t, locale } = useTranslation();
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
@@ -39,7 +41,7 @@ export function CVLibrarySection({
               <p className="text-xs text-[var(--text-3)]">{t("documents.cvLibrary.usedInApplications").replace("{count}", String(cv.usedInApplicationsCount))}</p>
               <p className="text-xs text-[var(--text-3)]">{t("documents.cvLibrary.updated")} {dateFmt.format(new Date(cv.lastUpdated))}</p>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline">{t("documents.actions.view")}</Button>
+                <Button size="sm" variant="outline" onClick={() => onView?.(cv)}>{t("documents.actions.view")}</Button>
                 <Button size="sm" variant="secondary" onClick={() => onSetDefault(cv.id)}>{t("documents.actions.setDefault")}</Button>
               </div>
             </CardContent>

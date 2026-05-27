@@ -11,9 +11,11 @@ import { DocumentTypeBadge } from "./DocumentTypeBadge";
 export function PDFExportsSection({
   records,
   onPreviewText,
+  onExportAgain,
 }: {
   records: PDFExportRecord[];
   onPreviewText?: (record: PDFExportRecord) => void;
+  onExportAgain?: (record: PDFExportRecord) => void;
 }) {
   const { t, locale } = useTranslation();
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
@@ -69,7 +71,7 @@ export function PDFExportsSection({
                 )}
               </TableCell>
               <TableCell className="text-right">
-                <Button size="sm" variant="secondary">
+                <Button size="sm" variant="secondary" onClick={() => onExportAgain?.(r)}>
                   {t("documents.actions.exportAgain")}
                 </Button>
               </TableCell>

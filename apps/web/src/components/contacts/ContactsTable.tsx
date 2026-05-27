@@ -13,10 +13,12 @@ export function ContactsTable({
   contacts,
   onView,
   onMarkFollowedUp,
+  onOpenLinkedIn,
 }: {
   contacts: Contact[];
   onView: (contact: Contact) => void;
   onMarkFollowedUp: (contactId: string) => void;
+  onOpenLinkedIn?: (contact: Contact) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -64,9 +66,15 @@ export function ContactsTable({
                   <Button size="sm" variant="secondary" onClick={() => onMarkFollowedUp(c.id)}>
                     {t("contacts.table.markFollowedUp")}
                   </Button>
-                  <Button size="sm" variant="ghost">
-                    {t("contacts.table.openLinkedIn")}
-                  </Button>
+                  {(c.linkedInUrl ?? c.linkedinUrl) ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onOpenLinkedIn ? onOpenLinkedIn(c) : window.open(c.linkedInUrl ?? c.linkedinUrl, "_blank", "noopener,noreferrer")}
+                    >
+                      {t("contacts.table.openLinkedIn")}
+                    </Button>
+                  ) : null}
                 </div>
               </TableCell>
             </TableRow>

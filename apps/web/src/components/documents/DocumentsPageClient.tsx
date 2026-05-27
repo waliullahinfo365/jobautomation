@@ -569,11 +569,25 @@ export function DocumentsPageClient() {
           onSetDefault={(id) => {
             setCvDefaultId(id);
           }}
+          onView={(cv) => {
+            const doc = documents.find((d) => d.id === cv.id);
+            const url = doc?.pdfUrl || doc?.storageUrl;
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
+            else showInfo("No file URL available for this CV.");
+          }}
         />
       ) : null}
       {tab === "Cover Letters" ? <CoverLettersSection records={coverRows} /> : null}
       {tab === "Research Docs" ? <ResearchDocsSection records={researchRows} /> : null}
-      {tab === "PDF Exports" ? <PDFExportsSection records={pdfRows} /> : null}
+      {tab === "PDF Exports" ? (
+        <PDFExportsSection
+          records={pdfRows}
+          onExportAgain={(r) => {
+            const doc = documents.find((d) => d.id === r.id);
+            if (doc) void handleExportPdf(doc);
+          }}
+        />
+      ) : null}
       {tab === "Folder Automation" ? (
         <FolderAutomationSection
           activity={folderActivity}

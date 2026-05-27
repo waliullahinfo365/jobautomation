@@ -375,6 +375,14 @@ export function InterviewsPageClient() {
     setHiddenAwaitingIds((prev) => new Set(prev).add(id));
   };
 
+  const ignoreAwaiting = (id: string) => {
+    setHiddenAwaitingIds((prev) => new Set(prev).add(id));
+  };
+
+  const handleSyncCalendar = () => {
+    showInfo(t("error.calendarSyncNote"));
+  };
+
   const isInitialLoading = interviewsApi.loading && interviewsApi.data === undefined;
 
   if (isInitialLoading) {
@@ -387,7 +395,7 @@ export function InterviewsPageClient() {
           description={t("interviews.description")}
           actions={
             <>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" onClick={handleSyncCalendar}>
                 <RefreshIcon size={16} className="mr-2" />
                 {t("interviews.syncCalendar")}
               </Button>
@@ -466,7 +474,7 @@ export function InterviewsPageClient() {
             <div className="xl:col-span-2">
               <CalendarWeekView interviews={interviews} />
             </div>
-            <CalendarSyncStatusCard status={calendarSyncStatus} />
+            <CalendarSyncStatusCard status={calendarSyncStatus} onSyncNow={handleSyncCalendar} />
           </div>
         ) : null}
 
@@ -476,7 +484,7 @@ export function InterviewsPageClient() {
           awaitingItems.length === 0 ? (
             <EmptyState title={t("interviews.empty.noAwaitingConfirmation")} description={t("interviews.empty.awaitingConfirmationBody")} />
           ) : (
-            <AwaitingConfirmationSection items={awaitingItems} onConfirm={confirmAwaiting} />
+            <AwaitingConfirmationSection items={awaitingItems} onConfirm={confirmAwaiting} onIgnore={ignoreAwaiting} />
           )
         ) : null}
         {tab === "Automation Logs" ? <InterviewAutomationLogs logs={liveAutoLogs} /> : null}

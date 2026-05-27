@@ -11,9 +11,11 @@ import { useTranslation } from "@/i18n/useTranslation";
 export function FollowUpsDueSection({
   contacts,
   onMarkDone,
+  onSnooze,
 }: {
   contacts: Contact[];
   onMarkDone: (contactId: string) => void;
+  onSnooze?: (contactId: string) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -51,12 +53,18 @@ export function FollowUpsDueSection({
                 <Button size="sm" variant="outline" onClick={() => onMarkDone(contact.id)}>
                   {t("contacts.followUps.markDone")}
                 </Button>
-                <Button size="sm" variant="secondary">
+                <Button size="sm" variant="secondary" onClick={() => onSnooze?.(contact.id)}>
                   {t("contacts.followUps.snooze")}
                 </Button>
-                <Button size="sm" variant="ghost">
-                  {t("contacts.followUps.openEmail")}
-                </Button>
+                {contact.email ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => window.open(`mailto:${contact.email}`, "_blank")}
+                  >
+                    {t("contacts.followUps.openEmail")}
+                  </Button>
+                ) : null}
               </div>
             </div>
           </MotionCard>
