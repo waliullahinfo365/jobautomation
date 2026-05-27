@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Zap, Twitter, Github, Linkedin, Mail } from "lucide-react";
+import { Twitter, Github, Linkedin, Mail } from "lucide-react";
 
 const FOOTER_LINKS = {
   Product: [
@@ -50,8 +50,8 @@ export function LandingFooter() {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2.5 mb-5 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                <Zap size={15} className="text-white" fill="white" />
+              <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 group-hover:scale-110 transition-transform">
+                <img src="/brand/logo.jpeg" alt="NewJob Guru" className="w-full h-full object-cover" />
               </div>
               <span className="font-bold text-[17px] tracking-tight text-white">
                 NewJob <span className="text-blue-400">Guru</span>

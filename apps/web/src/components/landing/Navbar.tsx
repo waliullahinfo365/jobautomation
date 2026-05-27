@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Zap, Sun, Moon } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
 import { useLandingTheme } from "./LandingThemeContext";
 
 const NAV_LINKS = [
@@ -53,11 +53,8 @@ export function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
-            >
-              <Zap size={14} className="text-white" fill="white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+              <img src="/brand/logo.jpeg" alt="NewJob Guru" className="w-full h-full object-cover" />
             </div>
             <span
               className="font-bold text-[17px] tracking-tight hidden sm:block"

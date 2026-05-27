@@ -16,6 +16,10 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title:       { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description: APP_DESCRIPTION,
+  icons: {
+    icon: "/brand/logo.jpeg",
+    apple: "/brand/logo.jpeg",
+  },
 };
 
 export const viewport: Viewport = {

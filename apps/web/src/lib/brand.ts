@@ -3,7 +3,7 @@ export const BRAND = {
   shortName: "NewJob Guru",
   taglineEn: "AI-powered job application automation",
   taglineDe: "KI-gestützte Bewerbungsautomatisierung",
-  logoPath: "/brand/newjob-guru-logo.svg",
-  iconPath: "/brand/newjob-guru-icon.svg",
+  logoPath: "/brand/logo.jpeg",
+  iconPath: "/brand/logo.jpeg",
   domains: ["newjob.guru", "www.newjob.guru"],
 } as const;
