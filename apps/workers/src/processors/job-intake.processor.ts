@@ -1,6 +1,6 @@
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import { AutomationLogModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
-import { runAiExtraction, isRealJobOpportunity } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, isRealJobOpportunity, detectJobBoardSource } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import { checkDuplicateJobWorker } from "../lib/duplicate-job-check";
 import { loadGoogleAccessToken } from "../lib/google-auth";
@@ -312,7 +312,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       createdBy: payload.userId,
       company: data.company,
       position: data.position,
-      source: data.source || "gmail",
+      source: detectJobBoardSource(normalized.from) || data.source || "gmail",
       status: "New",
       priority: "Medium",
       location: data.location,
@@ -339,7 +339,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       tenantId: payload.tenantId,
       moduleKey: "job-intake",
       event: "new-job-detected",
-      message: `New job imported:\n${data.company} — ${data.position}\nSource: Gmail\nFolder: pending\nDraft: pending`,
+      message: `New job imported:\n${data.company} — ${data.position}\nSource: ${detectJobBoardSource(normalized.from) || "Gmail"}\nFolder: pending\nDraft: pending`,
       operationId,
       metadata: { jobId: String(created._id) },
     });
