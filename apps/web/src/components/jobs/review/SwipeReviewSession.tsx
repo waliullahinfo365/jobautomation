@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReviewableJob, ReviewAction, ReviewStatus } from "@/types/job";
-import { reviewJob, undoReview } from "@/lib/api/jobs.api";
+import type { JobReviewAi } from "@/types/job";
+import { reviewJob, undoReview, analyzeJobForReview } from "@/lib/api/jobs.api";
 import { SwipeCard } from "./SwipeCard";
 import { ReviewSummary } from "./ReviewSummary";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,50 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
   const [stats, setStats] = useState({ total: 0, saved: 0, applied: 0, rejected: 0, later: 0 });
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Pre-fetched AI cache — keyed by job id
+  const [aiCache, setAiCache] = useState<Record<string, JobReviewAi>>(() => {
+    // Seed from any data that came with the job list
+    const seed: Record<string, JobReviewAi> = {};
+    for (const j of initialJobs) {
+      if (j.reviewAiScore != null) {
+        seed[j.id] = {
+          score: j.reviewAiScore,
+          reasons: j.reviewAiReasons ?? [],
+          redFlags: j.reviewAiRedFlags ?? [],
+          effort: j.reviewAiEffort ?? "Medium",
+          recommendation: j.reviewAiRecommendation ?? "",
+        };
+      }
+    }
+    return seed;
+  });
+  const fetchingIds = useRef<Set<string>>(new Set());
+
+  const prefetchAi = useCallback((job: ReviewableJob) => {
+    if (!job || aiCache[job.id] || fetchingIds.current.has(job.id)) return;
+    fetchingIds.current.add(job.id);
+    analyzeJobForReview(job.id)
+      .then((result) => {
+        if (result) setAiCache((prev) => ({ ...prev, [job.id]: result }));
+      })
+      .catch(() => null)
+      .finally(() => fetchingIds.current.delete(job.id));
+  }, [aiCache]);
+
+  // Pre-fetch first 5 cards immediately on mount
+  useEffect(() => {
+    for (const job of initialJobs.slice(0, 5)) {
+      prefetchAi(job);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Eagerly pre-fetch the next 2 cards whenever index advances
+  useEffect(() => {
+    const upcomingJobs = queue.slice(currentIndex, currentIndex + 3);
+    for (const job of upcomingJobs) prefetchAi(job);
+  }, [currentIndex, queue, prefetchAi]);
+
   const remainingJobs = queue.slice(currentIndex);
   const currentJob = remainingJobs[0];
   const nextJob = remainingJobs[1];
@@ -123,7 +168,6 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
     setCurrentIndex(nextIdx);
     if (nextIdx >= queue.length) setDone(true);
 
-    // Show undo for 4s
     setUndoVisible(true);
     undoTimer.current = setTimeout(() => setUndoVisible(false), 4000);
 
@@ -164,8 +208,6 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
     return <ReviewSummary stats={stats} onRestart={queue.length > currentIndex ? () => setDone(false) : undefined} />;
   }
 
-  // 64px navbar + 56px bottom mobile nav + 48px progress + 60px buttons + 32px gaps + 20px buffer = 280px desktop
-  // On mobile add extra 60px for browser chrome → use 340px subtraction, capped at 560px max
   const cardHeight = "calc(100dvh - 340px)";
 
   return (
@@ -179,16 +221,16 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
       >
         <AnimatePresence>
           {nextJob && (
-            <SwipeCard key={nextJob.id} job={nextJob} onAction={handleAction} isTop={false} stackIndex={1} />
+            <SwipeCard key={nextJob.id} job={nextJob} prefetchedAi={aiCache[nextJob.id] ?? null} onAction={handleAction} isTop={false} stackIndex={1} />
           )}
           {remainingJobs[2] && (
-            <SwipeCard key={remainingJobs[2].id} job={remainingJobs[2]} onAction={handleAction} isTop={false} stackIndex={2} />
+            <SwipeCard key={remainingJobs[2].id} job={remainingJobs[2]} prefetchedAi={aiCache[remainingJobs[2].id] ?? null} onAction={handleAction} isTop={false} stackIndex={2} />
           )}
-          <SwipeCard key={currentJob.id} job={currentJob} onAction={handleAction} isTop stackIndex={0} />
+          <SwipeCard key={currentJob.id} job={currentJob} prefetchedAi={aiCache[currentJob.id] ?? null} onAction={handleAction} isTop stackIndex={0} />
         </AnimatePresence>
       </div>
 
-      {/* Action buttons — always visible below the card */}
+      {/* Action buttons */}
       <div className="grid grid-cols-4 gap-2">
         {(["reject", "later", "save", "apply"] as ReviewAction[]).map((action) => {
           const cfg = ACTION_LABELS[action];
@@ -209,7 +251,6 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
         })}
       </div>
 
-      {/* Undo toast */}
       <AnimatePresence>
         {undoVisible && (
           <UndoToast message={lastActionLabel} onUndo={() => void handleUndo()} />

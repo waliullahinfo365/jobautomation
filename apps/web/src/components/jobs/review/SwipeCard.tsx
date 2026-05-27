@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate, AnimatePresence } from "framer-motion";
 import type { ReviewableJob, ReviewAction } from "@/types/job";
 import { cn } from "@/lib/utils";
 import { analyzeJobForReview } from "@/lib/api/jobs.api";
@@ -66,6 +66,146 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+// ── Full details bottom sheet ─────────────────────────────────────────────────
+
+function DetailsSheet({ job, ai, onClose }: { job: ReviewableJob; ai: JobReviewAi | null; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/50"
+        onClick={onClose}
+      />
+      <motion.div
+        key="sheet"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-[var(--surface-1)] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Handle bar */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-[var(--border-default)]" />
+        </div>
+
+        <div className="px-5 pb-10 space-y-5">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-[var(--text-1)] leading-snug">{job.position}</h2>
+              <p className="text-sm text-[var(--text-2)]">{job.company}</p>
+            </div>
+            {ai?.score != null && <ScoreRing score={ai.score} />}
+          </div>
+
+          {/* Meta chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {job.location && <Chip>{job.location}</Chip>}
+            {job.source && <Chip>{job.source}</Chip>}
+            {job.salaryRange && <Chip className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{job.salaryRange}</Chip>}
+            {ai?.effort && <Chip className={EFFORT_COLORS[ai.effort]}>{ai.effort} effort</Chip>}
+            {job.remote && <Chip className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">Remote</Chip>}
+          </div>
+
+          {/* Why it fits */}
+          {ai && ai.reasons.length > 0 && (
+            <Section title="Why it fits">
+              <ul className="space-y-1.5">
+                {ai.reasons.map((r, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-[var(--text-2)]">
+                    <span className="mt-0.5 text-green-500 shrink-0">✓</span>
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {/* Red flags */}
+          {ai && ai.redFlags.length > 0 && (
+            <Section title="Red flags">
+              <ul className="space-y-1.5">
+                {ai.redFlags.map((f, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-amber-700 dark:text-amber-400">
+                    <span className="shrink-0">⚠</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {/* AI recommendation */}
+          {ai?.recommendation && (
+            <Section title="AI recommendation">
+              <p className="text-sm text-[var(--text-2)]">{ai.recommendation}</p>
+            </Section>
+          )}
+
+          {/* Job description */}
+          {(job.description || job.aiSummary) && (
+            <Section title="Job description">
+              <p className="text-sm text-[var(--text-2)] whitespace-pre-wrap leading-relaxed">
+                {job.description || job.aiSummary}
+              </p>
+            </Section>
+          )}
+
+          {/* Contact / apply */}
+          {(job.contactEmail || job.jobUrl) && (
+            <Section title="Apply / contact">
+              {job.jobUrl && (
+                <a
+                  href={job.jobUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-sm text-blue-600 underline break-all"
+                >
+                  View original posting ↗
+                </a>
+              )}
+              {job.contactEmail && (
+                <a href={`mailto:${job.contactEmail}`} className="block text-sm text-blue-600 underline">
+                  {job.contactEmail}
+                </a>
+              )}
+            </Section>
+          )}
+
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl bg-[var(--surface-2)] py-3 text-sm font-semibold text-[var(--text-2)] hover:bg-[var(--border)] transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function Chip({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span className={cn("rounded-full px-2.5 py-0.5 text-xs", className ?? "bg-[var(--surface-2)] text-[var(--text-2)]")}>
+      {children}
+    </span>
+  );
+}
+
 // ── Main card ─────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -73,9 +213,10 @@ interface Props {
   onAction: (action: ReviewAction) => void;
   isTop: boolean;
   stackIndex: number;
+  prefetchedAi?: JobReviewAi | null;
 }
 
-export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
+export function SwipeCard({ job, onAction, isTop, stackIndex, prefetchedAi }: Props) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-250, 0, 250], [-18, 0, 18]);
@@ -85,20 +226,27 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
   const applyOpacity   = useTransform(y, [0, -SWIPE_THRESHOLD], [0, 1]);
   const laterOpacity   = useTransform(y, [0, SWIPE_THRESHOLD], [0, 1]);
 
-  const [ai, setAi] = useState<JobReviewAi | null>(
-    job.reviewAiScore != null
-      ? {
-          score: job.reviewAiScore,
-          reasons: job.reviewAiReasons ?? [],
-          redFlags: job.reviewAiRedFlags ?? [],
-          effort: job.reviewAiEffort ?? "Medium",
-          recommendation: job.reviewAiRecommendation ?? "",
-        }
-      : null
-  );
+  const seedAi = prefetchedAi ?? (job.reviewAiScore != null
+    ? {
+        score: job.reviewAiScore,
+        reasons: job.reviewAiReasons ?? [],
+        redFlags: job.reviewAiRedFlags ?? [],
+        effort: job.reviewAiEffort ?? "Medium",
+        recommendation: job.reviewAiRecommendation ?? "",
+      }
+    : null);
+
+  const [ai, setAi] = useState<JobReviewAi | null>(seedAi);
   const [aiLoading, setAiLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const analyzed = useRef(false);
 
+  // Sync if prefetchedAi arrives after initial render
+  useEffect(() => {
+    if (prefetchedAi && !ai) setAi(prefetchedAi);
+  }, [prefetchedAi, ai]);
+
+  // Fallback: fetch on-demand only if prefetch didn't deliver and this is the top card
   useEffect(() => {
     if (!isTop || analyzed.current || ai) return;
     analyzed.current = true;
@@ -130,7 +278,6 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
     } else if (passedY) {
       oy < 0 ? flyOut("up", "apply") : flyOut("down", "later");
     } else {
-      // snap back
       void animate(x, 0, { type: "spring", stiffness: 500, damping: 30 });
       void animate(y, 0, { type: "spring", stiffness: 500, damping: 30 });
     }
@@ -152,124 +299,134 @@ export function SwipeCard({ job, onAction, isTop, stackIndex }: Props) {
   }
 
   return (
-    <motion.div
-      className="absolute inset-x-0 top-0 z-20 cursor-grab active:cursor-grabbing touch-none select-none"
-      style={{ x, y, rotate }}
-      drag
-      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-      dragElastic={0.15}
-      onDragEnd={handleDragEnd}
-      whileTap={{ scale: 1.02 }}
-    >
-      {/* Swipe overlays */}
-      <SwipeIndicator action="reject" opacity={rejectOpacity} />
-      <SwipeIndicator action="save"   opacity={saveOpacity} />
-      <SwipeIndicator action="apply"  opacity={applyOpacity} />
-      <SwipeIndicator action="later"  opacity={laterOpacity} />
+    <>
+      <motion.div
+        className="absolute inset-x-0 top-0 z-20 cursor-grab active:cursor-grabbing touch-none select-none"
+        style={{ x, y, rotate }}
+        drag
+        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+        dragElastic={0.15}
+        onDragEnd={handleDragEnd}
+        whileTap={{ scale: 1.02 }}
+      >
+        {/* Swipe overlays */}
+        <SwipeIndicator action="reject" opacity={rejectOpacity} />
+        <SwipeIndicator action="save"   opacity={saveOpacity} />
+        <SwipeIndicator action="apply"  opacity={applyOpacity} />
+        <SwipeIndicator action="later"  opacity={laterOpacity} />
 
-      <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border-default)] shadow-xl overflow-hidden">
-        {/* Header strip */}
-        <div className="px-4 pt-4 pb-3">
-          <div className="flex items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-[var(--text-1)] leading-snug line-clamp-2">{job.position}</h2>
-              <p className="mt-0.5 text-sm font-medium text-[var(--text-2)]">{job.company}</p>
+        <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border-default)] shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="px-4 pt-4 pb-3">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-bold text-[var(--text-1)] leading-snug line-clamp-2">{job.position}</h2>
+                <p className="mt-0.5 text-sm font-medium text-[var(--text-2)]">{job.company}</p>
+              </div>
+              {ai?.score != null && <ScoreRing score={ai.score} />}
+              {aiLoading && (
+                <div className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--border-default)] flex items-center justify-center">
+                  <span className="text-[10px] text-[var(--text-3)] animate-pulse">AI…</span>
+                </div>
+              )}
             </div>
-            {ai?.score != null && <ScoreRing score={ai.score} />}
-            {aiLoading && (
-              <div className="h-14 w-14 shrink-0 rounded-full border-2 border-[var(--border-default)] flex items-center justify-center">
-                <span className="text-[10px] text-[var(--text-3)] animate-pulse">AI…</span>
+
+            {/* Meta row */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {job.location && (
+                <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-xs text-[var(--text-2)]">
+                  {job.location}
+                </span>
+              )}
+              {job.source && (
+                <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-xs text-[var(--text-2)]">
+                  {job.source}
+                </span>
+              )}
+              {job.salaryRange && (
+                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                  {job.salaryRange}
+                </span>
+              )}
+              {isUrgent && (
+                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                  Deadline in {daysUntilDeadline}d
+                </span>
+              )}
+              {ai?.effort && (
+                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", EFFORT_COLORS[ai.effort])}>
+                  {ai.effort} effort
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--border-default)]" />
+
+          {/* AI insights — compact preview */}
+          <div className="px-4 py-3 space-y-2 overflow-hidden" style={{ maxHeight: "28vh" }}>
+            {ai ? (
+              <>
+                {ai.reasons.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Why it fits</p>
+                    <ul className="space-y-1">
+                      {ai.reasons.slice(0, 3).map((r, i) => (
+                        <li key={i} className="flex gap-2 text-sm text-[var(--text-2)]">
+                          <span className="mt-0.5 text-green-500 shrink-0">✓</span>
+                          {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {ai.redFlags.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Red flags</p>
+                    <ul className="space-y-1">
+                      {ai.redFlags.slice(0, 2).map((f, i) => (
+                        <li key={i} className="flex gap-2 text-sm text-amber-700 dark:text-amber-400">
+                          <span className="shrink-0">⚠</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : aiLoading ? (
+              <div className="space-y-2 animate-pulse">
+                <div className="h-3 w-2/3 rounded bg-[var(--surface-2)]" />
+                <div className="h-3 w-1/2 rounded bg-[var(--surface-2)]" />
+                <div className="h-3 w-3/4 rounded bg-[var(--surface-2)]" />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Job summary</p>
+                <p className="text-sm text-[var(--text-2)] line-clamp-4">{job.description || job.aiSummary || "No description available."}</p>
               </div>
             )}
           </div>
 
-          {/* Meta row */}
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {job.location && (
-              <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-xs text-[var(--text-2)]">
-                {job.location}
-              </span>
-            )}
-            {job.source && (
-              <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-xs text-[var(--text-2)]">
-                {job.source}
-              </span>
-            )}
-            {job.salaryRange && (
-              <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                {job.salaryRange}
-              </span>
-            )}
-            {isUrgent && (
-              <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                Deadline in {daysUntilDeadline}d
-              </span>
-            )}
-            {ai?.effort && (
-              <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", EFFORT_COLORS[ai.effort])}>
-                {ai.effort} effort
-              </span>
-            )}
+          {/* Footer: see more + swipe hint */}
+          <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-4 py-2 flex items-center justify-between">
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setShowDetails(true); }}
+              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              See full details ↗
+            </button>
+            <p className="text-[10px] text-[var(--text-3)] tracking-wide">
+              ← Reject · Save → · ↑ Apply · ↓ Later
+            </p>
           </div>
         </div>
+      </motion.div>
 
-        <div className="border-t border-[var(--border-default)]" />
-
-        {/* AI insights */}
-        <div className="px-4 py-3 space-y-2 max-h-[28vh] overflow-hidden">
-          {ai ? (
-            <>
-              {ai.reasons.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Why it fits</p>
-                  <ul className="space-y-1">
-                    {ai.reasons.map((r, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-[var(--text-2)]">
-                        <span className="mt-0.5 text-green-500 shrink-0">✓</span>
-                        {r}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {ai.redFlags.length > 0 && (
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Red flags</p>
-                  <ul className="space-y-1">
-                    {ai.redFlags.map((f, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-amber-700 dark:text-amber-400">
-                        <span className="shrink-0">⚠</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {ai.recommendation && (
-                <p className="text-xs italic text-[var(--text-3)]">AI: {ai.recommendation}</p>
-              )}
-            </>
-          ) : aiLoading ? (
-            <div className="space-y-2 animate-pulse">
-              <div className="h-3 w-2/3 rounded bg-[var(--surface-2)]" />
-              <div className="h-3 w-1/2 rounded bg-[var(--surface-2)]" />
-              <div className="h-3 w-3/4 rounded bg-[var(--surface-2)]" />
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Job summary</p>
-              <p className="text-sm text-[var(--text-2)] line-clamp-5">{job.description || job.aiSummary || "No description available."}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Swipe hint */}
-        <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-5 py-2.5">
-          <p className="text-center text-[10px] text-[var(--text-3)] tracking-wide">
-            ← Reject &nbsp;·&nbsp; Save → &nbsp;·&nbsp; ↑ Apply &nbsp;·&nbsp; ↓ Later
-          </p>
-        </div>
-      </div>
-    </motion.div>
+      {showDetails && (
+        <DetailsSheet job={job} ai={ai} onClose={() => setShowDetails(false)} />
+      )}
+    </>
   );
 }
