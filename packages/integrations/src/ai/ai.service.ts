@@ -41,8 +41,8 @@ export interface JobIntakeClassification {
 // ─── Pattern tables ──────────────────────────────────────────────────────────
 
 /** Senders that are ATS platforms — high confidence real jobs */
+// ATS applicant-tracking systems only — NOT job boards (job boards have their own classifier)
 const ATS_SENDER_PATTERNS = [
-  // ATS platforms
   /greenhouse\.io/i,
   /lever\.co/i,
   /workday\.com/i,
@@ -56,28 +56,6 @@ const ATS_SENDER_PATTERNS = [
   /breezy\.hr/i,
   /bamboohr\.com/i,
   /recruitee\.com/i,
-  // Job boards — EU & global
-  /stepstone\.(de|at|be|nl|fr|co\.uk|com)/i,
-  /xing\.com/i,
-  /xing-mail\.com/i,
-  /indeed\.(com|de|co\.uk|fr|at|ch)/i,
-  /glassdoor\.(com|de|co\.uk|fr)/i,
-  /monster\.(de|com|co\.uk|fr|at)/i,
-  /jobware\.de/i,
-  /karriere\.at/i,
-  /jobs\.ch/i,
-  /jobscout24\.(de|ch|at)/i,
-  /meinestadt\.de/i,
-  /stellenanzeigen\.de/i,
-  /jobbörse/i,
-  /arbeitsagentur\.de/i,
-  /experteer\.(de|com)/i,
-  /interamt\.de/i,
-  /hogast\.at/i,
-  /yourfirm\.de/i,
-  /absolventa\.de/i,
-  /academics\.de/i,
-  /kimeta\.de/i,
 ];
 
 /** Hard-reject subjects — always non-job regardless of sender */
@@ -247,21 +225,31 @@ function classifyLinkedInEmail(payload: JobIntakeEmailPayload): EmailClassificat
 
 // ─── Job board sender → source name map ──────────────────────────────────────
 
+// German job boards listed first — client is German-market
 const JOB_BOARD_SOURCE_MAP: [RegExp, string][] = [
-  [/stepstone\./i, "Stepstone"],
-  [/xing\./i, "Xing"],
-  [/indeed\./i, "Indeed"],
-  [/glassdoor\./i, "Glassdoor"],
-  [/monster\./i, "Monster"],
-  [/jobware\./i, "Jobware"],
+  // ── German / DACH primary ──
+  [/stepstone\.(de|at|be|nl|fr|co\.uk|com)/i, "Stepstone"],
+  [/xing(-mail)?\.com/i, "Xing"],
+  [/jobware\.de/i, "Jobware"],
+  [/stellenanzeigen\.de/i, "Stellenanzeigen.de"],
+  [/meinestadt\.de/i, "Meinestadt.de"],
+  [/jobbörse\.de/i, "Jobbörse"],
+  [/arbeitsagentur\.de/i, "Arbeitsagentur"],
+  [/interamt\.de/i, "Interamt"],
+  [/yourfirm\.de/i, "YourFirm"],
+  [/absolventa\.de/i, "Absolventa"],
+  [/academics\.de/i, "Academics"],
+  [/kimeta\.de/i, "Kimeta"],
+  [/experteer\.(de|com)/i, "Experteer"],
+  [/hogast\.at/i, "Hogast"],
+  // ── Austria / Switzerland ──
   [/karriere\.at/i, "Karriere.at"],
   [/jobs\.ch/i, "Jobs.ch"],
-  [/jobscout24\./i, "JobScout24"],
-  [/stellenanzeigen\./i, "Stellenanzeigen.de"],
-  [/arbeitsagentur\./i, "Arbeitsagentur"],
-  [/experteer\./i, "Experteer"],
-  [/absolventa\./i, "Absolventa"],
-  [/academics\./i, "Academics"],
+  [/jobscout24\.(de|ch|at)/i, "JobScout24"],
+  // ── Global ──
+  [/indeed\.(com|de|co\.uk|fr|at|ch)/i, "Indeed"],
+  [/glassdoor\.(com|de|co\.uk|fr)/i, "Glassdoor"],
+  [/monster\.(de|com|co\.uk|fr|at)/i, "Monster"],
   [/linkedin\./i, "LinkedIn"],
 ];
 
@@ -278,41 +266,76 @@ export function detectJobBoardSource(from: string): string {
 function classifyJobBoardEmail(payload: JobIntakeEmailPayload): EmailClassificationResult {
   const subject = payload.subject;
   const body = payload.bodyText;
+  const from = payload.from.toLowerCase();
 
-  // Job board alert emails with German gender suffix (m/w/d) are almost always job postings
-  if (/\b(w\/m\/d|m\/w\/d|m\/f\/d)\b/i.test(subject)) {
-    return { isJob: true, confidence: 0.97, reason: "Job board email with gender-neutral job title marker (m/w/d)", detectedType: "job_alert" };
+  // Hard-reject: unsubscribe-only / newsletter marketing from job boards
+  if (/unsubscribe from this newsletter|du erhältst diese e-mail, weil du dich.*newsletter/i.test(body) &&
+      !JOB_BODY_SIGNALS.some((p) => p.test(body))) {
+    return { isJob: false, confidence: 0.90, reason: "Job board newsletter without job signals", detectedType: "newsletter" };
   }
 
-  // "Ich bin interessiert" / "Jetzt bewerben" CTA in body
-  if (/\b(ich bin interessiert|jetzt bewerben)\b/i.test(body)) {
-    return { isJob: true, confidence: 0.96, reason: "Job board email with apply CTA", detectedType: "job_alert" };
+  // ── German-first signals ─────────────────────────────────────────────────────
+
+  // m/w/d gender suffix in subject — near-certain German job posting
+  if (/\b(m\/w\/d|w\/m\/d|m\/f\/d|f\/m\/d)\b/i.test(subject)) {
+    return { isJob: true, confidence: 0.98, reason: "German job posting with gender-neutral suffix (m/w/d) in subject", detectedType: "job_alert" };
   }
 
-  // German job keywords in subject
-  const hasGermanJobSubject = /\b(jobalert|job-alert|stellenangebot|neue stelle|passende jobs|vakanz|bewerbung)\b/i.test(subject);
-  if (hasGermanJobSubject) {
-    return { isJob: true, confidence: 0.94, reason: "Job board with German job alert subject", detectedType: "job_alert" };
+  // m/w/d in body (Stepstone often puts it in body not subject)
+  if (/\b(m\/w\/d|w\/m\/d|m\/f\/d)\b/i.test(body)) {
+    return { isJob: true, confidence: 0.96, reason: "German job posting with gender-neutral suffix (m/w/d) in body", detectedType: "job_alert" };
   }
 
-  // Stepstone-style: "Beliebter Job" / popular job signal in body
-  if (/beliebter job|passende stelle|empfohlene stelle/i.test(body)) {
-    return { isJob: true, confidence: 0.95, reason: "Job board with recommended job signal", detectedType: "job_alert" };
+  // Stepstone / Xing specific alert patterns
+  if (/stepstone/i.test(from)) {
+    if (/jobalert|job-alert|neue jobs|passende stellen|ihr job-alarm/i.test(subject) ||
+        /beliebter job|passende stelle|empfohlene stelle|jetzt bewerben/i.test(body)) {
+      return { isJob: true, confidence: 0.97, reason: "Stepstone job alert email", detectedType: "job_alert" };
+    }
+  }
+
+  if (/xing/i.test(from)) {
+    if (/jobalert|job-alert|ihre job-empfehlung|passende jobs|neue stellen/i.test(subject) ||
+        /jetzt bewerben|ich bin interessiert|auf xing bewerben/i.test(body)) {
+      return { isJob: true, confidence: 0.97, reason: "Xing job alert email", detectedType: "job_alert" };
+    }
+  }
+
+  // Generic German job alert subject
+  if (/\b(jobalert|job-alert|job-alarm|stellenangebot|neue stelle|passende jobs|vakanz|ihre empfehlung)\b/i.test(subject)) {
+    return { isJob: true, confidence: 0.95, reason: "German job board alert subject", detectedType: "job_alert" };
+  }
+
+  // German apply CTA in body
+  if (/\b(ich bin interessiert|jetzt bewerben|bewerbung einreichen|zur stellenanzeige)\b/i.test(body)) {
+    return { isJob: true, confidence: 0.96, reason: "German job board with apply CTA", detectedType: "job_alert" };
+  }
+
+  // Recommended/popular job signals (Stepstone, Xing, karriere.at style)
+  if (/beliebter job|passende stelle|empfohlene stelle|für dich empfohlen|top-job/i.test(body)) {
+    return { isJob: true, confidence: 0.95, reason: "Job board recommended job signal", detectedType: "job_alert" };
   }
 
   // Salary range with EUR/€
-  if (/\d[\d.,]+\s*[-–]\s*\d[\d.,]+\s*(€|EUR|eur)/i.test(body) || /\d{2,3}\.?\d{3}\s*(€|EUR)\/Jahr/i.test(body)) {
-    return { isJob: true, confidence: 0.93, reason: "Job board email with salary range", detectedType: "job_alert" };
+  if (/\d[\d.,]+\s*[-–]\s*\d[\d.,]+\s*(€|EUR)/i.test(body) || /\d{2,3}\.?\d{3}\s*(€|EUR)\s*\/(Jahr|Monat|Jahr)/i.test(body)) {
+    return { isJob: true, confidence: 0.93, reason: "Job board email with EUR salary range", detectedType: "job_alert" };
   }
 
-  // Generic fallback — job boards are high-trust so score lower threshold
+  // ── English / global signals ─────────────────────────────────────────────────
+
+  // Indeed / Glassdoor / Monster job alert subject
+  if (/\b(job alert|your alert|new jobs for you|jobs matching)\b/i.test(subject)) {
+    return { isJob: true, confidence: 0.94, reason: "Job board alert subject (English)", detectedType: "job_alert" };
+  }
+
+  // Generic positive signals
   const bodySignals = JOB_BODY_SIGNALS.filter((p) => p.test(body)).length;
   const subjectSignals = JOB_SUBJECT_SIGNALS.filter((p) => p.test(subject)).length;
   if (bodySignals >= 1 || subjectSignals >= 1) {
     return { isJob: true, confidence: 0.88, reason: `Job board with ${bodySignals} body + ${subjectSignals} subject signals`, detectedType: "job_alert" };
   }
 
-  // Still a job board — accept with moderate confidence (unsubscribe or marketing emails caught later by hard-rejects)
+  // Trusted job board domain — accept with moderate confidence
   return { isJob: true, confidence: 0.80, reason: "Email from trusted job board platform", detectedType: "job_alert" };
 }
 
@@ -323,19 +346,16 @@ export function isRealJobOpportunity(payload: JobIntakeEmailPayload): EmailClass
   const subject = payload.subject;
   const body = payload.bodyText;
 
+  // German / DACH job boards — checked first (client is German-market)
+  if (JOB_BOARD_SOURCE_MAP.some(([pattern]) => pattern.test(from))) {
+    // LinkedIn has its own more nuanced classifier
+    if (from.includes("linkedin.com")) return classifyLinkedInEmail(payload);
+    return classifyJobBoardEmail(payload);
+  }
+
   // ATS platform sender — high-confidence real job
   if (ATS_SENDER_PATTERNS.some((p) => p.test(from))) {
     return { isJob: true, confidence: 0.95, reason: "Email from ATS/recruiter platform", detectedType: "job_alert" };
-  }
-
-  // LinkedIn emails — dedicated router
-  if (from.includes("linkedin.com")) {
-    return classifyLinkedInEmail(payload);
-  }
-
-  // Known job boards — dedicated router (Stepstone, Xing, Indeed, etc.)
-  if (JOB_BOARD_SOURCE_MAP.some(([pattern]) => pattern.test(from))) {
-    return classifyJobBoardEmail(payload);
   }
 
   // Hard-reject subjects for any sender
