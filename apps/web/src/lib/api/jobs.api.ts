@@ -142,3 +142,28 @@ export function undoReview(jobId: string) {
 export function analyzeJobForReview(jobId: string) {
   return apiFetch<JobReviewAi>(`/jobs/${jobId}/review/analyze`, { method: "POST" });
 }
+
+// ── CV Tailoring API ──────────────────────────────────────────────────────────
+
+export interface TailoredCvData {
+  status: "Not Started" | "Queued" | "Completed" | "Failed";
+  headline: string | null;
+  summary: string | null;
+  keywords: string[];
+  missingKeywords: string[];
+  bullets: Array<{ role: string; bullets: string[] }>;
+  atsScoreBefore: number | null;
+  atsScoreAfter: number | null;
+  generatedAt: string | null;
+  coverLetter: string | null;
+  coverLetterSubject: string | null;
+  error: string | null;
+}
+
+export function getTailoredCv(jobId: string) {
+  return apiFetch<TailoredCvData>(`/jobs/${jobId}/tailor-cv`);
+}
+
+export function generateTailoredCv(jobId: string, options?: { userInstructions?: string; tone?: string }) {
+  return apiFetch<TailoredCvData>(`/jobs/${jobId}/tailor-cv`, { method: "POST", body: options ?? {} });
+}

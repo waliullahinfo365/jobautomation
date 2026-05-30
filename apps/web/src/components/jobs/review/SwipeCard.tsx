@@ -6,6 +6,7 @@ import type { ReviewableJob, ReviewAction } from "@/types/job";
 import { cn } from "@/lib/utils";
 import { analyzeJobForReview } from "@/lib/api/jobs.api";
 import type { JobReviewAi } from "@/types/job";
+import { TailoredCvModal } from "@/components/jobs/TailoredCvModal";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -69,7 +70,18 @@ function ScoreRing({ score }: { score: number }) {
 // ── Full details bottom sheet ─────────────────────────────────────────────────
 
 function DetailsSheet({ job, ai, onClose }: { job: ReviewableJob; ai: JobReviewAi | null; onClose: () => void }) {
+  const [tailorOpen, setTailorOpen] = useState(false);
   return (
+    <>
+    {tailorOpen && (
+      <TailoredCvModal
+        jobId={job.id}
+        jobTitle={job.position}
+        company={job.company}
+        isOpen={tailorOpen}
+        onClose={() => setTailorOpen(false)}
+      />
+    )}
     <AnimatePresence>
       <motion.div
         key="backdrop"
@@ -177,6 +189,14 @@ function DetailsSheet({ job, ai, onClose }: { job: ReviewableJob; ai: JobReviewA
             </Section>
           )}
 
+          {/* Tailor CV button */}
+          <button
+            onClick={() => setTailorOpen(true)}
+            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          >
+            ✦ Tailor CV for this job
+          </button>
+
           <button
             onClick={onClose}
             className="w-full rounded-xl bg-[var(--surface-2)] py-3 text-sm font-semibold text-[var(--text-2)] hover:bg-[var(--border)] transition-colors"
@@ -186,6 +206,7 @@ function DetailsSheet({ job, ai, onClose }: { job: ReviewableJob; ai: JobReviewA
         </div>
       </motion.div>
     </AnimatePresence>
+    </>
   );
 }
 

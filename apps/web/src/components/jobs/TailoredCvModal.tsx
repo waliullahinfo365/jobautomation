@@ -1,0 +1,489 @@
+"use client";
+
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { generateTailoredCv, getTailoredCv, type TailoredCvData } from "@/lib/api/jobs.api";
+import { showError, showSuccess } from "@/lib/ui/toast";
+import { cn } from "@/lib/utils";
+import { CV_TEMPLATE_OPTIONS } from "@/lib/cv-templates/types";
+import type { CvTemplateId } from "@/lib/cv-templates/types";
+
+type Tab = "cv" | "cover-letter" | "ats";
+
+// ── Cover letter PDF download button ─────────────────────────────────────────
+
+function CoverLetterPdfDownloadButton({
+  jobId,
+  style,
+  personalInfo,
+  company,
+}: {
+  jobId: string;
+  style: "modern" | "classic";
+  personalInfo: { fullName: string; email: string; phone: string; location: string; linkedIn: string };
+  company: string;
+}) {
+  const [loading, setLoading] = useState(false);
+  const download = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/cover-letter-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style, ...personalInfo }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `cover-letter-${company.replace(/\s+/g, "-")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showError("Cover letter PDF generation failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <Button onClick={() => void download()} disabled={loading} className="w-full">
+      {loading ? "Generating PDF…" : "⬇ Download Cover Letter PDF"}
+    </Button>
+  );
+}
+
+function AtsScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="text-[var(--text-2)]">{label}</span>
+        <span className="font-semibold text-[var(--text-1)]">{score}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+        <motion.div
+          className={cn("h-full rounded-full", color)}
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface Props {
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  isOpen: boolean;
+  onClose: () => void;
+  initialData?: TailoredCvData | null;
+}
+
+export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, initialData }: Props) {
+  const [tab, setTab] = useState<Tab>("cv");
+  const [data, setData] = useState<TailoredCvData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(false);
+  const [userInstructions, setUserInstructions] = useState("");
+  const [copied, setCopied] = useState<"cv" | "cl" | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<CvTemplateId>("modern-no-photo");
+  const [downloading, setDownloading] = useState(false);
+  const [personalInfo, setPersonalInfo] = useState({ fullName: "", email: "", phone: "", location: "", linkedIn: "" });
+
+  const handleGenerate = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await generateTailoredCv(jobId, { userInstructions: userInstructions || undefined });
+      if (result) setData(result);
+    } catch {
+      showError("CV tailoring failed. Please check that an active CV with extracted text is uploaded in the Documents module.");
+      // Attempt to fetch whatever was saved
+      try {
+        const saved = await getTailoredCv(jobId);
+        if (saved) setData(saved);
+      } catch { /* ignore */ }
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId, userInstructions]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!data) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/cv-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateId: selectedTemplate,
+          data: {
+            fullName: personalInfo.fullName || "Your Name",
+            email: personalInfo.email,
+            phone: personalInfo.phone,
+            location: personalInfo.location,
+            linkedIn: personalInfo.linkedIn,
+            headline: data.headline,
+            summary: data.summary,
+            skills: data.keywords,
+            experience: data.bullets,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `CV-${company.replace(/\s+/g, "-")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showSuccess("PDF downloaded!");
+    } catch {
+      showError("PDF generation failed. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  }, [data, jobId, selectedTemplate, personalInfo, company]);
+
+  const copyToClipboard = useCallback((text: string, which: "cv" | "cl") => {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(which);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }, []);
+
+  const hasData = data?.status === "Completed";
+  const isFailed = data?.status === "Failed";
+
+  const tabs: Array<{ id: Tab; label: string }> = [
+    { id: "cv", label: "Tailored CV" },
+    { id: "cover-letter", label: "Cover Letter" },
+    { id: "ats", label: "ATS Analysis" },
+  ];
+
+  const cvText = hasData
+    ? [
+        data.headline ? `**${data.headline}**` : "",
+        "",
+        data.summary ?? "",
+        "",
+        ...(data.bullets ?? []).flatMap((section) => [
+          `### ${section.role}`,
+          ...(section.bullets ?? []).map((b) => `• ${b}`),
+          "",
+        ]),
+      ]
+        .join("\n")
+        .trim()
+    : "";
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`AI CV Tailoring — ${company} · ${jobTitle}`}
+      size="lg"
+    >
+      <div className="flex flex-col gap-4">
+        {/* Generate panel */}
+        {!hasData && (
+          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 space-y-3">
+            {isFailed && data.error && (
+              <p className="text-sm text-red-500">{data.error}</p>
+            )}
+            <p className="text-sm text-[var(--text-2)]">
+              Claude will tailor your uploaded CV headline, summary, and experience bullets to match this job's ATS keywords — without changing any facts.
+            </p>
+            <textarea
+              className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={2}
+              placeholder="Optional: extra instructions (e.g. 'emphasise Python skills', 'write in German')"
+              value={userInstructions}
+              onChange={(e) => setUserInstructions(e.target.value)}
+            />
+            <Button onClick={() => void handleGenerate()} disabled={loading} className="w-full">
+              {loading ? "Generating…" : isFailed ? "Retry Generation" : "Generate Tailored CV + Cover Letter"}
+            </Button>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            <span className="text-sm text-[var(--text-2)]">Claude is tailoring your CV… this takes ~15 seconds</span>
+          </div>
+        )}
+
+        {/* Results */}
+        {hasData && !loading && (
+          <>
+            {/* Regenerate bar */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                className="flex-1 min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-1.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Add instructions and regenerate…"
+                value={userInstructions}
+                onChange={(e) => setUserInstructions(e.target.value)}
+              />
+              <Button size="sm" variant="outline" onClick={() => void handleGenerate()} disabled={loading}>
+                Regenerate
+              </Button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-1">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={cn(
+                    "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                    tab === t.id
+                      ? "bg-[var(--bg-1)] text-[var(--text-1)] shadow-sm"
+                      : "text-[var(--text-3)] hover:text-[var(--text-2)]"
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18 }}
+              >
+                {tab === "cv" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-[var(--text-1)]">Tailored Content</h3>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyToClipboard(cvText, "cv")}
+                      >
+                        {copied === "cv" ? "Copied!" : "Copy all"}
+                      </Button>
+                    </div>
+
+                    {/* Personal info for PDF */}
+                    <details className="rounded-lg border border-[var(--border-default)]">
+                      <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg">
+                        Personal info for PDF (name, contact) ›
+                      </summary>
+                      <div className="grid grid-cols-2 gap-2 p-3 pt-2">
+                        {(["fullName", "email", "phone", "location", "linkedIn"] as const).map((field) => (
+                          <input
+                            key={field}
+                            className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-2 py-1.5 text-xs text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder={{ fullName: "Full Name", email: "Email", phone: "Phone", location: "City, Country", linkedIn: "LinkedIn URL" }[field]}
+                            value={personalInfo[field]}
+                            onChange={(e) => setPersonalInfo((p) => ({ ...p, [field]: e.target.value }))}
+                          />
+                        ))}
+                      </div>
+                    </details>
+
+                    {/* Template picker + download */}
+                    <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-2">
+                      <p className="text-xs font-semibold text-[var(--text-2)]">Download as PDF</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {CV_TEMPLATE_OPTIONS.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setSelectedTemplate(t.id)}
+                            className={cn(
+                              "rounded-lg border px-2.5 py-2 text-left text-xs transition-all",
+                              selectedTemplate === t.id
+                                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700"
+                                : "border-[var(--border-default)] text-[var(--text-2)] hover:border-blue-400"
+                            )}
+                          >
+                            <span className="font-semibold">{t.label}</span>
+                            <br />
+                            <span className="text-[10px] opacity-70">{t.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <Button
+                        onClick={() => void handleDownloadPdf()}
+                        disabled={downloading}
+                        className="w-full"
+                      >
+                        {downloading ? "Generating PDF…" : "⬇ Download PDF"}
+                      </Button>
+                    </div>
+
+                    {data.headline && (
+                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)] mb-1">Headline</p>
+                        <p className="text-sm font-semibold text-[var(--text-1)]">{data.headline}</p>
+                      </div>
+                    )}
+
+                    {data.summary && (
+                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)] mb-1">Summary</p>
+                        <p className="text-sm text-[var(--text-2)] leading-relaxed">{data.summary}</p>
+                      </div>
+                    )}
+
+                    {(data.bullets ?? []).length > 0 && (
+                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Key Experience Bullets</p>
+                        {(data.bullets ?? []).map((section, i) => (
+                          <div key={i}>
+                            <p className="text-xs font-semibold text-[var(--text-2)] mb-1">{section.role}</p>
+                            <ul className="space-y-1">
+                              {section.bullets.map((b, j) => (
+                                <li key={j} className="text-sm text-[var(--text-2)] pl-3 border-l-2 border-[var(--border-default)]">
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {tab === "cover-letter" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-[var(--text-1)]">Cover Letter</h3>
+                        {data.coverLetterSubject && (
+                          <p className="text-xs text-[var(--text-3)]">Subject: {data.coverLetterSubject}</p>
+                        )}
+                      </div>
+                      {data.coverLetter && (
+                        <Button size="sm" variant="ghost" onClick={() => copyToClipboard(data.coverLetter!, "cl")}>
+                          {copied === "cl" ? "Copied!" : "Copy text"}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Styled preview */}
+                    {data.coverLetter && (
+                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] p-5 space-y-4 max-h-80 overflow-y-auto">
+                        <div className="border-b border-[var(--border-default)] pb-3">
+                          <p className="font-bold text-[var(--text-1)]">{personalInfo.fullName || "Your Name"}</p>
+                          <div className="flex flex-wrap gap-3 mt-1 text-xs text-[var(--text-3)]">
+                            {personalInfo.email    && <span>{personalInfo.email}</span>}
+                            {personalInfo.phone    && <span>{personalInfo.phone}</span>}
+                            {personalInfo.location && <span>{personalInfo.location}</span>}
+                          </div>
+                        </div>
+                        <div className="text-xs text-[var(--text-3)]">{new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div>
+                        <div className="text-xs text-[var(--text-2)]">
+                          <p className="font-semibold">{company}</p>
+                          <p>Re: {jobTitle}</p>
+                        </div>
+                        {data.coverLetterSubject && (
+                          <p className="text-sm font-semibold text-[var(--text-1)] underline">{data.coverLetterSubject}</p>
+                        )}
+                        <div className="space-y-3">
+                          {data.coverLetter.split(/\n{2,}|\n/).filter(Boolean).map((para, i) => (
+                            <p key={i} className="text-sm text-[var(--text-2)] leading-relaxed">{para}</p>
+                          ))}
+                        </div>
+                        <div className="pt-2 border-t border-[var(--border-default)]">
+                          <p className="text-sm text-[var(--text-2)]">Yours sincerely,</p>
+                          <p className="text-sm font-bold text-[var(--text-1)] mt-4">{personalInfo.fullName || "Your Name"}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* PDF download with style selector */}
+                    {data.coverLetter && (
+                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-2">
+                        <p className="text-xs font-semibold text-[var(--text-2)]">Download as PDF</p>
+                        <div className="flex gap-2">
+                          {(["modern", "classic"] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setSelectedTemplate(s === "modern" ? "modern-no-photo" : "classic-no-photo")}
+                              className={cn(
+                                "flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all",
+                                (s === "modern" ? selectedTemplate === "modern-no-photo" || selectedTemplate === "modern-with-photo" : selectedTemplate === "classic-no-photo" || selectedTemplate === "classic-with-photo")
+                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700"
+                                  : "border-[var(--border-default)] text-[var(--text-2)] hover:border-blue-400"
+                              )}
+                            >
+                              {s === "modern" ? "Modern (colour header)" : "Classic (minimal)"}
+                            </button>
+                          ))}
+                        </div>
+                        <CoverLetterPdfDownloadButton
+                          jobId={jobId}
+                          style={selectedTemplate.startsWith("modern") ? "modern" : "classic"}
+                          personalInfo={personalInfo}
+                          company={company}
+                        />
+                      </div>
+                    )}
+
+                    {!data.coverLetter && (
+                      <p className="text-sm text-[var(--text-3)]">No cover letter generated yet.</p>
+                    )}
+                  </div>
+                )}
+
+                {tab === "ats" && (
+                  <div className="space-y-4">
+                    <div className="space-y-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">ATS Match Score</p>
+                      {data.atsScoreBefore != null && (
+                        <AtsScoreBar label="Original CV" score={data.atsScoreBefore} color="bg-amber-400" />
+                      )}
+                      {data.atsScoreAfter != null && (
+                        <AtsScoreBar label="Tailored CV" score={data.atsScoreAfter} color="bg-green-500" />
+                      )}
+                      {data.atsScoreBefore != null && data.atsScoreAfter != null && (
+                        <p className="text-xs text-green-600 font-medium">
+                          +{data.atsScoreAfter - data.atsScoreBefore}% improvement
+                        </p>
+                      )}
+                    </div>
+
+                    {(data.keywords ?? []).length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Matched Keywords</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(data.keywords ?? []).map((kw) => (
+                            <Badge key={kw} variant="success" className="text-xs">{kw}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(data.missingKeywords ?? []).length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Missing Keywords</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(data.missingKeywords ?? []).map((kw) => (
+                            <Badge key={kw} variant="danger" className="text-xs">{kw}</Badge>
+                          ))}
+                        </div>
+                        <p className="text-xs text-[var(--text-3)]">These keywords appear in the job description but were not found in your CV.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}

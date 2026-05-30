@@ -109,6 +109,7 @@ function toCVVersion(d: DocumentRecord, index: number, defaultId: string | null)
     usedInApplicationsCount: 0,
     isDefault: defaultId ? d.id === defaultId : index === 0,
     lastUpdated: d.lastUpdated,
+    contentText: d.contentText,
   };
 }
 

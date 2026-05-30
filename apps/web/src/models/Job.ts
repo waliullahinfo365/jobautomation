@@ -21,6 +21,19 @@ export interface IJob extends Document {
   driveFolderId?: string;
   applicationId?: mongoose.Types.ObjectId;
   contactIds:     mongoose.Types.ObjectId[];
+  // CV tailoring
+  tailoredCvStatus?: "Not Started" | "Queued" | "Completed" | "Failed";
+  tailoredCvHeadline?: string;
+  tailoredCvSummary?: string;
+  tailoredCvKeywords?: string[];
+  tailoredCvMissingKeywords?: string[];
+  tailoredCvBullets?: Array<{ role: string; bullets: string[] }>;
+  tailoredCvAtsScoreBefore?: number;
+  tailoredCvAtsScoreAfter?: number;
+  tailoredCvGeneratedAt?: Date;
+  tailoredCoverLetter?: string;
+  tailoredCoverLetterSubject?: string;
+  tailoredCvError?: string;
   createdAt:      Date;
   updatedAt:      Date;
 }
@@ -50,6 +63,18 @@ const JobSchema = new Schema<IJob>(
     driveFolderId:  { type: String },
     applicationId:  { type: Schema.Types.ObjectId, ref: "Application" },
     contactIds:     [{ type: Schema.Types.ObjectId, ref: "Contact" }],
+    tailoredCvStatus:           { type: String, enum: ["Not Started", "Queued", "Completed", "Failed"], default: "Not Started" },
+    tailoredCvHeadline:         String,
+    tailoredCvSummary:          String,
+    tailoredCvKeywords:         [String],
+    tailoredCvMissingKeywords:  [String],
+    tailoredCvBullets:          { type: Schema.Types.Mixed, default: [] },
+    tailoredCvAtsScoreBefore:   Number,
+    tailoredCvAtsScoreAfter:    Number,
+    tailoredCvGeneratedAt:      Date,
+    tailoredCoverLetter:        String,
+    tailoredCoverLetterSubject: String,
+    tailoredCvError:            String,
   },
   { timestamps: true }
 );

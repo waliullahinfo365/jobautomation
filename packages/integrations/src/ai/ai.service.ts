@@ -818,10 +818,95 @@ export async function generateCoverLetterDraft(input: {
   };
 }
 
+export interface TailoredCvResult {
+  tailoredHeadline: string;
+  tailoredSummary: string;
+  atsKeywords: string[];
+  missingKeywords: string[];
+  atsScoreBefore: number;
+  atsScoreAfter: number;
+  tailoredBullets: Array<{ role: string; bullets: string[] }>;
+  promptVersion: string;
+}
+
+export async function runTailoredCvGeneration(input: {
+  cvText: string;
+  job: { company: string; position: string; description?: string };
+  config: AiRuntimeConfig;
+  userInstructions?: string;
+}): Promise<AiServiceResult<TailoredCvResult>> {
+  const apiKey = resolveAnthropicApiKey() ?? input.config.apiKeyDecrypted;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set.");
+
+  const modelCandidates = buildAnthropicModelCandidates(input.config.model);
+  const inText = `${input.job.company} ${input.job.position} ${input.job.description ?? ""}`;
+
+  const prompt = [
+    "You are an expert ATS resume optimizer and career coach. Your task is to tailor an existing CV to a specific job posting.",
+    "CRITICAL RULES:",
+    "- Never invent experience, credentials, or skills not present in the original CV.",
+    "- Never change dates, company names, job titles, or metrics from the original CV.",
+    "- Only rewrite headline, summary, and reorder/reframe existing bullet points to match job keywords.",
+    "- Output ONLY valid JSON — no markdown, no commentary.",
+    "",
+    "Return a JSON object with exactly these keys:",
+    '  "tailoredHeadline": string — rewritten professional headline targeting this specific role (max 12 words)',
+    '  "tailoredSummary": string — rewritten 3-4 sentence summary with ATS keywords naturally embedded',
+    '  "atsKeywords": array of strings — top 10-15 keywords from the job description found in the CV',
+    '  "missingKeywords": array of strings — important keywords from JD NOT found in CV (max 8)',
+    '  "atsScoreBefore": number — estimated ATS match score 0-100 for original CV',
+    '  "atsScoreAfter": number — estimated ATS match score 0-100 for tailored CV',
+    '  "tailoredBullets": array of { "role": string, "bullets": string[] } — top 2-3 roles from CV with reordered/reframed bullets (most relevant to this job first)',
+    "",
+    `Target Company: ${input.job.company}`,
+    `Target Position: ${input.job.position}`,
+    `Job Description:\n${input.job.description ?? "Not provided"}`,
+    "",
+    `Original CV:\n${input.cvText}`,
+    ...(input.userInstructions ? ["", `Additional instructions:\n${input.userInstructions}`] : []),
+  ].join("\n");
+
+  const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 2000, temperature: 0.3 });
+  if (!result.ok) throw new Error(`Claude CV tailoring failed: [${result.errorType}] ${result.message}`);
+
+  const cleaned = result.text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(cleaned) as Record<string, unknown>;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("Claude returned non-JSON CV tailoring output");
+    parsed = JSON.parse(match[0]) as Record<string, unknown>;
+  }
+
+  const data: TailoredCvResult = {
+    tailoredHeadline: String(parsed.tailoredHeadline ?? ""),
+    tailoredSummary: String(parsed.tailoredSummary ?? ""),
+    atsKeywords: Array.isArray(parsed.atsKeywords) ? (parsed.atsKeywords as string[]) : [],
+    missingKeywords: Array.isArray(parsed.missingKeywords) ? (parsed.missingKeywords as string[]) : [],
+    atsScoreBefore: Number(parsed.atsScoreBefore ?? 0),
+    atsScoreAfter: Number(parsed.atsScoreAfter ?? 0),
+    tailoredBullets: Array.isArray(parsed.tailoredBullets)
+      ? (parsed.tailoredBullets as Array<{ role: string; bullets: string[] }>)
+      : [],
+    promptVersion: "tailored-cv-v1-claude-json",
+  };
+
+  return {
+    provider: "Claude",
+    model: result.model,
+    usedStub: false,
+    confidence: 0.88,
+    data,
+    usage: usageFromLengths(inText.length + input.cvText.length, result.text.length),
+  };
+}
+
 export async function runCoverLetterGeneration(input: {
   job: { company: string; position: string; description?: string; tone?: "professional" | "confident" | "friendly" };
   config: AiRuntimeConfig;
   userInstructions?: string;
+  cvText?: string;
 }): Promise<AiServiceResult<{
   subject: string;
   cover_letter: string;
@@ -847,11 +932,14 @@ export async function runCoverLetterGeneration(input: {
     '  "key_customizations": array of 3-5 strings — ways this letter is tailored to the role',
     '  "missing_info_warnings": array of strings — requirements in JD not addressed (empty if none)',
     "",
-    "Do not fabricate credentials. Only cite experience from the job description.",
+    input.cvText
+      ? "Base the letter on the candidate's actual CV experience provided below. Do not fabricate credentials."
+      : "Do not fabricate credentials. Only cite experience from the job description.",
     "",
     `Company: ${input.job.company}`,
     `Position: ${input.job.position}`,
     `Job description:\n${input.job.description ?? "Not provided"}`,
+    ...(input.cvText ? ["", `Candidate CV:\n${input.cvText}`] : []),
     ...(input.userInstructions ? ["", `Additional instructions from the user:\n${input.userInstructions}`] : []),
   ].join("\n");
 

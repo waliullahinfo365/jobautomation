@@ -60,6 +60,7 @@ export interface CVVersion {
   usedInApplicationsCount: number;
   isDefault: boolean;
   lastUpdated: Date | string;
+  contentText?: string;
 }
 
 export interface CoverLetterRecord {

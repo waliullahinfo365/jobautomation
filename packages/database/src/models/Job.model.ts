@@ -94,6 +94,20 @@ const JobSchema = new Schema(
     reviewAiEffort: { type: String, enum: ["Low", "Medium", "High"] },
     reviewAiRecommendation: String,
     reviewAiGeneratedAt: Date,
+    // AI CV tailoring
+    tailoredCvStatus: { type: String, enum: ["Not Started", "Queued", "Completed", "Failed"], default: "Not Started" },
+    tailoredCvHeadline: String,
+    tailoredCvSummary: String,
+    tailoredCvKeywords: { type: [String], default: [] },
+    tailoredCvMissingKeywords: { type: [String], default: [] },
+    tailoredCvBullets: { type: Schema.Types.Mixed, default: [] },
+    tailoredCvAtsScoreBefore: Number,
+    tailoredCvAtsScoreAfter: Number,
+    tailoredCvGeneratedAt: Date,
+    tailoredCoverLetter: String,
+    tailoredCoverLetterSubject: String,
+    tailoredCoverLetterGeneratedAt: Date,
+    tailoredCvError: String,
   }),
   { timestamps: true }
 );
