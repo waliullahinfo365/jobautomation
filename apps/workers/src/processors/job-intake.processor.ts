@@ -68,15 +68,47 @@ function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): str
   // GMAIL_JOB_ALERT_QUERY (legacy name used in earlier releases)
   // Only read from env vars — never from stored metadata (stale DB values caused wrong queries)
   const configured = process.env.GMAIL_JOB_QUERY || process.env.GMAIL_JOB_ALERT_QUERY || "";
-  return configured.trim() || 'label:job-alerts OR label:"Job Alerts" OR subject:(job OR hiring OR opportunity OR interview)';
+  return configured.trim() || [
+    // Gmail labels
+    'label:job-alerts',
+    'label:"Job Alerts"',
+    // German job board senders (Stepstone, Xing, Arbeitsagentur, etc.)
+    'from:stepstone.de',
+    'from:stepstone.at',
+    'from:xing.com',
+    'from:xing-mail.com',
+    'from:arbeitsagentur.de',
+    'from:jobware.de',
+    'from:karriere.at',
+    'from:jobs.ch',
+    'from:stellenanzeigen.de',
+    'from:meinestadt.de',
+    'from:jobscout24.de',
+    'from:experteer.de',
+    'from:absolventa.de',
+    'from:interamt.de',
+    'from:yourfirm.de',
+    'from:academics.de',
+    // Global job boards
+    'from:indeed.com',
+    'from:glassdoor.com',
+    'from:monster.de',
+    'from:monster.com',
+    'from:linkedin.com',
+    // German subject keywords
+    'subject:(Jobalert OR Jobalarm OR Stellenangebot OR Stellenanzeige OR "m/w/d" OR "w/m/d" OR "Jetzt bewerben" OR "Passende Jobs")',
+    // English subject keywords
+    'subject:(job OR hiring OR opportunity OR interview OR vacancy)',
+  ].join(' OR ');
 }
 
 /** Returns true when the query is pre-filtered enough to use the relaxed confidence threshold */
 function isPreFilteredQuery(query: string): boolean {
-  // A query is pre-filtered if it came from the env var, OR if it targets a specific label
+  // Pre-filtered if it came from env var, targets a label, or targets specific senders (from:)
   const hasLabel = /\blabel:/i.test(query);
+  const hasFrom = /\bfrom:/i.test(query);
   const envSet = Boolean(process.env.GMAIL_JOB_QUERY?.trim() || process.env.GMAIL_JOB_ALERT_QUERY?.trim());
-  return envSet || hasLabel;
+  return envSet || hasLabel || hasFrom;
 }
 
 function buildBackfillQuery(input: { label?: string; days?: number; metadata?: Record<string, unknown> }) {
@@ -87,7 +119,12 @@ function buildBackfillQuery(input: { label?: string; days?: number; metadata?: R
   const label = String(input.label || "job alerts").trim();
   const safeLabel = label.replace(/"/g, "");
   if (safeLabel) return `newer_than:${days}d label:"${safeLabel}"`;
-  return `newer_than:${days}d ("job alert" OR job OR hiring OR application)`;
+  // Include German job board senders and keywords for backfill
+  return [
+    `newer_than:${days}d label:"job alerts"`,
+    `newer_than:${days}d (from:stepstone.de OR from:stepstone.at OR from:xing.com OR from:xing-mail.com OR from:arbeitsagentur.de OR from:jobware.de OR from:karriere.at OR from:jobs.ch OR from:stellenanzeigen.de OR from:indeed.com OR from:glassdoor.com OR from:monster.de OR from:linkedin.com)`,
+    `newer_than:${days}d subject:(Jobalert OR Jobalarm OR Stellenangebot OR "m/w/d" OR "w/m/d" OR job OR hiring OR vacancy)`,
+  ].join(' OR ');
 }
 
 function getMessageHistoryId(message: any): number {
