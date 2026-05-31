@@ -40,6 +40,30 @@ export interface JobIntakeClassification {
 
 // ─── Pattern tables ──────────────────────────────────────────────────────────
 
+/**
+ * Senders that are SaaS marketing tools / ad networks / non-job platforms.
+ * These never send real job postings — always marketing.
+ */
+const MARKETING_SENDER_PATTERNS: RegExp[] = [
+  /stackadapt\.com/i,
+  /aiapply\.(co|com|io)/i,
+  /jobswipe\.(co|com|io)/i,
+  /jobagentic\.(com|io)/i,
+  /mailchimp\.com/i,
+  /sendgrid\.net/i,
+  /constantcontact\.com/i,
+  /hubspotemail\.net/i,
+  /marketo\.com/i,
+  /klaviyo\.com/i,
+  /activecampaign\.com/i,
+  /sendinblue\.com/i,
+  /brevo\.com/i,
+  /reply\.io/i,
+  /lemlist\.com/i,
+  /outreach\.io/i,
+  /salesloft\.com/i,
+];
+
 /** Senders that are ATS platforms — high confidence real jobs */
 // ATS applicant-tracking systems only — NOT job boards (job boards have their own classifier)
 const ATS_SENDER_PATTERNS = [
@@ -82,6 +106,22 @@ const HARD_REJECT_SUBJECT_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/\b(webinar|conference|summit|workshop|event|meetup)\b/i, "newsletter"],
   [/\b(discount|promo|coupon|sale|offer ends|% off)\b/i, "newsletter"],
   [/\b(product update|release notes|changelog|new feature)\b/i, "newsletter"],
+  // SaaS tool marketing emails (credits, billing, trial, subscription)
+  [/\b(credit|credits|trial|subscription|upgrade|plan|billing|invoice|receipt|payment)\b/i, "newsletter"],
+  [/\b(ends (today|soon|may|june|july|this week)|expires|expiring|last chance|limited time)\b/i, "newsletter"],
+  [/\b(summer support|spring offer|black friday|cyber monday)\b/i, "newsletter"],
+  // GDPR / legal / consent emails — not jobs
+  [/\b(consent to retain|data retention|privacy policy|terms of service|terms of use|gdpr|dsgvo)\b/i, "newsletter"],
+  [/\b(retain your (application |account |personal )?data)\b/i, "newsletter"],
+  // Promotional job-adjacent marketing
+  [/\b(join over \d+|over \d+ applicants|popular job|trending job|hot job)\b/i, "newsletter"],
+  [/\bthe best jobs are right here\b/i, "newsletter"],
+  [/\bcold email\b/i, "newsletter"],
+  [/\b(most .{3,30} (start|begin|end) with)\b/i, "newsletter"],
+  // Account notifications — not jobs
+  [/\b(account (update|security|verify|verification|confirmed|created|deleted|suspended))\b/i, "newsletter"],
+  [/\b(password (reset|changed|updated))\b/i, "newsletter"],
+  [/\b(your (order|purchase|subscription|invoice|receipt))\b/i, "newsletter"],
 ];
 
 /** Body signals that indicate a non-job email */
@@ -92,9 +132,21 @@ const HARD_REJECT_BODY_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/linkedin\.com\/sales\/contract-chooser/i, "sales_nav_notification"],
   [/sales navigator/i, "sales_nav_notification"],
   [/inmail credit/i, "sales_nav_notification"],
-  // Only reject if body contains newsletter-style unsubscribe + no job URL anywhere in body
   [/unsubscribe from this newsletter/i, "newsletter"],
   [/you('re| are) receiving this (email|newsletter) because you subscribed/i, "newsletter"],
+  // GDPR / data consent body signals
+  [/\b(we('re| are) required by law|data protection|retention period|right to be forgotten|right to erasure)\b/i, "newsletter"],
+  [/\b(consent to (store|retain|process|keep) your (personal |application |account )?data)\b/i, "newsletter"],
+  // SaaS marketing body signals — credits, trial endings, product promo
+  [/\b(your (free trial|trial period|subscription) (expires?|ends?|has ended|will end))\b/i, "newsletter"],
+  [/\b(\d+\s+(free |extra |bonus )?credits?)\b/i, "newsletter"],
+  [/\b(upgrade (your plan|to (pro|premium|business|enterprise)))\b/i, "newsletter"],
+  // Social-proof marketing (not actual job postings)
+  [/\bjoin over \d+\s*(applicants?|candidates?|users?|members?|people)\b/i, "newsletter"],
+  [/\bover \d+\s*(companies|employers|recruiters) (are|have)\b/i, "newsletter"],
+  // Cold email / outreach tool marketing
+  [/\b(open rate|click rate|deliverability|email sequence|warm-up|inbox placement)\b/i, "newsletter"],
+  [/\b(cold email|outreach tool|sales outreach|lead generation|prospect)\b/i, "newsletter"],
 ];
 
 /** Strong positive signals in body */
@@ -105,7 +157,7 @@ const JOB_BODY_SIGNALS: RegExp[] = [
   /\b(job description|key responsibilities|requirements|qualifications)\b/i,
   /\b(salary range|compensation|equity|base pay)\b/i,
   /https?:\/\/[^\s]*(greenhouse\.io|lever\.co|ashbyhq\.com|workday\.com|jobvite|icims|taleo)[^\s]*/i,
-  /https?:\/\/[^\s]*\/(jobs?|careers?|apply|opening|vacancy|position)[^\s]*/i,
+  /https?:\/\/[^\s]*\/(jobs?|careers?|opening|vacancy|position)[^\s]*/i,
   // Direct recruiter outreach phrases
   /\b(i (came across|noticed|found|saw) your (profile|background|experience|linkedin))\b/i,
   /\b(we('re| are) looking for|we have an? (opening|role|position|opportunity) for)\b/i,
@@ -274,6 +326,20 @@ function classifyJobBoardEmail(payload: JobIntakeEmailPayload): EmailClassificat
     return { isJob: false, confidence: 0.90, reason: "Job board newsletter without job signals", detectedType: "newsletter" };
   }
 
+  // Hard-reject shared subject patterns even from job boards (GDPR, marketing, etc.)
+  for (const [pattern, type] of HARD_REJECT_SUBJECT_PATTERNS) {
+    if (pattern.test(subject)) {
+      return { isJob: false, confidence: 0.92, reason: `Non-job subject from job board: ${pattern.source}`, detectedType: type };
+    }
+  }
+
+  // Hard-reject body signals
+  for (const [pattern, type] of HARD_REJECT_BODY_PATTERNS) {
+    if (pattern.test(body)) {
+      return { isJob: false, confidence: 0.88, reason: `Non-job body signal from job board: ${pattern.source}`, detectedType: type };
+    }
+  }
+
   // ── German-first signals ─────────────────────────────────────────────────────
 
   // m/w/d gender suffix in subject — near-certain German job posting
@@ -346,6 +412,11 @@ export function isRealJobOpportunity(payload: JobIntakeEmailPayload): EmailClass
   const subject = payload.subject;
   const body = payload.bodyText;
 
+  // Reject known marketing / SaaS / ad-network senders immediately
+  if (MARKETING_SENDER_PATTERNS.some((p) => p.test(from))) {
+    return { isJob: false, confidence: 0.98, reason: "Known marketing/SaaS sender — not a job portal", detectedType: "newsletter" };
+  }
+
   // German / DACH job boards — checked first (client is German-market)
   if (JOB_BOARD_SOURCE_MAP.some(([pattern]) => pattern.test(from))) {
     // LinkedIn has its own more nuanced classifier
@@ -392,7 +463,7 @@ export function isRealJobOpportunity(payload: JobIntakeEmailPayload): EmailClass
   const hasAtsUrl = /https?:\/\/[^\s]*(greenhouse\.io|lever\.co|ashbyhq\.com|workday\.com|jobvite|icims|taleo|smartrecruiters|bamboohr|recruitee|breezy)[^\s]*/i.test(body);
   if (hasAtsUrl) { score += 0.30; reasons.push("ATS URL in body"); }
 
-  const isJob = score >= 0.85;
+  const isJob = score >= 0.90;
   const confidence = Math.min(0.97, score);
   let detectedType: DetectedEmailType = "unknown";
   if (isJob) {
