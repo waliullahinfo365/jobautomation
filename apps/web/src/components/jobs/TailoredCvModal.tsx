@@ -129,7 +129,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
             headline: data.headline,
             summary: data.summary,
             skills: data.keywords,
-            experience: data.bullets,
+            experience: data.bullets ?? [],
           },
         }),
       });

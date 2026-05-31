@@ -45,7 +45,9 @@ export async function POST(
       linkedIn:   String(body.data?.linkedIn ?? ""),
       photoUrl:   body.data?.photoUrl ? String(body.data.photoUrl) : undefined,
       skills:     Array.isArray(body.data?.skills)        ? body.data!.skills as string[]        : (j.tailoredCvKeywords as string[] | undefined) ?? [],
-      experience: Array.isArray(body.data?.experience)    ? body.data!.experience as never[]    : (j.tailoredCvBullets  as never[] | undefined) ?? [],
+      experience: Array.isArray(body.data?.experience) ? body.data!.experience as never[]
+                : Array.isArray(body.data?.bullets)    ? body.data!.bullets    as never[]
+                : (j.tailoredCvBullets as never[] | undefined) ?? [],
       education:  Array.isArray(body.data?.education)     ? body.data!.education as never[]     : [],
       languages:  Array.isArray(body.data?.languages)     ? body.data!.languages as never[]     : [],
       certifications: Array.isArray(body.data?.certifications) ? body.data!.certifications as string[] : [],

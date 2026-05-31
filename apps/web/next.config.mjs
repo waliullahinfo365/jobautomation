@@ -9,7 +9,7 @@ const nextConfig = {
     // Only enable in production builds — avoids dev instability (chunk 404s) after
     // config reloads; `instrumentation.ts` still runs on `next build` / `next start`.
     ...(isProd ? { instrumentationHook: true } : {}),
-    serverComponentsExternalPackages: ["mongoose"],
+    serverComponentsExternalPackages: ["mongoose", "@react-pdf/renderer", "@react-pdf/font", "canvas"],
     externalDir: true
   },
   images: {

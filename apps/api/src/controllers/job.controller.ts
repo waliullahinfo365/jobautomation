@@ -370,13 +370,20 @@ Description: ${jobDesc}
 CV:
 ${cvText.slice(0, 4000) || "No CV provided — create generic tailored content."}
 
-Output exactly:
+Output exactly this JSON (no extra text, no markdown):
 {
   "headline": "<ATS-optimised headline for this role, max 12 words>",
   "summary": "<3-4 sentence professional summary tailored to this role>",
   "keywords": ["<keyword>", ...],
-  "missingKeywords": ["<missing skill from JD>", ...],
-  "bullets": ["<achievement bullet with metrics>", ...],
+  "missingKeywords": ["<missing skill from JD not in CV>", ...],
+  "experience": [
+    {
+      "role": "<job title from CV>",
+      "company": "<company name from CV>",
+      "period": "<date range e.g. Jan 2022 – Mar 2024>",
+      "bullets": ["<rewritten achievement bullet with metrics>", "<another bullet>"]
+    }
+  ],
   "atsScoreBefore": <integer 0-100>,
   "atsScoreAfter": <integer 0-100>
 }`;
@@ -418,7 +425,7 @@ Output ONLY valid JSON:
     tailoredCvSummary: String(cvParsed.summary ?? ""),
     tailoredCvKeywords: Array.isArray(cvParsed.keywords) ? cvParsed.keywords : [],
     tailoredCvMissingKeywords: Array.isArray(cvParsed.missingKeywords) ? cvParsed.missingKeywords : [],
-    tailoredCvBullets: Array.isArray(cvParsed.bullets) ? cvParsed.bullets : [],
+    tailoredCvBullets: Array.isArray(cvParsed.experience) ? cvParsed.experience : (Array.isArray(cvParsed.bullets) ? cvParsed.bullets : []),
     tailoredCvAtsScoreBefore: Number(cvParsed.atsScoreBefore ?? 0),
     tailoredCvAtsScoreAfter: Number(cvParsed.atsScoreAfter ?? 0),
     tailoredCvGeneratedAt: new Date(),
