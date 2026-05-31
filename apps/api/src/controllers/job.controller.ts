@@ -1,5 +1,5 @@
 import { DocumentModel, JobModel } from "@jobflow/database/models";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import { callAnthropicMessages, buildAnthropicModelCandidates, resolveAnthropicApiKey } from "@jobflow/integrations/ai/anthropic-messages";
 import { asyncHandler } from "../utils/asyncHandler";
 import { paginatedResponse, successResponse } from "../utils/apiResponse";
@@ -299,6 +299,186 @@ recommendation: Concise recommended action.`;
   } catch {
     return successResponse(res, { score: null, reasons: [], redFlags: [], effort: "Medium", recommendation: "Analysis unavailable", cached: false });
   }
+});
+
+export const getTailoredCv = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const job = await findTenantScopedById(JobModel, tenantId, req.params.id);
+  if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
+  const j = job as Record<string, unknown>;
+  if (!j.tailoredCvStatus) return successResponse(res, { status: "none" });
+  return successResponse(res, {
+    status:            j.tailoredCvStatus,
+    headline:          j.tailoredCvHeadline,
+    summary:           j.tailoredCvSummary,
+    keywords:          j.tailoredCvKeywords ?? [],
+    missingKeywords:   j.tailoredCvMissingKeywords ?? [],
+    bullets:           j.tailoredCvBullets ?? [],
+    atsScoreBefore:    j.tailoredCvAtsScoreBefore,
+    atsScoreAfter:     j.tailoredCvAtsScoreAfter,
+    generatedAt:       j.tailoredCvGeneratedAt,
+    coverLetter:       j.tailoredCoverLetter,
+    coverLetterSubject: j.tailoredCoverLetterSubject,
+    error:             j.tailoredCvError,
+  });
+});
+
+export const generateTailoredCv = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const job = await findTenantScopedById(JobModel, tenantId, req.params.id);
+  if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
+  const j = job as Record<string, unknown>;
+
+  // Return cached if fresh (< 7 days)
+  if (j.tailoredCvStatus === "Completed" && j.tailoredCvGeneratedAt) {
+    const ageMs = Date.now() - new Date(j.tailoredCvGeneratedAt as string).getTime();
+    if (ageMs < 7 * 24 * 60 * 60 * 1000) {
+      return successResponse(res, {
+        status: "Completed", cached: true,
+        headline: j.tailoredCvHeadline, summary: j.tailoredCvSummary,
+        keywords: j.tailoredCvKeywords ?? [], missingKeywords: j.tailoredCvMissingKeywords ?? [],
+        bullets: j.tailoredCvBullets ?? [],
+        atsScoreBefore: j.tailoredCvAtsScoreBefore, atsScoreAfter: j.tailoredCvAtsScoreAfter,
+        coverLetter: j.tailoredCoverLetter, coverLetterSubject: j.tailoredCoverLetterSubject,
+      });
+    }
+  }
+
+  const apiKey = resolveAnthropicApiKey();
+  if (!apiKey) throw new ApiError("AI not configured", 503, "SERVICE_UNAVAILABLE");
+
+  // Find the user's CV
+  const cvDoc = await DocumentModel.findOne({
+    tenantId,
+    $or: [{ type: "CV" }, { profileDocumentType: "cv_resume" }],
+    content: { $exists: true, $ne: "" },
+  }).sort({ updatedAt: -1 }).lean() as Record<string, unknown> | null;
+
+  const cvText = cvDoc ? String(cvDoc.content ?? "") : "";
+  const jobDesc = String(j.description ?? j.aiSummary ?? "").slice(0, 3000);
+  const position = String(j.position ?? j.title ?? "");
+  const company = String(j.company ?? "");
+
+  const modelCandidates = buildAnthropicModelCandidates();
+
+  // Tailor CV
+  const cvPrompt = `You are an ATS-optimisation specialist. Given a job description and a candidate's CV, output ONLY valid JSON with no markdown fences.
+
+Job: ${position} at ${company}
+Description: ${jobDesc}
+
+CV:
+${cvText.slice(0, 4000) || "No CV provided — create generic tailored content."}
+
+Output exactly:
+{
+  "headline": "<ATS-optimised headline for this role, max 12 words>",
+  "summary": "<3-4 sentence professional summary tailored to this role>",
+  "keywords": ["<keyword>", ...],
+  "missingKeywords": ["<missing skill from JD>", ...],
+  "bullets": ["<achievement bullet with metrics>", ...],
+  "atsScoreBefore": <integer 0-100>,
+  "atsScoreAfter": <integer 0-100>
+}`;
+
+  const coverPrompt = `Write a professional cover letter for ${position} at ${company}.
+
+Job description: ${jobDesc}
+
+CV summary: ${cvText.slice(0, 2000) || "Not provided."}
+
+Output ONLY valid JSON:
+{"subject": "<email subject line>", "body": "<full cover letter, 3-4 paragraphs, professional tone>"}`;
+
+  const [cvResult, clResult] = await Promise.all([
+    callAnthropicMessages({ prompt: cvPrompt, apiKey, modelCandidates, maxTokens: 1200, temperature: 0.3 }),
+    callAnthropicMessages({ prompt: coverPrompt, apiKey, modelCandidates, maxTokens: 800, temperature: 0.4 }),
+  ]);
+
+  let cvParsed: Record<string, unknown> = {};
+  let clParsed: Record<string, unknown> = {};
+
+  try {
+    if (cvResult.ok) {
+      const m = cvResult.text.match(/\{[\s\S]*\}/);
+      if (m) cvParsed = JSON.parse(m[0]) as Record<string, unknown>;
+    }
+  } catch { /* leave empty */ }
+
+  try {
+    if (clResult.ok) {
+      const m = clResult.text.match(/\{[\s\S]*\}/);
+      if (m) clParsed = JSON.parse(m[0]) as Record<string, unknown>;
+    }
+  } catch { /* leave empty */ }
+
+  const update = {
+    tailoredCvStatus: "Completed",
+    tailoredCvHeadline: String(cvParsed.headline ?? ""),
+    tailoredCvSummary: String(cvParsed.summary ?? ""),
+    tailoredCvKeywords: Array.isArray(cvParsed.keywords) ? cvParsed.keywords : [],
+    tailoredCvMissingKeywords: Array.isArray(cvParsed.missingKeywords) ? cvParsed.missingKeywords : [],
+    tailoredCvBullets: Array.isArray(cvParsed.bullets) ? cvParsed.bullets : [],
+    tailoredCvAtsScoreBefore: Number(cvParsed.atsScoreBefore ?? 0),
+    tailoredCvAtsScoreAfter: Number(cvParsed.atsScoreAfter ?? 0),
+    tailoredCvGeneratedAt: new Date(),
+    tailoredCoverLetter: String(clParsed.body ?? ""),
+    tailoredCoverLetterSubject: String(clParsed.subject ?? `Application for ${position}`),
+    tailoredCvError: null,
+  };
+
+  await JobModel.findByIdAndUpdate(job._id, { $set: update });
+
+  return successResponse(res, { status: "Completed", cached: false, ...update });
+});
+
+export const generateCvPdf = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const job = await findTenantScopedById(JobModel, tenantId, req.params.id);
+  if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
+  const j = job as Record<string, unknown>;
+
+  const body = req.body as Record<string, unknown>;
+  const templateId = String(body.templateId ?? "modern-no-photo");
+  const personalInfo = (body.personalInfo ?? {}) as Record<string, string>;
+
+  const cvDoc = await DocumentModel.findOne({
+    tenantId,
+    $or: [{ type: "CV" }, { profileDocumentType: "cv_resume" }],
+    content: { $exists: true, $ne: "" },
+  }).sort({ updatedAt: -1 }).lean() as Record<string, unknown> | null;
+
+  // Build template data from job tailored fields + personal info
+  const templateData = {
+    name: String(personalInfo.name ?? ""),
+    headline: String(j.tailoredCvHeadline ?? personalInfo.headline ?? ""),
+    email: String(personalInfo.email ?? ""),
+    phone: String(personalInfo.phone ?? ""),
+    location: String(personalInfo.location ?? ""),
+    linkedin: String(personalInfo.linkedin ?? ""),
+    summary: String(j.tailoredCvSummary ?? ""),
+    bullets: Array.isArray(j.tailoredCvBullets) ? (j.tailoredCvBullets as string[]) : [],
+    keywords: Array.isArray(j.tailoredCvKeywords) ? (j.tailoredCvKeywords as string[]) : [],
+    cvText: cvDoc ? String(cvDoc.content ?? "") : "",
+    photoUrl: String(personalInfo.photoUrl ?? ""),
+    templateId,
+  };
+
+  // Dynamically load PDF renderer (only available in Next.js web app)
+  // In Railway API, return structured data for client-side rendering
+  return successResponse(res, { templateData, message: "Use /api/jobs/:id/cv-pdf on the web app for PDF generation" });
+});
+
+export const generateCoverLetterPdf = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const job = await findTenantScopedById(JobModel, tenantId, req.params.id);
+  if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
+  const j = job as Record<string, unknown>;
+  return successResponse(res, {
+    subject: j.tailoredCoverLetterSubject ?? "",
+    body: j.tailoredCoverLetter ?? "",
+    message: "Use /api/jobs/:id/cover-letter-pdf on the web app for PDF generation",
+  });
 });
 
 export const applyToJob = asyncHandler(async (req: Request, res) => {

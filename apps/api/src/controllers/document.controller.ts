@@ -1,5 +1,6 @@
 import { DocumentModel } from "@jobflow/database/models";
 import type { Request, Response } from "express";
+import { callAnthropicMessages, buildAnthropicModelCandidates, resolveAnthropicApiKey } from "@jobflow/integrations/ai/anthropic-messages";
 import { asyncHandler } from "../utils/asyncHandler";
 import { paginatedResponse, successResponse } from "../utils/apiResponse";
 import { ApiError } from "../utils/errors";
@@ -204,4 +205,54 @@ export const exportPdf = asyncHandler(async (req: Request, res) => {
     },
     "PDF export queued",
   );
+});
+
+export const scoreAtsDocument = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const body = req.body as Record<string, unknown>;
+
+  let cvText = String(body.contentText ?? body.content ?? "");
+  const docId = body.documentId ? String(body.documentId) : null;
+
+  if (!cvText && docId) {
+    const doc = await findTenantScopedById(DocumentModel, tenantId, docId);
+    if (doc) cvText = String((doc as Record<string, unknown>).content ?? "");
+  }
+
+  if (!cvText) throw new ApiError("No CV content provided", 422, "VALIDATION_ERROR");
+
+  const apiKey = resolveAnthropicApiKey();
+  if (!apiKey) throw new ApiError("AI not configured", 503, "SERVICE_UNAVAILABLE");
+
+  const prompt = `You are an ATS (Applicant Tracking System) expert. Score this CV and provide improvement recommendations. Output ONLY valid JSON with no markdown fences.
+
+CV Content:
+${cvText.slice(0, 5000)}
+
+Output exactly:
+{
+  "overallScore": <integer 0-100>,
+  "categories": {
+    "keywords": <integer 0-100>,
+    "formatting": <integer 0-100>,
+    "experience": <integer 0-100>,
+    "education": <integer 0-100>,
+    "skills": <integer 0-100>
+  },
+  "improvements": ["<specific improvement suggestion>", ...],
+  "improvedHeadline": "<rewritten headline for ATS>",
+  "improvedSummary": "<rewritten 3-4 sentence professional summary, ATS-optimised>"
+}`;
+
+  const modelCandidates = buildAnthropicModelCandidates();
+  const result = await callAnthropicMessages({ prompt, apiKey, modelCandidates, maxTokens: 1000, temperature: 0.2 });
+  if (!result.ok) throw new ApiError("AI scoring failed", 503, "SERVICE_UNAVAILABLE");
+
+  let parsed: Record<string, unknown> = {};
+  try {
+    const m = result.text.match(/\{[\s\S]*\}/);
+    if (m) parsed = JSON.parse(m[0]) as Record<string, unknown>;
+  } catch { throw new ApiError("Failed to parse AI response", 503, "SERVICE_UNAVAILABLE"); }
+
+  return successResponse(res, parsed);
 });

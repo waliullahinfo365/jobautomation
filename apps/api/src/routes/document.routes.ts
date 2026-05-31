@@ -8,6 +8,7 @@ import {
   listDocuments,
   routeCv,
   updateDocument,
+  scoreAtsDocument,
 } from "../controllers/document.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
@@ -40,3 +41,4 @@ documentRoutes.post(
   routeCv
 );
 documentRoutes.post("/:id/export-pdf", requirePermission("documents.update"), validateParams(documentIdParamSchema), exportPdf);
+documentRoutes.post("/ats-score", requirePermission("documents.read"), scoreAtsDocument);

@@ -18,6 +18,10 @@ import {
   undoReview,
   updateJob,
   applyToJob,
+  getTailoredCv,
+  generateTailoredCv,
+  generateCvPdf,
+  generateCoverLetterPdf,
 } from "../controllers/job.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
@@ -53,3 +57,9 @@ jobRoutes.post("/:id/review/analyze", requirePermission("jobs.read"), validatePa
 
 // Automated apply route
 jobRoutes.post("/:id/apply", requirePermission("jobs.update"), validateParams(jobIdParamSchema), applyToJob);
+
+// Tailor CV routes
+jobRoutes.get("/:id/tailor-cv", requirePermission("jobs.read"), validateParams(jobIdParamSchema), getTailoredCv);
+jobRoutes.post("/:id/tailor-cv", requirePermission("jobs.update"), validateParams(jobIdParamSchema), generateTailoredCv);
+jobRoutes.post("/:id/cv-pdf", requirePermission("jobs.read"), validateParams(jobIdParamSchema), generateCvPdf);
+jobRoutes.post("/:id/cover-letter-pdf", requirePermission("jobs.read"), validateParams(jobIdParamSchema), generateCoverLetterPdf);
