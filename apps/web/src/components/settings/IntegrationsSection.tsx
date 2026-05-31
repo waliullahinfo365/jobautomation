@@ -12,6 +12,8 @@ import { ApiError, getAuthToken } from "@/lib/api/client";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
+import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/api/client";
 import { IntegrationCard } from "./IntegrationCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
 import { LinkedInSessionCard } from "./LinkedInSessionCard";
@@ -158,6 +160,83 @@ function stubOfflineTest(item: IntegrationListItem): IntegrationTestResult {
     checkedAt,
     metadata: { stub: true },
   };
+}
+
+interface GmailScanSummary {
+  scanned: number;
+  processed: number;
+  created: number;
+  skipped: number;
+  failed: number;
+  scanErrors: string[];
+  intakeErrors: string[];
+}
+
+function GmailScanPanel() {
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState<GmailScanSummary | null>(null);
+  const [daysBack, setDaysBack] = useState(14);
+
+  const run = async () => {
+    setScanning(true);
+    setResult(null);
+    try {
+      const data = await apiFetch<GmailScanSummary>("/integrations/gmail/scan-inbox", {
+        method: "POST",
+        body: { daysBack, maxMessages: 100 },
+        timeoutMs: 120_000,
+      });
+      setResult(data);
+      showSuccess(`Scan complete — ${data.created} new job${data.created !== 1 ? "s" : ""} added.`);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Scan failed. Check Gmail is connected.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold text-[var(--text-1)]">Scan Gmail Inbox for Jobs</p>
+          <p className="text-xs text-[var(--text-2)]">
+            Reads your inbox and automatically imports any job-related emails from all portals (LinkedIn, Stepstone, Xing, Indeed, recruiters, etc.)
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <select
+            className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-2 py-1.5 text-xs text-[var(--text-1)] focus:outline-none"
+            value={daysBack}
+            onChange={(e) => setDaysBack(Number(e.target.value))}
+            disabled={scanning}
+          >
+            <option value={3}>Last 3 days</option>
+            <option value={7}>Last 7 days</option>
+            <option value={14}>Last 14 days</option>
+            <option value={30}>Last 30 days</option>
+          </select>
+          <Button size="sm" onClick={() => void run()} disabled={scanning}>
+            {scanning ? "Scanning…" : "Scan Now"}
+          </Button>
+        </div>
+      </div>
+
+      {result && (
+        <div className="rounded-lg bg-[var(--bg-1)] border border-[var(--border-default)] p-3 text-xs space-y-1">
+          <div className="flex gap-4 flex-wrap">
+            <span className="text-[var(--text-2)]">Scanned: <strong className="text-[var(--text-1)]">{result.scanned}</strong></span>
+            <span className="text-green-600">Added: <strong>{result.created}</strong></span>
+            <span className="text-[var(--text-2)]">Skipped: <strong>{result.skipped}</strong></span>
+            {result.failed > 0 && <span className="text-red-500">Errors: <strong>{result.failed}</strong></span>}
+          </div>
+          {result.intakeErrors.slice(0, 3).map((e, i) => (
+            <p key={i} className="text-red-400 truncate">{e}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function isGoogleSlug(slug: string): boolean {
@@ -534,6 +613,11 @@ export function IntegrationsSection() {
           />
         ))}
       </div>
+
+      {/* Gmail Inbox Scan — shown when Gmail is connected */}
+      {mergedItems.some((i) => i.slug === "gmail" && i.status === "Connected") && (
+        <GmailScanPanel />
+      )}
 
       <IntegrationConnectModal
         open={modalSlug !== null}

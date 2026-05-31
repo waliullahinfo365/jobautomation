@@ -11,6 +11,7 @@ import {
   getIntegrationHealth,
   gmailReplyTest,
   gmailReplyWebhook,
+  gmailScanInbox,
   getResendStatus,
   getTelegramStatus,
   listIntegrations,
@@ -66,5 +67,6 @@ integrationRoutes.post("/linkedin/session/cookies", requirePermission("integrati
 integrationRoutes.get("/linkedin/session", requirePermission("integrations.read"), getLinkedInSessionStatus);
 integrationRoutes.delete("/linkedin/session", requirePermission("integrations.disconnect"), deleteLinkedInSession);
 
+integrationRoutes.post("/gmail/scan-inbox", requirePermission("jobs.create"), gmailScanInbox);
 integrationRoutes.post("/gmail/reply-webhook", gmailReplyWebhook);
 integrationRoutes.post("/gmail/reply-test", requirePermission("integrations.connect"), validateBody(replyTestBodySchema), gmailReplyTest);
