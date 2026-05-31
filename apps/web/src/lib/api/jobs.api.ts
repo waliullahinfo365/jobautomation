@@ -165,5 +165,5 @@ export function getTailoredCv(jobId: string) {
 }
 
 export function generateTailoredCv(jobId: string, options?: { userInstructions?: string; tone?: string }) {
-  return apiFetch<TailoredCvData>(`/jobs/${jobId}/tailor-cv`, { method: "POST", body: options ?? {} });
+  return apiFetch<TailoredCvData>(`/jobs/${jobId}/tailor-cv`, { method: "POST", body: options ?? {}, timeoutMs: 90_000 });
 }

@@ -69,19 +69,9 @@ function ScoreRing({ score }: { score: number }) {
 
 // ── Full details bottom sheet ─────────────────────────────────────────────────
 
-function DetailsSheet({ job, ai, onClose }: { job: ReviewableJob; ai: JobReviewAi | null; onClose: () => void }) {
-  const [tailorOpen, setTailorOpen] = useState(false);
+function DetailsSheet({ job, ai, onClose, onTailorCv }: { job: ReviewableJob; ai: JobReviewAi | null; onClose: () => void; onTailorCv: () => void }) {
   return (
     <>
-    {tailorOpen && (
-      <TailoredCvModal
-        jobId={job.id}
-        jobTitle={job.position}
-        company={job.company}
-        isOpen={tailorOpen}
-        onClose={() => setTailorOpen(false)}
-      />
-    )}
     <AnimatePresence>
       <motion.div
         key="backdrop"
@@ -191,7 +181,7 @@ function DetailsSheet({ job, ai, onClose }: { job: ReviewableJob; ai: JobReviewA
 
           {/* Tailor CV button */}
           <button
-            onClick={() => setTailorOpen(true)}
+            onClick={onTailorCv}
             className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
           >
             ✦ Tailor CV for this job
@@ -260,6 +250,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex, prefetchedAi }: Pr
   const [ai, setAi] = useState<JobReviewAi | null>(seedAi);
   const [aiLoading, setAiLoading] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [tailorOpen, setTailorOpen] = useState(false);
   const analyzed = useRef(false);
 
   // Sync if prefetchedAi arrives after initial render
@@ -446,7 +437,22 @@ export function SwipeCard({ job, onAction, isTop, stackIndex, prefetchedAi }: Pr
       </motion.div>
 
       {showDetails && (
-        <DetailsSheet job={job} ai={ai} onClose={() => setShowDetails(false)} />
+        <DetailsSheet
+          job={job}
+          ai={ai}
+          onClose={() => setShowDetails(false)}
+          onTailorCv={() => { setShowDetails(false); setTailorOpen(true); }}
+        />
+      )}
+
+      {tailorOpen && (
+        <TailoredCvModal
+          jobId={job.id}
+          jobTitle={job.position}
+          company={job.company}
+          isOpen={tailorOpen}
+          onClose={() => setTailorOpen(false)}
+        />
       )}
     </>
   );
