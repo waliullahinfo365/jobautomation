@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { JobModel } from "@jobflow/database/models";
-import { runAiExtraction } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, isRealJobOpportunity } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import type { JobIntakeEmailPayload, JobIntakeResult } from "@jobflow/shared/types/job";
 import { createAutomationLog } from "./automation-log.service";
@@ -72,6 +72,19 @@ export async function processJobIntakeEmail(input: ProcessInput): Promise<JobInt
           duplicateScore: 1,
           reasons: ["Provider message already processed"],
         },
+        logs,
+      };
+    }
+
+    // Rule-based classifier runs first — fast, no API cost
+    const classification = isRealJobOpportunity(input.payload);
+    if (!classification.isJob) {
+      logs.push(`job-intake:rejected-by-classifier:${classification.detectedType}`);
+      return {
+        operationId,
+        tenantId,
+        status: "skipped",
+        duplicateCheck: { status: "Skipped", duplicateScore: 0, reasons: [`Not a job: ${classification.reason}`] },
         logs,
       };
     }

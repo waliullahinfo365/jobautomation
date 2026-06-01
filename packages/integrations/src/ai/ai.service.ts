@@ -709,6 +709,17 @@ export async function runAiExtraction(input: {
         if (result.ok) {
           const parsed = parseExtractionJson(result.text);
           if (parsed && parsed.is_job_opportunity !== undefined) {
+            // If Claude says it's not a job, bail out immediately
+            if (!parsed.is_job_opportunity) {
+              return {
+                provider: "Claude",
+                model: result.model,
+                usedStub: false,
+                confidence: 0,
+                data: { ...base, company: "", position: "" },
+                usage: usageFromLengths(body.length, result.text.length),
+              };
+            }
             const company = parsed.company?.trim() || base.company;
             const position = parsed.position?.trim() || base.position;
             const confidence = typeof parsed.confidence === "number" ? parsed.confidence : base.confidence;
