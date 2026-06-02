@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import type { ApiResponse } from "@/types/api";
 
+export const maxDuration = 90; // Vercel: allow up to 90s for AI CV tailoring
+
 interface RouteContext {
   params: { id: string };
 }

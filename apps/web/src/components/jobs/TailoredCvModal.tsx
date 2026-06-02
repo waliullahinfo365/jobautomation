@@ -35,14 +35,17 @@ function CoverLetterPdfDownloadButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ style, ...personalInfo }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error(await res.text().catch(() => `Server error ${res.status}`));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `cover-letter-${company.replace(/\s+/g, "-")}.pdf`;
+      a.style.display = "none";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
       showError("Cover letter PDF generation failed.");
     } finally {
@@ -133,17 +136,23 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
           },
         }),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "Unknown error");
+        throw new Error(errText || `Server error ${res.status}`);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `CV-${company.replace(/\s+/g, "-")}.pdf`;
+      a.style.display = "none";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       showSuccess("PDF downloaded!");
-    } catch {
-      showError("PDF generation failed. Please try again.");
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "PDF generation failed. Please try again.");
     } finally {
       setDownloading(false);
     }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 
+export const maxDuration = 60; // Vercel: allow up to 60s for PDF generation
+
 interface RouteContext {
   params: { id: string };
 }
