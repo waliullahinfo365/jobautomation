@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/lib/db";
 import type { CvTemplateId } from "@/lib/cv-templates";
 
-export const maxDuration = 60; // Vercel: allow up to 60s for PDF generation
+export const maxDuration = 60;
 
 interface RouteContext {
   params: { id: string };
@@ -11,53 +10,43 @@ interface RouteContext {
 /**
  * POST /api/jobs/[id]/cv-pdf
  * Body: { templateId: CvTemplateId; data: CvTemplateData }
- * Returns a PDF file stream.
+ * Returns a PDF binary. All data is taken from the request body —
+ * no DB connection required.
  */
 export async function POST(
   req: NextRequest,
-  { params }: RouteContext
+  { params: _params }: RouteContext
 ): Promise<NextResponse> {
   try {
-    await connectDB();
-    const JobModel = (await import("@/models/Job")).default;
-
-    const job = await JobModel.findById(params.id).lean();
-    if (!job) {
-      return new NextResponse("Job not found", { status: 404 });
-    }
-
     const body = await req.json() as {
       templateId?: CvTemplateId;
       data?: Record<string, unknown>;
     };
 
     const templateId: CvTemplateId = body.templateId ?? "modern-no-photo";
+    const d = body.data ?? {};
 
-    const j = job as Record<string, unknown>;
-
-    // Build template data from job's tailored CV + provided data override
     const { renderCvToPdf } = await import("@/lib/cv-templates");
     const templateData = {
-      fullName:   String(body.data?.fullName ?? ""),
-      headline:   String(body.data?.headline ?? j.tailoredCvHeadline ?? ""),
-      summary:    String(body.data?.summary  ?? j.tailoredCvSummary  ?? ""),
-      email:      String(body.data?.email    ?? ""),
-      phone:      String(body.data?.phone    ?? ""),
-      location:   String(body.data?.location ?? ""),
-      linkedIn:   String(body.data?.linkedIn ?? ""),
-      photoUrl:   body.data?.photoUrl ? String(body.data.photoUrl) : undefined,
-      skills:     Array.isArray(body.data?.skills)        ? body.data!.skills as string[]        : (j.tailoredCvKeywords as string[] | undefined) ?? [],
-      experience: Array.isArray(body.data?.experience) ? body.data!.experience as never[]
-                : Array.isArray(body.data?.bullets)    ? body.data!.bullets    as never[]
-                : (j.tailoredCvBullets as never[] | undefined) ?? [],
-      education:  Array.isArray(body.data?.education)     ? body.data!.education as never[]     : [],
-      languages:  Array.isArray(body.data?.languages)     ? body.data!.languages as never[]     : [],
-      certifications: Array.isArray(body.data?.certifications) ? body.data!.certifications as string[] : [],
+      fullName:   String(d.fullName   ?? ""),
+      headline:   String(d.headline   ?? ""),
+      summary:    String(d.summary    ?? ""),
+      email:      d.email    ? String(d.email)    : undefined,
+      phone:      d.phone    ? String(d.phone)    : undefined,
+      location:   d.location ? String(d.location) : undefined,
+      linkedIn:   d.linkedIn ? String(d.linkedIn) : undefined,
+      photoUrl:   d.photoUrl ? String(d.photoUrl) : undefined,
+      skills:     Array.isArray(d.skills)      ? (d.skills as string[])      : [],
+      experience: Array.isArray(d.experience)  ? (d.experience as never[])
+                : Array.isArray(d.bullets)     ? (d.bullets    as never[])  : [],
+      education:  Array.isArray(d.education)   ? (d.education  as never[])  : [],
+      languages:  Array.isArray(d.languages)   ? (d.languages  as never[])  : [],
+      certifications: Array.isArray(d.certifications) ? (d.certifications as string[]) : [],
     };
 
     const pdfBuffer = await renderCvToPdf(templateId, templateData);
 
-    const filename = `cv-${String(j.company ?? "").replace(/\s+/g, "-")}-${String(j.title ?? j.position ?? "").replace(/\s+/g, "-")}.pdf`;
+    const filename = `cv-tailored.pdf`;
 
     // Wrap in Blob — passing a Node.js Buffer directly as BodyInit corrupts
     // binary content in Next.js App Router (web Response under the hood).
