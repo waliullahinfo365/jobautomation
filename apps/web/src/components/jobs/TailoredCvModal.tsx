@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,12 @@ import { showError, showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { CV_TEMPLATE_OPTIONS } from "@/lib/cv-templates/types";
 import type { CvTemplateId } from "@/lib/cv-templates/types";
+
+// Client-side only — @react-pdf/renderer cannot run on the server
+const CvPdfClientDownload = dynamic(
+  () => import("./CvPdfClientDownload"),
+  { ssr: false, loading: () => <button className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white opacity-60 cursor-wait">Preparing PDF…</button> }
+);
 
 type Tab = "cv" | "cover-letter" | "ats";
 
@@ -322,13 +329,21 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                           </button>
                         ))}
                       </div>
-                      <Button
-                        onClick={() => void handleDownloadPdf()}
-                        disabled={downloading}
-                        className="w-full"
-                      >
-                        {downloading ? "Generating PDF…" : "⬇ Download PDF"}
-                      </Button>
+                      <CvPdfClientDownload
+                        templateId={selectedTemplate}
+                        filename={`CV-${company.replace(/\s+/g, "-")}.pdf`}
+                        data={{
+                          fullName: personalInfo.fullName || "Your Name",
+                          email: personalInfo.email,
+                          phone: personalInfo.phone,
+                          location: personalInfo.location,
+                          linkedIn: personalInfo.linkedIn,
+                          headline: data.headline ?? "",
+                          summary: data.summary ?? "",
+                          skills: data.keywords ?? [],
+                          experience: (data.bullets ?? []) as never[],
+                        }}
+                      />
                     </div>
 
                     {data.headline && (
