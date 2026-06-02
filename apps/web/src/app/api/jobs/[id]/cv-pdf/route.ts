@@ -59,12 +59,16 @@ export async function POST(
 
     const filename = `cv-${String(j.company ?? "").replace(/\s+/g, "-")}-${String(j.title ?? j.position ?? "").replace(/\s+/g, "-")}.pdf`;
 
-    return new NextResponse(pdfBuffer as unknown as BodyInit, {
+    // Wrap in Blob — passing a Node.js Buffer directly as BodyInit corrupts
+    // binary content in Next.js App Router (web Response under the hood).
+    const blob = new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" });
+
+    return new NextResponse(blob, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Length": String(pdfBuffer.length),
+        "Content-Length": String(blob.size),
       },
     });
   } catch (err) {

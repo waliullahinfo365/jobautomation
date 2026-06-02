@@ -330,6 +330,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                         ))}
                       </div>
                       <CvPdfClientDownload
+                        jobId={jobId}
                         templateId={selectedTemplate}
                         filename={`CV-${company.replace(/\s+/g, "-")}.pdf`}
                         data={{
