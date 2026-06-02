@@ -85,6 +85,54 @@ function AtsScoreBar({ label, score, color }: { label: string; score: number; co
   );
 }
 
+function TemplatePreview({ id }: { id: string }) {
+  const isModern = id.startsWith("modern");
+  const hasPhoto = id.endsWith("with-photo");
+  return (
+    <svg viewBox="0 0 120 160" className="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
+      {/* Page background */}
+      <rect width="120" height="160" rx="3" fill="#f9fafb" stroke="#e5e7eb" strokeWidth="1" />
+      {isModern ? (
+        <>
+          {/* Sidebar */}
+          <rect x="0" y="0" width="38" height="160" rx="3" fill="#1a56db" opacity="0.85" />
+          {hasPhoto && <circle cx="19" cy="22" r="11" fill="white" opacity="0.4" />}
+          <rect x="5" y={hasPhoto ? "40" : "12"} width="28" height="3" rx="1.5" fill="white" opacity="0.7" />
+          <rect x="5" y={hasPhoto ? "47" : "19"} width="20" height="2" rx="1" fill="white" opacity="0.5" />
+          <rect x="5" y={hasPhoto ? "56" : "28"} width="16" height="2" rx="1" fill="white" opacity="0.4" />
+          <rect x="5" y={hasPhoto ? "62" : "34"} width="22" height="2" rx="1" fill="white" opacity="0.4" />
+          <rect x="5" y={hasPhoto ? "68" : "40"} width="18" height="2" rx="1" fill="white" opacity="0.4" />
+          {/* Main content */}
+          <rect x="46" y="14" width="64" height="4" rx="2" fill="#1a56db" opacity="0.8" />
+          <rect x="46" y="22" width="48" height="2.5" rx="1.25" fill="#374151" opacity="0.6" />
+          <rect x="46" y="28" width="54" height="2" rx="1" fill="#6b7280" opacity="0.5" />
+          <rect x="46" y="32" width="46" height="2" rx="1" fill="#6b7280" opacity="0.5" />
+          <rect x="46" y="42" width="30" height="3" rx="1.5" fill="#1a56db" opacity="0.6" />
+          <rect x="46" y="49" width="56" height="2" rx="1" fill="#6b7280" opacity="0.4" />
+          <rect x="46" y="54" width="52" height="2" rx="1" fill="#6b7280" opacity="0.4" />
+          <rect x="46" y="59" width="48" height="2" rx="1" fill="#6b7280" opacity="0.4" />
+        </>
+      ) : (
+        <>
+          {/* Classic single-column */}
+          {hasPhoto && <rect x="88" y="10" width="24" height="28" rx="3" fill="#d1d5db" opacity="0.6" />}
+          <rect x="10" y="14" width="60" height="5" rx="2.5" fill="#111827" opacity="0.8" />
+          <rect x="10" y="23" width="44" height="2.5" rx="1.25" fill="#1a56db" opacity="0.7" />
+          <rect x="10" y="29" width="95" height="1.5" rx="0.75" fill="#d1d5db" />
+          <rect x="10" y="34" width="25" height="3" rx="1.5" fill="#111827" opacity="0.7" />
+          <rect x="10" y="41" width="100" height="2" rx="1" fill="#6b7280" opacity="0.5" />
+          <rect x="10" y="46" width="90" height="2" rx="1" fill="#6b7280" opacity="0.5" />
+          <rect x="10" y="51" width="80" height="2" rx="1" fill="#6b7280" opacity="0.5" />
+          <rect x="10" y="59" width="100" height="1.5" rx="0.75" fill="#d1d5db" />
+          <rect x="10" y="64" width="25" height="3" rx="1.5" fill="#111827" opacity="0.7" />
+          <rect x="10" y="71" width="70" height="2" rx="1" fill="#6b7280" opacity="0.4" />
+          <rect x="10" y="76" width="65" height="2" rx="1" fill="#6b7280" opacity="0.4" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 interface Props {
   jobId: string;
   jobTitle: string;
@@ -310,14 +358,14 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
 
                     {/* Template picker + download */}
                     <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-2">
-                      <p className="text-xs font-semibold text-[var(--text-2)]">Download as PDF</p>
+                      <p className="text-xs font-semibold text-[var(--text-2)]">Choose template &amp; download</p>
                       <div className="grid grid-cols-2 gap-1.5">
                         {CV_TEMPLATE_OPTIONS.map((t) => (
                           <button
                             key={t.id}
                             onClick={() => setSelectedTemplate(t.id)}
                             className={cn(
-                              "rounded-lg border px-2.5 py-2 text-left text-xs transition-all",
+                              "rounded-lg border px-2.5 py-2 text-left text-xs transition-all relative group",
                               selectedTemplate === t.id
                                 ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700"
                                 : "border-[var(--border-default)] text-[var(--text-2)] hover:border-blue-400"
@@ -326,6 +374,13 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                             <span className="font-semibold">{t.label}</span>
                             <br />
                             <span className="text-[10px] opacity-70">{t.description}</span>
+                            {/* Preview tooltip on hover/long-press */}
+                            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 hidden group-hover:flex flex-col items-center">
+                              <span className="bg-[var(--bg-1)] border border-[var(--border-default)] rounded-lg shadow-xl p-2 w-36">
+                                <TemplatePreview id={t.id} />
+                              </span>
+                              <span className="w-2 h-2 bg-[var(--bg-1)] border-r border-b border-[var(--border-default)] rotate-45 -mt-1" />
+                            </span>
                           </button>
                         ))}
                       </div>
