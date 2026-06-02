@@ -96,6 +96,16 @@ export async function processJobIntakeEmail(input: ProcessInput): Promise<JobInt
       throw new Error("Extraction missing required fields: company/position");
     }
 
+    // Reject if extracted values look like platform names or marketing copy (not real job data)
+    const FAKE_COMPANY_PATTERN = /^(job\s?agent|jobbörse|job\s?board|linkedin|stepstone|xing|indeed|glassdoor|monster|email|gmail|unknown|n\/a)$/i;
+    const FAKE_POSITION_PATTERN = /\b(new job opportunity|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you)\b/i;
+    if (FAKE_COMPANY_PATTERN.test(extraction.company.trim())) {
+      throw new Error(`Extracted company '${extraction.company}' is a platform name, not a hiring company`);
+    }
+    if (FAKE_POSITION_PATTERN.test(extraction.position)) {
+      throw new Error(`Extracted position '${extraction.position}' is marketing copy, not a job title`);
+    }
+
     const fingerprintHash = createJobFingerprint({
       tenantId,
       company: extraction.company,

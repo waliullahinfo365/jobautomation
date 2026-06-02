@@ -163,6 +163,7 @@ function stubOfflineTest(item: IntegrationListItem): IntegrationTestResult {
 }
 
 interface GmailScanSummary {
+  purged?: number;
   scanned: number;
   processed: number;
   created: number;
@@ -176,6 +177,7 @@ function GmailScanPanel() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<GmailScanSummary | null>(null);
   const [daysBack, setDaysBack] = useState(14);
+  const [purgeJunk, setPurgeJunk] = useState(true);
 
   const run = async () => {
     setScanning(true);
@@ -183,11 +185,12 @@ function GmailScanPanel() {
     try {
       const data = await apiFetch<GmailScanSummary>("/integrations/gmail/scan-inbox", {
         method: "POST",
-        body: { daysBack, maxMessages: 100 },
+        body: { daysBack, maxMessages: 100, purgeJunk },
         timeoutMs: 120_000,
       });
       setResult(data);
-      showSuccess(`Scan complete — ${data.created} new job${data.created !== 1 ? "s" : ""} added.`);
+      const purgedMsg = data.purged ? ` Removed ${data.purged} junk.` : "";
+      showSuccess(`Scan complete — ${data.created} new job${data.created !== 1 ? "s" : ""} added.${purgedMsg}`);
     } catch (err) {
       showError(err instanceof Error ? err.message : "Scan failed. Check Gmail is connected.");
     } finally {
@@ -201,10 +204,20 @@ function GmailScanPanel() {
         <div>
           <p className="text-sm font-semibold text-[var(--text-1)]">Scan Gmail Inbox for Jobs</p>
           <p className="text-xs text-[var(--text-2)]">
-            Reads your inbox and automatically imports any job-related emails from all portals (LinkedIn, Stepstone, Xing, Indeed, recruiters, etc.)
+            Reads your inbox and imports real job postings from all portals (LinkedIn, Stepstone, Xing, Indeed, recruiters…)
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <label className="flex items-center gap-1.5 text-xs text-[var(--text-2)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={purgeJunk}
+              onChange={(e) => setPurgeJunk(e.target.checked)}
+              disabled={scanning}
+              className="rounded"
+            />
+            Remove junk first
+          </label>
           <select
             className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-2 py-1.5 text-xs text-[var(--text-1)] focus:outline-none"
             value={daysBack}
@@ -225,6 +238,7 @@ function GmailScanPanel() {
       {result && (
         <div className="rounded-lg bg-[var(--bg-1)] border border-[var(--border-default)] p-3 text-xs space-y-1">
           <div className="flex gap-4 flex-wrap">
+            {(result.purged ?? 0) > 0 && <span className="text-orange-500">Removed: <strong>{result.purged}</strong></span>}
             <span className="text-[var(--text-2)]">Scanned: <strong className="text-[var(--text-1)]">{result.scanned}</strong></span>
             <span className="text-green-600">Added: <strong>{result.created}</strong></span>
             <span className="text-[var(--text-2)]">Skipped: <strong>{result.skipped}</strong></span>

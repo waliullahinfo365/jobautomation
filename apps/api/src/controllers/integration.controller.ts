@@ -4,6 +4,7 @@ import * as integrationService from "../services/integration.service";
 import { processEmailReply } from "../services/email-reply-detection.service";
 import { scanGmailInbox } from "../services/gmail-scan.service";
 import { processJobIntakeEmail } from "../services/job-intake.service";
+import { JobModel } from "@jobflow/database/models";
 import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
 import { assertTenantId } from "../services/baseTenant.service";
@@ -101,6 +102,21 @@ export const gmailScanInbox = asyncHandler(async (req: Request, res) => {
   const maxMessages = Math.min(Number(body.maxMessages ?? 100), 200);
   const daysBack = Math.min(Number(body.daysBack ?? 14), 60);
   const labelFilter = typeof body.labelFilter === "string" && body.labelFilter ? body.labelFilter : undefined;
+  const purgeJunk = body.purgeJunk === true;
+
+  // Purge known-junk jobs before scanning (platform names as company, marketing copy as position)
+  let purged = 0;
+  if (purgeJunk) {
+    const result = await JobModel.deleteMany({
+      tenantId,
+      status: { $in: ["New", "Research"] },
+      $or: [
+        { company: { $regex: /^(job\s?agent|jobbörse|job\s?board|unknown|n\/a)$/i } },
+        { position: { $regex: /\b(new job opportunity|our recommendation|popular job|jobs? for you|join over \d+|looking for candidates|companies? (are|is) looking)\b/i } },
+      ],
+    });
+    purged = result.deletedCount ?? 0;
+  }
 
   const scan = await scanGmailInbox({ tenantId, maxMessages, daysBack, labelFilter });
 
@@ -125,6 +141,7 @@ export const gmailScanInbox = asyncHandler(async (req: Request, res) => {
   }
 
   return successResponse(res, {
+    purged,
     scanned: scan.scanned,
     processed: scan.payloads.length,
     created: created.length,

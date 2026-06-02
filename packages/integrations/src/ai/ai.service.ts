@@ -62,6 +62,14 @@ const MARKETING_SENDER_PATTERNS: RegExp[] = [
   /lemlist\.com/i,
   /outreach\.io/i,
   /salesloft\.com/i,
+  // Job aggregator/digest platforms — send multi-job digests, not single postings
+  /jobagent\.(de|com|at|ch|io)/i,
+  /job-agent\.(de|com|at|ch|io)/i,
+  /jobrecommend\./i,
+  /jobnotify\./i,
+  /talentalert\./i,
+  /jobalarm\./i,
+  /meinestadt\.de/i,
 ];
 
 /** Senders that are ATS platforms — high confidence real jobs */
@@ -122,6 +130,17 @@ const HARD_REJECT_SUBJECT_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/\b(account (update|security|verify|verification|confirmed|created|deleted|suspended))\b/i, "newsletter"],
   [/\b(password (reset|changed|updated))\b/i, "newsletter"],
   [/\b(your (order|purchase|subscription|invoice|receipt))\b/i, "newsletter"],
+  // Digest / multi-job recommendation emails — not a single real job posting
+  [/\d+\s+(other\s+)?(companies|employers|firms|jobs?|positions?)\s+(are\s+)?(looking for|hiring)/i, "newsletter"],
+  [/companies (are|have been) looking for candidates like you/i, "newsletter"],
+  [/\bour recommendation\b/i, "newsletter"],
+  [/\bnew job opportunity for you\b/i, "newsletter"],
+  [/\b(we found|we have found|we('ve| have) selected)\s+\d+\s+(jobs?|positions?|matches?|results?)/i, "newsletter"],
+  [/\b(jobs? that match(es)? your (profile|search|preferences)|matching jobs? for you)\b/i, "newsletter"],
+  [/\b(top \d+ jobs?|latest \d+ jobs?|\d+ new jobs? for you)\b/i, "newsletter"],
+  [/\b(empfohlene|empfehlung|unsere empfehlung|wir empfehlen)\b/i, "newsletter"],
+  [/\b\d+\s+unternehmen (suchen|sucht)\b/i, "newsletter"],
+  [/\bpassende stellen für sie\b/i, "newsletter"],
 ];
 
 /** Body signals that indicate a non-job email */
@@ -638,9 +657,10 @@ Return ONLY valid JSON with this exact shape (no extra keys, no markdown fences)
 }
 
 Rules:
-- is_job_opportunity: true only for real job postings/alerts/recruiter outreach. False for newsletters, updates, articles.
-- company: the actual hiring company. NEVER use "linkedin" unless LinkedIn itself is hiring.
-- position: exact job title. NEVER use the email subject verbatim if it's "Your job alert for X".
+- is_job_opportunity: true ONLY for a single, specific real job posting with a clear job title and hiring company. Set false for: newsletters, digests with multiple jobs, marketing/promotional emails, recommendation digests, account notifications, GDPR/consent emails, SaaS tool emails.
+- company: the ACTUAL HIRING COMPANY name (the organisation that will employ the person). NEVER use: "linkedin", "stepstone", "xing", "indeed", "job agent", "jobbörse", "job board", the email sender name, or the name of a recruitment platform.
+- position: the EXACT JOB TITLE as stated in the posting (e.g. "Senior Software Engineer", "Marketing Manager (m/w/d)"). NEVER use: email subject lines verbatim, generic phrases like "New job opportunity for you", "Our recommendation", "Popular job", "Jobs matching your profile", or any marketing copy. If you cannot identify a clear job title, set is_job_opportunity to false.
+- If the email contains MULTIPLE job listings (a digest), set is_job_opportunity to false — only single-job emails qualify.
 - source_type: one of "linkedin_job_alert" | "saved_job_reminder" | "ats_job_alert" | "direct_recruiter" | "stepstone_job_alert" | "xing_job_alert" | "indeed_job_alert" | "glassdoor_job_alert" | "monster_job_alert" | "job_board_alert" | "unknown"
 - If confidence < 0.85, set is_job_opportunity to false and explain in reject_reason.
 - requirements and skills: max 8 items each, plain strings.
