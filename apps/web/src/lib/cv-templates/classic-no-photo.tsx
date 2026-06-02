@@ -108,7 +108,7 @@ export function ClassicNoPhotoCv({ data }: { data: CvTemplateData }) {
                   </View>
                   {exp.period && <Text style={styles.expPeriod}>{exp.period}</Text>}
                 </View>
-                {exp.bullets.map((b, j) => (
+                {(exp.bullets ?? []).map((b, j) => (
                   <View key={j} style={styles.bullet}>
                     <Text style={styles.bulletDot}>–</Text>
                     <Text style={styles.bulletText}>{b}</Text>
