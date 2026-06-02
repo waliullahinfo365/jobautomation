@@ -127,6 +127,14 @@ const HARD_REJECT_SUBJECT_PATTERNS: [RegExp, DetectedEmailType][] = [
   // Generic job-alert subjects (email subject used verbatim, no real title)
   [/^jobs?\s+alert$/i, "newsletter"],
   [/^job\s+alerts?$/i, "newsletter"],
+  // Privacy / legal update subjects
+  [/\b(updated?|new)\s+(privacy|terms|legal)\s+(notice|policy|update|agreement)\b/i, "newsletter"],
+  // VC / investor newsletter subjects
+  [/\b(capital|ventures?|fund|investor)\s+news\b/i, "newsletter"],
+  [/\bcontent\s+roundup\b/i, "newsletter"],
+  // SaaS trial ending
+  [/\bfree trial (of .{3,40})?ends? in \d+\s*days?\b/i, "newsletter"],
+  [/\b(your|benjaminkueper'?s?) (free trial|trial) (of .{3,30})?ends?\b/i, "newsletter"],
   // SaaS tool marketing emails (credits, billing, trial, subscription)
   [/\b(credit|credits|trial|subscription|upgrade|plan|billing|invoice|receipt|payment)\b/i, "newsletter"],
   [/\b(ends (today|soon|may|june|july|this week)|expires|expiring|last chance|limited time)\b/i, "newsletter"],

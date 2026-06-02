@@ -107,16 +107,22 @@ export const gmailScanInbox = asyncHandler(async (req: Request, res) => {
   // Purge known-junk jobs before scanning (platform names as company, marketing copy as position)
   let purged = 0;
   if (purgeJunk) {
+    // Delete all gmail-sourced New/Research jobs created before today — these predate classifier fixes
+    // and are overwhelmingly junk. LinkedIn/ATS jobs (real ones) have source != "gmail".
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
     const result = await JobModel.deleteMany({
       tenantId,
       status: { $in: ["New", "Research"] },
       $or: [
-        // Platform/generic company names
-        { company: { $regex: "^(job agent|job-agent|jobbörse|job board|jobmail|unknown|n/a|by confidential|confidential careers|this group|anonymous)$", $options: "i" } },
-        // Marketing copy or generic subjects used as position
-        { position: { $regex: "(jobs? alert|new job opportunity|our recommendation|popular job|jobs? for you|join over [0-9]+|looking for candidates|companies? (are|is) looking|free ebook|payment fail|sign up for|please read the rules|for more regular updates)", $options: "i" } },
-        // Google billing emails
-        { position: { $regex: "payment failure|payment failed|google workspace.*billing|invoice.*google", $options: "i" } },
+        // All pre-fix gmail jobs (created before today)
+        { source: "gmail", createdAt: { $lt: todayStart } },
+        // Platform/generic company names regardless of source
+        { company: { $regex: "^(job agent|job-agent|jobbörse|job board|jobmail|unknown company|unknown|n/a|by confidential|confidential careers|this group|anonymous|slack|priori|beautymat)$", $options: "i" } },
+        { company: { $regex: "^by ", $options: "i" } },
+        // Marketing copy as position
+        { position: { $regex: "(jobs? alert|new job opportunity|our recommendation|popular job|jobs? for you|join over [0-9]+|looking for candidates|free ebook|payment fail|privacy notice|privacy policy|content roundup|capital news|ends in [0-9]+ days|free trial.*ends)", $options: "i" } },
+        { position: { $regex: "^#", $options: "i" } },
       ],
     });
     purged = result.deletedCount ?? 0;

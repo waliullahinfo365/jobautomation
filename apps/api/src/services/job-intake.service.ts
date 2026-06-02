@@ -97,13 +97,16 @@ export async function processJobIntakeEmail(input: ProcessInput): Promise<JobInt
     }
 
     // Reject if extracted values look like platform names or marketing copy (not real job data)
-    const FAKE_COMPANY_PATTERN = /^(job\s?agent|jobbörse|job\s?board|jobmail|linkedin|stepstone|xing|indeed|glassdoor|monster|email|gmail|google|unknown|n\/a|by confidential|confidential careers?|recruiter|anonymous|this group)$/i;
-    const FAKE_POSITION_PATTERN = /^(jobs?\s+alerts?|job\s+alert|new job opportunit(y|ies)( for you)?|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you|free ebook.*|payment (failure|failed).*)$/i;
-    if (FAKE_COMPANY_PATTERN.test(extraction.company.trim())) {
-      throw new Error(`Extracted company '${extraction.company}' is a platform/generic name, not a hiring company`);
+    const company = extraction.company.trim();
+    const position = extraction.position.trim();
+    const FAKE_COMPANY_PATTERN = /^(job\s?agent|jobbörse|job\s?board|jobmail|linkedin|stepstone|xing|indeed|glassdoor|monster|email|gmail|google|slack|unknown\s*(company)?|n\/a|by confidential|confidential careers?|recruiter|anonymous|this group)$/i;
+    const FAKE_COMPANY_BY_PREFIX = /^by\s+\w/i; // "By Eze Vidra", "By 3one4 Capital", "By BeautyMatter"
+    const FAKE_POSITION_PATTERN = /^(jobs?\s+alerts?|job\s+alert|new job opportunit(y|ies)( for you)?|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you|free ebook.*|payment (failure|failed).*|updated?\s+.{0,20}privacy (notice|policy)|.*capital news|content roundup.*|.*ends? in \d+ days.*|#\w.*)$/i;
+    if (FAKE_COMPANY_PATTERN.test(company) || FAKE_COMPANY_BY_PREFIX.test(company)) {
+      throw new Error(`Extracted company '${company}' is a platform/newsletter sender, not a hiring company`);
     }
-    if (FAKE_POSITION_PATTERN.test(extraction.position.trim())) {
-      throw new Error(`Extracted position '${extraction.position}' is not a real job title`);
+    if (FAKE_POSITION_PATTERN.test(position)) {
+      throw new Error(`Extracted position '${position}' is not a real job title`);
     }
 
     const fingerprintHash = createJobFingerprint({
