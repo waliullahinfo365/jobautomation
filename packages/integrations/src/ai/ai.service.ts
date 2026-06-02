@@ -114,6 +114,19 @@ const HARD_REJECT_SUBJECT_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/\b(webinar|conference|summit|workshop|event|meetup)\b/i, "newsletter"],
   [/\b(discount|promo|coupon|sale|offer ends|% off)\b/i, "newsletter"],
   [/\b(product update|release notes|changelog|new feature)\b/i, "newsletter"],
+  // Ebook / content marketing
+  [/\bfree ebook\b/i, "newsletter"],
+  [/\b(download|get) (your )?(free |our )?(ebook|guide|whitepaper|report|checklist|template)\b/i, "newsletter"],
+  // Payment / billing / financial emails
+  [/\bpayment (failure|failed|declined|unsuccessful|overdue|past due)\b/i, "newsletter"],
+  [/\b(your (payment|invoice|bill|charge|subscription) (failed|is due|has been|was (charged|processed|declined)))\b/i, "newsletter"],
+  [/\b(google workspace|microsoft 365|office 365) (billing|subscription|payment|invoice)\b/i, "newsletter"],
+  // Community / forum / group moderation
+  [/\bplease read the rules before posting\b/i, "newsletter"],
+  [/\b(this group is|this community is) (actively )?(managed|moderated)\b/i, "newsletter"],
+  // Generic job-alert subjects (email subject used verbatim, no real title)
+  [/^jobs?\s+alert$/i, "newsletter"],
+  [/^job\s+alerts?$/i, "newsletter"],
   // SaaS tool marketing emails (credits, billing, trial, subscription)
   [/\b(credit|credits|trial|subscription|upgrade|plan|billing|invoice|receipt|payment)\b/i, "newsletter"],
   [/\b(ends (today|soon|may|june|july|this week)|expires|expiring|last chance|limited time)\b/i, "newsletter"],
@@ -166,6 +179,16 @@ const HARD_REJECT_BODY_PATTERNS: [RegExp, DetectedEmailType][] = [
   // Cold email / outreach tool marketing
   [/\b(open rate|click rate|deliverability|email sequence|warm-up|inbox placement)\b/i, "newsletter"],
   [/\b(cold email|outreach tool|sales outreach|lead generation|prospect)\b/i, "newsletter"],
+  // Community / forum / group emails
+  [/\bplease read the rules before posting\b/i, "newsletter"],
+  [/\b(this group is|this community is) (actively )?(managed|moderated)\b/i, "newsletter"],
+  [/\bsign up for (our|this) (email )?newsletter\b/i, "newsletter"],
+  [/\bfor more (regular )?updates.{0,40}sign up\b/i, "newsletter"],
+  // Billing / payment body signals
+  [/\bpayment (method|failed|failure|declined|past due)\b/i, "newsletter"],
+  [/\byour (google workspace|microsoft 365|office 365|dropbox|slack|zoom) (account|subscription|billing)\b/i, "newsletter"],
+  // Ebook / content download body
+  [/\b(download|access|get) (your )?(free )?(ebook|guide|whitepaper|report|checklist)\b/i, "newsletter"],
 ];
 
 /** Strong positive signals in body */

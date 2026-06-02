@@ -111,8 +111,12 @@ export const gmailScanInbox = asyncHandler(async (req: Request, res) => {
       tenantId,
       status: { $in: ["New", "Research"] },
       $or: [
-        { company: { $regex: /^(job\s?agent|jobbörse|job\s?board|unknown|n\/a)$/i } },
-        { position: { $regex: /\b(new job opportunity|our recommendation|popular job|jobs? for you|join over \d+|looking for candidates|companies? (are|is) looking)\b/i } },
+        // Platform/generic company names
+        { company: { $regex: "^(job agent|job-agent|jobbörse|job board|jobmail|unknown|n/a|by confidential|confidential careers|this group|anonymous)$", $options: "i" } },
+        // Marketing copy or generic subjects used as position
+        { position: { $regex: "(jobs? alert|new job opportunity|our recommendation|popular job|jobs? for you|join over [0-9]+|looking for candidates|companies? (are|is) looking|free ebook|payment fail|sign up for|please read the rules|for more regular updates)", $options: "i" } },
+        // Google billing emails
+        { position: { $regex: "payment failure|payment failed|google workspace.*billing|invoice.*google", $options: "i" } },
       ],
     });
     purged = result.deletedCount ?? 0;

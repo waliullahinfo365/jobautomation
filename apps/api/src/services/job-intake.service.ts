@@ -97,13 +97,13 @@ export async function processJobIntakeEmail(input: ProcessInput): Promise<JobInt
     }
 
     // Reject if extracted values look like platform names or marketing copy (not real job data)
-    const FAKE_COMPANY_PATTERN = /^(job\s?agent|jobbörse|job\s?board|linkedin|stepstone|xing|indeed|glassdoor|monster|email|gmail|unknown|n\/a)$/i;
-    const FAKE_POSITION_PATTERN = /\b(new job opportunity|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you)\b/i;
+    const FAKE_COMPANY_PATTERN = /^(job\s?agent|jobbörse|job\s?board|jobmail|linkedin|stepstone|xing|indeed|glassdoor|monster|email|gmail|google|unknown|n\/a|by confidential|confidential careers?|recruiter|anonymous|this group)$/i;
+    const FAKE_POSITION_PATTERN = /^(jobs?\s+alerts?|job\s+alert|new job opportunit(y|ies)( for you)?|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you|free ebook.*|payment (failure|failed).*)$/i;
     if (FAKE_COMPANY_PATTERN.test(extraction.company.trim())) {
-      throw new Error(`Extracted company '${extraction.company}' is a platform name, not a hiring company`);
+      throw new Error(`Extracted company '${extraction.company}' is a platform/generic name, not a hiring company`);
     }
-    if (FAKE_POSITION_PATTERN.test(extraction.position)) {
-      throw new Error(`Extracted position '${extraction.position}' is marketing copy, not a job title`);
+    if (FAKE_POSITION_PATTERN.test(extraction.position.trim())) {
+      throw new Error(`Extracted position '${extraction.position}' is not a real job title`);
     }
 
     const fingerprintHash = createJobFingerprint({
