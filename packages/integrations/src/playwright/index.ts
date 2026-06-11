@@ -169,8 +169,11 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
       result = { ...r, sessionExpired: false };
     }
 
-    // Refresh session cookies (keeps it alive longer)
-    await captureAndSaveSession({ tenantId: input.tenantId, platform, context: session.context });
+    // Refresh session cookies when the session still looks valid — avoids overwriting a good
+    // imported session with storage from the login/checkpoint page after IP or auth failure.
+    if (!result.sessionExpired) {
+      await captureAndSaveSession({ tenantId: input.tenantId, platform, context: session.context });
+    }
 
     return result;
   } finally {

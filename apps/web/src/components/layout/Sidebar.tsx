@@ -9,6 +9,7 @@ import { useInterviewsApi } from "@/hooks/api/useInterviewsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { useTranslation } from "@/i18n/useTranslation";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
+import { useJobPipelineSummary } from "@/context/JobPipelineSummaryContext";
 import { cn } from "@/lib/utils";
 import type { Interview } from "@/types/interview";
 import type { Job } from "@/types/job";
@@ -18,7 +19,8 @@ export function Sidebar() {
   const { t } = useTranslation();
   const jobsQ = useJobsApi({ fallbackToMock: false });
   const intQ = useInterviewsApi({ fallbackToMock: false });
-  const jobsCount = normalizeListResponse<Job>(jobsQ.list).length;
+  const pipeline = useJobPipelineSummary();
+  const jobsBadgeCount = pipeline.summary ? pipeline.totalActive : normalizeListResponse<Job>(jobsQ.list).length;
   const interviewsCount = normalizeListResponse<Interview>(intQ.list).length;
 
   return (
@@ -50,7 +52,7 @@ export function Sidebar() {
               {section.items.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const Icon = item.icon;
-                const badge = item.href === "/jobs" ? jobsCount : undefined;
+                const badge = item.href === "/jobs" ? jobsBadgeCount : undefined;
                 return (
                   <Link key={item.href} href={item.href} className={cn("jf-nav-item", isActive && "is-active")}>
                     <Icon size={16} />

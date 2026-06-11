@@ -13,6 +13,7 @@ import { LoadingState } from "@/components/shared/LoadingState";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { Button } from "@/components/ui/button";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
+import { useJobPipelineSummary } from "@/context/JobPipelineSummaryContext";
 import { ApiError } from "@/lib/api/client";
 import { buildCreateJobPayload, type CreateJobFormPayload } from "@/lib/api/jobs.api";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
@@ -73,6 +74,7 @@ const TAB_STATUSES: Record<JobTab, string[] | null> = {
 
 export default function JobsPage() {
   const { t } = useTranslation();
+  const pipeline = useJobPipelineSummary();
   const [filters, setFilters] = useState<JobFiltersType>(initialFilters);
   const [view, setView] = useState<ViewMode>("table");
   const [activeTab, setActiveTab] = useState<JobTab>("new");
@@ -95,6 +97,15 @@ export default function JobsPage() {
     const extra = localJobsOverlay.filter((j) => !seen.has(j.id));
     return [...extra, ...base];
   }, [jobsApi.data, localJobsOverlay]);
+
+  /** KPI + tab badges use server aggregates so they are not capped by the jobs list page size (default 20). */
+  const useServerPipelineCounts = Boolean(pipeline.summary);
+  const countStatus = (status: string) =>
+    useServerPipelineCounts ? pipeline.count(status) : jobs.filter((j) => j.status === status).length;
+  const savedTabCount = useServerPipelineCounts
+    ? pipeline.count("Research") + pipeline.count("Drafting") + pipeline.count("Ready to Apply")
+    : jobs.filter((j) => TAB_STATUSES.saved!.includes(j.status)).length;
+  const allTabCount = useServerPipelineCounts ? pipeline.totalActive : jobs.length;
 
   const tabFilteredJobs = useMemo(() => {
     const allowed = TAB_STATUSES[activeTab];
@@ -119,12 +130,13 @@ export default function JobsPage() {
       try {
         await jobsApi.archive(id);
         showSuccess(t("jobs.toastArchived"));
-        void jobsApi.refetch();
+        await jobsApi.refetch();
+        await pipeline.refetch();
       } catch {
         showError(t("jobs.toastArchiveFailed"));
       }
     },
-    [jobsApi, t]
+    [jobsApi, t, pipeline]
   );
 
   const handleGenerateResearch = useCallback(
@@ -159,6 +171,7 @@ export default function JobsPage() {
         showSuccess(t("jobs.toastCreated"));
         setIsAddJobOpen(false);
         await jobsApi.refetch();
+        await pipeline.refetch();
       } catch (e) {
         if (shouldUseMockFallback(e)) {
           setLocalJobsOverlay((prev) => [buildLocalDemoJob(form), ...prev]);
@@ -170,7 +183,7 @@ export default function JobsPage() {
         showError(msg);
       }
     },
-    [jobsApi, t]
+    [jobsApi, t, pipeline]
   );
 
   if (jobsApi.loading && !jobsApi.data) {
@@ -217,12 +230,12 @@ export default function JobsPage() {
       />
 
       <div className="jf-kpi-grid">
-        <KpiCard label={t("jobs.kpiNew")} value={jobs.filter((j) => j.status === "New").length} />
-        <KpiCard label={t("jobs.kpiReady")} value={jobs.filter((j) => j.status === "Ready to Apply").length} />
-        <KpiCard label={t("jobs.kpiApplied")} value={jobs.filter((j) => j.status === "Applied").length} />
-        <KpiCard label={t("jobs.kpiInterviews")} value={jobs.filter((j) => j.status === "Interview").length} />
-        <KpiCard label={t("jobs.kpiOffers")} value={jobs.filter((j) => j.status === "Offer").length} />
-        <KpiCard label={t("jobs.kpiRejected")} value={jobs.filter((j) => j.status === "Rejected").length} />
+        <KpiCard label={t("jobs.kpiNew")} value={countStatus("New")} />
+        <KpiCard label={t("jobs.kpiReady")} value={countStatus("Ready to Apply")} />
+        <KpiCard label={t("jobs.kpiApplied")} value={countStatus("Applied")} />
+        <KpiCard label={t("jobs.kpiInterviews")} value={countStatus("Interview")} />
+        <KpiCard label={t("jobs.kpiOffers")} value={countStatus("Offer")} />
+        <KpiCard label={t("jobs.kpiRejected")} value={countStatus("Rejected")} />
       </div>
 
       {/* Status tabs */}
@@ -230,9 +243,9 @@ export default function JobsPage() {
         {(["new", "saved", "all"] as JobTab[]).map((tab) => {
           const labels: Record<JobTab, string> = { new: "New", saved: "Saved", all: "All Jobs" };
           const counts: Record<JobTab, number> = {
-            new: jobs.filter((j) => TAB_STATUSES.new!.includes(j.status)).length,
-            saved: jobs.filter((j) => TAB_STATUSES.saved!.includes(j.status)).length,
-            all: jobs.length,
+            new: useServerPipelineCounts ? pipeline.count("New") : jobs.filter((j) => TAB_STATUSES.new!.includes(j.status)).length,
+            saved: savedTabCount,
+            all: allTabCount,
           };
           return (
             <button
