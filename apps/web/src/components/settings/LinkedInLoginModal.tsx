@@ -11,7 +11,7 @@ type Props = {
   loading: boolean;
   onClose: () => void;
   onSubmitCredentials: (email: string, password: string) => Promise<void>;
-  onSubmitCookies: (cookieJson: string) => Promise<void>;
+  onSubmitCookies: (cookieJson: string, workerProxyUrl?: string) => Promise<void>;
 };
 
 export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials, onSubmitCookies }: Props) {
@@ -19,6 +19,7 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cookieJson, setCookieJson] = useState("");
+  const [workerProxyUrl, setWorkerProxyUrl] = useState("");
 
   if (!open) return null;
 
@@ -31,7 +32,7 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
   async function handleCookies(e: React.FormEvent) {
     e.preventDefault();
     if (!cookieJson.trim()) return;
-    await onSubmitCookies(cookieJson.trim());
+    await onSubmitCookies(cookieJson.trim(), workerProxyUrl.trim() || undefined);
   }
 
   return (
@@ -123,6 +124,27 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
             </div>
 
             <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="worker-proxy">
+                Worker HTTP(S) proxy (recommended)
+              </label>
+              <Input
+                id="worker-proxy"
+                type="password"
+                autoComplete="off"
+                placeholder="http://user:pass@host:port — same egress as cookie export"
+                value={workerProxyUrl}
+                onChange={(e) => setWorkerProxyUrl(e.target.value)}
+                disabled={loading}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Stored encrypted with your session. Every apply and keep-alive uses this IP so LinkedIn does not
+                invalidate the session when server env vars change. Leave empty only if the worker has no proxy (local
+                dev).
+              </p>
+            </div>
+
+            <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="cookie-json">
                 Paste cookie JSON here
               </label>
@@ -140,8 +162,8 @@ export function LinkedInLoginModal({ open, loading, onClose, onSubmitCredentials
 
             <p className="text-xs text-muted-foreground">
               Your cookies are encrypted (AES-256) and stored only in your workspace database.
-              They are never sent to any third party. For Railway workers, set PROXY_URL to the
-              same stable residential IP used to create these cookies.
+              If the server also sets <code className="rounded bg-muted px-1 py-0.5">PROXY_URL</code>, that value is
+              pinned automatically when you leave the proxy field empty.
             </p>
 
             <div className="flex justify-end gap-3">

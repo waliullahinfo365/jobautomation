@@ -1,5 +1,5 @@
 import { IntegrationConnectionModel } from "@jobflow/database/models";
-import { saveSession } from "@jobflow/integrations/playwright/session-store";
+import { saveSession, loadPlaywrightProxyUrl } from "@jobflow/integrations/playwright/session-store";
 import { launchBrowser, humanDelay } from "@jobflow/integrations/playwright/browser";
 import type { LinkedInLoginPayload } from "@jobflow/shared/types/queue";
 import { encryptSecretForWorker, decryptSecretForWorker } from "../lib/google-auth";
@@ -51,7 +51,8 @@ export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promi
 
   await writeLoginResult(payload.tenantId, "pending", "Login in progress…");
 
-  const proxyUrl = process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+  const pinnedProxy = await loadPlaywrightProxyUrl({ tenantId: payload.tenantId, platform: "linkedin" });
+  const proxyUrl = pinnedProxy ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
   const session = await launchBrowser({ headless: true, ...(proxyUrl ? { proxyUrl } : {}) });
   const { page, context } = session;
 
@@ -170,7 +171,14 @@ export async function processLinkedInLogin(payload: LinkedInLoginPayload): Promi
 
     // Save session cookies + localStorage to MongoDB
     const storageState = await context.storageState();
-    await saveSession({ tenantId: payload.tenantId, platform: "linkedin", storageState });
+    const effectiveProxy = proxyUrl;
+    await saveSession({
+      tenantId: payload.tenantId,
+      platform: "linkedin",
+      storageState,
+      proxyPin: effectiveProxy ? { mode: "set", url: effectiveProxy } : { mode: "keep" },
+      clearSessionExpiredFlags: true,
+    });
 
     // Persist encrypted credentials so the worker can auto-re-login when the session expires
     try {

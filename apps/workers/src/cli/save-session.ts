@@ -73,7 +73,7 @@ async function main() {
   // This is critical: LinkedIn binds session cookies to the IP that logged in.
   // If you log in without proxy and the worker uses a proxy, the session will
   // be rejected immediately. Always use the same proxy here as in production.
-  const proxyUrl = process.env.PROXY_URL?.trim();
+  const proxyUrl = process.env.PROXY_URL?.trim() || process.env.PLAYWRIGHT_PROXY_URL?.trim();
   if (proxyUrl) {
     console.log(`\n   Proxy detected: ${proxyUrl.replace(/:\/\/[^@]+@/, "://<credentials>@")}`);
     console.log("   The browser will log in through the proxy — same IP the worker will use.");
@@ -114,10 +114,13 @@ async function main() {
     }
 
     // Save session
+    const storageState = await session.context.storageState();
     await saveSession({
       tenantId,
       platform,
-      storageState: await session.context.storageState(),
+      storageState,
+      proxyPin: proxyUrl ? { mode: "set", url: proxyUrl } : { mode: "clear" },
+      clearSessionExpiredFlags: true,
     });
 
     console.log(`\n✅ Session saved for ${platform} (tenant: ${tenantId})`);

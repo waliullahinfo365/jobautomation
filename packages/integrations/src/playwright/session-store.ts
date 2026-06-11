@@ -4,6 +4,10 @@
  *
  * Sessions are stored in IntegrationConnectionModel as provider = "playwright-session-<platform>"
  * and the session JSON is encrypted with the tenant encryption key.
+ *
+ * Optional **pinned egress proxy** (`metadata.playwrightProxyEncrypted`): LinkedIn sessions are
+ * IP-bound; we persist the HTTP(S) proxy URL used when the session was created so workers keep
+ * using the same egress even if `PROXY_URL` env changes between deploys.
  */
 
 import { IntegrationConnectionModel } from "@jobflow/database/models";
@@ -48,29 +52,84 @@ function decrypt(cipher: string): string {
   }
 }
 
+/** How to update the per-session pinned Playwright proxy URL (encrypted at rest). */
+export type SessionProxyPin =
+  | { mode: "set"; url: string }
+  | { mode: "clear" }
+  | { mode: "keep" };
+
 /** Save the browser storageState (cookies + origins) for a given tenant + platform */
 export async function saveSession(input: {
   tenantId: string;
   platform: ApplyPlatform;
   storageState: object;
+  /** Update or clear the pinned worker proxy; omit to leave existing metadata unchanged. */
+  proxyPin?: SessionProxyPin;
+  /** Strip session-expired markers (e.g. after cookie import or a successful apply capture). */
+  clearSessionExpiredFlags?: boolean;
 }): Promise<void> {
   const provider = providerKey(input.platform);
   const json = JSON.stringify(input.storageState);
   const encrypted = encrypt(json);
 
+  const existing = (await IntegrationConnectionModel.findOne({
+    tenantId: input.tenantId,
+    provider,
+  }).lean()) as Record<string, unknown> | null;
+
+  const prev = ((existing?.metadata as Record<string, unknown>) ?? {}) as Record<string, unknown>;
+  const meta: Record<string, unknown> = { ...prev, platform: input.platform, savedAt: new Date().toISOString() };
+
+  if (input.clearSessionExpiredFlags) {
+    delete meta.sessionExpired;
+    delete meta.expiredAt;
+  }
+
+  if (input.proxyPin !== undefined) {
+    if (input.proxyPin.mode === "set" && input.proxyPin.url.trim()) {
+      meta.playwrightProxyEncrypted = encrypt(input.proxyPin.url.trim());
+    } else if (input.proxyPin.mode === "clear") {
+      delete meta.playwrightProxyEncrypted;
+    }
+  }
+
   await IntegrationConnectionModel.findOneAndUpdate(
     { tenantId: input.tenantId, provider },
     {
-      tenantId: input.tenantId,
-      provider,
-      status: "Connected",
-      accessTokenEncrypted: encrypted,
-      lastSyncAt: new Date(),
-      syncStatus: "OK",
-      metadata: { platform: input.platform, savedAt: new Date().toISOString() },
+      $set: {
+        tenantId: input.tenantId,
+        provider,
+        status: "Connected",
+        accessTokenEncrypted: encrypted,
+        lastSyncAt: new Date(),
+        syncStatus: "OK",
+        metadata: meta,
+      },
     },
     { upsert: true, new: true }
   );
+}
+
+/** Decrypted HTTP(S) proxy URL pinned for this session, if any. */
+export async function loadPlaywrightProxyUrl(input: {
+  tenantId: string;
+  platform: ApplyPlatform;
+}): Promise<string | undefined> {
+  const provider = providerKey(input.platform);
+  const row = (await IntegrationConnectionModel.findOne({
+    tenantId: input.tenantId,
+    provider,
+    status: "Connected",
+  }).lean()) as Record<string, unknown> | null;
+
+  const enc = (row?.metadata as Record<string, unknown> | undefined)?.playwrightProxyEncrypted;
+  if (typeof enc !== "string" || !enc.trim()) return undefined;
+  try {
+    const url = decrypt(enc).trim();
+    return url || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Load the browser storageState for a given tenant + platform. Returns null if not found. */
@@ -119,5 +178,10 @@ export async function captureAndSaveSession(input: {
   context: BrowserContext;
 }): Promise<void> {
   const storageState = await input.context.storageState();
-  await saveSession({ tenantId: input.tenantId, platform: input.platform, storageState });
+  await saveSession({
+    tenantId: input.tenantId,
+    platform: input.platform,
+    storageState,
+    clearSessionExpiredFlags: true,
+  });
 }

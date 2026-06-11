@@ -2,8 +2,15 @@
  * Playwright job application automation — public exports.
  */
 
-export { saveSession, loadSession, hasSession, deleteSession, captureAndSaveSession } from "./session-store";
-export type { ApplyPlatform } from "./session-store";
+export {
+  saveSession,
+  loadSession,
+  hasSession,
+  deleteSession,
+  captureAndSaveSession,
+  loadPlaywrightProxyUrl,
+} from "./session-store";
+export type { ApplyPlatform, SessionProxyPin } from "./session-store";
 export { launchBrowser, detectPlatform, humanDelay, humanType } from "./browser";
 export { fillFormPage, extractFormFields, uploadFile } from "./form-filler";
 export type { UserProfile, FormField, FillInstruction, FormFillResult } from "./form-filler";
@@ -12,7 +19,7 @@ export { applyViaIndeed } from "./appliers/indeed";
 export { applyViaExternal } from "./appliers/external";
 
 import { launchBrowser, detectPlatform, humanDelay } from "./browser";
-import { loadSession, captureAndSaveSession } from "./session-store";
+import { loadSession, captureAndSaveSession, loadPlaywrightProxyUrl } from "./session-store";
 import { applyViaLinkedIn } from "./appliers/linkedin";
 import { applyViaIndeed } from "./appliers/indeed";
 import { applyViaExternal } from "./appliers/external";
@@ -101,7 +108,9 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
     description: input.additionalContext,
   };
 
-  const proxyUrl = input.proxyUrl ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+  const pinnedProxy = await loadPlaywrightProxyUrl({ tenantId: input.tenantId, platform });
+  const proxyUrl =
+    input.proxyUrl ?? pinnedProxy ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
   const session = await launchBrowser({ headless: true, storageState, proxyUrl });
 
   try {

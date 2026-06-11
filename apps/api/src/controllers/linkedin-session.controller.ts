@@ -33,7 +33,7 @@ export const startLinkedInLogin = asyncHandler(async (req: Request, res) => {
 /** POST /integrations/linkedin/session/cookies — import cookies exported from browser */
 export const importLinkedInCookies = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const { cookies } = req.body as { cookies?: unknown };
+  const { cookies, proxyUrl: bodyProxy } = req.body as { cookies?: unknown; proxyUrl?: string | null };
 
   if (!cookies) throw new ApiError("cookies field is required", 422, "VALIDATION_ERROR");
 
@@ -78,19 +78,31 @@ export const importLinkedInCookies = asyncHandler(async (req: Request, res) => {
   }));
 
   const { saveSession } = await import("@jobflow/integrations/playwright/session-store");
+  const trimmedProxy = typeof bodyProxy === "string" ? bodyProxy.trim() : "";
+  const envProxy = (process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL ?? "").trim();
+  const proxyPin = trimmedProxy
+    ? ({ mode: "set" as const, url: trimmedProxy })
+    : envProxy
+      ? ({ mode: "set" as const, url: envProxy })
+      : ({ mode: "clear" as const });
+
   await saveSession({
     tenantId,
     platform: "linkedin",
     storageState: { cookies: normalised, origins: [] },
+    proxyPin,
+    clearSessionExpiredFlags: true,
   });
 
-  // Clear any session-expired flag so the next auto-apply attempt proceeds immediately
-  await IntegrationConnectionModel.updateOne(
-    { tenantId, provider: "playwright-session-linkedin" },
-    { $unset: { "metadata.sessionExpired": "", "metadata.expiredAt": "" } }
+  return successResponse(
+    res,
+    {
+      connected: true,
+      cookieCount: normalised.length,
+      proxyPinned: trimmedProxy.length > 0 || envProxy.length > 0,
+    },
+    "LinkedIn cookies imported"
   );
-
-  return successResponse(res, { connected: true, cookieCount: normalised.length }, "LinkedIn cookies imported");
 });
 
 /** GET /integrations/linkedin/session — check session status + latest login attempt result */
@@ -120,6 +132,7 @@ export const getLinkedInSessionStatus = asyncHandler(async (req: Request, res) =
       connected: !sessionExpired,
       sessionExpired,
       savedAt: meta.savedAt ?? sessionRow.lastSyncAt ?? null,
+      proxyPinned: Boolean(meta.playwrightProxyEncrypted),
       loginError: sessionExpired ? "LinkedIn session expired. Please re-import your cookies from Settings → Integrations." : null,
     }, "LinkedIn session status");
   }
@@ -128,6 +141,7 @@ export const getLinkedInSessionStatus = asyncHandler(async (req: Request, res) =
   return successResponse(res, {
     connected: false,
     savedAt: null,
+    proxyPinned: false,
     loginAttemptStatus: attemptStatus ?? null,  // "pending" | "connected" | "failed" | null
     loginError: attemptStatus === "failed" ? (attemptMessage ?? null) : null,
   }, "LinkedIn session status");

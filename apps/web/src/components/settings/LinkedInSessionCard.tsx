@@ -18,6 +18,13 @@ import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 
 const POLL_INTERVAL_MS = 4_000;
 const POLL_MAX_ATTEMPTS = 20; // ~80 seconds total
+const STATUS_REFRESH_MS = 90_000;
+
+function syncLoginErrorFromStatus(s: LinkedInSessionStatus) {
+  if (s.connected) return null;
+  if (s.loginError) return s.loginError;
+  return null;
+}
 
 export function LinkedInSessionCard() {
   const [status, setStatus] = useState<LinkedInSessionStatus | null>(null);
@@ -31,9 +38,7 @@ export function LinkedInSessionCard() {
     try {
       const s = await getLinkedInSessionStatus();
       setStatus(s);
-      if (s.sessionExpired && s.loginError) {
-        setLoginError(s.loginError);
-      }
+      setLoginError(syncLoginErrorFromStatus(s));
     } catch {
       // ignore — API may be loading
     }
@@ -41,6 +46,15 @@ export function LinkedInSessionCard() {
 
   useEffect(() => {
     void fetchStatus();
+    const intervalId = window.setInterval(() => void fetchStatus(), STATUS_REFRESH_MS);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void fetchStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   async function pollForSession(attempts = 0): Promise<void> {
@@ -106,16 +120,17 @@ export function LinkedInSessionCard() {
     }
   }
 
-  async function handleCookieImport(cookieJson: string) {
+  async function handleCookieImport(cookieJson: string, workerProxyUrl?: string) {
     setLoginError(null);
     try {
       setConnecting(true);
-      const result = await importLinkedInCookies(cookieJson);
+      const result = await importLinkedInCookies(cookieJson, workerProxyUrl);
       setConnecting(false);
       if (result.connected) {
         await fetchStatus();
         setModalOpen(false);
-        showSuccess(`LinkedIn session imported (${result.cookieCount} cookies). Use the same IP/proxy for the worker.`);
+        const pinNote = result.proxyPinned ? " Egress proxy is saved with this session." : "";
+        showSuccess(`LinkedIn session imported (${result.cookieCount} cookies).${pinNote}`);
       }
     } catch (e) {
       setConnecting(false);
@@ -128,7 +143,8 @@ export function LinkedInSessionCard() {
   async function handleDisconnect() {
     try {
       await deleteLinkedInSession();
-      setStatus({ connected: false, savedAt: null });
+      setLoginError(null);
+      setStatus({ connected: false, savedAt: null, proxyPinned: false });
       showSuccess("LinkedIn session removed.");
     } catch (e) {
       showError(e instanceof Error ? e.message : "Failed to disconnect.");
@@ -177,11 +193,33 @@ export function LinkedInSessionCard() {
             <div>
               <p className="text-xs text-muted-foreground">Session saved</p>
               <p>{savedAt ?? "Active"}</p>
+              {status.proxyPinned ? (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Egress proxy is pinned to this session — workers use the same IP for apply and keep-alive.
+                </p>
+              ) : (
+                <p className="text-xs text-amber-700 dark:text-amber-500/90 mt-2">
+                  No worker proxy is stored with this session. Reconnect via Import Cookies and add your{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">HTTP(S) proxy</code>, or rely on server{" "}
+                  <code className="rounded bg-muted px-1 py-0.5">PROXY_URL</code> and re-import once so it is pinned.
+                </p>
+              )}
             </div>
           ) : loginError ? (
-            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-              <p className="font-semibold mb-1">Login failed</p>
-              <p className="whitespace-pre-wrap">{loginError}</p>
+            <div className="space-y-2">
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+                <p className="font-semibold mb-1">
+                  {status?.sessionExpired ? "Session refresh needed" : "Login failed"}
+                </p>
+                <p className="whitespace-pre-wrap">{loginError}</p>
+              </div>
+              {status?.sessionExpired ? (
+                <p className="text-xs text-muted-foreground">
+                  Re-import cookies from a browser session on the <strong className="text-foreground">same</strong>{" "}
+                  HTTP(S) proxy you save below (or that is already pinned). LinkedIn invalidates cookies when egress IP
+                  drifts from the login IP.
+                </p>
+              ) : null}
             </div>
           ) : (
             <p className="text-muted-foreground text-xs">

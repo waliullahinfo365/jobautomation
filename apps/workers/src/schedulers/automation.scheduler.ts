@@ -1,7 +1,7 @@
 import { TenantModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
 import type { EnqueueAutomationJobInput } from "@jobflow/shared/types/queue";
 import { enqueueManyAutomationJobs, enqueueAutomationJob } from "../queues/automation.queue";
-import { loadSession, saveSession } from "@jobflow/integrations/playwright/session-store";
+import { loadSession, saveSession, loadPlaywrightProxyUrl } from "@jobflow/integrations/playwright/session-store";
 import { launchBrowser, humanDelay } from "@jobflow/integrations/playwright/browser";
 
 function todayKey() {
@@ -268,7 +268,8 @@ export async function scheduleLinkedInSessionKeepAlive() {
       const storageState = await loadSession({ tenantId, platform: "linkedin" });
       if (!storageState) continue;
 
-      const proxyUrl = process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
+      const pinnedProxy = await loadPlaywrightProxyUrl({ tenantId, platform: "linkedin" });
+      const proxyUrl = pinnedProxy ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
       session = await launchBrowser({ headless: true, storageState, proxyUrl });
 
       // Visit feed to signal activity to LinkedIn — this resets session expiry
@@ -286,12 +287,12 @@ export async function scheduleLinkedInSessionKeepAlive() {
       if (isAlive) {
         // Save refreshed cookies back to DB
         const freshState = await session.context.storageState();
-        await saveSession({ tenantId, platform: "linkedin", storageState: freshState });
-        // Clear any expired flag
-        await IntegrationConnectionModel.updateOne(
-          { tenantId, provider: "playwright-session-linkedin" },
-          { $unset: { "metadata.sessionExpired": "", "metadata.expiredAt": "" } }
-        );
+        await saveSession({
+          tenantId,
+          platform: "linkedin",
+          storageState: freshState,
+          clearSessionExpiredFlags: true,
+        });
       }
     } catch {
       // Non-fatal — just skip this tenant

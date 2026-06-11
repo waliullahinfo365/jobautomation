@@ -4,6 +4,8 @@ export interface LinkedInSessionStatus {
   connected: boolean;
   sessionExpired?: boolean;
   savedAt: string | null;
+  /** True when an HTTP(S) proxy URL is stored with this session (same egress for every worker run). */
+  proxyPinned?: boolean;
   loginAttemptStatus?: "pending" | "connected" | "failed" | null;
   loginError?: string | null;
 }
@@ -29,9 +31,18 @@ export function deleteLinkedInSession(): Promise<{ disconnected: boolean }> {
   return apiFetch<{ disconnected: boolean }>("/integrations/linkedin/session", { method: "DELETE" });
 }
 
-export function importLinkedInCookies(cookies: string): Promise<{ connected: boolean; cookieCount: number }> {
-  return apiFetch<{ connected: boolean; cookieCount: number }>("/integrations/linkedin/session/cookies", {
-    method: "POST",
-    body: { cookies },
-  });
+export function importLinkedInCookies(
+  cookies: string,
+  proxyUrl?: string
+): Promise<{ connected: boolean; cookieCount: number; proxyPinned?: boolean }> {
+  return apiFetch<{ connected: boolean; cookieCount: number; proxyPinned?: boolean }>(
+    "/integrations/linkedin/session/cookies",
+    {
+      method: "POST",
+      body: {
+        cookies,
+        ...(proxyUrl?.trim() ? { proxyUrl: proxyUrl.trim() } : {}),
+      },
+    }
+  );
 }
