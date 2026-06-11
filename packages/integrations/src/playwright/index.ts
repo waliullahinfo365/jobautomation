@@ -87,7 +87,7 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
       message: `No saved session for ${platform}. Run the save-session CLI first: pnpm save-session ${platform}`,
       platform,
       stepsCompleted: 0,
-      sessionExpired: true,
+      sessionExpired: false,
     };
   }
 

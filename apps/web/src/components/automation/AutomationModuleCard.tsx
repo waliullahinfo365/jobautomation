@@ -208,6 +208,7 @@ function translateRequirement(value: string, t: (key: string) => string) {
   const keys: Record<string, string> = {
     Gmail: "automation.requirements.gmail",
     "Claude or OpenAI": "automation.requirements.aiProvider",
+    "Anthropic Claude": "automation.requirements.aiProvider",
     "Google Drive": "automation.requirements.googleDrive",
     "Google Drive and Google Docs scope": "automation.requirements.googleDriveDocs",
     "Google Calendar": "automation.requirements.googleCalendar",

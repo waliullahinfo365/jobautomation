@@ -79,7 +79,7 @@ function notificationReady(rows: Map<string, any>) {
 function requirementLabel(key: string) {
   const labels: Record<string, string> = {
     gmail: "Gmail",
-    ai_provider: "Claude or OpenAI",
+    ai_provider: "Anthropic Claude",
     google_drive: "Google Drive",
     google_drive_docs: "Google Drive and Google Docs scope",
     google_calendar: "Google Calendar",
@@ -98,7 +98,7 @@ function requirementSatisfied(key: string, rows: Map<string, any>, activeCvCount
         "https://www.googleapis.com/auth/gmail.modify",
       ]);
     case "ai_provider":
-      return providerConnected(rows, "Claude") || providerConnected(rows, "OpenAI");
+      return providerConnected(rows, "Claude");
     case "google_drive":
       return googleReady(rows, "Google Drive", [GOOGLE_DRIVE_FILE_SCOPE]);
     case "google_drive_docs":

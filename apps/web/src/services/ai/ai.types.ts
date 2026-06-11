@@ -1,4 +1,4 @@
-export type AIProvider = "openai" | "anthropic";
+export type AIProvider = "anthropic";
 
 export interface AICompletionOptions {
   model?:       string;

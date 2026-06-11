@@ -125,16 +125,15 @@ export const getSystemStatus = asyncHandler(async (req: Request, res) => {
   // Anthropic / Claude AI
   const anthropicKeySet = Boolean(process.env.ANTHROPIC_API_KEY?.trim() || process.env.CLAUDE_API_KEY?.trim());
   const claudeRow = byProvider.get("Claude");
-  const openaiRow = byProvider.get("OpenAI");
-  const aiConnected = claudeRow?.status === "Connected" || openaiRow?.status === "Connected";
+  const aiConnected = claudeRow?.status === "Connected";
   services.aiProvider = {
-    label: "AI provider (Anthropic / OpenAI)",
+    label: "AI provider (Anthropic Claude)",
     status: aiConnected ? "healthy" : anthropicKeySet ? "healthy" : "not_configured",
     detail: aiConnected
-      ? (claudeRow?.status === "Connected" ? "Claude connected" : "OpenAI connected")
+      ? "Claude integration connected"
       : anthropicKeySet
         ? "API key set (not yet verified)"
-        : "No AI provider configured — set ANTHROPIC_API_KEY or connect via integrations",
+        : "No AI provider configured — set ANTHROPIC_API_KEY or connect Claude under Integrations",
   };
 
   // Resend

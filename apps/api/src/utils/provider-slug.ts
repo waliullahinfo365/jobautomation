@@ -6,7 +6,7 @@ export const SLUG_TO_PROVIDER: Record<string, IntegrationProvider> = {
   "google-drive": "Google Drive",
   "google-calendar": "Google Calendar",
   telegram: "Telegram",
-  openai: "OpenAI",
+  linkedin: "LinkedIn",
   claude: "Claude",
   smtp: "SMTP",
   resend: "Resend",

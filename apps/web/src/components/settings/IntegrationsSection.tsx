@@ -422,10 +422,10 @@ export function IntegrationsSection() {
   async function runTest(slug: string) {
     const item = mergedItems.find((i) => i.slug === slug);
     if (!item) return;
-    if (slug === "openai" || slug === "claude") {
+    if (slug === "claude") {
       try {
         setPending({ slug, action: "test" });
-        const r = await aiApi.testAi({ provider: slug === "openai" ? "OpenAI" : "Claude" });
+        const r = await aiApi.testAi({ provider: "Claude" });
         showSuccess(r.summary?.slice(0, 120) ?? t("integrations.toast.aiTestOk"));
         void aiApi.refetchUsage();
         await refetch();

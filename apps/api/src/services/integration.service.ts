@@ -19,6 +19,7 @@ import { encryptSecret } from "../utils/encryption";
 import { getSmtpOutboundCredentials } from "./smtp-config.service";
 import { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 import { getGoogleScopesForProvider, missingGoogleScopes } from "@jobflow/shared/constants/googleScopes";
+import { DEFAULT_AI_MODEL } from "@jobflow/shared/constants/ai";
 
 export { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 
@@ -49,16 +50,17 @@ const CATALOG: IntegrationCatalogEntry[] = [
     requiredFor: ["notifications", "daily-digest", "weekly-report", "deadline-alert", "follow-up-reminder"],
   },
   {
-    provider: "OpenAI",
-    slug: "openai",
-    purpose: "Research, drafts, extraction, and classification.",
-    requiredFor: ["ai-processing", "research-document"],
+    provider: "LinkedIn",
+    slug: "linkedin",
+    purpose:
+      "Playwright browser session for LinkedIn Easy Apply automation. Sessions are IP-sensitive — use PROXY_URL on workers when cookies were created on a different network.",
+    requiredFor: ["job-apply"],
   },
   {
     provider: "Claude",
     slug: "claude",
-    purpose: "Alternative AI generation path.",
-    requiredFor: ["ai-processing"],
+    purpose: "Anthropic Claude for research, drafts, extraction, and classification.",
+    requiredFor: ["ai-processing", "research-document"],
   },
   {
     provider: "SMTP",
@@ -165,6 +167,8 @@ function sanitizeMetadataForResponse(meta: Record<string, unknown>): Record<stri
   delete out.accessToken;
   delete out.refreshToken;
   delete out.passPreview;
+  delete out.emailEncrypted;
+  delete out.passwordEncrypted;
   return out;
 }
 
@@ -267,6 +271,49 @@ function rowToItem(entry: IntegrationCatalogEntry, row: Record<string, unknown> 
     }
   }
 
+  if (entry.provider === "LinkedIn") {
+    const rawProv = String(row?.provider ?? "");
+    if (!row) {
+      resolvedStatus = "Not Connected";
+      resolvedSyncStatus = undefined;
+      resolvedError =
+        "Use the LinkedIn session card: import browser cookies or run credential login. Set PROXY_URL on workers when sessions are created on a different IP.";
+    } else if (rawProv === "playwright-session-linkedin") {
+      const sessionExpired = meta.sessionExpired === true;
+      const st = row.status as IntegrationStatus | undefined;
+      if (st === "Connected" && !sessionExpired) {
+        resolvedStatus = "Connected";
+        resolvedSyncStatus = "Easy Apply session ready";
+        resolvedError = undefined;
+      } else if (sessionExpired) {
+        resolvedStatus = "Needs Attention";
+        resolvedSyncStatus = "Session expired";
+        resolvedError =
+          "LinkedIn session expired or IP mismatch. Re-import cookies through the worker proxy or re-login from the same residential IP.";
+      } else {
+        resolvedStatus = st ?? "Not Connected";
+        resolvedSyncStatus = row.syncStatus as string | undefined;
+        resolvedError = row.errorMessage as string | undefined;
+      }
+    } else if (rawProv === "playwright-session-linkedin-attempt") {
+      const sync = String(row.syncStatus ?? "");
+      if (sync === "failed") {
+        resolvedStatus = "Needs Attention";
+        resolvedSyncStatus = "Login failed";
+        resolvedError =
+          (row.errorMessage as string) || (meta.message as string) || "LinkedIn login failed.";
+      } else if (sync === "pending") {
+        resolvedStatus = "Needs Attention";
+        resolvedSyncStatus = "Login in progress";
+        resolvedError = undefined;
+      } else {
+        resolvedStatus = "Connected";
+        resolvedSyncStatus = "Login completed";
+        resolvedError = undefined;
+      }
+    }
+  }
+
   const scopesList = Array.isArray(row?.scopes) ? (row.scopes as string[]) : [];
 
   if (isGoogleProvider && !isDemoGoogle && row && resolvedStatus === "Connected") {
@@ -308,7 +355,7 @@ function canonicalProviderKey(value: string): string {
   if (v === "google-drive" || v === "google drive") return "Google Drive";
   if (v === "google-calendar" || v === "google calendar") return "Google Calendar";
   if (v === "telegram") return "Telegram";
-  if (v === "openai") return "OpenAI";
+  if (v === "linkedin") return "LinkedIn";
   if (v === "claude") return "Claude";
   if (v === "smtp") return "SMTP";
   if (v === "notion-legacy" || v === "notion legacy") return "Notion Legacy";
@@ -336,16 +383,32 @@ function rankIntegrationRow(row: Record<string, unknown>): number {
 export async function listIntegrations(input: { tenantId: string }): Promise<IntegrationListItem[]> {
   const tenantId = assertTenantId(input.tenantId);
   const rows = await IntegrationConnectionModel.find({ tenantId }).lean();
+  const linkedinPreferred =
+    (rows.find((r) => String((r as Record<string, unknown>).provider) === "playwright-session-linkedin") as
+      | Record<string, unknown>
+      | undefined) ??
+    (rows.find((r) => String((r as Record<string, unknown>).provider) === "playwright-session-linkedin-attempt") as
+      | Record<string, unknown>
+      | undefined) ??
+    null;
   const byProvider = new Map<string, Record<string, unknown>>();
   for (const r of rows) {
     const row = r as Record<string, unknown>;
-    const key = canonicalProviderKey(String(row.provider ?? ""));
+    const raw = String(row.provider ?? "");
+    if (raw === "playwright-session-linkedin" || raw === "playwright-session-linkedin-attempt") {
+      continue;
+    }
+    const key = canonicalProviderKey(raw);
     const existing = byProvider.get(key);
     if (!existing || rankIntegrationRow(row) > rankIntegrationRow(existing)) {
       byProvider.set(key, row);
     }
   }
-  return CATALOG.map((entry) => rowToItem(entry, byProvider.get(entry.provider) ?? null));
+  return CATALOG.map((entry) =>
+    entry.provider === "LinkedIn"
+      ? rowToItem(entry, linkedinPreferred ?? null)
+      : rowToItem(entry, byProvider.get(entry.provider) ?? null)
+  );
 }
 
 export async function getIntegrationHealth(input: { tenantId: string }): Promise<IntegrationHealthSummary> {
@@ -395,6 +458,14 @@ export async function connectIntegration(input: {
   const tenantId = assertTenantId(input.tenantId);
   const provider = providerFromSlug(input.providerSlug);
   if (!provider) throw new ApiError("Unknown integration provider", 422, "UNKNOWN_PROVIDER");
+
+  if (provider === "LinkedIn") {
+    throw new ApiError(
+      "LinkedIn is connected via the LinkedIn session card (cookie import or queued login). On cloud workers set PROXY_URL to match the IP where the session was created.",
+      422,
+      "LINKEDIN_USE_SESSION_FLOW"
+    );
+  }
 
   if (provider === "Resend") {
     const catalog = CATALOG.find((c) => c.provider === "Resend")!;
@@ -524,12 +595,9 @@ export async function connectIntegration(input: {
   };
 
   let newAccessEncrypted: string | undefined;
-  if (provider === "OpenAI" || provider === "Claude") {
+  if (provider === "Claude") {
     mergedMeta.providerType = "ai";
-    const modelPick =
-      (input.body.config?.model as string) ||
-      (cfg.model as string) ||
-      (provider === "OpenAI" ? "gpt-4o-mini" : "claude-3-5-haiku-latest");
+    const modelPick = (input.body.config?.model as string) || (cfg.model as string) || DEFAULT_AI_MODEL;
     mergedMeta.model = modelPick;
     mergedMeta.fallbackToStub = input.body.config?.fallbackToStub !== false;
     const rawKey = typeof input.body.config?.apiKey === "string" ? input.body.config.apiKey.trim() : "";
@@ -609,6 +677,14 @@ export async function disconnectIntegration(input: {
   const provider = providerFromSlug(input.providerSlug);
   if (!provider) throw new ApiError("Unknown integration provider", 422, "UNKNOWN_PROVIDER");
 
+  if (provider === "LinkedIn") {
+    throw new ApiError(
+      "To clear a LinkedIn browser session, use the LinkedIn session card. This catalog entry is not a separate database row.",
+      422,
+      "LINKEDIN_USE_SESSION_FLOW"
+    );
+  }
+
   const catalog = CATALOG.find((c) => c.provider === provider)!;
 
   if (provider === "Resend") {
@@ -661,11 +737,80 @@ export async function testIntegration(input: {
   const provider = providerFromSlug(input.providerSlug);
   if (!provider) throw new ApiError("Unknown integration provider", 422, "UNKNOWN_PROVIDER");
 
-  const row = (await IntegrationConnectionModel.findOne({ tenantId, provider }).lean()) as Record<
+  let row = (await IntegrationConnectionModel.findOne({ tenantId, provider }).lean()) as Record<
     string,
     unknown
   > | null;
+  if (provider === "LinkedIn") {
+    row =
+      ((await IntegrationConnectionModel.findOne({ tenantId, provider: "playwright-session-linkedin" }).lean()) as Record<
+        string,
+        unknown
+      > | null) ??
+      ((await IntegrationConnectionModel.findOne({ tenantId, provider: "playwright-session-linkedin-attempt" }).lean()) as Record<
+        string,
+        unknown
+      > | null);
+  }
   const statusRow = row?.status as IntegrationStatus | undefined;
+
+  if (provider === "LinkedIn") {
+    const checkedAt = new Date().toISOString();
+    const sessionMeta = (row?.metadata as Record<string, unknown>) ?? {};
+    const sessionExpired = sessionMeta.sessionExpired === true;
+    const rawProv = String(row?.provider ?? "");
+    let liStatus: IntegrationTestStatus;
+    let liMessage: string;
+    if (!row) {
+      liStatus = "Warning";
+      liMessage =
+        "No LinkedIn Playwright session — import cookies or complete credential login from the LinkedIn session card.";
+    } else if (sessionExpired && rawProv === "playwright-session-linkedin") {
+      liStatus = "Failed";
+      liMessage =
+        "LinkedIn session is marked expired — re-import cookies or re-login using the same proxy IP as the worker.";
+    } else if (rawProv === "playwright-session-linkedin-attempt" && String(row.syncStatus) === "failed") {
+      liStatus = "Failed";
+      liMessage =
+        (row.errorMessage as string) || (sessionMeta.message as string) || "Last LinkedIn login attempt failed.";
+    } else if (rawProv === "playwright-session-linkedin" && row.status === "Connected" && !sessionExpired) {
+      liStatus = "Success";
+      liMessage = "LinkedIn session storage is present. Validate with a real Easy Apply run.";
+    } else if (rawProv === "playwright-session-linkedin-attempt" && String(row.syncStatus) === "pending") {
+      liStatus = "Warning";
+      liMessage = "LinkedIn login is still in progress — wait a few seconds and test again.";
+    } else {
+      liStatus = "Warning";
+      liMessage = "LinkedIn session state is unclear — open the LinkedIn session card.";
+    }
+    const result: IntegrationTestResult = {
+      provider,
+      status: liStatus,
+      message: liMessage,
+      checkedAt,
+      metadata: {},
+    };
+    if (row?._id) {
+      await IntegrationConnectionModel.updateOne(
+        { _id: row._id },
+        {
+          $set: {
+            "metadata.lastTest": result,
+          },
+        }
+      );
+    }
+    await createAuditLog({
+      tenantId,
+      userId: input.userId,
+      action: "integration.tested",
+      entityType: "IntegrationConnection",
+      entityId: provider,
+      message: `Integration test: ${liStatus}`,
+      metadata: { provider, slug: input.providerSlug, result: liStatus },
+    });
+    return result;
+  }
 
   if (provider === "Resend") {
     throw new ApiError(
@@ -772,7 +917,7 @@ export async function testIntegration(input: {
     if (demoGoogle) {
       testStatus = "Failed";
       message = "Google OAuth demo connection detected. Configure live Google OAuth and reconnect.";
-    } else if (provider === "OpenAI" || provider === "Claude") {
+    } else if (provider === "Claude") {
       const accessEnc = row?.accessTokenEncrypted;
       const preview = meta?.apiKeyPreview;
       if (!accessEnc && !preview) {

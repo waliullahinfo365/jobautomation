@@ -362,7 +362,7 @@ export async function seedDemoData(tenantId: string, createdBy = "system") {
 
 async function seedIntegrationConnections(tenantId: string, createdBy: string) {
   const rows: Array<{
-    provider: "Gmail" | "Google Drive" | "Google Calendar" | "OpenAI" | "SMTP" | "Slack";
+    provider: "Gmail" | "Google Drive" | "Google Calendar" | "Claude" | "SMTP" | "Slack";
     status: "Connected" | "Not Connected" | "Needs Attention" | "Expired" | "Disabled";
     connectedEmail?: string;
     accountName?: string;
@@ -386,9 +386,9 @@ async function seedIntegrationConnections(tenantId: string, createdBy: string) {
       metadata: { demoLabel: "Google Calendar Connected demo", primaryCalendarId: "primary" },
     },
     {
-      provider: "OpenAI",
+      provider: "Claude",
       status: "Connected",
-      metadata: { demoLabel: "OpenAI Connected demo", stubEnabled: true },
+      metadata: { demoLabel: "Claude Connected demo", stubEnabled: true },
     },
     {
       provider: "SMTP",

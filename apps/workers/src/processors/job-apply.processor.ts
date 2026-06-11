@@ -17,6 +17,7 @@ import type { JobApplyPayload } from "@jobflow/shared/types/queue";
 import type { UserProfile } from "@jobflow/integrations/playwright";
 import { logger } from "../utils/logger";
 import { serializeWorkerError } from "../utils/worker-error";
+import { loadLinkedInCredentials, processLinkedInLogin } from "./linkedin-login.processor";
 
 const MODULE_KEY = "job-apply";
 
@@ -132,6 +133,47 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
       additionalContext: additionalContext || undefined,
       dryRun: false,
     });
+
+    if (!result.success && result.sessionExpired && platform === "linkedin") {
+      const creds = await loadLinkedInCredentials(payload.tenantId);
+      if (creds) {
+        logger.info({ tenantId: payload.tenantId, jobId: payload.jobId }, "LinkedIn session expired — attempting automatic re-login");
+        const reloginOpId = `linkedin-relogin-${operationId}`;
+        const loginResult = await processLinkedInLogin({
+          tenantId: payload.tenantId,
+          userId: payload.userId,
+          operationId: reloginOpId,
+          requestedAt: new Date().toISOString(),
+          source: "system",
+          email: creds.email,
+          password: creds.password,
+        });
+        if (loginResult.success) {
+          await IntegrationConnectionModel.updateOne(
+            { tenantId: payload.tenantId, provider: "playwright-session-linkedin" },
+            { $unset: { "metadata.sessionExpired": "", "metadata.expiredAt": "" } }
+          ).catch(() => void 0);
+          result = await runApply({
+            tenantId: payload.tenantId,
+            jobId: payload.jobId,
+            jobUrl,
+            platform,
+            profile,
+            company: String(j.company ?? ""),
+            position: String(j.position ?? j.title ?? ""),
+            cvUrl: cvUrl || undefined,
+            coverLetterUrl: coverLetterUrl || undefined,
+            additionalContext: additionalContext || undefined,
+            dryRun: false,
+          });
+        } else {
+          logger.warn(
+            { tenantId: payload.tenantId, jobId: payload.jobId, message: loginResult.message },
+            "LinkedIn automatic re-login failed"
+          );
+        }
+      }
+    }
   } catch (err) {
     const ser = serializeWorkerError(err);
     logger.error({ jobId: payload.jobId, err: ser.message }, "job-apply failed");

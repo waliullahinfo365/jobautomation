@@ -2,30 +2,6 @@ import type { AiModelOption, AiProvider } from "../types/ai";
 
 export const AI_MODEL_OPTIONS: AiModelOption[] = [
   {
-    provider: "OpenAI",
-    model: "gpt-4o-mini",
-    displayName: "GPT-4o mini",
-    recommendedFor: ["drafts", "classification", "low-latency"],
-    supportsJson: true,
-    maxTokens: 128_000,
-  },
-  {
-    provider: "OpenAI",
-    model: "gpt-4.1-mini",
-    displayName: "GPT-4.1 mini",
-    recommendedFor: ["research", "drafts"],
-    supportsJson: true,
-    maxTokens: 128_000,
-  },
-  {
-    provider: "OpenAI",
-    model: "gpt-4.1",
-    displayName: "GPT-4.1",
-    recommendedFor: ["complex reasoning", "long context"],
-    supportsJson: true,
-    maxTokens: 128_000,
-  },
-  {
     provider: "Claude",
     model: "claude-sonnet-4-6",
     displayName: "Claude Sonnet 4.6 (Recommended)",

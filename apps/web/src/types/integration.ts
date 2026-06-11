@@ -2,7 +2,7 @@ export type IntegrationProvider =
   | "gmail"
   | "google-drive"
   | "google-calendar"
-  | "openai"
+  | "claude"
   | "anthropic"
   | "smtp";
 

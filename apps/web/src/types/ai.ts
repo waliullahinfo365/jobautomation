@@ -2,7 +2,7 @@
  * Web-side AI types aligned with API responses (no @jobflow/shared).
  */
 
-export type AiProvider = "OpenAI" | "Claude" | "Stub";
+export type AiProvider = "Claude" | "Stub";
 
 export type AiModelOption = {
   provider: AiProvider;

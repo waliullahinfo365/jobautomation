@@ -3,7 +3,7 @@ import type { ApiResponse } from "@/types/api";
 
 /**
  * POST /api/integrations/ai
- * Body: { action: "test" | "complete", provider: "openai" | "anthropic", prompt?: string }
+ * Body: { action: "test" | "complete", provider: "anthropic", prompt?: string }
  */
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>> {
   const body = await req.json();
@@ -13,5 +13,5 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 }
 
 export async function GET(): Promise<NextResponse<ApiResponse>> {
-  return NextResponse.json({ success: true, data: { openai: "disconnected", anthropic: "disconnected" } });
+  return NextResponse.json({ success: true, data: { anthropic: "disconnected" } });
 }

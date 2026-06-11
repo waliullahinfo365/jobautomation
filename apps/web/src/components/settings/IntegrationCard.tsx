@@ -9,8 +9,8 @@ import {
   MailIcon,
   MessageSquareIcon,
   SendIcon,
-  SparklesIcon,
 } from "@/components/icons";
+import { LinkedinIcon } from "@/components/icons/moreIcons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConnectionStatusBadge } from "./ConnectionStatusBadge";
@@ -23,7 +23,7 @@ const PROVIDER_DESC_KEY: Record<string, string> = {
   "google-drive": "integrations.providers.googleDrive.description",
   "google-calendar": "integrations.providers.googleCalendar.description",
   telegram: "integrations.providers.telegram.description",
-  openai: "integrations.providers.openai.description",
+  linkedin: "integrations.providers.linkedin.description",
   claude: "integrations.providers.claude.description",
   smtp: "integrations.providers.smtp.description",
   resend: "integrations.providers.resend.description",
@@ -44,8 +44,8 @@ function ProviderIcon({ slug }: { slug: string }) {
       return <HardDriveIcon size={32} className={iconClass} aria-hidden />;
     case "google-calendar":
       return <CalendarDaysIcon size={32} className={iconClass} aria-hidden />;
-    case "openai":
-      return <SparklesIcon size={32} className={iconClass} aria-hidden />;
+    case "linkedin":
+      return <LinkedinIcon size={32} className={iconClass} aria-hidden />;
     case "claude":
       return <BotIcon size={32} className={iconClass} aria-hidden />;
     case "smtp":
@@ -90,8 +90,11 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
       item.connectedEmail === "oauth-demo-user@example.com");
   const isSlack = item.slug === "slack";
   const isResend = item.slug === "resend";
+  const isLinkedin = item.slug === "linkedin";
   const connectLabel =
-    isResend
+    isLinkedin
+      ? t("integrations.actions.linkedinSetup")
+    : isResend
       ? t("integrations.actions.configureInstructions")
       : demoGoogle
         ? t("integrations.actions.configureGoogleOAuth")
@@ -209,7 +212,7 @@ export function IntegrationCard({ item, onConnect, onTest, onDisconnect, pending
           <Button variant="secondary" size="sm" onClick={onTest} disabled={isBusy(pending, item.slug, "test")}>
             {isResend ? t("integrations.actions.testResend") : isTelegram ? t("integrations.actions.testTelegram") : isSlack ? t("integrations.actions.sendTestMessage") : t("integrations.actions.test")}
           </Button>
-          {!isResend ? (
+          {!isResend && !isLinkedin ? (
             <Button variant="outline" size="sm" onClick={onDisconnect} disabled={isBusy(pending, item.slug, "disconnect")}>
               {t("integrations.actions.disconnect")}
             </Button>

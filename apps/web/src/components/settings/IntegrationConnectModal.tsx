@@ -49,7 +49,7 @@ export function IntegrationConnectModal({
 }: Props) {
   const [connectedEmail, setConnectedEmail] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [model, setModel] = useState("gpt-4o-mini");
+  const [model, setModel] = useState("claude-sonnet-4-6");
   const [apiKey, setApiKey] = useState("");
   const [host, setHost] = useState("");
   const [port, setPort] = useState("587");
@@ -65,8 +65,8 @@ export function IntegrationConnectModal({
   const [fallbackToStub] = useState(false);
 
   const aiModelChoices = useMemo(() => {
-    if (!providerSlug || (providerSlug !== "openai" && providerSlug !== "claude")) return [];
-    return AI_MODEL_OPTIONS.filter((m) => m.provider === providerSlug);
+    if (providerSlug !== "claude") return [];
+    return [...AI_MODEL_OPTIONS];
   }, [providerSlug]);
 
   useEffect(() => {
@@ -85,12 +85,7 @@ export function IntegrationConnectModal({
       return;
     }
 
-    const defaultModel =
-      providerSlug === "claude"
-        ? AI_MODEL_OPTIONS.find((m) => m.provider.toLowerCase() === "claude")?.model ?? "claude-sonnet-4-6"
-        : AI_MODEL_OPTIONS.find((m) => m.provider === "openai" && m.model === "gpt-4o-mini")?.model ??
-          AI_MODEL_OPTIONS.find((m) => m.provider === "openai")?.model ??
-          "gpt-4o-mini";
+    const defaultModel = AI_MODEL_OPTIONS.find((m) => m.model === "claude-sonnet-4-6")?.model ?? "claude-sonnet-4-6";
     setModel(defaultModel);
     setApiKey("");
     setWorkspaceName("Demo Workspace");
@@ -105,7 +100,7 @@ export function IntegrationConnectModal({
     if (!providerSlug) return t("integrations.modal.save");
     if (providerSlug === "gmail" || providerSlug === "google-drive" || providerSlug === "google-calendar")
       return googleOAuthEnabled === false ? t("integrations.actions.configureGoogleOAuth") : t("integrations.modal.connectWithGoogle");
-    if (providerSlug === "openai" || providerSlug === "claude") return t("integrations.modal.saveDemoConfig");
+    if (providerSlug === "claude") return t("integrations.modal.saveDemoConfig");
     if (providerSlug === "smtp") return t("integrations.modal.saveSmtpSettings");
     if (providerSlug === "slack") return t("integrations.actions.sendTestMessage");
     if (providerSlug === "telegram") return t("integrations.actions.configureTelegram");
@@ -115,6 +110,23 @@ export function IntegrationConnectModal({
   }, [providerSlug, googleOAuthEnabled, t]);
 
   if (!open || !providerSlug) return null;
+
+  if (providerSlug === "linkedin") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+        <div className="relative z-50 w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+          <h2 className="text-lg font-semibold">{t("integrations.modal.linkedinTitle")}</h2>
+          <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{t("integrations.modal.linkedinBody")}</p>
+          <div className="mt-6 flex justify-end">
+            <Button type="button" variant="default" onClick={onClose}>
+              {t("common.close")}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const googleBlock =
     providerSlug === "gmail" || providerSlug === "google-drive" || providerSlug === "google-calendar";
@@ -129,10 +141,10 @@ export function IntegrationConnectModal({
       });
       return;
     }
-    if (providerSlug === "openai" || providerSlug === "claude") {
+    if (providerSlug === "claude") {
       await onSubmit({
         config: {
-          provider: providerSlug === "openai" ? "OpenAI" : "Claude",
+          provider: "Claude",
           model,
           fallbackToStub,
           ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
@@ -226,7 +238,7 @@ export function IntegrationConnectModal({
             </>
           ) : null}
 
-          {(providerSlug === "openai" || providerSlug === "claude") && (
+          {providerSlug === "claude" && (
             <>
               <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 {t("integrations.modal.apiKeysMaskedWarning")}
@@ -247,7 +259,7 @@ export function IntegrationConnectModal({
               </div>
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">{t("integrations.labels.apiKey")}</p>
-                <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." type="password" autoComplete="off" />
+                <Input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-ant-..." type="password" autoComplete="off" />
               </div>
             </>
           )}

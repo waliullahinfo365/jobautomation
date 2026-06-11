@@ -1,12 +1,12 @@
-// TODO: Implement with OpenAI SDK or Anthropic SDK.
-// Supports both providers; switch via env.
+// TODO: Implement with Anthropic SDK.
+// Supports Anthropic only; switch via env.
 
 import type { AIProvider, AICompletionOptions, AICompletionResult } from "./ai.types";
 
 export class AIService {
   private provider: AIProvider;
 
-  constructor(provider: AIProvider = "openai") {
+  constructor(provider: AIProvider = "anthropic") {
     this.provider = provider;
   }
 
@@ -14,7 +14,7 @@ export class AIService {
    * TODO: Generate text completion (cover letter, research summary, email draft).
    */
   async complete(_prompt: string, _options?: AICompletionOptions): Promise<AICompletionResult> {
-    // TODO: Route to openai.chat.completions.create or anthropic.messages.create
+    // TODO: Route to anthropic.messages.create
     throw new Error(`AIService.complete not implemented for provider: ${this.provider}`);
   }
 

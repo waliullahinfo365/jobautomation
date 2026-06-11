@@ -19,8 +19,8 @@ export function estimateCost(input: {
   if (input.provider === "Stub") return 0;
   const inM = input.inputTokens / 1_000_000;
   const outM = input.outputTokens / 1_000_000;
-  const inRate = input.provider === "OpenAI" ? 0.15 : 0.25;
-  const outRate = input.provider === "OpenAI" ? 0.6 : 1.25;
+  const inRate = 0.25;
+  const outRate = 1.25;
   void input.model;
   return inM * inRate + outM * outRate;
 }

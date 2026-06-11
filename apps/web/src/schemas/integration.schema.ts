@@ -5,7 +5,7 @@ export const integrationSchema = z.object({
     "gmail",
     "google-drive",
     "google-calendar",
-    "openai",
+    "claude",
     "anthropic",
     "smtp",
   ]),

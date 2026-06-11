@@ -58,10 +58,11 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
     metadata: { botTokenConfigured: false, chatIdConfigured: false },
   },
   {
-    provider: "OpenAI",
-    slug: "openai",
-    purpose: "Research, drafts, extraction, and classification.",
-    requiredFor: ["ai-processing", "research-document"],
+    provider: "LinkedIn",
+    slug: "linkedin",
+    purpose:
+      "Playwright browser session for LinkedIn Easy Apply. Sessions are IP-sensitive — use PROXY_URL on workers when cookies were created on a different network.",
+    requiredFor: ["job-apply"],
     status: "Not Connected",
     scopes: [],
     metadata: {},
@@ -69,8 +70,8 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
   {
     provider: "Claude",
     slug: "claude",
-    purpose: "Alternative AI generation path.",
-    requiredFor: ["ai-processing"],
+    purpose: "Anthropic Claude for research, drafts, extraction, and classification.",
+    requiredFor: ["ai-processing", "research-document"],
     status: "Not Connected",
     scopes: [],
     metadata: {},

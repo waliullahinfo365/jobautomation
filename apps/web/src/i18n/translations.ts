@@ -1002,6 +1002,7 @@ export const messages: Record<
         configureInstructions: "Anleitung konfigurieren",
         testResend: "Resend testen",
         configureGoogleOAuth: "Google OAuth konfigurieren",
+        linkedinSetup: "Anleitung",
       },
       providers: {
         gmail: {
@@ -1016,11 +1017,12 @@ export const messages: Record<
         telegram: {
           description: "Telegram-Benachrichtigungen für Job-Alerts, Erinnerungen, Berichte und Automatisierungsfehler.",
         },
-        openai: {
-          description: "Recherche, Entwürfe, Extraktion und Klassifizierung.",
+        linkedin: {
+          description:
+            "Playwright-Browsersitzung für LinkedIn Easy Apply. Sitzungen sind IP-gebunden — setzen Sie PROXY_URL auf den Worker, wenn Cookies auf einem anderen Netzwerk erstellt wurden.",
         },
         claude: {
-          description: "Alternativer KI-Erstellungspfad.",
+          description: "Anthropic Claude für Recherche, Entwürfe, Extraktion und Klassifizierung.",
         },
         smtp: {
           description: "Legacy-SMTP (auf Railway oft blockiert). Für produktive E-Mails wird Resend empfohlen. Optionaler Fallback, wenn Resend nicht konfiguriert ist.",
@@ -1124,6 +1126,9 @@ export const messages: Record<
         channel: "Kanal",
         databaseName: "Datenbankname",
         workspaceName: "Arbeitsbereichsname",
+        linkedinTitle: "LinkedIn",
+        linkedinBody:
+          "LinkedIn wird über die LinkedIn-Sitzungskarte verbunden (Cookie-Import oder Anmelde-Warteschlange).\n\nWichtig: Sitzungen sind an die IP gebunden, unter der sie erstellt wurden. Auf Railway setzen Sie PROXY_URL auf denselben stabilen Residential-Proxy wie beim Erstellen der Sitzung.\n\nNutzen Sie die Karte „LinkedIn-Sitzung“ oben in den Integrationen.",
       },
     },
     status: {
@@ -2047,7 +2052,7 @@ export const messages: Record<
       },
       requirements: {
         gmail: "Gmail",
-        aiProvider: "Claude oder OpenAI",
+        aiProvider: "Anthropic Claude",
         googleDrive: "Google Drive",
         googleDriveDocs: "Google Drive und Google-Docs-Berechtigung",
         googleCalendar: "Google Calendar",
@@ -2147,7 +2152,7 @@ export const messages: Record<
       steps: {
         integrations: {
           title: "Demo-Integrationen verbinden",
-          description: "Öffnen Sie Einstellungen → Integrationen und prüfen Sie Gmail, Drive, Kalender und OpenAI (Platzhalter).",
+          description: "Öffnen Sie Einstellungen → Integrationen und prüfen Sie Gmail, Drive, Kalender und Claude.",
         },
         intake: {
           title: "Test-Job erfassen",
@@ -3630,6 +3635,7 @@ export const messages: Record<
         configureInstructions: "Configure Instructions",
         testResend: "Test Resend",
         configureGoogleOAuth: "Configure Google OAuth",
+        linkedinSetup: "How to connect",
       },
       providers: {
         gmail: {
@@ -3644,11 +3650,12 @@ export const messages: Record<
         telegram: {
           description: "Telegram notifications for job alerts, reminders, reports, and automation failures.",
         },
-        openai: {
-          description: "Research, drafts, extraction, and classification.",
+        linkedin: {
+          description:
+            "Playwright browser session for LinkedIn Easy Apply. Sessions are IP-bound — set PROXY_URL on workers when cookies were created on another network.",
         },
         claude: {
-          description: "Alternative AI generation path.",
+          description: "Anthropic Claude for research, drafts, extraction, and classification.",
         },
         smtp: {
           description: "Legacy SMTP (often blocked on Railway). Prefer Resend for production email. Optional fallback when Resend is not configured.",
@@ -3752,6 +3759,9 @@ export const messages: Record<
         channel: "Channel",
         databaseName: "Database name",
         workspaceName: "Workspace name",
+        linkedinTitle: "LinkedIn",
+        linkedinBody:
+          "Connect LinkedIn from the LinkedIn session card above (cookie import or queued credential login).\n\nSessions are tied to the IP where they were created. On Railway, set PROXY_URL to the same stable residential proxy you use when establishing the session.\n\nUse the “LinkedIn session” card at the top of Integrations for imports and login.",
       },
     },
     status: {
@@ -4671,7 +4681,7 @@ export const messages: Record<
       },
       requirements: {
         gmail: "Gmail",
-        aiProvider: "Claude or OpenAI",
+        aiProvider: "Anthropic Claude",
         googleDrive: "Google Drive",
         googleDriveDocs: "Google Drive and Google Docs scope",
         googleCalendar: "Google Calendar",
@@ -4770,7 +4780,7 @@ export const messages: Record<
       steps: {
         integrations: {
           title: "Connect demo integrations",
-          description: "Open Settings → Integrations and review Gmail, Drive, Calendar, and OpenAI (stub) status.",
+          description: "Open Settings → Integrations and review Gmail, Drive, Calendar, and Claude.",
         },
         intake: {
           title: "Intake test job",

@@ -1,5 +1,5 @@
-/** Runtime AI provider selection (includes deterministic stub). */
-export type AiProvider = "OpenAI" | "Claude" | "Stub";
+/** Runtime AI provider selection (includes deterministic stub). Production uses Anthropic (Claude) only. */
+export type AiProvider = "Claude" | "Stub";
 
 export type AiModelOption = {
   provider: AiProvider;

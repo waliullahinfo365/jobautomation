@@ -65,10 +65,6 @@ export const env = {
     driveFolderId: optionalEnv("GOOGLE_DRIVE_FOLDER_ID"),
     calendarId: optionalEnv("GOOGLE_CALENDAR_ID", "primary"),
   },
-  openai: {
-    apiKey: () => requireEnv("OPENAI_API_KEY"),
-    model: optionalEnv("OPENAI_MODEL", "gpt-4o"),
-  },
   anthropic: {
     apiKey: () => requireEnv("ANTHROPIC_API_KEY"),
     model: optionalEnv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),

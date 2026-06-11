@@ -3,7 +3,6 @@ import { apiFetch } from "./client";
 
 export type AiConfigResponse = {
   active: AiProviderConfig;
-  openai?: AiProviderConfig;
   claude?: AiProviderConfig;
   models: AiModelOption[];
 };
@@ -36,6 +35,6 @@ export function getAiUsage(query?: { start?: string; end?: string }): Promise<Ai
   return apiFetch<AiUsageSummaryResponse>(`/ai/usage${q}`);
 }
 
-export function testAi(body: { provider?: "OpenAI" | "Claude" | "Stub"; model?: string; samplePrompt?: string } = {}): Promise<AiTestResponse> {
+export function testAi(body: { provider?: "Claude" | "Stub"; model?: string; samplePrompt?: string } = {}): Promise<AiTestResponse> {
   return apiFetch<AiTestResponse>("/ai/test", { method: "POST", body });
 }

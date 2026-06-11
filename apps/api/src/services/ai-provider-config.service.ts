@@ -14,7 +14,7 @@ export function getAvailableAiModels() {
   return AI_MODEL_OPTIONS;
 }
 
-function safeAiConfigFromRow(row: Record<string, unknown> | null, provider: "OpenAI" | "Claude"): AiProviderConfig | undefined {
+function safeAiConfigFromRow(row: Record<string, unknown> | null, provider: "Claude"): AiProviderConfig | undefined {
   if (!row || row.status !== "Connected") return undefined;
   const meta = (row.metadata as Record<string, unknown>) ?? {};
   return {
@@ -28,33 +28,22 @@ function safeAiConfigFromRow(row: Record<string, unknown> | null, provider: "Ope
 
 export async function getTenantAiConfig(input: { tenantId: string }): Promise<{
   active: AiProviderConfig;
-  openai?: AiProviderConfig;
   claude?: AiProviderConfig;
   models: typeof AI_MODEL_OPTIONS;
 }> {
   const tenantId = assertTenantId(input.tenantId);
-  const [openaiRow, claudeRow] = await Promise.all([
-    IntegrationConnectionModel.findOne({ tenantId, provider: "OpenAI" }).lean(),
-    IntegrationConnectionModel.findOne({ tenantId, provider: "Claude" }).lean(),
-  ]);
-  const o = openaiRow as Record<string, unknown> | null;
+  const claudeRow = await IntegrationConnectionModel.findOne({ tenantId, provider: "Claude" }).lean();
   const c = claudeRow as Record<string, unknown> | null;
-  const openai = safeAiConfigFromRow(o, "OpenAI");
   const claude = safeAiConfigFromRow(c, "Claude");
   const resolved = await resolveAiProviderForTenant({ tenantId });
   const active: AiProviderConfig = {
     provider: resolved.provider,
     model: resolved.model,
-    apiKeyPreview:
-      resolved.provider === "OpenAI"
-        ? openai?.apiKeyPreview
-        : resolved.provider === "Claude"
-          ? claude?.apiKeyPreview
-          : undefined,
+    apiKeyPreview: resolved.provider === "Claude" ? claude?.apiKeyPreview : undefined,
     enabled: resolved.provider !== "Stub",
     fallbackToStub: resolved.fallbackToStub,
   };
-  return { active, openai, claude, models: AI_MODEL_OPTIONS };
+  return { active, claude, models: AI_MODEL_OPTIONS };
 }
 
 export async function resolveAiProviderForTenant(input: {
@@ -62,13 +51,11 @@ export async function resolveAiProviderForTenant(input: {
   preferredProvider?: AiProvider;
 }): Promise<AiRuntimeConfig> {
   const tenantId = assertTenantId(input.tenantId);
-  const [openaiRow, claudeRow] = await Promise.all([
-    IntegrationConnectionModel.findOne({ tenantId, provider: "OpenAI" }).lean(),
-    IntegrationConnectionModel.findOne({ tenantId, provider: "Claude" }).lean(),
-  ]);
+  const claudeRow = await IntegrationConnectionModel.findOne({ tenantId, provider: "Claude" }).lean();
 
   const pick = (row: Record<string, unknown> | null): AiRuntimeConfig | null => {
     if (!row || row.status !== "Connected") return null;
+    if (row.provider !== "Claude") return null;
     const meta = (row.metadata as Record<string, unknown>) ?? {};
     const model = (meta.model as string) || DEFAULT_AI_MODEL;
     const fallbackToStub = meta.fallbackToStub !== false;
@@ -81,26 +68,19 @@ export async function resolveAiProviderForTenant(input: {
         apiKeyDecrypted = undefined;
       }
     }
-    const providerName = row.provider === "Claude" ? "Claude" : "OpenAI";
     return {
-      provider: providerName as AiProvider,
+      provider: "Claude",
       model,
       fallbackToStub,
       apiKeyDecrypted,
     };
   };
 
-  if (input.preferredProvider === "OpenAI") {
-    const p = pick(openaiRow as Record<string, unknown> | null);
-    if (p) return p;
-  }
   if (input.preferredProvider === "Claude") {
     const p = pick(claudeRow as Record<string, unknown> | null);
     if (p) return p;
   }
 
-  const openai = pick(openaiRow as Record<string, unknown> | null);
-  if (openai) return openai;
   const claude = pick(claudeRow as Record<string, unknown> | null);
   if (claude) return claude;
 

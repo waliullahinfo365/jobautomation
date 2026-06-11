@@ -6,8 +6,8 @@ export type IntegrationProvider =
   | "Google Drive"
   | "Google Calendar"
   | "Telegram"
-  | "OpenAI"
   | "Claude"
+  | "LinkedIn"
   | "SMTP"
   | "Resend"
   | "Notion Legacy"
@@ -70,7 +70,7 @@ export interface SmtpIntegrationConfig {
 
 /** AI provider demo configuration — responses include apiKeyPreview only. */
 export interface AiProviderIntegrationConfig {
-  provider: "OpenAI" | "Claude";
+  provider: "Claude";
   model: string;
   apiKeyPreview?: string;
 }

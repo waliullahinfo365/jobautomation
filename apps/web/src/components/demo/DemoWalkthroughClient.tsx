@@ -52,7 +52,7 @@ const STEP_DEFS: DemoStep[] = [
     id: "integrations",
     order: 1,
     title: "Connect demo integrations",
-    description: "Open Settings → Integrations and review Gmail, Drive, Calendar, and OpenAI (stub) status.",
+    description: "Open Settings → Integrations and review Gmail, Drive, Calendar, and Claude.",
     linkHref: "/settings",
     linkLabel: "Integrations",
   },
