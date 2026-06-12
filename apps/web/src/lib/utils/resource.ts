@@ -200,7 +200,8 @@ export function normalizeJobAutomationLogRow(raw: unknown): JobAutomationLog {
  */
 export function normalizeJobForUi(raw: unknown): Job {
   const j = (raw ?? {}) as Record<string, unknown>;
-  const id = ((j.id ?? j._id) as string) ?? "";
+  const rawId = j.id ?? j._id;
+  const id = rawId !== undefined && rawId !== null && String(rawId) !== "undefined" ? String(rawId) : "";
   const documentsRaw = j.documents;
   const automationRaw = j.automationLogs;
 

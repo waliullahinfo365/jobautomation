@@ -36,8 +36,11 @@ export function JobBoard({ jobs }: JobBoardProps) {
                     No jobs
                   </p>
                 ) : (
-                  statusJobs.map((job) => (
-                    <div key={job.id} className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
+                  statusJobs.map((job, idx) => (
+                    <div
+                      key={job.id ? job.id : `job-${status}-${idx}`}
+                      className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3"
+                    >
                       <JobCard job={job} />
                       <p className="mt-2 text-[11px] text-[var(--text-3)]">Last updated: {formatDate(job.lastUpdated)}</p>
                     </div>

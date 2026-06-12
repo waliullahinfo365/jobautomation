@@ -5,10 +5,20 @@ import type { Job } from "@/types/job";
 import { useApiMutation } from "./useApiMutation";
 import { useApiQuery } from "./useApiQuery";
 
+/** Stable key so list refetches when query params change (tab, limit, status). */
+function jobsListParamsKey(params?: Record<string, unknown>): string {
+  if (!params || Object.keys(params).length === 0) return "";
+  const sortedKeys = Object.keys(params).sort();
+  const stable: Record<string, unknown> = {};
+  for (const k of sortedKeys) stable[k] = params[k];
+  return JSON.stringify(stable);
+}
+
 export function useJobsApi(options?: { fallbackToMock?: boolean; params?: Record<string, unknown> }) {
   const query = useApiQuery(() => jobsApi.listJobs(options?.params), {
     fallbackToMock: options?.fallbackToMock,
     mockResourceName: "jobs",
+    refreshKey: jobsListParamsKey(options?.params),
   });
 
   const provisionMutation = useApiMutation(({ id, execute }: { id: string; execute?: boolean }) =>

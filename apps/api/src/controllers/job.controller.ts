@@ -6,7 +6,6 @@ import { paginatedResponse, successResponse } from "../utils/apiResponse";
 import { ApiError } from "../utils/errors";
 import { listAutomationLogs, logApiAction } from "../services/automation-log.service";
 import { assertTenantId, buildTenantFilter, createTenantScopedRecord, findTenantScopedById, updateTenantScopedById, archiveTenantScopedById } from "../services/baseTenant.service";
-import { getPagination } from "../utils/pagination";
 import { checkDuplicateJob as checkDuplicateAgainstExisting } from "../services/duplicate-protection.service";
 import { getAiProcessingStatus as getAiStatusForJob, runDraftGeneration, runFullAiProcessing, runResearchGeneration } from "../services/ai-processing.service";
 import { provisionJobFolders } from "../services/folder-automation.service";
@@ -50,7 +49,10 @@ export const getPipelineSummary = asyncHandler(async (req: Request, res) => {
 
 export const listJobs = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const { page, limit, skip } = getPagination(req.query);
+  /** Jobs list allows a higher page size than generic list endpoints (dashboard needs full pipeline tabs). */
+  const page = Math.max(1, Number(req.query.page ?? 1));
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 20)));
+  const skip = (page - 1) * limit;
   const search = typeof req.query.search === "string" ? req.query.search : undefined;
   const status = typeof req.query.status === "string" ? req.query.status : undefined;
   const priority = typeof req.query.priority === "string" ? req.query.priority : undefined;
@@ -61,7 +63,15 @@ export const listJobs = asyncHandler(async (req: Request, res) => {
   const filter: Record<string, unknown> = buildTenantFilter(tenantId);
 
   if (status) {
-    filter.status = status;
+    const parts = status
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length > 1) {
+      filter.status = { $in: parts };
+    } else {
+      filter.status = parts[0] ?? status;
+    }
   } else if (!includeArchived) {
     filter.status = { $nin: ["Rejected", "Archived"] };
   }

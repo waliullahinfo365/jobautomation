@@ -41,8 +41,8 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {jobs.map((job) => (
-            <TableRow key={job.id}>
+          {jobs.map((job, index) => (
+            <TableRow key={job.id ? job.id : `job-${index}`}>
               <TableCell className="font-medium">{job.company}</TableCell>
               <TableCell>
                 <Link href={`/jobs/${job.id}`} className="hover:text-primary">

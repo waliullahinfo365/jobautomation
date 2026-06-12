@@ -81,7 +81,15 @@ export default function JobsPage() {
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [localJobsOverlay, setLocalJobsOverlay] = useState<Job[]>([]);
 
-  const jobsApi = useJobsApi({ fallbackToMock: false });
+  /** Match list fetch to the active tab so counts (50 New, etc.) align with the table, not only the latest 20 rows. */
+  const jobsListParams = useMemo(() => {
+    const limit = 200;
+    if (activeTab === "new") return { limit, status: "New" };
+    if (activeTab === "saved") return { limit, status: "Research,Drafting,Ready to Apply" };
+    return { limit };
+  }, [activeTab]);
+
+  const jobsApi = useJobsApi({ fallbackToMock: false, params: jobsListParams });
 
   useEffect(() => {
     if (!jobsApi.isUsingFallback) {
@@ -275,8 +283,8 @@ export default function JobsPage() {
 
       {/* Mobile: card grid always */}
       <div className="grid gap-3 sm:grid-cols-2 md:hidden">
-        {filteredJobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+        {filteredJobs.map((job, index) => (
+          <JobCard key={job.id ? job.id : `job-card-${index}`} job={job} />
         ))}
         {filteredJobs.length === 0 && (
           <p className="col-span-2 py-8 text-center text-[13px] text-[var(--text-4)]">No jobs in this category yet.</p>
