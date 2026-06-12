@@ -4,6 +4,10 @@ import { jobStatuses } from "../constants/statuses";
 const jobSources = [
   "LinkedIn",
   "Indeed",
+  "Stepstone",
+  "Xing",
+  "Glassdoor",
+  "Monster",
   "Company Website",
   "Referral",
   "Gmail",

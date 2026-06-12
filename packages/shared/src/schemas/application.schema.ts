@@ -4,6 +4,10 @@ import { applicationStatuses, followUpStatuses, responseStatuses } from "../cons
 const applicationSources = [
   "LinkedIn",
   "Indeed",
+  "Stepstone",
+  "Xing",
+  "Glassdoor",
+  "Monster",
   "Company Website",
   "Referral",
   "Gmail",

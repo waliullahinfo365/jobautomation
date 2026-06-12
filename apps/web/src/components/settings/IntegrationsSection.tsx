@@ -174,6 +174,7 @@ interface GmailScanSummary {
 }
 
 function GmailScanPanel() {
+  const { t } = useTranslation();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<GmailScanSummary | null>(null);
   const [daysBack, setDaysBack] = useState(14);
@@ -201,10 +202,11 @@ function GmailScanPanel() {
   return (
     <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <p className="text-sm font-semibold text-[var(--text-1)]">Scan Gmail Inbox for Jobs</p>
-          <p className="text-xs text-[var(--text-2)]">
-            Reads your inbox and imports real job postings from all portals (LinkedIn, Stepstone, Xing, Indeed, recruiters…)
+        <div className="space-y-1.5 min-w-0 flex-1">
+          <p className="text-sm font-semibold text-[var(--text-1)]">{t("integrations.gmailScan.title")}</p>
+          <p className="text-xs text-[var(--text-2)]">{t("integrations.gmailScan.description")}</p>
+          <p className="text-xs text-[var(--text-3)] border-l-2 border-[var(--accent-ring)] pl-2">
+            {t("integrations.gmailScan.automatedHint")}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -216,7 +218,7 @@ function GmailScanPanel() {
               disabled={scanning}
               className="rounded"
             />
-            Remove junk first
+            {t("integrations.gmailScan.removeJunkFirst")}
           </label>
           <select
             className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-2 py-1.5 text-xs text-[var(--text-1)] focus:outline-none"
@@ -230,7 +232,7 @@ function GmailScanPanel() {
             <option value={30}>Last 30 days</option>
           </select>
           <Button size="sm" onClick={() => void run()} disabled={scanning}>
-            {scanning ? "Scanning…" : "Scan Now"}
+            {scanning ? t("integrations.gmailScan.scanning") : t("integrations.gmailScan.scanNow")}
           </Button>
         </div>
       </div>

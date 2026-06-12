@@ -6,10 +6,12 @@ import { ApplicationPipelineChart } from "@/components/dashboard/ApplicationPipe
 import { LoadingState } from "@/components/shared/LoadingState";
 import { useDashboardOverview } from "@/hooks/api/useDashboardOverview";
 import { useTranslation } from "@/i18n/useTranslation";
+import { jobSourceDisplayLabel } from "@/i18n/job-filters";
 import type { AutomationModule } from "@/types/automation";
 import type { Job } from "@/types/job";
 import type { Application } from "@/types/application";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
+import { importChannelGroupKey } from "@/lib/jobs/import-channel-key";
 import { normalizeAutomationModuleForUi, normalizeJobForUi } from "@/lib/utils/resource";
 import * as automationApi from "@/lib/api/automation.api";
 import { getJobPipelineSummary } from "@/lib/api/jobs.api";
@@ -46,7 +48,10 @@ interface ActionCard {
 
 export function DashboardPageClient() {
   const { t } = useTranslation();
-  const { jobsQuery, applicationsQuery: appsQuery, automationQuery } = useDashboardOverview({ fallbackToMock: false });
+  const { jobsQuery, applicationsQuery: appsQuery, automationQuery } = useDashboardOverview({
+    fallbackToMock: false,
+    params: { limit: 200 },
+  });
   const [backfillLoading, setBackfillLoading] = useState(false);
   const [pipelineData, setPipelineData] = useState<{ status: string; count: number }[] | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState(true);
@@ -61,6 +66,17 @@ export function DashboardPageClient() {
   const jobs = useMemo((): Job[] => {
     const raw = normalizeListResponse(jobsQuery.data);
     return raw.map(normalizeJobForUi);
+  }, [jobsQuery.data]);
+
+  const importChannelCounts = useMemo(() => {
+    const raw = normalizeListResponse(jobsQuery.data);
+    const m = new Map<string, number>();
+    for (const row of raw) {
+      const r = row as Record<string, unknown>;
+      const key = importChannelGroupKey(r.source);
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [jobsQuery.data]);
 
   const applications = useMemo((): Application[] => {
@@ -261,6 +277,33 @@ export function DashboardPageClient() {
           ))}
         </div>
       </section>
+
+      {jobs.length > 0 && importChannelCounts.length > 0 ? (
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[13px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
+              {t("dashboard.importChannels.title")}
+            </h2>
+            <Link href="/jobs" className="text-[12px] text-[var(--accent-hi)] hover:underline">
+              {t("dashboard.importChannels.viewJobs")}
+            </Link>
+          </div>
+          <p className="mb-3 text-[12.5px] text-[var(--text-3)]">{t("dashboard.importChannels.subtitle")}</p>
+          <div className="flex flex-wrap gap-2">
+            {importChannelCounts.map(([source, count]) => (
+              <div
+                key={source}
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2 text-[12.5px] shadow-sm"
+              >
+                <span className="font-medium text-[var(--text-1)]">{jobSourceDisplayLabel(source, t)}</span>
+                <span className="rounded-full bg-[var(--accent-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-hi)]">
+                  {count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* B. Your Pipeline */}
       <section>

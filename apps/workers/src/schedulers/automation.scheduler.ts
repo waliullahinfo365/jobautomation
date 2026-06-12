@@ -150,13 +150,15 @@ export async function scheduleOfferTrackingSweep() {
 export async function scheduleJobIntakeSweep() {
   const date = todayKey();
   const tenantIds = await activeTenantIds();
+  const intakeIntervalMs = Number(process.env.GMAIL_INTAKE_INTERVAL_MS ?? 5 * 60_000);
+  const intakeBucket = Math.floor(Date.now() / Math.max(60_000, intakeIntervalMs));
   return enqueueManyAutomationJobs(
     tenantIds.map((tenantId) => ({
       name: "job-intake",
       payload: {
         tenantId,
         operationId: `job-intake-${tenantId}-${date}-${Date.now()}`,
-        idempotencyKey: `job-intake:${tenantId}:${date}:${Math.floor(Date.now() / (5 * 60_000))}`,
+        idempotencyKey: `job-intake:${tenantId}:${date}:${intakeBucket}`,
         requestedAt: new Date().toISOString(),
         source: "scheduler",
       },

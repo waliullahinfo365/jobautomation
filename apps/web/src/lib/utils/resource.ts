@@ -1,4 +1,4 @@
-import type { Job, JobDocument, JobTimelineEvent, JobAutomationLog } from "@/types/job";
+import type { Job, JobDocument, JobTimelineEvent, JobAutomationLog, JobSource } from "@/types/job";
 import type { Application } from "@/types/application";
 import type { Contact, ContactAutomationLog, ContactCommunicationEvent, ContactRelatedJob } from "@/types/contact";
 import type { DocumentRecord, DocumentStatus, DocumentType, PDFExportStatus } from "@/types/document";
@@ -194,6 +194,33 @@ export function normalizeJobAutomationLogRow(raw: unknown): JobAutomationLog {
   };
 }
 
+/** Maps intake/worker `source` strings onto the UI `JobSource` union. */
+export function normalizeJobSourceForUi(raw: unknown): JobSource {
+  const s = String(raw ?? "").trim();
+  if (!s) return "Manual";
+  const lower = s.toLowerCase();
+  if (lower === "gmail" || lower === "email") return "Gmail";
+
+  const known: readonly JobSource[] = [
+    "Gmail",
+    "LinkedIn",
+    "Indeed",
+    "Stepstone",
+    "Xing",
+    "Glassdoor",
+    "Monster",
+    "Company Website",
+    "Referral",
+    "Manual",
+    "Other",
+  ] as const;
+  if (known.includes(s as JobSource)) return s as JobSource;
+  for (const k of known) {
+    if (k.toLowerCase() === lower) return k;
+  }
+  return "Other";
+}
+
 /**
  * Normalizes a raw backend Job (which uses _id, may alias fields differently)
  * to the frontend Job shape that components expect.
@@ -219,7 +246,7 @@ export function normalizeJobForUi(raw: unknown): Job {
     company: (j.company as string) ?? "",
     position: ((j.position ?? j.title) as string) ?? "",
     title: ((j.position ?? j.title) as string) ?? "",
-    source: (j.source as Job["source"]) ?? "Manual",
+    source: normalizeJobSourceForUi(j.source),
     status: (j.status as Job["status"]) ?? "New",
     priority: (j.priority as Job["priority"]) ?? "Medium",
     location: (j.location as string) ?? "",

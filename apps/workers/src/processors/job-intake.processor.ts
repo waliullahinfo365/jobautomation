@@ -180,10 +180,11 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
   const query = isBackfill
     ? buildBackfillQuery({ label: payload.label, days: payload.days, metadata: gmailMetadata })
     : getGmailIntakeQuery(gmailMetadata);
+  const maxListResults = Math.min(100, Math.max(10, Number(process.env.GMAIL_INTAKE_MAX_MESSAGES ?? 50)));
   const list = await gmailApiJson<{ messages?: Array<{ id: string; threadId: string }>; resultSizeEstimate?: number }>({
     accessToken: auth.accessToken,
     path: "users/me/messages",
-    query: { q: query, maxResults: 20 },
+    query: { q: query, maxResults: maxListResults },
   });
   const messages = list.messages ?? [];
   let createdCount = 0;

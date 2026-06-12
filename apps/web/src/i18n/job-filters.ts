@@ -23,11 +23,21 @@ const SOURCE_TO_KEY: Record<string, string> = {
   Gmail: "jobs.sourceKind.gmail",
   LinkedIn: "jobs.sourceKind.linkedin",
   Indeed: "jobs.sourceKind.indeed",
+  Stepstone: "jobs.sourceKind.stepstone",
+  Xing: "jobs.sourceKind.xing",
+  Glassdoor: "jobs.sourceKind.glassdoor",
+  Monster: "jobs.sourceKind.monster",
   "Company Website": "jobs.sourceKind.companyWebsite",
   Referral: "jobs.sourceKind.referral",
   Manual: "jobs.sourceKind.manual",
   Other: "jobs.sourceKind.other",
 };
+
+/** Label for an import `source` string (may be a board name not in the job filter enum). */
+export function jobSourceDisplayLabel(sourceKey: string, t: (k: string) => string): string {
+  const key = SOURCE_TO_KEY[sourceKey];
+  return key ? t(key) : sourceKey;
+}
 
 export function jobFilterStatusLabel(value: JobFilters["status"], t: (k: string) => string): string {
   if (!value || value === "All") return t("jobs.allStatuses");

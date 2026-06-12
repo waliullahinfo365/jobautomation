@@ -163,6 +163,12 @@ export const messages: Record<
         view: "Anzeigen",
         empty: "Noch keine Jobs. Verbinde Gmail oder füge einen Job manuell hinzu.",
       },
+      importChannels: {
+        title: "Jobs nach Quelle",
+        subtitle:
+          "Alle aus Gmail & Jobportalen erkannten Kanäle — nicht nur LinkedIn (Stepstone, Xing, Indeed …).",
+        viewJobs: "Zur Jobliste",
+      },
       priority: {
         high: "Hoch",
         medium: "Mittel",
@@ -449,6 +455,10 @@ export const messages: Record<
         gmail: "Gmail",
         linkedin: "LinkedIn",
         indeed: "Indeed",
+        stepstone: "Stepstone",
+        xing: "Xing",
+        glassdoor: "Glassdoor",
+        monster: "Monster",
         companyWebsite: "Unternehmenswebsite",
         referral: "Empfehlung",
         manual: "Manuell",
@@ -971,6 +981,16 @@ export const messages: Record<
       syncStatus: "Synchronisierungsstatus",
       requiredFor: "Erforderlich für",
       statusLabel: "Status",
+      gmailScan: {
+        title: "Gmail-Posteingang nach Jobs durchsuchen",
+        description:
+          "Liest den Posteingang und importiert echte Stellenanzeigen von Portalen (LinkedIn, Stepstone, Xing, Indeed, Recruiter …).",
+        automatedHint:
+          "Automatisch: Der Job-Worker prüft Gmail etwa alle 5 Minuten, wenn SCHEDULER_ENABLED=true (Intervall: GMAIL_INTAKE_INTERVAL_MS). Dabei wird die gleiche Job-Alert-Suche wie beim Intake verwendet. «Jetzt scannen» durchsucht einen größeren Zeitraum nach Ihrer Tagesauswahl.",
+        removeJunkFirst: "Zuerst Junk entfernen",
+        scanNow: "Jetzt scannen",
+        scanning: "Scan läuft…",
+      },
       labels: {
         error: "Fehler",
         scopes: "Berechtigungen",
@@ -2795,6 +2815,12 @@ export const messages: Record<
         view: "View",
         empty: "No job opportunities yet. Connect Gmail or add a job manually.",
       },
+      importChannels: {
+        title: "Jobs by import channel",
+        subtitle:
+          "Every source detected from email and boards — not only LinkedIn (Stepstone, Xing, Indeed, and more).",
+        viewJobs: "Open jobs list",
+      },
       priority: {
         high: "High",
         medium: "Medium",
@@ -3081,6 +3107,10 @@ export const messages: Record<
         gmail: "Gmail",
         linkedin: "LinkedIn",
         indeed: "Indeed",
+        stepstone: "Stepstone",
+        xing: "Xing",
+        glassdoor: "Glassdoor",
+        monster: "Monster",
         companyWebsite: "Company Website",
         referral: "Referral",
         manual: "Manual",
@@ -3605,6 +3635,16 @@ export const messages: Record<
       syncStatus: "Sync status",
       requiredFor: "Required for",
       statusLabel: "Status",
+      gmailScan: {
+        title: "Scan Gmail Inbox for Jobs",
+        description:
+          "Reads your inbox and imports real job postings from all portals (LinkedIn, Stepstone, Xing, Indeed, recruiters…)",
+        automatedHint:
+          "Automated: the job worker checks Gmail about every 5 minutes when SCHEDULER_ENABLED=true (override with GMAIL_INTAKE_INTERVAL_MS). That run uses the job-intake Gmail search (job alerts and common boards). Use Scan Now for a wider inbox slice over the days you pick.",
+        removeJunkFirst: "Remove junk first",
+        scanNow: "Scan Now",
+        scanning: "Scanning…",
+      },
       labels: {
         error: "Error",
         scopes: "Scopes",
