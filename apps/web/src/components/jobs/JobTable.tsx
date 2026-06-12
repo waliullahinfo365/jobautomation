@@ -12,6 +12,7 @@ import { MoreIcon } from "@/components/icons";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
+import { resolveExternalJobPostingUrl } from "@/lib/utils/job-posting-url";
 
 interface JobTableProps {
   jobs: Job[];
@@ -41,7 +42,9 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {jobs.map((job, index) => (
+          {jobs.map((job, index) => {
+            const postingHref = resolveExternalJobPostingUrl(job);
+            return (
             <TableRow key={job.id ? job.id : `job-${index}`}>
               <TableCell className="font-medium">{job.company}</TableCell>
               <TableCell>
@@ -77,6 +80,15 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      {postingHref ? (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              window.open(postingHref, "_blank", "noopener,noreferrer");
+                            }}
+                          >
+                            {t("jobs.jobLink")}
+                          </DropdownMenuItem>
+                        ) : null}
                       {onGenerateResearch && (
                         <DropdownMenuItem onClick={() => onGenerateResearch(job.id)}>
                           {t("jobs.generateResearch")}
@@ -93,7 +105,8 @@ export function JobTable({ jobs, onArchive, onGenerateResearch, onGenerateDraft 
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </SectionCard>

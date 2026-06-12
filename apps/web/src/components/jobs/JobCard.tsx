@@ -4,6 +4,7 @@ import type { Job } from "@/types/job";
 import { JobStatusBadge } from "./JobStatusBadge";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { resolveExternalJobPostingUrl } from "@/lib/utils/job-posting-url";
 
 interface JobCardProps {
   job: Job;
@@ -61,16 +62,19 @@ export function JobCard({ job }: JobCardProps) {
         >
           View
         </Link>
-        {job.url && (
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border-default)] px-3 text-[12px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
-          >
-            Open job
-          </a>
-        )}
+        {(() => {
+          const href = resolveExternalJobPostingUrl(job);
+          return href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border-default)] px-3 text-[12px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+            >
+              Open job
+            </a>
+          ) : null;
+        })()}
       </div>
     </div>
   );
