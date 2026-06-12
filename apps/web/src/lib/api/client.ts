@@ -93,6 +93,7 @@ export function setAuthToken(token: string | null): void {
 
 export function clearAuthToken(): void {
   setAuthToken(null);
+  invalidateApiCache();
 }
 
 export function getApiHeaders(extra?: HeadersInit): HeadersInit {
@@ -185,8 +186,26 @@ function dbg(...args: unknown[]): void {
   if (DEBUG) console.debug("[apiFetch]", ...args);
 }
 
+/**
+ * GET response cache must vary by tenant/session; otherwise a queue fetched
+ * as demo/anonymous can be replayed after login (empty or wrong tenant data).
+ */
+function cacheAuthFingerprint(): string {
+  if (typeof window === "undefined") return "ssr";
+  try {
+    const token = getAuthToken();
+    const tid = localStorage.getItem("tenantId") ?? sessionStorage.getItem("tenantId") ?? "";
+    if (!token && !tid) return "anon";
+    const tok = token ? `${token.length}:${token.slice(-24)}` : "0";
+    return `${tid}|${tok}`;
+  } catch {
+    return "err";
+  }
+}
+
 function cacheKey(method: string, path: string): string {
-  return `${method} ${path}`;
+  if (method !== "GET") return `${method} ${path}`;
+  return `${method} ${path}#${cacheAuthFingerprint()}`;
 }
 
 function readFreshCache(key: string): { hit: true; value: unknown } | { hit: false } {

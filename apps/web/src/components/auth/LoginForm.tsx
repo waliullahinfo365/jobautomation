@@ -6,7 +6,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthApi } from "@/hooks/api/useAuthApi";
-import { getAuthToken, setAuthToken } from "@/lib/api/client";
+import { getAuthToken, invalidateApiCache, setAuthToken } from "@/lib/api/client";
 import { getGoogleLoginUrl } from "@/lib/api/auth.api";
 import { useTranslation } from "@/i18n/useTranslation";
 import { showError } from "@/lib/ui/toast";
@@ -76,6 +76,7 @@ export function LoginForm() {
       } catch {
         /* ignore */
       }
+      invalidateApiCache();
       router.replace("/dashboard");
       return;
     }

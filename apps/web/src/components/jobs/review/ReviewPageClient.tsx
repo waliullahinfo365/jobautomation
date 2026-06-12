@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { invalidateApiCache } from "@/lib/api/client";
 import { getReviewQueue } from "@/lib/api/jobs.api";
 import type { ReviewableJob, ReviewQueueResponse } from "@/types/job";
 import { normalizeJobForUi } from "@/lib/utils/resource";
@@ -38,10 +39,16 @@ export function ReviewPageClient() {
     setLoading(true);
     setError(null);
     try {
-      const payload = await getReviewQueue(50) as ReviewQueueResponse;
-      const normalized = payload.jobs.map((j) => ({ ...normalizeJobForUi(j), ...j } as ReviewableJob));
+      invalidateApiCache("/jobs");
+      const payload = (await getReviewQueue(50)) as ReviewQueueResponse & { items?: unknown[] };
+      const rawList = Array.isArray(payload?.jobs)
+        ? payload.jobs
+        : Array.isArray(payload?.items)
+          ? (payload.items as ReviewQueueResponse["jobs"])
+          : [];
+      const normalized = rawList.map((j) => ({ ...normalizeJobForUi(j), ...j } as ReviewableJob));
       setJobs(normalized);
-      setTotal(payload.total);
+      setTotal(typeof payload.total === "number" ? payload.total : normalized.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load review queue");
     } finally {

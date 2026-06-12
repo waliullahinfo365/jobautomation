@@ -1,4 +1,4 @@
-import { apiFetch, clearAuthToken, setAuthToken } from "./client";
+import { apiFetch, clearAuthToken, invalidateApiCache, setAuthToken } from "./client";
 
 export type AuthSessionPayload = {
   accessToken: string;
@@ -28,6 +28,7 @@ function persistSession(data: AuthSessionPayload): void {
       /* ignore */
     }
   }
+  invalidateApiCache();
 }
 
 export async function register(payload: {

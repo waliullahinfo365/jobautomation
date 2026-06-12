@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Suspense } from "react";
-import { setAuthToken } from "@/lib/api/client";
+import { invalidateApiCache, setAuthToken } from "@/lib/api/client";
 
 function CallbackHandler() {
   const router = useRouter();
@@ -28,6 +28,7 @@ function CallbackHandler() {
       } catch {
         /* ignore */
       }
+      invalidateApiCache();
       router.replace("/dashboard");
       return;
     }

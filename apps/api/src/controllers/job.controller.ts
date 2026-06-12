@@ -172,11 +172,18 @@ type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 export const getReviewQueue = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const limit = Math.min(Number(req.query.limit) || 30, 100);
-  const filter = {
+  /** Align with “new jobs to review”: pipeline New + swipe queue not yet triaged. Excludes demo/stub rows like listJobs. */
+  const filter: Record<string, unknown> = {
     ...buildTenantFilter(tenantId),
-    status: { $nin: ["Rejected", "Archived"] },
-    $or: [{ reviewStatus: "new" }, { reviewStatus: { $exists: false } }, { reviewStatus: null }],
-    $nor: [{ source: "test" }, { intakeSource: "test" }],
+    status: "New",
+    $or: [
+      { reviewStatus: "new" },
+      { reviewStatus: { $exists: false } },
+      { reviewStatus: null },
+      { reviewStatus: "" },
+      { reviewStatus: "New" },
+    ],
+    $nor: [buildTestJobFilter()],
   };
   const [jobs, total] = await Promise.all([
     JobModel.find(filter).sort({ priority: -1, dateFound: -1, createdAt: -1 }).limit(limit).lean(),
