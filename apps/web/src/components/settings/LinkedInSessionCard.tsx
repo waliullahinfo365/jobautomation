@@ -199,9 +199,11 @@ export function LinkedInSessionCard() {
                 </p>
               ) : (
                 <p className="text-xs text-amber-700 dark:text-amber-500/90 mt-2">
-                  No worker proxy is stored with this session. Reconnect via Import Cookies and add your{" "}
-                  <code className="rounded bg-muted px-1 py-0.5">HTTP(S) proxy</code>, or rely on server{" "}
-                  <code className="rounded bg-muted px-1 py-0.5">PROXY_URL</code> and re-import once so it is pinned.
+                  No worker proxy is pinned yet. Your session can break if the worker exits from a different IP than
+                  where you got these cookies. Open Reconnect → Import Cookies, paste your Webshare proxy URL in the
+                  worker proxy field (same URL as PROXY_URL on Railway), export fresh cookies from LinkedIn while your
+                  browser uses that same proxy, then import. If Railway already has PROXY_URL set, you can leave the
+                  field empty and import once so that value is saved with the session.
                 </p>
               )}
             </div>
