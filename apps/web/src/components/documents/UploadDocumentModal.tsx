@@ -56,11 +56,26 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
       showError(t("documents.upload.selectFileFirst"));
       return;
     }
+    let extracted = "";
+    if (file) {
+      try {
+        const { extractTextFromUpload } = await import("@/lib/documents/extractUploadText");
+        extracted = await extractTextFromUpload(file);
+      } catch {
+        extracted = "";
+      }
+    }
+    const manual = contentText.trim();
+    const merged = [manual, extracted].filter(Boolean).join("\n\n---\n\n");
+    if (!merged) {
+      showError(t("documents.upload.noExtractableText"));
+      return;
+    }
     await onSubmit({
       fileName,
       type,
       jobId: jobId || undefined,
-      contentText: contentText.trim() || undefined,
+      contentText: merged,
       notes: notes.trim() || undefined,
     });
     setFile(null);

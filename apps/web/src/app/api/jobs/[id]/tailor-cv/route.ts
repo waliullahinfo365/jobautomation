@@ -105,15 +105,22 @@ export async function POST(
 
     // Find the active CV document with extracted text
     const cvDoc = await DocumentModel.findOne({
-      $or: [
-        { type: "CV", content: { $exists: true, $ne: "" } },
-        { type: "cv_resume", content: { $exists: true, $ne: "" } },
+      $and: [
+        {
+          $or: [{ type: "CV" }, { type: "cv_resume" }, { profileDocumentType: "cv_resume" }],
+        },
+        {
+          $or: [
+            { content: { $exists: true, $nin: [null, ""] } },
+            { contentText: { $exists: true, $nin: [null, ""] } },
+          ],
+        },
       ],
     })
       .sort({ updatedAt: -1 })
       .lean() as Record<string, unknown> | null;
 
-    const cvText = cvDoc?.content as string | undefined;
+    const cvText = String(cvDoc?.content ?? cvDoc?.contentText ?? "");
     if (!cvText) {
       return NextResponse.json(
         {

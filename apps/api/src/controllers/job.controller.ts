@@ -322,7 +322,22 @@ export const getTailoredCv = asyncHandler(async (req: Request, res) => {
   const job = await findTenantScopedById(JobModel, tenantId, req.params.id);
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
   const j = job as Record<string, unknown>;
-  if (!j.tailoredCvStatus) return successResponse(res, { status: "none" });
+  if (!j.tailoredCvStatus) {
+    return successResponse(res, {
+      status: "Not Started",
+      headline: null,
+      summary: null,
+      keywords: [],
+      missingKeywords: [],
+      bullets: [],
+      atsScoreBefore: null,
+      atsScoreAfter: null,
+      generatedAt: null,
+      coverLetter: null,
+      coverLetterSubject: null,
+      error: null,
+    });
+  }
   return successResponse(res, {
     status:            j.tailoredCvStatus,
     headline:          j.tailoredCvHeadline,
@@ -367,10 +382,10 @@ export const generateTailoredCv = asyncHandler(async (req: Request, res) => {
   const cvDoc = await DocumentModel.findOne({
     tenantId,
     $or: [{ type: "CV" }, { profileDocumentType: "cv_resume" }],
-    content: { $exists: true, $ne: "" },
+    contentText: { $exists: true, $nin: [null, ""] },
   }).sort({ updatedAt: -1 }).lean() as Record<string, unknown> | null;
 
-  const cvText = cvDoc ? String(cvDoc.content ?? "") : "";
+  const cvText = cvDoc ? String(cvDoc.contentText ?? (cvDoc as { content?: string }).content ?? "") : "";
   const jobDesc = String(j.description ?? j.aiSummary ?? "").slice(0, 3000);
   const position = String(j.position ?? j.title ?? "");
   const company = String(j.company ?? "");
@@ -452,7 +467,21 @@ Output ONLY valid JSON:
 
   await JobModel.findByIdAndUpdate(job._id, { $set: update });
 
-  return successResponse(res, { status: "Completed", cached: false, ...update });
+  return successResponse(res, {
+    status: "Completed" as const,
+    cached: false,
+    headline: update.tailoredCvHeadline,
+    summary: update.tailoredCvSummary,
+    keywords: update.tailoredCvKeywords,
+    missingKeywords: update.tailoredCvMissingKeywords,
+    bullets: update.tailoredCvBullets,
+    atsScoreBefore: update.tailoredCvAtsScoreBefore,
+    atsScoreAfter: update.tailoredCvAtsScoreAfter,
+    generatedAt: update.tailoredCvGeneratedAt,
+    coverLetter: update.tailoredCoverLetter,
+    coverLetterSubject: update.tailoredCoverLetterSubject,
+    error: null,
+  });
 });
 
 export const generateCvPdf = asyncHandler(async (req: Request, res: Response) => {
@@ -468,7 +497,7 @@ export const generateCvPdf = asyncHandler(async (req: Request, res: Response) =>
   const cvDoc = await DocumentModel.findOne({
     tenantId,
     $or: [{ type: "CV" }, { profileDocumentType: "cv_resume" }],
-    content: { $exists: true, $ne: "" },
+    contentText: { $exists: true, $nin: [null, ""] },
   }).sort({ updatedAt: -1 }).lean() as Record<string, unknown> | null;
 
   // Build template data from job tailored fields + personal info
@@ -482,7 +511,7 @@ export const generateCvPdf = asyncHandler(async (req: Request, res: Response) =>
     summary: String(j.tailoredCvSummary ?? ""),
     bullets: Array.isArray(j.tailoredCvBullets) ? (j.tailoredCvBullets as string[]) : [],
     keywords: Array.isArray(j.tailoredCvKeywords) ? (j.tailoredCvKeywords as string[]) : [],
-    cvText: cvDoc ? String(cvDoc.content ?? "") : "",
+    cvText: cvDoc ? String(cvDoc.contentText ?? (cvDoc as { content?: string }).content ?? "") : "",
     photoUrl: String(personalInfo.photoUrl ?? ""),
     templateId,
   };
