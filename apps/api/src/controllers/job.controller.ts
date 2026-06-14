@@ -172,17 +172,16 @@ type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 export const getReviewQueue = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const limit = Math.min(Number(req.query.limit) || 30, 100);
-  /** Align with “new jobs to review”: pipeline New + swipe queue not yet triaged. Excludes demo/stub rows like listJobs. */
+  /**
+   * Pipeline “New” jobs that are not finished in Quick Review.
+   * Use $nin (not $or on only "new") so we still include review_later, unknown values,
+   * and legacy casing — the old $or excluded review_later and anything outside the list,
+   * which produced an empty queue while the dashboard still showed many status New jobs.
+   */
   const filter: Record<string, unknown> = {
     ...buildTenantFilter(tenantId),
     status: "New",
-    $or: [
-      { reviewStatus: "new" },
-      { reviewStatus: { $exists: false } },
-      { reviewStatus: null },
-      { reviewStatus: "" },
-      { reviewStatus: "New" },
-    ],
+    reviewStatus: { $nin: ["rejected", "saved", "apply_next"] },
     $nor: [buildTestJobFilter()],
   };
   const [jobs, total] = await Promise.all([

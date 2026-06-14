@@ -307,6 +307,10 @@ export async function apiFetch<T>(
   const method = options?.method ?? "GET";
   const timeoutMs = options?.timeoutMs ?? 20_000;
 
+  const pathOnly = path.split("?")[0];
+  /** User-specific; must never reuse a cached body from another session or stale empty queue. */
+  const skipGetCache = method === "GET" && pathOnly.includes("/jobs/review/queue");
+
   // Mutations bypass caching and invalidate the GET cache for the affected resource.
   if (method !== "GET") {
     const result = await performFetch<T>(path, { method, body: options?.body, headers: options?.headers, signal: options?.signal, timeoutMs });
@@ -318,31 +322,30 @@ export async function apiFetch<T>(
 
   const key = cacheKey(method, path);
 
-  // Layer 1: TTL response cache.
-  const fresh = readFreshCache(key);
-  if (fresh.hit) {
-    dbg("cache-hit", path);
-    return fresh.value as T;
-  }
-
-  // Layer 2: in-flight dedup.
-  const existing = inflight.get(key);
-  if (existing) {
+  const existingInflight = inflight.get(key);
+  if (existingInflight) {
     dbg("inflight-share", path);
-    return existing as Promise<T>;
+    return existingInflight as Promise<T>;
   }
 
-  // Layer 3: hard rate-limit floor. If a network call to the same key fired
-  // within RATE_LIMIT_MS, return whatever stale value we have (the previous
-  // response). If we genuinely have nothing yet, fall through to network.
-  const last = lastFetchAt.get(key);
-  if (last !== undefined && Date.now() - last < RATE_LIMIT_MS) {
-    const stale = cache.get(key);
-    if (stale) {
-      dbg("rate-limited (stale-cache)", path);
-      return stale.value as T;
+  if (!skipGetCache) {
+    // Layer 1: TTL response cache.
+    const fresh = readFreshCache(key);
+    if (fresh.hit) {
+      dbg("cache-hit", path);
+      return fresh.value as T;
     }
-    dbg("rate-limited but no data yet — falling through", path);
+
+    // Layer 2: hard rate-limit floor (uses same cache as Layer 1).
+    const last = lastFetchAt.get(key);
+    if (last !== undefined && Date.now() - last < RATE_LIMIT_MS) {
+      const stale = cache.get(key);
+      if (stale) {
+        dbg("rate-limited (stale-cache)", path);
+        return stale.value as T;
+      }
+      dbg("rate-limited but no data yet — falling through", path);
+    }
   }
 
   dbg("network", path);
@@ -350,7 +353,9 @@ export async function apiFetch<T>(
 
   const p = performFetch<T>(path, { method, body: options?.body, headers: options?.headers, signal: options?.signal, timeoutMs })
     .then((value) => {
-      cache.set(key, { value, expiresAt: Date.now() + DEDUPE_TTL_MS });
+      if (!skipGetCache) {
+        cache.set(key, { value, expiresAt: Date.now() + DEDUPE_TTL_MS });
+      }
       return value;
     })
     .finally(() => {

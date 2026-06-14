@@ -32,6 +32,8 @@ export const jobRoutes = Router();
 
 jobRoutes.get("/", requirePermission("jobs.read"), validateQuery(listQuerySchema), listJobs);
 jobRoutes.get("/pipeline/summary", requirePermission("jobs.read"), getPipelineSummary);
+/** Static path before `/:id` so it is never captured as an id segment. */
+jobRoutes.get("/review/queue", requirePermission("jobs.read"), getReviewQueue);
 jobRoutes.post("/", requirePermission("jobs.create"), validateBody(jobCreateSchema), createJob);
 jobRoutes.get("/:id", requirePermission("jobs.read"), validateParams(jobIdParamSchema), getJobById);
 jobRoutes.patch("/:id", requirePermission("jobs.update"), validateParams(jobIdParamSchema), validateBody(jobUpdateSchema), updateJob);
@@ -49,8 +51,7 @@ jobRoutes.post(
 );
 jobRoutes.get("/:id/ai-processing/status", requirePermission("jobs.read"), validateParams(jobIdParamSchema), aiProcessingStatus);
 
-// Quick Review routes
-jobRoutes.get("/review/queue", requirePermission("jobs.read"), getReviewQueue);
+// Quick Review routes (queue registered above `/:id`)
 jobRoutes.patch("/:id/review", requirePermission("jobs.update"), validateParams(jobIdParamSchema), reviewJob);
 jobRoutes.post("/:id/review/undo", requirePermission("jobs.update"), validateParams(jobIdParamSchema), undoReview);
 jobRoutes.post("/:id/review/analyze", requirePermission("jobs.read"), validateParams(jobIdParamSchema), analyzeJobForReview);

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { invalidateApiCache } from "@/lib/api/client";
-import { getReviewQueue } from "@/lib/api/jobs.api";
+import { getReviewQueue, listJobs } from "@/lib/api/jobs.api";
+import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import type { ReviewableJob, ReviewQueueResponse } from "@/types/job";
 import { normalizeJobForUi } from "@/lib/utils/resource";
 import { SwipeReviewSession } from "./SwipeReviewSession";
@@ -28,6 +29,20 @@ function EmptyQueue({ onBack }: { onBack: () => void }) {
   );
 }
 
+function extractReviewQueuePayload(payload: unknown): { jobs: unknown[]; total: number } {
+  if (!payload || typeof payload !== "object") return { jobs: [], total: 0 };
+  const r = payload as Record<string, unknown>;
+  if (Array.isArray(r.jobs)) return { jobs: r.jobs, total: Number(r.total) || r.jobs.length };
+  if (Array.isArray(r.items)) return { jobs: r.items, total: Number(r.total) || r.items.length };
+  const nested = r.data;
+  if (nested && typeof nested === "object") {
+    const d = nested as Record<string, unknown>;
+    if (Array.isArray(d.jobs)) return { jobs: d.jobs, total: Number(d.total) || d.jobs.length };
+    if (Array.isArray(d.items)) return { jobs: d.items, total: Number(d.total) || d.items.length };
+  }
+  return { jobs: [], total: 0 };
+}
+
 export function ReviewPageClient() {
   const router = useRouter();
   const [jobs, setJobs] = useState<ReviewableJob[] | null>(null);
@@ -41,14 +56,20 @@ export function ReviewPageClient() {
     try {
       invalidateApiCache("/jobs");
       const payload = (await getReviewQueue(50)) as ReviewQueueResponse & { items?: unknown[] };
-      const rawList = Array.isArray(payload?.jobs)
-        ? payload.jobs
-        : Array.isArray(payload?.items)
-          ? (payload.items as ReviewQueueResponse["jobs"])
-          : [];
-      const normalized = rawList.map((j) => ({ ...normalizeJobForUi(j), ...j } as ReviewableJob));
+      let { jobs: rawList, total: rawTotal } = extractReviewQueuePayload(payload);
+
+      if (rawList.length === 0) {
+        const listed = await listJobs({ status: "New", limit: 100, page: 1 });
+        rawList = Array.isArray(listed) ? listed : normalizeListResponse(listed);
+        rawTotal = rawList.length;
+      }
+
+      const normalized = rawList.map((j) => ({
+        ...normalizeJobForUi(j),
+        ...(typeof j === "object" && j !== null ? (j as Record<string, unknown>) : {}),
+      } as ReviewableJob));
       setJobs(normalized);
-      setTotal(typeof payload.total === "number" ? payload.total : normalized.length);
+      setTotal(typeof rawTotal === "number" && rawTotal > 0 ? rawTotal : normalized.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load review queue");
     } finally {
