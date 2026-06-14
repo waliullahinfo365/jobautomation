@@ -464,6 +464,41 @@ export const messages: Record<
         manual: "Manuell",
         other: "Sonstiges",
       },
+      tailorCvForJob: "✦ CV für diesen Job anpassen",
+      tailoredCvGuide: {
+        title: "CV-Anpassung ist live",
+        bulletQuickReview:
+          "Quick Review öffnen → Stellenkarte öffnen → „CV für diesen Job anpassen“ wählen.",
+        bulletAi:
+          "Die KI passt Überschrift und Zusammenfassung an diese Stelle und ATS-Schlüsselwörter an.",
+        bulletPdf: "Gestaltete PDF herunterladen (4 Vorlagen: mit oder ohne Foto).",
+        bulletCover: "Derselbe Dialog → Tab Anschreiben → formatierte PDF (Modern oder Klassisch).",
+        bulletAtsMaster:
+          "ATS-Bewertung des Master-CVs: Meine Dokumente → CV-Bibliothek → „ATS-Score“ bei jedem CV mit Text.",
+        getStartedTitle: "So starten Sie",
+        getStarted1:
+          "Laden Sie Ihren CV unter Meine Dokumente hoch und fügen Sie den CV-Text im Textfeld ein.",
+        getStarted2:
+          "Öffnen Sie dann eine Stelle im Quick Review und wählen Sie CV für diesen Job anpassen.",
+        linkDocuments: "Zu Meine Dokumente",
+        linkQuickReview: "Zu Quick Review",
+      },
+      tailoredCvModal: {
+        titlePrefix: "KI-Lebenslauf-Anpassung —",
+        generateIntro:
+          "Nutzt den CV-Text aus Meine Dokumente. Überschrift, Zusammenfassung und Erfahrung werden an diese Stelle angepasst — ohne Fakten zu erfinden.",
+        optionalPlaceholder:
+          "Optional: weitere Anweisungen (z. B. „Python betonen“, „auf Deutsch schreiben“)",
+        generateButton: "Angepassten CV + Anschreiben erzeugen",
+        generateButtonLoading: "Wird erzeugt…",
+        retryButton: "Erneut versuchen",
+        generatingWait: "Claude passt Ihren CV an … etwa 15 Sekunden",
+        tailorFailedToast:
+          "CV-Anpassung fehlgeschlagen. Bitte prüfen Sie, ob unter Meine Dokumente ein aktiver CV mit extrahiertem Text hinterlegt ist.",
+        tabCv: "Angepasster CV",
+        tabCoverLetter: "Anschreiben",
+        tabAts: "ATS-Analyse",
+      },
     },
     jobDetail: {
       checkDuplicate: "Duplikat prüfen",
@@ -1822,6 +1857,12 @@ export const messages: Record<
         default: "Standard",
         usedInApplications: "Verwendet in {count} Bewerbungen",
         updated: "Aktualisiert",
+        workflowHint:
+          "Tipp: CV unter Meine Dokumente hochladen und den Text einfügen. Pro Stelle im Quick Review anpassen; hier den ATS-Score für CVs mit Text nutzen.",
+        atsShow: "ATS-Score ↓",
+        atsHide: "ATS-Score ausblenden ↑",
+        noTextForAts:
+          "Fügen Sie den CV-Text im Upload-Dialog ein, um die ATS-Bewertung zu aktivieren.",
       },
       coverLetters: {
         title: "Anschreiben",
@@ -3118,6 +3159,40 @@ export const messages: Record<
         referral: "Referral",
         manual: "Manual",
         other: "Other",
+      },
+      tailorCvForJob: "✦ Tailor CV for this job",
+      tailoredCvGuide: {
+        title: "CV Tailoring is live",
+        bulletQuickReview:
+          "Go to Quick Review → open any job card → tap \"Tailor CV for this job\".",
+        bulletAi:
+          "AI rewrites your headline and summary to match that job plus ATS keywords.",
+        bulletPdf: "Download a styled PDF (four templates: with or without photo).",
+        bulletCover:
+          "Same modal → Cover Letter tab → download a formatted PDF (Modern or Classic).",
+        bulletAtsMaster:
+          "ATS scoring for your master CV: Documents → CV Library → \"ATS Score\" on any CV that has text.",
+        getStartedTitle: "To get started",
+        getStarted1: "Upload your CV under Documents and paste the CV text in the text field.",
+        getStarted2: "Then open any job in Quick Review and choose Tailor CV for this job.",
+        linkDocuments: "Open Documents",
+        linkQuickReview: "Open Quick Review",
+      },
+      tailoredCvModal: {
+        titlePrefix: "AI CV Tailoring —",
+        generateIntro:
+          "Uses CV text from Documents. Your headline, summary, and experience bullets are tailored to this role — without inventing facts.",
+        optionalPlaceholder:
+          "Optional: extra instructions (e.g. \"emphasise Python skills\", \"write in German\")",
+        generateButton: "Generate tailored CV + cover letter",
+        generateButtonLoading: "Generating…",
+        retryButton: "Retry generation",
+        generatingWait: "Claude is tailoring your CV… about 15 seconds",
+        tailorFailedToast:
+          "CV tailoring failed. Please ensure an active CV with extracted text is uploaded under Documents.",
+        tabCv: "Tailored CV",
+        tabCoverLetter: "Cover Letter",
+        tabAts: "ATS Analysis",
       },
     },
     jobDetail: {
@@ -4477,6 +4552,11 @@ export const messages: Record<
         default: "Default",
         usedInApplications: "Used in {count} applications",
         updated: "Updated",
+        workflowHint:
+          "Tip: Upload your CV under Documents and paste the text first. Tailor per job in Quick Review; use ATS Score here on any CV that has text.",
+        atsShow: "ATS Score ↓",
+        atsHide: "Hide ATS Score ↑",
+        noTextForAts: "Paste CV text in the upload modal to enable ATS scoring.",
       },
       coverLetters: {
         title: "Cover Letters",

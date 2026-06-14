@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { analyzeJobForReview } from "@/lib/api/jobs.api";
 import type { JobReviewAi } from "@/types/job";
 import { TailoredCvModal } from "@/components/jobs/TailoredCvModal";
+import { useTranslation } from "@/i18n/useTranslation";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ function ScoreRing({ score }: { score: number }) {
 // ── Full details bottom sheet ─────────────────────────────────────────────────
 
 function DetailsSheet({ job, ai, onClose, onTailorCv }: { job: ReviewableJob; ai: JobReviewAi | null; onClose: () => void; onTailorCv: () => void }) {
+  const { t } = useTranslation();
   return (
     <>
     <AnimatePresence>
@@ -184,7 +186,7 @@ function DetailsSheet({ job, ai, onClose, onTailorCv }: { job: ReviewableJob; ai
             onClick={onTailorCv}
             className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
           >
-            ✦ Tailor CV for this job
+            {t("jobs.tailorCvForJob")}
           </button>
 
           <button

@@ -26,6 +26,7 @@ export function CVLibrarySection({
 
   return (
     <SectionCard title={t("documents.cvLibrary.title")} description={t("documents.cvLibrary.subtitle")}>
+      <p className="mb-4 text-sm leading-relaxed text-[var(--text-2)]">{t("documents.cvLibrary.workflowHint")}</p>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {records.map((cv) => (
           <Card key={cv.id}>
@@ -53,7 +54,7 @@ export function CVLibrarySection({
                     variant="ghost"
                     onClick={() => setExpandedId(expandedId === cv.id ? null : cv.id)}
                   >
-                    {expandedId === cv.id ? "Hide ATS Score ↑" : "ATS Score ↓"}
+                    {expandedId === cv.id ? t("documents.cvLibrary.atsHide") : t("documents.cvLibrary.atsShow")}
                   </Button>
                 )}
               </div>
@@ -66,7 +67,7 @@ export function CVLibrarySection({
               {/* Hint when no content text */}
               {!cv.contentText && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Paste CV text in the upload modal to enable ATS scoring.
+                  {t("documents.cvLibrary.noTextForAts")}
                 </p>
               )}
             </CardContent>

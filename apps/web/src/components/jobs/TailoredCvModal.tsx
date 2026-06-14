@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { showError, showSuccess } from "@/lib/ui/toast";
 import { cn } from "@/lib/utils";
 import { CV_TEMPLATE_OPTIONS } from "@/lib/cv-templates/types";
 import type { CvTemplateId } from "@/lib/cv-templates/types";
+import { useTranslation } from "@/i18n/useTranslation";
 
 // Client-side only — @react-pdf/renderer cannot run on the server
 const CvPdfClientDownload = dynamic(
@@ -143,6 +145,7 @@ interface Props {
 }
 
 export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, initialData }: Props) {
+  const { t: tr } = useTranslation();
   const [tab, setTab] = useState<Tab>("cv");
   const [data, setData] = useState<TailoredCvData | null>(initialData ?? null);
   const [loading, setLoading] = useState(false);
@@ -158,7 +161,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
       const result = await generateTailoredCv(jobId, { userInstructions: userInstructions || undefined });
       if (result) setData(result);
     } catch {
-      showError("CV tailoring failed. Please check that an active CV with extracted text is uploaded in the Documents module.");
+      showError(tr("jobs.tailoredCvModal.tailorFailedToast"));
       // Attempt to fetch whatever was saved
       try {
         const saved = await getTailoredCv(jobId);
@@ -167,7 +170,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
     } finally {
       setLoading(false);
     }
-  }, [jobId, userInstructions]);
+  }, [jobId, userInstructions, tr]);
 
   const handleDownloadPdf = useCallback(async () => {
     if (!data) return;
@@ -224,9 +227,9 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
   const isFailed = data?.status === "Failed";
 
   const tabs: Array<{ id: Tab; label: string }> = [
-    { id: "cv", label: "Tailored CV" },
-    { id: "cover-letter", label: "Cover Letter" },
-    { id: "ats", label: "ATS Analysis" },
+    { id: "cv", label: tr("jobs.tailoredCvModal.tabCv") },
+    { id: "cover-letter", label: tr("jobs.tailoredCvModal.tabCoverLetter") },
+    { id: "ats", label: tr("jobs.tailoredCvModal.tabAts") },
   ];
 
   const cvText = hasData
@@ -249,7 +252,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`AI CV Tailoring — ${company} · ${jobTitle}`}
+      title={`${tr("jobs.tailoredCvModal.titlePrefix")} ${company} · ${jobTitle}`}
       size="lg"
     >
       <div className="flex flex-col gap-4">
@@ -259,18 +262,43 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
             {isFailed && data.error && (
               <p className="text-sm text-red-500">{data.error}</p>
             )}
-            <p className="text-sm text-[var(--text-2)]">
-              Claude will tailor your uploaded CV headline, summary, and experience bullets to match this job's ATS keywords — without changing any facts.
-            </p>
+            <div className="rounded-lg border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/25 p-3 space-y-2 text-sm text-[var(--text-2)]">
+              <p className="font-semibold text-[var(--text-1)]">{tr("jobs.tailoredCvGuide.title")}</p>
+              <ul className="list-disc pl-4 space-y-1.5">
+                <li>{tr("jobs.tailoredCvGuide.bulletQuickReview")}</li>
+                <li>{tr("jobs.tailoredCvGuide.bulletAi")}</li>
+                <li>{tr("jobs.tailoredCvGuide.bulletPdf")}</li>
+                <li>{tr("jobs.tailoredCvGuide.bulletCover")}</li>
+                <li>{tr("jobs.tailoredCvGuide.bulletAtsMaster")}</li>
+              </ul>
+              <p className="font-semibold text-[var(--text-1)] pt-1">{tr("jobs.tailoredCvGuide.getStartedTitle")}</p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>{tr("jobs.tailoredCvGuide.getStarted1")}</li>
+                <li>{tr("jobs.tailoredCvGuide.getStarted2")}</li>
+              </ul>
+              <div className="flex flex-wrap gap-3 pt-1">
+                <Link href="/documents" className="text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700">
+                  {tr("jobs.tailoredCvGuide.linkDocuments")}
+                </Link>
+                <Link href="/jobs/review" className="text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700">
+                  {tr("jobs.tailoredCvGuide.linkQuickReview")}
+                </Link>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--text-2)]">{tr("jobs.tailoredCvModal.generateIntro")}</p>
             <textarea
               className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-2 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
               rows={2}
-              placeholder="Optional: extra instructions (e.g. 'emphasise Python skills', 'write in German')"
+              placeholder={tr("jobs.tailoredCvModal.optionalPlaceholder")}
               value={userInstructions}
               onChange={(e) => setUserInstructions(e.target.value)}
             />
             <Button onClick={() => void handleGenerate()} disabled={loading} className="w-full">
-              {loading ? "Generating…" : isFailed ? "Retry Generation" : "Generate Tailored CV + Cover Letter"}
+              {loading
+                ? tr("jobs.tailoredCvModal.generateButtonLoading")
+                : isFailed
+                  ? tr("jobs.tailoredCvModal.retryButton")
+                  : tr("jobs.tailoredCvModal.generateButton")}
             </Button>
           </div>
         )}
@@ -279,7 +307,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
         {loading && (
           <div className="flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-            <span className="text-sm text-[var(--text-2)]">Claude is tailoring your CV… this takes ~15 seconds</span>
+            <span className="text-sm text-[var(--text-2)]">{tr("jobs.tailoredCvModal.generatingWait")}</span>
           </div>
         )}
 
@@ -301,18 +329,18 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
 
             {/* Tabs */}
             <div className="flex gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-1">
-              {tabs.map((t) => (
+              {tabs.map((tabItem) => (
                 <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={tabItem.id}
+                  onClick={() => setTab(tabItem.id)}
                   className={cn(
                     "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                    tab === t.id
+                    tab === tabItem.id
                       ? "bg-[var(--bg-1)] text-[var(--text-1)] shadow-sm"
                       : "text-[var(--text-3)] hover:text-[var(--text-2)]"
                   )}
                 >
-                  {t.label}
+                  {tabItem.label}
                 </button>
               ))}
             </div>
