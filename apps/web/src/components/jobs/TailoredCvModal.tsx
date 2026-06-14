@@ -223,7 +223,18 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
     });
   }, []);
 
-  const hasData = data?.status === "Completed";
+  const hasData =
+    data?.status === "Completed" &&
+    Boolean(
+      (data.headline && data.headline.trim()) ||
+        (data.summary && data.summary.trim()) ||
+        (data.coverLetter && data.coverLetter.trim()) ||
+        (data.bullets && data.bullets.some((s) => (s.bullets?.length ?? 0) > 0)) ||
+        (data.keywords && data.keywords.length > 0) ||
+        (data.missingKeywords && data.missingKeywords.length > 0) ||
+        data.atsScoreBefore != null ||
+        data.atsScoreAfter != null
+    );
   const isFailed = data?.status === "Failed";
 
   const tabs: Array<{ id: Tab; label: string }> = [

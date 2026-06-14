@@ -317,6 +317,62 @@ recommendation: Concise recommended action.`;
   }
 });
 
+/** Tenant-scoped query: latest CV document that has pasted or extracted text. */
+function buildActiveCvDocumentFilter(tenantId: string): Record<string, unknown> {
+  return {
+    tenantId,
+    $and: [
+      { $or: [{ type: "CV" }, { type: "cv_resume" }, { profileDocumentType: "cv_resume" }] },
+      {
+        $or: [
+          { contentText: { $exists: true, $nin: [null, ""] } },
+          { content: { $exists: true, $nin: [null, ""] } },
+        ],
+      },
+    ],
+  };
+}
+
+function pickNonEmptyString(...vals: unknown[]): string {
+  for (const v of vals) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+function stringArrayField(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((x) => String(x)).filter((s) => s.trim());
+}
+
+/** Normalize bullets whether the model returned `experience`, `tailoredBullets`, or `bullets`. */
+function normalizeTailoredBullets(cvParsed: Record<string, unknown>): Array<{ role: string; bullets: string[] }> {
+  const raw =
+    (Array.isArray(cvParsed.experience) && cvParsed.experience) ||
+    (Array.isArray(cvParsed.tailoredBullets) && cvParsed.tailoredBullets) ||
+    (Array.isArray(cvParsed.bullets) && cvParsed.bullets) ||
+    [];
+  const out: Array<{ role: string; bullets: string[] }> = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const role =
+      pickNonEmptyString(row.role, row.title, row.position, row.jobTitle) || "Experience";
+    const bl = row.bullets;
+    const bullets = Array.isArray(bl) ? bl.map((b) => String(b)).filter((b) => b.trim()) : [];
+    if (bullets.length > 0) out.push({ role, bullets });
+  }
+  return out;
+}
+
+function coverLetterBodyFromParsed(o: Record<string, unknown>): string {
+  return pickNonEmptyString(o.body, o.cover_letter, o.coverLetter, o.letter, o.text);
+}
+
+function coverLetterSubjectFromParsed(o: Record<string, unknown>, position: string): string {
+  return pickNonEmptyString(o.subject, o.email_subject, o.title) || `Application for ${position}`;
+}
+
 export const getTailoredCv = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const job = await findTenantScopedById(JobModel, tenantId, req.params.id);
@@ -360,46 +416,48 @@ export const generateTailoredCv = asyncHandler(async (req: Request, res) => {
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
   const j = job as Record<string, unknown>;
 
-  // Return cached if fresh (< 7 days)
-  if (j.tailoredCvStatus === "Completed" && j.tailoredCvGeneratedAt) {
-    const ageMs = Date.now() - new Date(j.tailoredCvGeneratedAt as string).getTime();
-    if (ageMs < 7 * 24 * 60 * 60 * 1000) {
-      return successResponse(res, {
-        status: "Completed", cached: true,
-        headline: j.tailoredCvHeadline, summary: j.tailoredCvSummary,
-        keywords: j.tailoredCvKeywords ?? [], missingKeywords: j.tailoredCvMissingKeywords ?? [],
-        bullets: j.tailoredCvBullets ?? [],
-        atsScoreBefore: j.tailoredCvAtsScoreBefore, atsScoreAfter: j.tailoredCvAtsScoreAfter,
-        coverLetter: j.tailoredCoverLetter, coverLetterSubject: j.tailoredCoverLetterSubject,
-      });
-    }
-  }
+  // POST always runs a fresh generation (GET returns stored data). A 7-day cache here caused
+  // "Regenerate" to return stale or empty payloads without calling the model again.
 
   const apiKey = resolveAnthropicApiKey();
   if (!apiKey) throw new ApiError("AI not configured", 503, "SERVICE_UNAVAILABLE");
 
-  // Find the user's CV
-  const cvDoc = await DocumentModel.findOne({
-    tenantId,
-    $or: [{ type: "CV" }, { profileDocumentType: "cv_resume" }],
-    contentText: { $exists: true, $nin: [null, ""] },
-  }).sort({ updatedAt: -1 }).lean() as Record<string, unknown> | null;
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const userInstructions =
+    typeof body.userInstructions === "string" && body.userInstructions.trim()
+      ? body.userInstructions.trim()
+      : "";
+  const instructionsBlock = userInstructions
+    ? `\n\nExtra instructions from the candidate:\n${userInstructions}`
+    : "";
+
+  const cvDoc = await DocumentModel.findOne(buildActiveCvDocumentFilter(tenantId))
+    .sort({ updatedAt: -1 })
+    .lean() as Record<string, unknown> | null;
 
   const cvText = cvDoc ? String(cvDoc.contentText ?? (cvDoc as { content?: string }).content ?? "") : "";
+  if (!cvText.trim()) {
+    throw new ApiError(
+      "No CV with text found. Upload a CV under Documents and paste or extract the text.",
+      422,
+      "NO_CV_TEXT"
+    );
+  }
+
   const jobDesc = String(j.description ?? j.aiSummary ?? "").slice(0, 3000);
   const position = String(j.position ?? j.title ?? "");
   const company = String(j.company ?? "");
 
   const modelCandidates = buildAnthropicModelCandidates();
 
-  // Tailor CV
   const cvPrompt = `You are an ATS-optimisation specialist. Given a job description and a candidate's CV, output ONLY valid JSON with no markdown fences.
 
 Job: ${position} at ${company}
 Description: ${jobDesc}
 
 CV:
-${cvText.slice(0, 4000) || "No CV provided — create generic tailored content."}
+${cvText.slice(0, 4000)}
+${instructionsBlock}
 
 Output exactly this JSON (no extra text, no markdown):
 {
@@ -423,7 +481,8 @@ Output exactly this JSON (no extra text, no markdown):
 
 Job description: ${jobDesc}
 
-CV summary: ${cvText.slice(0, 2000) || "Not provided."}
+CV summary: ${cvText.slice(0, 2000)}
+${instructionsBlock}
 
 Output ONLY valid JSON:
 {"subject": "<email subject line>", "body": "<full cover letter, 3-4 paragraphs, professional tone>"}`;
@@ -433,35 +492,76 @@ Output ONLY valid JSON:
     callAnthropicMessages({ prompt: coverPrompt, apiKey, modelCandidates, maxTokens: 800, temperature: 0.4 }),
   ]);
 
+  const markFailed = async (message: string) => {
+    await JobModel.findByIdAndUpdate(job._id, {
+      $set: { tailoredCvStatus: "Failed", tailoredCvError: message },
+    });
+  };
+
+  if (!cvResult.ok) {
+    await markFailed(cvResult.message);
+    throw new ApiError(cvResult.message, 502, "AI_FAILED");
+  }
+
   let cvParsed: Record<string, unknown> = {};
-  let clParsed: Record<string, unknown> = {};
-
   try {
-    if (cvResult.ok) {
-      const m = cvResult.text.match(/\{[\s\S]*\}/);
-      if (m) cvParsed = JSON.parse(m[0]) as Record<string, unknown>;
-    }
-  } catch { /* leave empty */ }
+    const m = cvResult.text.match(/\{[\s\S]*\}/);
+    if (m) cvParsed = JSON.parse(m[0]) as Record<string, unknown>;
+  } catch {
+    cvParsed = {};
+  }
 
+  let clParsed: Record<string, unknown> = {};
   try {
     if (clResult.ok) {
       const m = clResult.text.match(/\{[\s\S]*\}/);
       if (m) clParsed = JSON.parse(m[0]) as Record<string, unknown>;
     }
-  } catch { /* leave empty */ }
+  } catch {
+    clParsed = {};
+  }
+
+  const headline = pickNonEmptyString(
+    cvParsed.headline,
+    cvParsed.tailoredHeadline,
+    cvParsed.cv_headline
+  );
+  const summary = pickNonEmptyString(cvParsed.summary, cvParsed.tailoredSummary, cvParsed.professional_summary);
+  const keywords = stringArrayField(cvParsed.keywords ?? cvParsed.atsKeywords ?? cvParsed.matchedKeywords);
+  const missingKeywords = stringArrayField(cvParsed.missingKeywords ?? cvParsed.missing_keywords);
+  const tailoredBullets = normalizeTailoredBullets(cvParsed);
+  const atsBefore = Number(cvParsed.atsScoreBefore ?? cvParsed.scoreBefore ?? 0) || 0;
+  const atsAfter = Number(cvParsed.atsScoreAfter ?? cvParsed.scoreAfter ?? 0) || 0;
+
+  const hasCvBody =
+    Boolean(headline) || Boolean(summary) || tailoredBullets.length > 0;
+
+  if (!hasCvBody) {
+    const msg =
+      "AI returned no usable CV fields. Try again, add a clearer job description, or check your CV text in Documents.";
+    await markFailed(msg);
+    throw new ApiError(msg, 502, "AI_EMPTY");
+  }
+
+  let coverBody = coverLetterBodyFromParsed(clParsed);
+  if (!coverBody && clResult.ok) {
+    const raw = clResult.text.trim();
+    if (raw && !raw.startsWith("{")) coverBody = raw;
+  }
+  const coverSubject = coverLetterSubjectFromParsed(clParsed, position);
 
   const update = {
-    tailoredCvStatus: "Completed",
-    tailoredCvHeadline: String(cvParsed.headline ?? ""),
-    tailoredCvSummary: String(cvParsed.summary ?? ""),
-    tailoredCvKeywords: Array.isArray(cvParsed.keywords) ? cvParsed.keywords : [],
-    tailoredCvMissingKeywords: Array.isArray(cvParsed.missingKeywords) ? cvParsed.missingKeywords : [],
-    tailoredCvBullets: Array.isArray(cvParsed.experience) ? cvParsed.experience : (Array.isArray(cvParsed.bullets) ? cvParsed.bullets : []),
-    tailoredCvAtsScoreBefore: Number(cvParsed.atsScoreBefore ?? 0),
-    tailoredCvAtsScoreAfter: Number(cvParsed.atsScoreAfter ?? 0),
+    tailoredCvStatus: "Completed" as const,
+    tailoredCvHeadline: headline,
+    tailoredCvSummary: summary,
+    tailoredCvKeywords: keywords,
+    tailoredCvMissingKeywords: missingKeywords,
+    tailoredCvBullets: tailoredBullets,
+    tailoredCvAtsScoreBefore: atsBefore,
+    tailoredCvAtsScoreAfter: atsAfter,
     tailoredCvGeneratedAt: new Date(),
-    tailoredCoverLetter: String(clParsed.body ?? ""),
-    tailoredCoverLetterSubject: String(clParsed.subject ?? `Application for ${position}`),
+    tailoredCoverLetter: coverBody,
+    tailoredCoverLetterSubject: coverSubject,
     tailoredCvError: null,
   };
 
@@ -494,11 +594,9 @@ export const generateCvPdf = asyncHandler(async (req: Request, res: Response) =>
   const templateId = String(body.templateId ?? "modern-no-photo");
   const personalInfo = (body.personalInfo ?? {}) as Record<string, string>;
 
-  const cvDoc = await DocumentModel.findOne({
-    tenantId,
-    $or: [{ type: "CV" }, { profileDocumentType: "cv_resume" }],
-    contentText: { $exists: true, $nin: [null, ""] },
-  }).sort({ updatedAt: -1 }).lean() as Record<string, unknown> | null;
+  const cvDoc = await DocumentModel.findOne(buildActiveCvDocumentFilter(tenantId))
+    .sort({ updatedAt: -1 })
+    .lean() as Record<string, unknown> | null;
 
   // Build template data from job tailored fields + personal info
   const templateData = {
