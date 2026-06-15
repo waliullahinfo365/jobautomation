@@ -22,5 +22,7 @@ In the **same modal** → **Cover Letter** tab → download a properly formatted
 
 ## Getting started
 
-1. Upload your CV under **Documents** and paste the CV text in the text field (or rely on extraction from PDF/DOCX when it works).
-2. Open any job in **Quick Review** and choose **Tailor CV for this job**.
+1. Upload your **general (master) CV** once under **Documents** → workspace library. PDF and Word are read automatically; you only need to paste text if the file has no extractable text (e.g. some scanned PDFs).
+2. Open any job in **Quick Review** and choose **Tailor CV for this job**. Extra instructions in the modal are **optional** — leave them blank for default tailoring to that role.
+
+Your career facts do not change; the product only reframes wording and emphasis per job and ATS keywords.

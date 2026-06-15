@@ -53,27 +53,31 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-y-contain bg-black/50 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-4"
       onClick={handleBackdropClick}
       role="presentation"
     >
       <div
         ref={modalRef}
         className={cn(
-          "relative w-full rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] shadow-lg",
+          "relative my-auto flex w-full min-w-0 max-h-[min(100dvh-1.25rem,56rem)] flex-col overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] shadow-lg sm:rounded-lg",
           sizeStyles[size]
         )}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         {/* Header */}
-        <div className="border-b border-[var(--border-default)] px-6 py-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--text-1)]">{title}</h2>
+        <div className="shrink-0 border-b border-[var(--border-default)] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="break-words text-base font-semibold text-[var(--text-1)] sm:text-lg">{title}</h2>
               {description && <p className="mt-1 text-sm text-[var(--text-3)]">{description}</p>}
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="text-[var(--text-3)] hover:text-[var(--text-1)]"
+              className="-m-1 shrink-0 rounded-md p-2 text-[var(--text-3)] hover:bg-[var(--surface-2)] hover:text-[var(--text-1)] touch-manipulation"
               aria-label={t("common.closeModal")}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,8 +87,8 @@ export function Modal({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-4">{children}</div>
+        {/* Content — scrolls on small screens / long bodies */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">{children}</div>
       </div>
     </div>
   );

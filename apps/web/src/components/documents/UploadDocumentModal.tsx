@@ -91,11 +91,11 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-y-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-4">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => !loading && onClose()} aria-hidden />
-      <div className="relative z-50 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-6 shadow-xl">
+      <div className="relative z-50 my-auto flex max-h-[min(100dvh-1.25rem,90vh)] w-full min-w-0 max-w-lg flex-col overflow-y-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 shadow-xl sm:rounded-[var(--r-lg)] sm:p-6">
         <h2 className="text-lg font-semibold text-[var(--text-1)]">{t("documents.upload.title")}</h2>
-        <p className="mt-1 text-sm text-[var(--text-3)]">{t("documents.upload.subtitle")}</p>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--text-3)]">{t("documents.upload.subtitle")}</p>
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.file")}</label>
@@ -111,6 +111,7 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
           </div>
           <div className="space-y-2">
             <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.documentText")}</label>
+            <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.documentTextHelp")}</p>
             <textarea
               className="flex min-h-[120px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={contentText}
@@ -127,11 +128,11 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
               placeholder={t("documents.upload.notesPlaceholder")}
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full touch-manipulation sm:w-auto">
               {t("documents.upload.cancel")}
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full touch-manipulation sm:w-auto">
               {loading ? t("documents.upload.creating") : t("documents.upload.createRecord")}
             </Button>
           </div>

@@ -488,7 +488,7 @@ export const messages: Record<
         generateIntro:
           "Nutzt den CV-Text aus Meine Dokumente. Überschrift, Zusammenfassung und Erfahrung werden an diese Stelle angepasst — ohne Fakten zu erfinden.",
         optionalPlaceholder:
-          "Optional: weitere Anweisungen (z. B. „Python betonen“, „auf Deutsch schreiben“)",
+          "Optional — leer lassen für Standard-Anpassung an die Stelle. Nur bei Sonderwünschen ausfüllen (z. B. „Python betonen“, „auf Deutsch“).",
         generateButton: "Angepassten CV + Anschreiben erzeugen",
         generateButtonLoading: "Wird erzeugt…",
         retryButton: "Erneut versuchen",
@@ -1924,14 +1924,17 @@ export const messages: Record<
       },
       upload: {
         title: "Dokument hochladen",
-        subtitle: "Arbeitsbereich-Lebenslauf und Anschreiben (ohne zugehörigen Job) werden für KI-Recherche, Entwürfe und Jobanalyse wiederverwendet.",
+        subtitle:
+          "Laden Sie einmal Ihren allgemeinen Lebenslauf in die Arbeitsbereich-Bibliothek — Fakten bleiben gleich. Die KI passt ihn später pro Stelle an (Quick Review), ohne Karriere zu erfinden.",
         file: "Datei",
         documentType: "Dokumenttyp",
         relatedJob: "Verknüpfter Job",
         workspaceLibrary: "Arbeitsbereich-Bibliothek (kein Job) — für KI-Profilkontext",
-        documentText: "Dokumenttext (optional, empfohlen für KI)",
+        documentText: "CV-Text (nur nötig, wenn die Datei keinen lesbaren Text hat)",
+        documentTextHelp:
+          "PDF/Word wird automatisch ausgelesen — dann kann dieses Feld leer bleiben. Nur bei gescannten PDFs oder leerem Extrakt hier den Lebenslauf einfügen.",
         documentTextPlaceholder:
-          "Optional: CV-Text hier einfügen. PDF, Word (.docx) und Klartext werden beim Dateiauswahl automatisch gelesen.",
+          "Leer lassen, wenn die Datei oben ausreicht. Sonst hier den vollständigen CV-Text einfügen.",
         notes: "Notizen",
         notesPlaceholder: "Optionaler Kontext für diesen Dokumentdatensatz",
         cancel: "Abbrechen",
@@ -3183,7 +3186,7 @@ export const messages: Record<
         generateIntro:
           "Uses CV text from Documents. Your headline, summary, and experience bullets are tailored to this role — without inventing facts.",
         optionalPlaceholder:
-          "Optional: extra instructions (e.g. \"emphasise Python skills\", \"write in German\")",
+          "Optional — leave blank for default tailoring to this job. Only add special requests (e.g. \"emphasise Python\", \"write in German\").",
         generateButton: "Generate tailored CV + cover letter",
         generateButtonLoading: "Generating…",
         retryButton: "Retry generation",
@@ -4618,14 +4621,17 @@ export const messages: Record<
       },
       upload: {
         title: "Upload document",
-        subtitle: "Workspace CV and cover letter (no related job) are reused for AI research, drafts, and job analysis.",
+        subtitle:
+          "Upload your general CV once to the workspace library — your career facts stay the same. AI then tailors it per job in Quick Review without inventing experience.",
         file: "File",
         documentType: "Document type",
         relatedJob: "Related job",
         workspaceLibrary: "Workspace library (no job) — for AI profile context",
-        documentText: "Document text (optional, recommended for AI)",
+        documentText: "CV text (only if the file has no readable text)",
+        documentTextHelp:
+          "We read PDF and Word automatically — you can leave this blank when that works. Paste only for scanned PDFs or when extraction comes back empty.",
         documentTextPlaceholder:
-          "Optional: paste CV text here. PDF, Word (.docx), and plain text files are read automatically when you pick a file.",
+          "Leave empty if the file above is enough. Otherwise paste your full CV text here.",
         notes: "Notes",
         notesPlaceholder: "Optional context for this document record",
         cancel: "Cancel",

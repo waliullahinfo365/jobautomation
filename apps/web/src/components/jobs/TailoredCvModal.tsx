@@ -271,11 +271,11 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
         {!hasData && (
           <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 space-y-3">
             {isFailed && data.error && (
-              <p className="text-sm text-red-500">{data.error}</p>
+              <p className="break-words text-sm text-red-500">{data.error}</p>
             )}
-            <div className="rounded-lg border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/25 p-3 space-y-2 text-sm text-[var(--text-2)]">
+            <div className="rounded-lg border border-blue-200/80 dark:border-blue-900/60 bg-blue-50/60 dark:bg-blue-950/25 p-3 space-y-2 text-sm text-[var(--text-2)] sm:p-4">
               <p className="font-semibold text-[var(--text-1)]">{tr("jobs.tailoredCvGuide.title")}</p>
-              <ul className="list-disc pl-4 space-y-1.5">
+              <ul className="list-disc space-y-1.5 pl-4 sm:pl-5">
                 <li>{tr("jobs.tailoredCvGuide.bulletQuickReview")}</li>
                 <li>{tr("jobs.tailoredCvGuide.bulletAi")}</li>
                 <li>{tr("jobs.tailoredCvGuide.bulletPdf")}</li>
@@ -283,11 +283,11 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                 <li>{tr("jobs.tailoredCvGuide.bulletAtsMaster")}</li>
               </ul>
               <p className="font-semibold text-[var(--text-1)] pt-1">{tr("jobs.tailoredCvGuide.getStartedTitle")}</p>
-              <ul className="list-disc pl-4 space-y-1">
+              <ul className="list-disc space-y-1 pl-4 sm:pl-5">
                 <li>{tr("jobs.tailoredCvGuide.getStarted1")}</li>
                 <li>{tr("jobs.tailoredCvGuide.getStarted2")}</li>
               </ul>
-              <div className="flex flex-wrap gap-3 pt-1">
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:gap-3">
                 <Link href="/documents" className="text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700">
                   {tr("jobs.tailoredCvGuide.linkDocuments")}
                 </Link>
@@ -316,9 +316,9 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
 
         {/* Loading state */}
         {loading && (
-          <div className="flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-            <span className="text-sm text-[var(--text-2)]">{tr("jobs.tailoredCvModal.generatingWait")}</span>
+          <div className="flex items-start gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+            <div className="mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            <span className="min-w-0 flex-1 text-sm leading-relaxed text-[var(--text-2)]">{tr("jobs.tailoredCvModal.generatingWait")}</span>
           </div>
         )}
 
@@ -326,26 +326,26 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
         {hasData && !loading && (
           <>
             {/* Regenerate bar */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
               <input
-                className="flex-1 min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-1.5 text-sm text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="min-h-11 w-full min-w-0 flex-1 rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] px-3 py-2 text-base text-[var(--text-1)] placeholder:text-[var(--text-3)] focus:outline-none focus:ring-1 focus:ring-blue-500 sm:min-h-0 sm:text-sm"
                 placeholder="Add instructions and regenerate…"
                 value={userInstructions}
                 onChange={(e) => setUserInstructions(e.target.value)}
               />
-              <Button size="sm" variant="outline" onClick={() => void handleGenerate()} disabled={loading}>
+              <Button size="sm" variant="outline" onClick={() => void handleGenerate()} disabled={loading} className="w-full shrink-0 touch-manipulation sm:w-auto sm:self-center">
                 Regenerate
               </Button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-1">
+            <div className="-mx-1 flex gap-1 overflow-x-auto overscroll-x-contain rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-1 sm:mx-0">
               {tabs.map((tabItem) => (
                 <button
                   key={tabItem.id}
                   onClick={() => setTab(tabItem.id)}
                   className={cn(
-                    "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                    "min-h-11 shrink-0 flex-1 whitespace-nowrap rounded-md px-2.5 py-2 text-xs font-medium transition-all touch-manipulation sm:min-h-0 sm:flex-1 sm:px-3 sm:py-1.5 sm:text-sm",
                     tab === tabItem.id
                       ? "bg-[var(--bg-1)] text-[var(--text-1)] shadow-sm"
                       : "text-[var(--text-3)] hover:text-[var(--text-2)]"
@@ -366,12 +366,13 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
               >
                 {tab === "cv" && (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <h3 className="text-sm font-semibold text-[var(--text-1)]">Tailored Content</h3>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => copyToClipboard(cvText, "cv")}
+                        className="w-full touch-manipulation sm:w-auto"
                       >
                         {copied === "cv" ? "Copied!" : "Copy all"}
                       </Button>
@@ -382,7 +383,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                       <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-[var(--text-2)] hover:bg-[var(--surface-2)] rounded-lg">
                         Personal info for PDF (name, contact) ›
                       </summary>
-                      <div className="grid grid-cols-2 gap-2 p-3 pt-2">
+                      <div className="grid grid-cols-1 gap-2 p-3 pt-2 sm:grid-cols-2">
                         {(["fullName", "email", "phone", "location", "linkedIn"] as const).map((field) => (
                           <input
                             key={field}
@@ -398,7 +399,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                     {/* Template picker + download */}
                     <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-2">
                       <p className="text-xs font-semibold text-[var(--text-2)]">Choose template &amp; download</p>
-                      <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                         {CV_TEMPLATE_OPTIONS.map((t) => (
                           <button
                             key={t.id}
@@ -477,15 +478,15 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
 
                 {tab === "cover-letter" && (
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
                         <h3 className="text-sm font-semibold text-[var(--text-1)]">Cover Letter</h3>
                         {data.coverLetterSubject && (
-                          <p className="text-xs text-[var(--text-3)]">Subject: {data.coverLetterSubject}</p>
+                          <p className="break-words text-xs text-[var(--text-3)]">Subject: {data.coverLetterSubject}</p>
                         )}
                       </div>
                       {data.coverLetter && (
-                        <Button size="sm" variant="ghost" onClick={() => copyToClipboard(data.coverLetter!, "cl")}>
+                        <Button size="sm" variant="ghost" onClick={() => copyToClipboard(data.coverLetter!, "cl")} className="w-full shrink-0 touch-manipulation sm:w-auto">
                           {copied === "cl" ? "Copied!" : "Copy text"}
                         </Button>
                       )}
@@ -493,7 +494,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
 
                     {/* Styled preview */}
                     {data.coverLetter && (
-                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] p-5 space-y-4 max-h-80 overflow-y-auto">
+                      <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-1)] p-4 space-y-4 max-h-[min(20rem,55vh)] overflow-y-auto sm:p-5 sm:max-h-80">
                         <div className="border-b border-[var(--border-default)] pb-3">
                           <p className="font-bold text-[var(--text-1)]">{personalInfo.fullName || "Your Name"}</p>
                           <div className="flex flex-wrap gap-3 mt-1 text-xs text-[var(--text-3)]">
@@ -526,13 +527,13 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                     {data.coverLetter && (
                       <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 space-y-2">
                         <p className="text-xs font-semibold text-[var(--text-2)]">Download as PDF</p>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                           {(["modern", "classic"] as const).map((s) => (
                             <button
                               key={s}
                               onClick={() => setSelectedTemplate(s === "modern" ? "modern-no-photo" : "classic-no-photo")}
                               className={cn(
-                                "flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-all",
+                                "min-h-11 flex-1 rounded-lg border px-2 py-2 text-xs font-medium transition-all touch-manipulation sm:min-h-0 sm:px-3",
                                 (s === "modern" ? selectedTemplate === "modern-no-photo" || selectedTemplate === "modern-with-photo" : selectedTemplate === "classic-no-photo" || selectedTemplate === "classic-with-photo")
                                   ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-700"
                                   : "border-[var(--border-default)] text-[var(--text-2)] hover:border-blue-400"

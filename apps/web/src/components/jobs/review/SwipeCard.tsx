@@ -89,7 +89,7 @@ function DetailsSheet({ job, ai, onClose, onTailorCv }: { job: ReviewableJob; ai
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-[var(--surface-1)] shadow-2xl"
+        className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto overscroll-y-contain rounded-t-2xl bg-[var(--surface-1)] shadow-2xl pb-[env(safe-area-inset-bottom)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Handle bar */}
@@ -97,7 +97,7 @@ function DetailsSheet({ job, ai, onClose, onTailorCv }: { job: ReviewableJob; ai
           <div className="h-1 w-10 rounded-full bg-[var(--border-default)]" />
         </div>
 
-        <div className="px-5 pb-10 space-y-5">
+        <div className="space-y-5 px-4 pb-8 pt-1 sm:px-5 sm:pb-10">
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div>
