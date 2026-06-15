@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -47,6 +47,15 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
   const [contentText, setContentText] = useState("");
   const [notes, setNotes] = useState("");
 
+  useEffect(() => {
+    if (!open) return;
+    setFile(null);
+    setType("CV");
+    setJobId("");
+    setContentText("");
+    setNotes("");
+  }, [open]);
+
   if (!open) return null;
 
   async function handleSubmit(e: React.FormEvent) {
@@ -74,7 +83,7 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
     await onSubmit({
       fileName,
       type,
-      jobId: jobId || undefined,
+      jobId: jobId.trim() || undefined,
       contentText: merged,
       notes: notes.trim() || undefined,
     });
@@ -106,10 +115,6 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
             <Select value={type} onChange={(e) => setType(e.target.value as UploadPayload["type"])} options={typeOptions} />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.relatedJob")}</label>
-            <Select value={jobId} onChange={(e) => setJobId(e.target.value)} options={jobOptions} />
-          </div>
-          <div className="space-y-2">
             <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.documentText")}</label>
             <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.documentTextHelp")}</p>
             <textarea
@@ -127,6 +132,11 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t("documents.upload.notesPlaceholder")}
             />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.relatedJob")}</label>
+            <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.relatedJobHint")}</p>
+            <Select value={jobId} onChange={(e) => setJobId(e.target.value)} options={jobOptions} />
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full touch-manipulation sm:w-auto">

@@ -1929,7 +1929,9 @@ export const messages: Record<
         file: "Datei",
         documentType: "Dokumenttyp",
         relatedJob: "Verknüpfter Job",
-        workspaceLibrary: "Arbeitsbereich-Bibliothek (kein Job) — für KI-Profilkontext",
+        workspaceLibrary: "Arbeitsbereich-Bibliothek (kein Job) — empfohlen für den allgemeinen Lebenslauf",
+        relatedJobHint:
+          "Nur ausfüllen, wenn diese Datei genau zu einer bestehenden Stelle gehört. Für den Standard-Lebenslauf „Arbeitsbereich-Bibliothek“ wählen — kein Job nötig.",
         documentText: "CV-Text (nur nötig, wenn die Datei keinen lesbaren Text hat)",
         documentTextHelp:
           "PDF/Word wird automatisch ausgelesen — dann kann dieses Feld leer bleiben. Nur bei gescannten PDFs oder leerem Extrakt hier den Lebenslauf einfügen.",
@@ -4626,7 +4628,9 @@ export const messages: Record<
         file: "File",
         documentType: "Document type",
         relatedJob: "Related job",
-        workspaceLibrary: "Workspace library (no job) — for AI profile context",
+        workspaceLibrary: "Workspace library (no job) — use this for your general CV",
+        relatedJobHint:
+          "Only link a job if this file is for that one role. For your main CV, keep “Workspace library” — no job is required.",
         documentText: "CV text (only if the file has no readable text)",
         documentTextHelp:
           "We read PDF and Word automatically — you can leave this blank when that works. Paste only for scanned PDFs or when extraction comes back empty.",

@@ -68,92 +68,158 @@ export async function processUploadedProfileDocument(payload: DocumentUploadProc
       relatedRecordId: String(doc._id),
       metadata: { profileDocumentType: payload.profileDocumentType, reason: auth.reason },
     });
+    if (contentText && payload.profileDocumentType === "cv_resume") {
+      await DocumentModel.updateMany(
+        { tenantId: payload.tenantId, profileDocumentType: "cv_resume", _id: { $ne: doc._id } },
+        { isActiveProfileDocument: false }
+      );
+      await DocumentModel.findByIdAndUpdate(doc._id, {
+        status: "Ready",
+        extractionStatus: "Provided",
+        isActiveProfileDocument: true,
+        storageLocation: "In-app (Google Drive not connected)",
+        storagePath: "In-app (Google Drive not connected)",
+        metadata: {
+          ...((doc.metadata as Record<string, unknown> | undefined) ?? {}),
+          workspaceLibrary: true,
+          profileDocumentType: payload.profileDocumentType,
+          operationId,
+        },
+      });
+    }
     return { suppressWorkerCompletionLog: true as const, moduleKey: "document-upload", status: "warning", operationId };
   }
 
-  const workspace = await ensureWorkspaceFolderStructure({ tenantId: payload.tenantId, accessToken: auth.accessToken });
-  let parentId = workspace.templates.folder.id;
-  let storageLocation = "Job Applications/Templates";
-  let fileName = String(doc.fileName ?? "Uploaded document");
+  try {
+    const workspace = await ensureWorkspaceFolderStructure({ tenantId: payload.tenantId, accessToken: auth.accessToken });
+    let parentId = workspace.templates.folder.id;
+    let storageLocation = "Job Applications/Templates";
+    const fileName = String(doc.fileName ?? "Uploaded document");
 
-  if (payload.profileDocumentType === "cv_resume") {
-    const cvFolder = await findOrCreateFolder({
+    if (payload.profileDocumentType === "cv_resume") {
+      const cvFolder = await findOrCreateFolder({
+        accessToken: auth.accessToken,
+        name: "CV",
+        parentId: workspace.templates.folder.id,
+      });
+      parentId = cvFolder.folder.id;
+      storageLocation = "Job Applications/Templates/CV";
+    }
+
+    const created = await createGoogleDoc({
       accessToken: auth.accessToken,
-      name: "CV",
-      parentId: workspace.templates.folder.id,
+      name: fileName,
+      content: contentText,
+      parentId,
     });
-    parentId = cvFolder.folder.id;
-    storageLocation = "Job Applications/Templates/CV";
-  }
+    const link = created.webViewLink ?? driveLink(created.id);
 
-  const created = await createGoogleDoc({
-    accessToken: auth.accessToken,
-    name: fileName,
-    content: contentText,
-    parentId,
-  });
-  const link = created.webViewLink ?? driveLink(created.id);
+    await DocumentModel.updateMany(
+      {
+        tenantId: payload.tenantId,
+        profileDocumentType: payload.profileDocumentType,
+        _id: { $ne: doc._id },
+      },
+      { isActiveProfileDocument: false }
+    );
 
-  await DocumentModel.updateMany(
-    {
-      tenantId: payload.tenantId,
-      profileDocumentType: payload.profileDocumentType,
-      _id: { $ne: doc._id },
-    },
-    { isActiveProfileDocument: false }
-  );
-
-  await DocumentModel.findByIdAndUpdate(doc._id, {
-    fileName,
-    status: "Ready",
-    generationStatus: "Generated",
-    extractionStatus: contentText ? "Provided" : "Not Required",
-    extractionError: undefined,
-    isActiveProfileDocument: payload.profileDocumentType !== "supporting_document",
-    storageProvider: "Google Drive",
-    storageLocation,
-    storagePath: storageLocation,
-    storageUrl: link,
-    driveFileId: created.id,
-    driveFileLink: link,
-    googleDriveFileId: created.id,
-    googleDriveFolderId: parentId,
-    metadata: {
-      ...((doc.metadata as Record<string, unknown> | undefined) ?? {}),
-      activeProfileDocument: payload.profileDocumentType !== "supporting_document",
-      profileDocumentType: payload.profileDocumentType,
-      googleDocId: created.id,
-      googleDocUrl: link,
+    await DocumentModel.findByIdAndUpdate(doc._id, {
+      fileName,
+      status: "Ready",
+      generationStatus: "Generated",
+      extractionStatus: contentText ? "Provided" : "Not Required",
+      extractionError: undefined,
+      isActiveProfileDocument: payload.profileDocumentType !== "supporting_document",
+      storageProvider: "Google Drive",
       storageLocation,
+      storagePath: storageLocation,
+      storageUrl: link,
+      driveFileId: created.id,
+      driveFileLink: link,
+      googleDriveFileId: created.id,
+      googleDriveFolderId: parentId,
+      metadata: {
+        ...((doc.metadata as Record<string, unknown> | undefined) ?? {}),
+        activeProfileDocument: payload.profileDocumentType !== "supporting_document",
+        profileDocumentType: payload.profileDocumentType,
+        googleDocId: created.id,
+        googleDocUrl: link,
+        storageLocation,
+        operationId,
+      },
+    });
+
+    await AutomationLogModel.create({
+      tenantId: payload.tenantId,
+      createdBy: "system",
+      moduleKey: "document-upload",
+      moduleName: "document-upload",
+      status: "Success",
+      message:
+        payload.profileDocumentType === "cv_resume"
+          ? "Active master CV uploaded to Google Drive."
+          : payload.profileDocumentType === "cover_letter_template"
+            ? "Active cover letter template uploaded to Google Drive."
+            : "Supporting document uploaded to Google Drive.",
       operationId,
-    },
-  });
+      relatedRecordType: "Document",
+      relatedRecordId: String(doc._id),
+      metadata: { profileDocumentType: payload.profileDocumentType, storageLocation, driveFileId: created.id },
+    });
 
-  await AutomationLogModel.create({
-    tenantId: payload.tenantId,
-    createdBy: "system",
-    moduleKey: "document-upload",
-    moduleName: "document-upload",
-    status: "Success",
-    message:
-      payload.profileDocumentType === "cv_resume"
-        ? "Active master CV uploaded to Google Drive."
-        : payload.profileDocumentType === "cover_letter_template"
-          ? "Active cover letter template uploaded to Google Drive."
-          : "Supporting document uploaded to Google Drive.",
-    operationId,
-    relatedRecordType: "Document",
-    relatedRecordId: String(doc._id),
-    metadata: { profileDocumentType: payload.profileDocumentType, storageLocation, driveFileId: created.id },
-  });
+    return {
+      suppressWorkerCompletionLog: true as const,
+      moduleKey: "document-upload",
+      status: "completed",
+      operationId,
+      documentId: String(doc._id),
+      driveFileId: created.id,
+      driveFileLink: link,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Google Drive sync failed";
+    await AutomationLogModel.create({
+      tenantId: payload.tenantId,
+      createdBy: "system",
+      moduleKey: "document-upload",
+      moduleName: "document-upload",
+      status: "Warning",
+      message: `Profile document saved in app; Google Drive upload failed: ${message}`,
+      operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: String(doc._id),
+      metadata: { profileDocumentType: payload.profileDocumentType, reason: message },
+    });
 
-  return {
-    suppressWorkerCompletionLog: true as const,
-    moduleKey: "document-upload",
-    status: "completed",
-    operationId,
-    documentId: String(doc._id),
-    driveFileId: created.id,
-    driveFileLink: link,
-  };
+    /** Keep text in DB so Quick Review / tailoring still work without Drive. */
+    if (contentText && payload.profileDocumentType === "cv_resume") {
+      await DocumentModel.updateMany(
+        {
+          tenantId: payload.tenantId,
+          profileDocumentType: "cv_resume",
+          _id: { $ne: doc._id },
+        },
+        { isActiveProfileDocument: false }
+      );
+      await DocumentModel.findByIdAndUpdate(doc._id, {
+        status: "Ready",
+        generationStatus: "Failed",
+        extractionStatus: "Provided",
+        extractionError: undefined,
+        isActiveProfileDocument: true,
+        storageLocation: "In-app (Drive sync failed)",
+        storagePath: "In-app (Drive sync failed)",
+        metadata: {
+          ...((doc.metadata as Record<string, unknown> | undefined) ?? {}),
+          workspaceLibrary: true,
+          profileDocumentType: payload.profileDocumentType,
+          driveSyncFailed: true,
+          driveSyncError: message,
+          operationId,
+        },
+      });
+    }
+
+    return { suppressWorkerCompletionLog: true as const, moduleKey: "document-upload", status: "warning", operationId };
+  }
 }

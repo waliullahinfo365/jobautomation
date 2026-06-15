@@ -98,17 +98,19 @@ export const createDocument = asyncHandler(async (req: Request, res) => {
         documentId: String(row._id),
         profileDocumentType,
       });
-      const refreshed = await findTenantScopedById(DocumentModel, tenantId, String(row._id));
-      const plain = refreshed && typeof refreshed.toObject === "function" ? refreshed.toObject() : refreshed ?? row;
-      return successResponse(res, sanitizeDocumentForApi(plain as Record<string, unknown>), "Created", 201);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Profile document post-processing failed";
       await DocumentModel.findByIdAndUpdate(row._id, {
-        extractionStatus: "Failed",
-        extractionError: error instanceof Error ? error.message : "Profile document routing failed",
-        isActiveProfileDocument: false,
+        extractionStatus: contentText ? "Provided" : "Failed",
+        extractionError: contentText ? msg : undefined,
+        isActiveProfileDocument: Boolean(contentText) && profileDocumentType === "cv_resume",
+        status: contentText ? "Ready" : "Draft",
+        generationStatus: "Failed",
       });
-      throw error;
     }
+    const refreshed = await findTenantScopedById(DocumentModel, tenantId, String(row._id));
+    const plain = refreshed && typeof refreshed.toObject === "function" ? refreshed.toObject() : refreshed ?? row;
+    return successResponse(res, sanitizeDocumentForApi(plain as Record<string, unknown>), "Created", 201);
   }
   return successResponse(res, row, "Created", 201);
 });

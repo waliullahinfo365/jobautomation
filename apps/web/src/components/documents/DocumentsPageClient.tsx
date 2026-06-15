@@ -18,7 +18,7 @@ import type {
 import {
   mockFolderAutomationSettings,
 } from "@/data/mockDocuments";
-import { apiFetch, withQuery } from "@/lib/api/client";
+import { apiFetch, withQuery, ApiError } from "@/lib/api/client";
 import { DocumentStatsCards } from "./DocumentStatsCards";
 import { DocumentTabs } from "./DocumentTabs";
 import { DocumentFilters, type DocumentFilterState } from "./DocumentFilters";
@@ -435,24 +435,26 @@ export function DocumentsPageClient() {
         apiType === "cv_resume" || apiType === "cover_letter_template" || apiType === "supporting_document"
           ? apiType
           : undefined;
+      const jobIdClean = typeof payload.jobId === "string" && payload.jobId.trim() ? payload.jobId.trim() : undefined;
       await documentsApi.createDocument({
         ...ids,
         fileName: payload.fileName,
         type: apiType,
         documentKind: apiType === "cv_resume" ? "CV" : apiType === "cover_letter_template" ? "Cover Letter" : "Other",
         status: "Draft",
-        jobId: payload.jobId,
+        jobId: jobIdClean,
         contentText: payload.contentText,
         notes: payload.notes,
         profileDocumentType,
         sourceFileName: payload.fileName,
-        metadata: !payload.jobId ? { workspaceLibrary: true, profileDocumentType } : undefined,
+        metadata: !jobIdClean ? { workspaceLibrary: true, profileDocumentType } : undefined,
       });
       showSuccess(t("documents.toast.documentRecordCreated"));
       setUploadOpen(false);
       await documentsApi.refetch();
-    } catch {
-      showError(t("documents.toast.couldNotCreateRecord"));
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : t("documents.toast.couldNotCreateRecord");
+      showError(msg);
     }
   }
 
