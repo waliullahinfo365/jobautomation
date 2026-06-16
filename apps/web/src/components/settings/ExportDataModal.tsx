@@ -5,8 +5,8 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
-
-type ExportType = "jobs" | "applications" | "contacts" | "documents" | "full";
+import { buildWorkspaceExport, type WorkspaceExportType } from "@/lib/export/workspace-export";
+import { ApiError } from "@/lib/api/client";
 
 interface ExportDataModalProps {
   isOpen: boolean;
@@ -18,16 +18,13 @@ export function ExportDataModal({
   onClose,
 }: ExportDataModalProps) {
   const { t } = useTranslation();
-  const [selectedType, setSelectedType] = useState<ExportType>("jobs");
+  const [selectedType, setSelectedType] = useState<WorkspaceExportType>("jobs");
   const [isExporting, setIsExporting] = useState(false);
 
   const handleGenerateExport = async () => {
     setIsExporting(true);
     try {
-      // Simulate export generation
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      const exportData = generateExportData(selectedType);
+      const exportData = await buildWorkspaceExport(selectedType);
       const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -43,7 +40,13 @@ export function ExportDataModal({
       showSuccess(t("settings.dataStorage.exportModal.successMsg"));
       onClose();
     } catch (error) {
-      showError(t("settings.dataStorage.exportModal.errorMsg"));
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : t("settings.dataStorage.exportModal.errorMsg");
+      showError(message);
     } finally {
       setIsExporting(false);
     }
@@ -99,42 +102,4 @@ export function ExportDataModal({
       </div>
     </Modal>
   );
-}
-
-function generateExportData(type: ExportType) {
-  const timestamp = new Date().toISOString();
-  const baseData = {
-    exportDate: timestamp,
-    exportType: type,
-    workspace: "Demo Workspace",
-  };
-
-  if (type === "full") {
-    return {
-      ...baseData,
-      jobs: { count: 12, sample: "Job data..." },
-      applications: { count: 45, sample: "Application data..." },
-      contacts: { count: 28, sample: "Contact data..." },
-      documents: { count: 156, sample: "Document data..." },
-    };
-  }
-
-  const typeCounts = {
-    jobs: 12,
-    applications: 45,
-    contacts: 28,
-    documents: 156,
-  };
-
-  return {
-    ...baseData,
-    [type]: {
-      count: typeCounts[type as Exclude<ExportType, "full">],
-      data: Array.from({ length: 3 }).map((_, i) => ({
-        id: `${type}-${i + 1}`,
-        name: `Sample ${type.slice(0, -1)} ${i + 1}`,
-        createdAt: timestamp,
-      })),
-    },
-  };
 }

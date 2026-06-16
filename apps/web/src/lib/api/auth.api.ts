@@ -62,6 +62,17 @@ export async function me(): Promise<{ user: AuthSessionPayload["user"]; tenant: 
   return apiFetch("/auth/me", { method: "GET" });
 }
 
+export async function updateProfile(payload: { name: string }): Promise<{ user: AuthSessionPayload["user"] }> {
+  return apiFetch("/auth/me", { method: "PATCH", body: payload });
+}
+
+export async function changePassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ ok: boolean }> {
+  return apiFetch("/auth/change-password", { method: "POST", body: payload });
+}
+
 export async function forgotPassword(email: string): Promise<{ ok: boolean }> {
   return apiFetch("/auth/forgot-password", { method: "POST", body: { email }, headers: {} });
 }

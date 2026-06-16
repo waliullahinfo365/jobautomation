@@ -11,6 +11,11 @@ export interface UserPreferences {
   noticePeriod?: string;
   rightToWork?: boolean;
   requiresSponsorship?: boolean;
+  securitySettings?: {
+    twoFactorAuth?: boolean;
+    loginAlerts?: boolean;
+    sessionTimeout?: boolean;
+  };
 }
 
 export function getUserPreferences() {

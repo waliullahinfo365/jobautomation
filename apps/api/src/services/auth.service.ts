@@ -346,6 +346,41 @@ export const authService = {
     };
   },
 
+  async updateCurrentUserProfile(input: { userId: string; tenantId: string; name: string }) {
+    const name = input.name.trim();
+    if (!name) throw new ApiError("Name is required", 422, "VALIDATION_ERROR");
+    const userDoc = await UserModel.findOneAndUpdate(
+      { _id: input.userId, tenantId: input.tenantId },
+      { $set: { name } },
+      { new: true }
+    ).lean();
+    if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");
+    return toPublicUser(userDoc as Record<string, unknown>);
+  },
+
+  async changePassword(input: {
+    userId: string;
+    tenantId: string;
+    currentPassword: string;
+    newPassword: string;
+  }) {
+    const userDoc = await UserModel.findOne({ _id: input.userId, tenantId: input.tenantId }).lean();
+    if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");
+    const passwordHash = String((userDoc as Record<string, unknown>).passwordHash ?? "");
+    if (!passwordHash) {
+      throw new ApiError(
+        "Password change is not available for accounts signed in with Google",
+        400,
+        "PASSWORD_NOT_SET"
+      );
+    }
+    const valid = await verifyPassword(input.currentPassword, passwordHash);
+    if (!valid) throw new ApiError("Current password is incorrect", 401, "INVALID_PASSWORD");
+    const nextHash = await hashPassword(input.newPassword);
+    await UserModel.updateOne({ _id: input.userId }, { $set: { passwordHash: nextHash } });
+    return { ok: true as const };
+  },
+
   async logoutUser() {
     return { ok: true as const };
   },

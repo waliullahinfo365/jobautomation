@@ -18,27 +18,18 @@ export function DeleteWorkspaceConfirmModal({
 }: DeleteWorkspaceConfirmModalProps) {
   const { t } = useTranslation();
   const [confirmText, setConfirmText] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const isConfirmed = confirmText.toUpperCase() === "DELETE";
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!isConfirmed) {
       showError(t("settings.dataStorage.deleteModal.confirmError"));
       return;
     }
 
-    setIsProcessing(true);
-    try {
-      // Simulate delete operation
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      showInfo(t("settings.dataStorage.deleteModal.disabledMsg"));
-      handleReset();
-      onClose();
-    } finally {
-      setIsProcessing(false);
-    }
+    showInfo(t("settings.dataStorage.deleteModal.disabledMsg"));
+    handleReset();
+    onClose();
   };
 
   const handleCancel = () => {
@@ -77,26 +68,23 @@ export function DeleteWorkspaceConfirmModal({
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder={t("settings.dataStorage.deleteModal.typeDeletePlaceholder")}
-            disabled={isProcessing}
             className="text-red-400"
           />
           <p className="mt-1 text-xs text-[var(--text-3)]">
-            {t("settings.dataStorage.deleteModal.demoNotice")}
+            {t("settings.dataStorage.deleteModal.disabledNotice")}
           </p>
         </div>
 
         <div className="border-t border-[var(--border-default)] pt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={handleCancel} disabled={isProcessing}>
+          <Button variant="outline" onClick={handleCancel}>
             {t("settings.dataStorage.deleteModal.cancel")}
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={!isConfirmed || isProcessing}
+            disabled={!isConfirmed}
           >
-            {isProcessing
-              ? t("settings.dataStorage.deleteModal.processing")
-              : t("settings.dataStorage.deleteModal.deleteBtn")}
+            {t("settings.dataStorage.deleteModal.deleteBtn")}
           </Button>
         </div>
       </div>

@@ -5,18 +5,18 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { showInfo, showError } from "@/lib/ui/toast";
+import { showSuccess, showError } from "@/lib/ui/toast";
+import { changePassword } from "@/lib/api/auth.api";
+import { ApiError } from "@/lib/api/client";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (passwords: { currentPassword: string; newPassword: string }) => void;
 }
 
 export function ChangePasswordModal({
   isOpen,
   onClose,
-  onSave,
 }: ChangePasswordModalProps) {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -25,7 +25,6 @@ export function ChangePasswordModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    // Validation
     if (!currentPassword.trim()) {
       showError("Current password is required.");
       return;
@@ -48,17 +47,12 @@ export function ChangePasswordModal({
 
     setIsSubmitting(true);
     try {
-      // Simulate password change
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      onSave?.({
-        currentPassword,
-        newPassword,
-      });
-
-      showInfo("Password change will be connected after password reset/security endpoints are enabled.");
+      await changePassword({ currentPassword, newPassword });
+      showSuccess("Password updated.");
       handleReset();
       onClose();
+    } catch (error) {
+      showError(error instanceof ApiError ? error.message : "Failed to update password.");
     } finally {
       setIsSubmitting(false);
     }

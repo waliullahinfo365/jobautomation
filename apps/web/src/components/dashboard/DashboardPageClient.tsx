@@ -14,7 +14,7 @@ import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { importChannelGroupKey } from "@/lib/jobs/import-channel-key";
 import { normalizeAutomationModuleForUi, normalizeJobForUi } from "@/lib/utils/resource";
 import * as automationApi from "@/lib/api/automation.api";
-import { getJobPipelineSummary } from "@/lib/api/jobs.api";
+import { getJobPipelineSummary, getReviewQueue } from "@/lib/api/jobs.api";
 import { showError, showSuccess } from "@/lib/ui/toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +63,14 @@ export function DashboardPageClient() {
       .finally(() => setPipelineLoading(false));
   }, []);
 
+  /** Matches GET /jobs/review/queue (Quick Review), not raw pipeline status "New". */
+  const [quickReviewPendingCount, setQuickReviewPendingCount] = useState<number | null>(null);
+  useEffect(() => {
+    void getReviewQueue(1)
+      .then((res) => setQuickReviewPendingCount(typeof res.total === "number" ? res.total : 0))
+      .catch(() => setQuickReviewPendingCount(null));
+  }, []);
+
   const jobs = useMemo((): Job[] => {
     const raw = normalizeListResponse(jobsQuery.data);
     return raw.map(normalizeJobForUi);
@@ -88,7 +96,9 @@ export function DashboardPageClient() {
     return raw.map(normalizeAutomationModuleForUi);
   }, [automationQuery.data]);
 
-  const newJobs = jobs.filter((j) => j.status === "New").length;
+  const rawNewPipelineCount = jobs.filter((j) => j.status === "New").length;
+  /** Prefer API queue total so dashboard matches Quick Review; fallback if queue request fails. */
+  const newJobsForReview = quickReviewPendingCount !== null ? quickReviewPendingCount : rawNewPipelineCount;
   const followUpsDue = applications.filter(
     (a) => a.followUpStatus === "Due Today" || a.followUpStatus === "Overdue"
   ).length;
@@ -100,11 +110,11 @@ export function DashboardPageClient() {
   const actionCards: ActionCard[] = useMemo(() => {
     const cards: ActionCard[] = [];
 
-    if (newJobs > 0) {
+    if (newJobsForReview > 0) {
       cards.push({
         id: "new-jobs",
         icon: <JobsIcon size={20} />,
-        title: `${newJobs} new job${newJobs > 1 ? "s" : ""} to review`,
+        title: `${newJobsForReview} new job${newJobsForReview > 1 ? "s" : ""} to review`,
         description: "New job opportunities are waiting for your decision.",
         buttonLabel: "Review Jobs",
         href: "/jobs/review",
@@ -157,7 +167,7 @@ export function DashboardPageClient() {
     }
 
     return cards;
-  }, [newJobs, followUpsDue, interviews, hasCv]);
+  }, [newJobsForReview, followUpsDue, interviews, hasCv]);
 
   const pipelineBreakdown = pipelineData ?? [];
 
@@ -233,7 +243,7 @@ export function DashboardPageClient() {
       {/* Greeting */}
       <div>
         <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[var(--text-1)] sm:text-[26px]">
-          {getGreeting()}. {newJobs > 0 ? `You have ${newJobs} job${newJobs > 1 ? "s" : ""} to review today.` : "Welcome back."}
+          {getGreeting()}. {newJobsForReview > 0 ? `You have ${newJobsForReview} job${newJobsForReview > 1 ? "s" : ""} to review today.` : "Welcome back."}
         </h1>
         <p className="mt-1 text-sm text-[var(--text-3)]">Here's what needs your attention.</p>
       </div>

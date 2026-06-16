@@ -88,10 +88,10 @@ export function IntegrationConnectModal({
     const defaultModel = AI_MODEL_OPTIONS.find((m) => m.model === "claude-sonnet-4-6")?.model ?? "claude-sonnet-4-6";
     setModel(defaultModel);
     setApiKey("");
-    setWorkspaceName("Demo Workspace");
+    setWorkspaceName(initialAccountName ?? "");
     setChannelName("#jobflow-alerts");
-    setDatabaseName("Job Pipeline — Legacy");
-    setNotionWorkspace("Legacy Teamspace");
+    setDatabaseName("");
+    setNotionWorkspace("");
   }, [open, providerSlug, initialEmail, initialAccountName, initialSmtp]);
 
   const { t } = useTranslation();

@@ -5,7 +5,10 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { showInfo } from "@/lib/ui/toast";
+import { showSuccess, showError } from "@/lib/ui/toast";
+import { updateProfile } from "@/lib/api/auth.api";
+import { updateCurrentTenant } from "@/lib/api/tenants.api";
+import { ApiError } from "@/lib/api/client";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -31,21 +34,37 @@ export function EditProfileModal({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!name.trim() || !email.trim() || !workspaceName.trim()) {
-      showInfo("Please fill in all fields.");
+    if (!name.trim() || !workspaceName.trim()) {
+      showError("Please fill in all required fields.");
       return;
     }
 
     setIsSaving(true);
     try {
-      // Simulate save operation
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const trimmedName = name.trim();
+      const trimmedWorkspace = workspaceName.trim();
+      const updates: Promise<unknown>[] = [];
 
-      const updatedProfile = { name, email, workspaceName };
+      if (trimmedName !== currentProfile.name.trim()) {
+        updates.push(updateProfile({ name: trimmedName }));
+      }
+      if (trimmedWorkspace !== currentProfile.workspaceName.trim()) {
+        updates.push(updateCurrentTenant({ name: trimmedWorkspace }));
+      }
+
+      if (updates.length === 0) {
+        onClose();
+        return;
+      }
+
+      await Promise.all(updates);
+
+      const updatedProfile = { name: trimmedName, email, workspaceName: trimmedWorkspace };
       onSave?.(updatedProfile);
-
-      showInfo("Profile changes are saved locally for this demo. Backend profile update will be connected next.");
+      showSuccess("Profile updated.");
       onClose();
+    } catch (error) {
+      showError(error instanceof ApiError ? error.message : "Failed to update profile.");
     } finally {
       setIsSaving(false);
     }
@@ -84,7 +103,7 @@ export function EditProfileModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("settings.profileLanguage")}</label>
+          <label className="block text-sm font-medium text-[var(--text-2)] mb-2">{t("profile.workspaceName")}</label>
           <Input
             type="text"
             value={workspaceName}

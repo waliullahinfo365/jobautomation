@@ -23,5 +23,20 @@ export const resetPasswordBodySchema = z.object({
   password: passwordSchema,
 });
 
+export const updateProfileBodySchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+});
+
+export const changePasswordBodySchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: passwordSchema,
+});
+
+export const securitySettingsSchema = z.object({
+  twoFactorAuth: z.boolean().optional(),
+  loginAlerts: z.boolean().optional(),
+  sessionTimeout: z.boolean().optional(),
+});
+
 export type RegisterBody = z.infer<typeof registerBodySchema>;
 export type LoginBody = z.infer<typeof loginBodySchema>;

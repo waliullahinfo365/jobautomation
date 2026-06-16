@@ -524,7 +524,11 @@ export function ApplicationsPageClient() {
         onMarkFollowUpSent={
           selectedApplication ? () => void handleMarkFollowUpSent(getResourceId(selectedApplication)) : undefined
         }
-        onSimulateReply={selectedApplication ? () => void handleSimulateReply(selectedApplication) : undefined}
+        onSimulateReply={
+          applicationsApi.isUsingFallback && selectedApplication
+            ? () => void handleSimulateReply(selectedApplication)
+            : undefined
+        }
         pendingAction={pendingAction}
       />
 

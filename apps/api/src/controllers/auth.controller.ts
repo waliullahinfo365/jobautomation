@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { successResponse } from "../utils/apiResponse";
 import { UserModel } from "@jobflow/database/models";
 import { ApiError } from "../utils/errors";
+import { securitySettingsSchema } from "../validators/auth.validator";
 
 export const registerHandler = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.registerUser({
@@ -59,10 +60,41 @@ export const updatePreferencesHandler = asyncHandler(async (req: Request, res: R
   for (const key of allowed) {
     if (key in req.body) patch[`preferences.${key}`] = req.body[key];
   }
+  if ("securitySettings" in req.body) {
+    const parsed = securitySettingsSchema.safeParse(req.body.securitySettings);
+    if (!parsed.success) throw new ApiError("Invalid security settings", 422, "VALIDATION_ERROR", parsed.error.flatten());
+    patch["preferences.securitySettings"] = parsed.data;
+  }
+  if (Object.keys(patch).length === 0) throw new ApiError("No valid fields to update", 422, "VALIDATION_ERROR");
   const user = await UserModel.findOneAndUpdate({ _id: userId, tenantId }, { $set: patch }, { new: true }).lean();
   if (!user) throw new ApiError("User not found", 404, "NOT_FOUND");
   const u = user as Record<string, unknown>;
   return successResponse(res, (u.preferences as Record<string, unknown>) ?? {}, "Preferences updated");
+});
+
+export const updateProfileHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const tenantId = req.user?.tenantId;
+  if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
+  const user = await authService.updateCurrentUserProfile({
+    userId,
+    tenantId,
+    name: req.body.name,
+  });
+  return successResponse(res, { user }, "Profile updated");
+});
+
+export const changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const tenantId = req.user?.tenantId;
+  if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
+  const result = await authService.changePassword({
+    userId,
+    tenantId,
+    currentPassword: req.body.currentPassword,
+    newPassword: req.body.newPassword,
+  });
+  return successResponse(res, result, "Password updated");
 });
 
 export const forgotPasswordHandler = asyncHandler(async (req: Request, res: Response) => {

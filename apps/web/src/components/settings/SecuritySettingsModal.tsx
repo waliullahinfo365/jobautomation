@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { showInfo } from "@/lib/ui/toast";
+import { showSuccess, showError } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
+import { getUserPreferences, updateUserPreferences } from "@/lib/api/user-preferences.api";
+import { ApiError } from "@/lib/api/client";
 
 interface SecuritySettings {
   twoFactorAuth: boolean;
@@ -18,18 +20,46 @@ interface SecuritySettingsModalProps {
   onSave?: (settings: SecuritySettings) => void;
 }
 
+const DEFAULT_SETTINGS: SecuritySettings = {
+  twoFactorAuth: false,
+  loginAlerts: true,
+  sessionTimeout: false,
+};
+
 export function SecuritySettingsModal({
   isOpen,
   onClose,
   onSave,
 }: SecuritySettingsModalProps) {
   const { t } = useTranslation();
-  const [settings, setSettings] = useState<SecuritySettings>({
-    twoFactorAuth: false,
-    loginAlerts: true,
-    sessionTimeout: false,
-  });
+  const [settings, setSettings] = useState<SecuritySettings>(DEFAULT_SETTINGS);
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let mounted = true;
+    setLoading(true);
+    void getUserPreferences()
+      .then((prefs) => {
+        if (!mounted) return;
+        const saved = prefs.securitySettings;
+        setSettings({
+          twoFactorAuth: saved?.twoFactorAuth ?? DEFAULT_SETTINGS.twoFactorAuth,
+          loginAlerts: saved?.loginAlerts ?? DEFAULT_SETTINGS.loginAlerts,
+          sessionTimeout: saved?.sessionTimeout ?? DEFAULT_SETTINGS.sessionTimeout,
+        });
+      })
+      .catch(() => {
+        if (mounted) setSettings(DEFAULT_SETTINGS);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
 
   const handleToggle = (key: keyof SecuritySettings) => {
     setSettings((prev) => ({
@@ -41,12 +71,12 @@ export function SecuritySettingsModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Simulate save operation
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
+      await updateUserPreferences({ securitySettings: settings });
       onSave?.(settings);
-      showInfo(t("settings.security.modal.saveSuccess"));
+      showSuccess(t("settings.security.modal.saveSuccess"));
       onClose();
+    } catch (error) {
+      showError(error instanceof ApiError ? error.message : "Failed to save security settings.");
     } finally {
       setIsSaving(false);
     }
@@ -67,7 +97,7 @@ export function SecuritySettingsModal({
             description={t("settings.security.modal.twoFactorAuthDesc")}
             checked={settings.twoFactorAuth}
             onChange={() => handleToggle("twoFactorAuth")}
-            disabled={isSaving}
+            disabled={isSaving || loading}
           />
 
           <ToggleRow
@@ -75,7 +105,7 @@ export function SecuritySettingsModal({
             description={t("settings.security.modal.loginAlertsDesc")}
             checked={settings.loginAlerts}
             onChange={() => handleToggle("loginAlerts")}
-            disabled={isSaving}
+            disabled={isSaving || loading}
           />
 
           <ToggleRow
@@ -83,21 +113,19 @@ export function SecuritySettingsModal({
             description={t("settings.security.modal.sessionTimeoutDesc")}
             checked={settings.sessionTimeout}
             onChange={() => handleToggle("sessionTimeout")}
-            disabled={isSaving}
+            disabled={isSaving || loading}
           />
         </div>
 
         <div className="bg-[var(--surface-3)] rounded-lg p-3 text-xs text-[var(--text-3)]">
-          <p>
-            {t("settings.security.modal.demoNotice")}
-          </p>
+          <p>{t("settings.security.modal.preferencesNotice")}</p>
         </div>
 
         <div className="border-t border-[var(--border-default)] pt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             {t("settings.security.modal.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || loading}>
             {isSaving
               ? t("settings.security.modal.saving")
               : t("settings.security.modal.save")}
