@@ -27,6 +27,7 @@ import {
   InterviewsIcon,
   FollowUpIcon,
 } from "@/components/icons";
+import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 function getGreeting(): string {
@@ -421,7 +422,7 @@ export function DashboardPageClient() {
         </Link>
         <Link href="/automation" className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 py-2 text-[13px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]">
           <AutomationIcon size={14} />
-          Job Assistant
+          {BRAND.productName}
         </Link>
         <Link href="/documents" className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-4 py-2 text-[13px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]">
           <DocumentsIcon size={14} />
