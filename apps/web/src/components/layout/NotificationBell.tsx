@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { NotificationIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, useDropdownMenuContext } from "@/components/ui/dropdown-menu";
 import { useNotificationsApi } from "@/hooks/api/useNotificationsApi";
 import type { InAppNotificationDto } from "@/lib/api/notifications.api";
 import { markAllNotificationsRead, markNotificationRead } from "@/lib/api/notifications.api";
@@ -19,9 +19,27 @@ function resolveActionHref(n: InAppNotificationDto): string {
 }
 
 export function NotificationBell() {
-  const { t } = useTranslation();
   const { listQuery, countQuery, refetch } = useNotificationsApi();
   const count = typeof countQuery.data?.count === "number" ? countQuery.data.count : 0;
+
+  return (
+    <DropdownMenu>
+      <NotificationBellMenu count={count} listQuery={listQuery} refetch={refetch} />
+    </DropdownMenu>
+  );
+}
+
+function NotificationBellMenu({
+  count,
+  listQuery,
+  refetch,
+}: {
+  count: number;
+  listQuery: ReturnType<typeof useNotificationsApi>["listQuery"];
+  refetch: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const dropdown = useDropdownMenuContext();
   const items = Array.isArray(listQuery.data) ? listQuery.data : [];
 
   function actionLabelFor(n: InAppNotificationDto): string {
@@ -42,7 +60,7 @@ export function NotificationBell() {
   };
 
   return (
-    <DropdownMenu>
+    <>
       <DropdownMenuTrigger>
         <button
           type="button"
@@ -87,7 +105,11 @@ export function NotificationBell() {
                     {n.createdAt ? formatDate(n.createdAt, "MMM d, HH:mm") : ""}
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link href={resolveActionHref(n)} className="text-[11px] font-medium text-[var(--accent-hi)] hover:underline">
+                    <Link
+                      href={resolveActionHref(n)}
+                      className="text-[11px] font-medium text-[var(--accent-hi)] hover:underline"
+                      onClick={() => dropdown?.close()}
+                    >
                       {actionLabelFor(n)}
                     </Link>
                     {!n.read ? (
@@ -106,6 +128,6 @@ export function NotificationBell() {
           </ul>
         )}
       </DropdownMenuContent>
-    </DropdownMenu>
+    </>
   );
 }
