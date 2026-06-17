@@ -13,51 +13,81 @@ const workspaceJobFilter = {
   $or: [{ jobId: { $exists: false } }, { jobId: null }, { jobId: "" }],
 };
 
-type ResolvedDoc = {
+export type CoverLetterSource = "generated" | "template" | "legacy_template" | null;
+export type ApplyDocumentDelivery = "drive" | "content_text";
+
+type ResolvedApplyDoc = {
   documentId: string;
-  googleDriveFileId: string;
   fileName: string;
+  delivery: ApplyDocumentDelivery;
+  googleDriveFileId?: string;
+  contentText?: string;
 };
 
-export type CoverLetterSource = "generated" | "template" | "legacy_template" | null;
-
-type ResolvedCoverLetter = ResolvedDoc & { source: Exclude<CoverLetterSource, null> };
+type ResolvedCoverLetter = ResolvedApplyDoc & { source: Exclude<CoverLetterSource, null> };
 
 function driveFileIdFromDoc(doc: Record<string, unknown>): string {
   return String(doc.googleDriveFileId ?? doc.driveFileId ?? "").trim();
 }
 
-async function resolveActiveCvDocument(tenantId: string, userId: string): Promise<ResolvedDoc | null> {
-  const base = {
+function contentTextFromDoc(doc: Record<string, unknown>): string {
+  return String(doc.contentText ?? "").trim();
+}
+
+function toResolvedDoc(row: Record<string, unknown>, defaultName: string): ResolvedApplyDoc | null {
+  const documentId = String(row._id ?? "");
+  if (!documentId) return null;
+  const fileName = String(row.fileName ?? defaultName);
+  const googleDriveFileId = driveFileIdFromDoc(row);
+  if (googleDriveFileId) {
+    return { documentId, fileName, delivery: "drive", googleDriveFileId };
+  }
+  const contentText = contentTextFromDoc(row);
+  if (contentText) {
+    return { documentId, fileName, delivery: "content_text", contentText };
+  }
+  return null;
+}
+
+async function findWorkspaceProfileDoc(
+  tenantId: string,
+  userId: string,
+  profileDocumentType: "cv_resume" | "cover_letter_template",
+  legacyType: "CV" | "Cover Letter",
+  defaultName: string
+): Promise<ResolvedApplyDoc | null> {
+  const activeBase = {
     tenantId,
-    profileDocumentType: "cv_resume",
+    profileDocumentType,
     isActiveProfileDocument: true,
     ...workspaceJobFilter,
-    googleDriveFileId: { $exists: true, $nin: [null, ""] },
   };
-  let doc =
-    (await DocumentModel.findOne({ ...base, createdBy: userId }).sort({ updatedAt: -1 }).lean()) ??
-    (await DocumentModel.findOne(base).sort({ updatedAt: -1 }).lean());
-  if (!doc) {
-    const legacy = await DocumentModel.findOne({
-      tenantId,
-      type: "CV",
-      ...workspaceJobFilter,
-      googleDriveFileId: { $exists: true, $nin: [null, ""] },
-    })
-      .sort({ updatedAt: -1 })
-      .lean();
-    doc = legacy;
+  const candidates: unknown[] = [];
+  for (const query of [
+    { ...activeBase, createdBy: userId },
+    activeBase,
+    { tenantId, type: legacyType, ...workspaceJobFilter, createdBy: userId },
+    { tenantId, type: legacyType, ...workspaceJobFilter },
+  ]) {
+    const doc = await DocumentModel.findOne(query).sort({ updatedAt: -1 }).lean();
+    if (doc) candidates.push(doc);
   }
-  if (!doc) return null;
-  const row = doc as Record<string, unknown>;
-  const googleDriveFileId = driveFileIdFromDoc(row);
-  if (!googleDriveFileId) return null;
-  return {
-    documentId: String(row._id),
-    googleDriveFileId,
-    fileName: String(row.fileName ?? "cv.pdf"),
-  };
+
+  let drivePick: ResolvedApplyDoc | null = null;
+  let textPick: ResolvedApplyDoc | null = null;
+  for (const raw of candidates) {
+    const row = raw as Record<string, unknown>;
+    const resolved = toResolvedDoc(row, defaultName);
+    if (!resolved) continue;
+    if (resolved.delivery === "drive" && !drivePick) drivePick = resolved;
+    if (resolved.delivery === "content_text" && !textPick) textPick = resolved;
+    if (drivePick && textPick) break;
+  }
+  return drivePick ?? textPick;
+}
+
+async function resolveActiveCvDocument(tenantId: string, userId: string): Promise<ResolvedApplyDoc | null> {
+  return findWorkspaceProfileDoc(tenantId, userId, "cv_resume", "CV", "cv.txt");
 }
 
 async function resolveCoverLetterDocument(
@@ -69,58 +99,45 @@ async function resolveCoverLetterDocument(
   const generatedId = String(job?.generatedCoverLetterDocumentId ?? "").trim();
   if (generatedId) {
     const generated = (await DocumentModel.findOne({ _id: generatedId, tenantId }).lean()) as Record<string, unknown> | null;
-    const googleDriveFileId = generated ? driveFileIdFromDoc(generated) : "";
-    if (googleDriveFileId) {
-      return {
-        documentId: generatedId,
-        googleDriveFileId,
-        fileName: String(generated?.fileName ?? "cover-letter.pdf"),
-        source: "generated",
-      };
-    }
+    const resolved = generated ? toResolvedDoc(generated, "cover-letter.txt") : null;
+    if (resolved) return { ...resolved, source: "generated" };
   }
 
-  const templateBase = {
+  const template = await findWorkspaceProfileDoc(
     tenantId,
-    profileDocumentType: "cover_letter_template",
-    isActiveProfileDocument: true,
-    ...workspaceJobFilter,
-    googleDriveFileId: { $exists: true, $nin: [null, ""] },
-  };
-  let doc =
-    (await DocumentModel.findOne({ ...templateBase, createdBy: userId }).sort({ updatedAt: -1 }).lean()) ??
-    (await DocumentModel.findOne(templateBase).sort({ updatedAt: -1 }).lean());
-  if (doc) {
-    const row = doc as Record<string, unknown>;
-    const googleDriveFileId = driveFileIdFromDoc(row);
-    if (googleDriveFileId) {
-      return {
-        documentId: String(row._id),
-        googleDriveFileId,
-        fileName: String(row.fileName ?? "cover-letter.pdf"),
-        source: "template",
-      };
-    }
-  }
+    userId,
+    "cover_letter_template",
+    "Cover Letter",
+    "cover-letter.txt"
+  );
+  if (template) return { ...template, source: "template" };
 
-  doc = await DocumentModel.findOne({
+  const jobCover = await DocumentModel.findOne({
     tenantId,
+    jobId,
     type: "Cover Letter",
-    ...workspaceJobFilter,
-    googleDriveFileId: { $exists: true, $nin: [null, ""] },
+    $or: [
+      { googleDriveFileId: { $exists: true, $nin: [null, ""] } },
+      { driveFileId: { $exists: true, $nin: [null, ""] } },
+      { contentText: { $exists: true, $nin: [null, ""] } },
+    ],
   })
     .sort({ updatedAt: -1 })
     .lean();
-  if (!doc) return null;
-  const row = doc as Record<string, unknown>;
-  const googleDriveFileId = driveFileIdFromDoc(row);
-  if (!googleDriveFileId) return null;
-  return {
-    documentId: String(row._id),
-    googleDriveFileId,
-    fileName: String(row.fileName ?? "cover-letter.pdf"),
-    source: "legacy_template",
-  };
+  const jobCoverResolved = jobCover ? toResolvedDoc(jobCover as Record<string, unknown>, "cover-letter.txt") : null;
+  if (jobCoverResolved) return { ...jobCoverResolved, source: "generated" };
+
+  const legacy = await DocumentModel.findOne({
+    tenantId,
+    type: "Cover Letter",
+    ...workspaceJobFilter,
+  })
+    .sort({ updatedAt: -1 })
+    .lean();
+  const legacyResolved = legacy ? toResolvedDoc(legacy as Record<string, unknown>, "cover-letter.txt") : null;
+  if (legacyResolved) return { ...legacyResolved, source: "legacy_template" };
+
+  return null;
 }
 
 async function resolveApplyDocumentReferenceIds(
@@ -141,7 +158,7 @@ export async function resolveApplyDocument(input: {
   userId: string;
   jobId: string;
   role: "cv" | "cover_letter";
-}): Promise<ResolvedDoc> {
+}): Promise<ResolvedApplyDoc> {
   const tenantId = assertTenantId(input.tenantId);
   const job = await findTenantScopedById(JobModel, tenantId, input.jobId);
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
@@ -154,10 +171,10 @@ export async function resolveApplyDocument(input: {
   if (!resolved) {
     throw new ApiError(
       input.role === "cv"
-        ? "No CV linked to Google Drive. Upload an active CV in Documents first."
-        : "No cover letter linked to Google Drive for this job.",
+        ? "No CV found. Upload an active CV in Documents first."
+        : "No cover letter found for this job. Upload a template or generate one.",
       404,
-      "DRIVE_DOCUMENT_NOT_FOUND"
+      "APPLY_DOCUMENT_NOT_FOUND"
     );
   }
   return resolved;
@@ -178,13 +195,20 @@ export async function getApplyDocumentStatus(input: {
 
   return {
     cv: cv
-      ? { available: true, documentId: cv.documentId, fileName: cv.fileName, googleDriveFileId: cv.googleDriveFileId }
+      ? {
+          available: true,
+          documentId: cv.documentId,
+          fileName: cv.fileName,
+          delivery: cv.delivery,
+          googleDriveFileId: cv.googleDriveFileId,
+        }
       : { available: false },
     coverLetter: coverLetter
       ? {
           available: true,
           documentId: coverLetter.documentId,
           fileName: coverLetter.fileName,
+          delivery: coverLetter.delivery,
           googleDriveFileId: coverLetter.googleDriveFileId,
           source: coverLetter.source,
         }
@@ -200,6 +224,11 @@ export async function getApplyDocumentStatus(input: {
   };
 }
 
+function streamFileName(baseName: string, delivery: ApplyDocumentDelivery): string {
+  const stem = baseName.replace(/\.[^.]+$/, "") || baseName;
+  return delivery === "content_text" ? `${stem}.txt` : baseName.endsWith(".pdf") ? baseName : `${stem}.pdf`;
+}
+
 export async function streamApplyDocument(input: {
   tenantId: string;
   userId: string;
@@ -211,13 +240,34 @@ export async function streamApplyDocument(input: {
     input.role === "cover_letter"
       ? ((await resolveCoverLetterDocument(input.tenantId, input.userId, input.jobId))?.source ?? null)
       : null;
-  const exported = await exportDriveFile({
-    tenantId: input.tenantId,
-    googleDriveFileId: doc.googleDriveFileId,
-    preferredFileName: doc.fileName,
-    exportMimeType: "application/pdf",
-  });
-  return { ...exported, documentId: doc.documentId, coverLetterSource };
+
+  if (doc.delivery === "drive" && doc.googleDriveFileId) {
+    const exported = await exportDriveFile({
+      tenantId: input.tenantId,
+      googleDriveFileId: doc.googleDriveFileId,
+      preferredFileName: doc.fileName,
+      exportMimeType: "application/pdf",
+    });
+    return { ...exported, documentId: doc.documentId, coverLetterSource, delivery: "drive" as const };
+  }
+
+  const text = doc.contentText?.trim();
+  if (!text) {
+    throw new ApiError("Document has no exportable content", 404, "APPLY_DOCUMENT_EMPTY");
+  }
+  const buffer = Buffer.from(text, "utf8");
+  const fileName = streamFileName(doc.fileName, "content_text");
+  return {
+    buffer,
+    contentType: "text/plain; charset=utf-8",
+    fileName,
+    sizeBytes: buffer.length,
+    exportBranch: "content_text" as const,
+    sourceMimeType: "text/plain",
+    documentId: doc.documentId,
+    coverLetterSource,
+    delivery: "content_text" as const,
+  };
 }
 
 export async function generateApplyAnswer(input: {

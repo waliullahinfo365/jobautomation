@@ -281,6 +281,11 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         onClick={handleProvisionFolders}
         variant="outline"
       />
+      <Link href={`/jobs/${id}/apply`}>
+        <Button type="button" variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          {t("applyAssistant.applyCta")}
+        </Button>
+      </Link>
       {!showStickyBar ? (
         <>
           <ActionButton

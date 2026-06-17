@@ -40,6 +40,7 @@ export const streamApplyDocumentHandler = asyncHandler(async (req: Request, res:
   res.setHeader("Content-Length", String(file.sizeBytes));
   if (file.exportBranch) res.setHeader("X-Export-Branch", file.exportBranch);
   if (file.sourceMimeType) res.setHeader("X-Drive-Source-Mime-Type", file.sourceMimeType);
+  if ("delivery" in file && file.delivery) res.setHeader("X-Apply-Document-Delivery", file.delivery);
   if (role === "cover_letter" && file.coverLetterSource) {
     res.setHeader("X-Cover-Letter-Source", file.coverLetterSource);
   }

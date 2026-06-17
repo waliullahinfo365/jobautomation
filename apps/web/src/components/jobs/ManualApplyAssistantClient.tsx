@@ -168,6 +168,8 @@ export function ManualApplyAssistantClient() {
   const jobUrl = job.jobUrl ?? "";
   const missingCv = docStatus?.missingDocuments.cv ?? false;
   const missingCoverLetter = docStatus?.missingDocuments.coverLetter ?? false;
+  const usesContentTextExport =
+    docStatus?.cv.delivery === "content_text" || docStatus?.coverLetter.delivery === "content_text";
 
   return (
     <div className="pb-36">
@@ -190,6 +192,9 @@ export function ManualApplyAssistantClient() {
           </a>
         ) : null}
         <p className="text-xs text-[var(--text-3)]">{t("applyAssistant.driveHint")}</p>
+        {usesContentTextExport ? (
+          <p className="text-xs text-[var(--amber)]">{t("applyAssistant.contentTextHint")}</p>
+        ) : null}
 
         {missingCv ? (
           <MissingDocumentCard

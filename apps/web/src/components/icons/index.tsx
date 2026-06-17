@@ -313,7 +313,7 @@ export const SIDEBAR_NAV_SECONDARY = [
       { labelKey: "nav.contacts", icon: ContactsIcon, href: "/contacts" },
       { labelKey: "nav.interviews", icon: InterviewsIcon, href: "/interviews" },
       { labelKey: "nav.insights", icon: ReportsIcon, href: "/insights" },
-      { labelKey: "nav.jobGuru", icon: AutomationIcon, href: "/job-guru" },
+      { labelKey: "nav.jobAssistant", icon: AutomationIcon, href: "/automation" },
       { labelKey: "nav.settings", icon: SettingsIcon, href: "/settings" },
     ],
   },

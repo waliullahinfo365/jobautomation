@@ -5,12 +5,21 @@ export type ApplyCompleteStatus = "Applied" | "In Progress" | "Rejected" | "Inte
 
 export type CoverLetterSource = "generated" | "template" | "legacy_template" | null;
 
+export type ApplyDocumentDelivery = "drive" | "content_text";
+
 export type ApplyDocumentStatus = {
-  cv: { available: boolean; documentId?: string; fileName?: string; googleDriveFileId?: string };
+  cv: {
+    available: boolean;
+    documentId?: string;
+    fileName?: string;
+    delivery?: ApplyDocumentDelivery;
+    googleDriveFileId?: string;
+  };
   coverLetter: {
     available: boolean;
     documentId?: string;
     fileName?: string;
+    delivery?: ApplyDocumentDelivery;
     googleDriveFileId?: string;
     source?: CoverLetterSource;
     generatedCoverLetterDocumentId?: string | null;
