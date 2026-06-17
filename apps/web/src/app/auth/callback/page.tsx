@@ -29,7 +29,7 @@ function CallbackHandler() {
         /* ignore */
       }
       invalidateApiCache();
-      router.replace("/dashboard");
+      router.replace("/today");
       return;
     }
 

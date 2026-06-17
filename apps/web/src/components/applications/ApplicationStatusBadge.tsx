@@ -10,6 +10,8 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
     "bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border-default)]",
   Ready:
     "bg-[var(--accent-bg)] text-[var(--accent-hi)] border border-[rgba(99,124,255,0.18)]",
+  "In Progress":
+    "bg-[var(--amber-bg)] text-[var(--amber)] border border-[rgba(229,162,59,0.18)]",
   Applied:
     "bg-[var(--accent-bg)] text-[var(--accent)] border border-[rgba(99,124,255,0.18)]",
   "Follow-Up Due":
@@ -29,6 +31,7 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
 const STATUS_KEY: Record<ApplicationStatus, string> = {
   Drafted: "applications.applicationStatus.drafted",
   Ready: "applications.applicationStatus.ready",
+  "In Progress": "applications.applicationStatus.inProgress",
   Applied: "applications.applicationStatus.applied",
   "Follow-Up Due": "applications.applicationStatus.followUpDue",
   Replied: "applications.applicationStatus.replied",

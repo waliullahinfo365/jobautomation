@@ -23,6 +23,12 @@ import {
   generateCvPdf,
   generateCoverLetterPdf,
 } from "../controllers/job.controller";
+import {
+  completeApplyAssistantHandler,
+  generateApplyAnswerHandler,
+  getApplyDocumentStatusHandler,
+  streamApplyDocumentHandler,
+} from "../controllers/apply-assistant.controller";
 import { requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams, validateQuery } from "../middleware/validate.middleware";
 import { aiProcessingRunSchema } from "../validators/ai-processing.validator";
@@ -58,6 +64,32 @@ jobRoutes.post("/:id/review/analyze", requirePermission("jobs.read"), validatePa
 
 // Automated apply route
 jobRoutes.post("/:id/apply", requirePermission("jobs.update"), validateParams(jobIdParamSchema), applyToJob);
+
+// Manual apply assistant
+jobRoutes.get(
+  "/:id/apply/documents/status",
+  requirePermission("jobs.read"),
+  validateParams(jobIdParamSchema),
+  getApplyDocumentStatusHandler
+);
+jobRoutes.get(
+  "/:id/apply/documents/:role/stream",
+  requirePermission("jobs.read"),
+  validateParams(jobIdParamSchema),
+  streamApplyDocumentHandler
+);
+jobRoutes.post(
+  "/:id/apply/generate-answer",
+  requirePermission("jobs.update"),
+  validateParams(jobIdParamSchema),
+  generateApplyAnswerHandler
+);
+jobRoutes.post(
+  "/:id/apply/complete",
+  requirePermission("jobs.update"),
+  validateParams(jobIdParamSchema),
+  completeApplyAssistantHandler
+);
 
 // Tailor CV routes
 jobRoutes.get("/:id/tailor-cv", requirePermission("jobs.read"), validateParams(jobIdParamSchema), getTailoredCv);

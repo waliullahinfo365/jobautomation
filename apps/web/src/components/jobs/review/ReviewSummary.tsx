@@ -67,7 +67,7 @@ export function ReviewSummary({ stats, onRestart }: Props) {
           </button>
         )}
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push("/today")}
           className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-colors"
         >
           Go to Dashboard

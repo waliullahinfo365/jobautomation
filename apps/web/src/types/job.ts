@@ -1,13 +1,12 @@
 export type JobStatus =
   | "New"
-  | "Research"
+  | "Saved"
   | "Drafting"
-  | "Ready to Apply"
+  | "Ready"
   | "Applied"
   | "Interview"
   | "Offer"
-  | "Rejected"
-  | "Archived";
+  | "Closed";
 
 export type JobPriority = "Low" | "Medium" | "High" | "Urgent";
 

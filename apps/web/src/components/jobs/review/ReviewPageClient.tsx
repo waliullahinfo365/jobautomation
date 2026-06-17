@@ -85,7 +85,7 @@ export function ReviewPageClient() {
       <div className="flex items-center justify-between">
         <div>
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/today")}
             className="mb-1 text-xs text-[var(--text-3)] hover:text-[var(--text-2)] flex items-center gap-1"
           >
             ← Dashboard
@@ -130,7 +130,7 @@ export function ReviewPageClient() {
         )}
         {!loading && !error && jobs !== null && (
           jobs.length === 0
-            ? <EmptyQueue onBack={() => router.push("/dashboard")} />
+            ? <EmptyQueue onBack={() => router.push("/today")} />
             : <SwipeReviewSession initialJobs={jobs} total={total} />
         )}
       </div>

@@ -5,13 +5,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const STATUSES: JobStatus[] = [
   "New",
-  "Research",
+  "Saved",
   "Drafting",
-  "Ready to Apply",
+  "Ready",
   "Applied",
   "Interview",
   "Offer",
-  "Rejected",
+  "Closed",
 ];
 
 interface JobBoardProps {

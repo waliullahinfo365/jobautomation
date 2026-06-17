@@ -125,7 +125,7 @@ export function Sidebar() {
       </nav>
 
       <div className="jf-sys-card jf-sidebar-collapsed-text">
-        <Link href="/automation" className="mb-2.5 flex items-center gap-2 rounded-lg transition-colors hover:bg-[var(--surface-3)]">
+        <Link href="/job-guru" className="mb-2.5 flex items-center gap-2 rounded-lg transition-colors hover:bg-[var(--surface-3)]">
           <div className={cn(
             "grid h-[26px] w-[26px] flex-none place-items-center rounded-[7px] border",
             automationHealth.hasIssues

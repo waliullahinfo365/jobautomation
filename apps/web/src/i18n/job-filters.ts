@@ -2,14 +2,13 @@ import type { JobFilters } from "@/types/job";
 
 const STATUS_TO_KEY: Record<string, string> = {
   New: "jobs.pipeline.new",
-  Research: "jobs.pipeline.research",
+  Saved: "jobs.pipeline.saved",
   Drafting: "jobs.pipeline.drafting",
-  "Ready to Apply": "jobs.pipeline.readyToApply",
+  Ready: "jobs.pipeline.ready",
   Applied: "jobs.pipeline.applied",
   Interview: "jobs.pipeline.interview",
   Offer: "jobs.pipeline.offer",
-  Rejected: "jobs.pipeline.rejected",
-  Archived: "jobs.pipeline.archived",
+  Closed: "jobs.pipeline.closed",
 };
 
 const PRIORITY_TO_KEY: Record<string, string> = {

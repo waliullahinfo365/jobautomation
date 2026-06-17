@@ -10,6 +10,7 @@ import { JobTimeline } from "@/components/jobs/JobTimeline";
 import { JobDocumentsCard } from "@/components/jobs/JobDocumentsCard";
 import { JobAutomationActivity } from "@/components/jobs/JobAutomationActivity";
 import { LogApplicationModal } from "@/components/applications/LogApplicationModal";
+import { ApplyStickyBar, shouldShowApplyStickyBar } from "@/components/jobs/ApplyStickyBar";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SectionCard } from "@/components/shared/SectionCard";
@@ -22,6 +23,7 @@ import { ApiError } from "@/lib/api/client";
 import { buildCreateApplicationPayload, type CreateApplicationFormPayload } from "@/lib/api/applications.api";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeJobForUi } from "@/lib/utils/resource";
+import { resolvePipelineStage } from "@/lib/jobs/pipeline-stage";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import { mockJobs } from "@/data/mockJobs";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -210,11 +212,6 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         await applicationsApi.createApplication(payload);
         showSuccess(t("jobDetail.toast.appLogged"));
         setLogAppOpen(false);
-        try {
-          await jobsApi.update({ id, payload: { status: "Applied" } });
-        } catch {
-          /* optional: job may already be Applied */
-        }
         await refetchJob();
         await applicationsApi.refetch();
       } catch (e) {
@@ -245,6 +242,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   }
 
   const actionDisabled = actionLoading !== null;
+  const showStickyBar = shouldShowApplyStickyBar(job);
 
   const actionBar = (
     <>
@@ -283,21 +281,25 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         onClick={handleProvisionFolders}
         variant="outline"
       />
-      <ActionButton
-        label="⚡ Auto Apply"
-        loading={actionLoading === "autoApply"}
-        disabled={actionDisabled}
-        onClick={handleAutoApply}
-        variant="default"
-        className="bg-blue-600 hover:bg-blue-700 text-white"
-      />
-      <ActionButton
-        label={t("jobDetail.logApplication")}
-        loading={applicationsApi.createApplicationLoading}
-        disabled={actionDisabled || applicationsApi.createApplicationLoading}
-        onClick={() => setLogAppOpen(true)}
-        variant="secondary"
-      />
+      {!showStickyBar ? (
+        <>
+          <ActionButton
+            label="⚡ Auto Apply"
+            loading={actionLoading === "autoApply"}
+            disabled={actionDisabled}
+            onClick={handleAutoApply}
+            variant="default"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          />
+          <ActionButton
+            label={t("jobDetail.logApplication")}
+            loading={applicationsApi.createApplicationLoading}
+            disabled={actionDisabled || applicationsApi.createApplicationLoading}
+            onClick={() => setLogAppOpen(true)}
+            variant="secondary"
+          />
+        </>
+      ) : null}
       <ActionButton
         label={t("jobs.archive")}
         loading={actionLoading === "archive"}
@@ -312,7 +314,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const profileContextLine = profileAiContextCopy(job);
 
   return (
-    <div className="space-y-6">
+    <div className={showStickyBar ? "space-y-6 pb-24 md:pb-20" : "space-y-6"}>
       <JobDetailHeader job={job} renderActions={<ErrorBoundary>{actionBar}</ErrorBoundary>} />
 
       {duplicateFollowUp ? (
@@ -411,6 +413,15 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
           <JobAutomationActivity logs={job.automationLogs} />
         </div>
       </div>
+
+      {showStickyBar ? (
+        <ApplyStickyBar
+          job={job}
+          onAutoApply={resolvePipelineStage(job) === "Ready" ? () => void handleAutoApply() : undefined}
+          autoApplyLoading={actionLoading === "autoApply"}
+          autoApplyDisabled={actionDisabled}
+        />
+      ) : null}
     </div>
   );
 }

@@ -56,6 +56,24 @@
       "require": "./dist/processors/interview-scheduling.processor.js",
       "import": "./dist/processors/interview-scheduling.processor.js",
       "default": "./dist/processors/interview-scheduling.processor.js"
+    },
+    "./lib/google-auth": {
+      "types": "./src/lib/google-auth.ts",
+      "require": "./dist/lib/google-auth.js",
+      "import": "./dist/lib/google-auth.js",
+      "default": "./dist/lib/google-auth.js"
+    },
+    "./lib/workspace-profile-docs": {
+      "types": "./src/lib/workspace-profile-docs.ts",
+      "require": "./dist/lib/workspace-profile-docs.js",
+      "import": "./dist/lib/workspace-profile-docs.js",
+      "default": "./dist/lib/workspace-profile-docs.js"
+    },
+    "./processors/follow-up-reminder": {
+      "types": "./src/processors/follow-up-reminder.processor.ts",
+      "require": "./dist/processors/follow-up-reminder.processor.js",
+      "import": "./dist/processors/follow-up-reminder.processor.js",
+      "default": "./dist/processors/follow-up-reminder.processor.js"
     }
   },
   "scripts": {

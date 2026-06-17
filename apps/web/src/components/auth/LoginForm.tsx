@@ -77,12 +77,12 @@ export function LoginForm() {
         /* ignore */
       }
       invalidateApiCache();
-      router.replace("/dashboard");
+      router.replace("/today");
       return;
     }
 
     if (getAuthToken()) {
-      router.replace("/dashboard");
+      router.replace("/today");
       return;
     }
 
@@ -95,7 +95,7 @@ export function LoginForm() {
     setGoogleError(null);
     try {
       await login(email, password);
-      router.push("/dashboard");
+      router.push("/today");
       router.refresh();
     } catch {
       /* error surfaced via hook */

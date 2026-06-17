@@ -1,5 +1,9 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ROLE_PERMISSIONS = exports.PERMISSIONS = void 0;
+exports.roleHasPermission = roleHasPermission;
 /** Canonical permission strings for RBAC checks */
-export const PERMISSIONS = [
+exports.PERMISSIONS = [
     "tenant.read",
     "tenant.update",
     "users.read",
@@ -35,7 +39,7 @@ export const PERMISSIONS = [
     "settings.read",
     "settings.update",
 ];
-const ALL = [...PERMISSIONS];
+const ALL = [...exports.PERMISSIONS];
 const without = (xs, ...drop) => xs.filter((p) => !drop.includes(p));
 /** Owner — full access */
 const OWNER = ALL;
@@ -87,17 +91,17 @@ const VIEWER = [
     "reports.read",
     "settings.read",
 ];
-export const ROLE_PERMISSIONS = {
+exports.ROLE_PERMISSIONS = {
     Owner: OWNER,
     Admin: ADMIN,
     Member: MEMBER,
     Viewer: VIEWER,
 };
-export function roleHasPermission(role, permission) {
+function roleHasPermission(role, permission) {
     if (!role)
         return false;
     const r = role;
-    const set = ROLE_PERMISSIONS[r];
+    const set = exports.ROLE_PERMISSIONS[r];
     if (!set)
         return false;
     return set.includes(permission);

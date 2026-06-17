@@ -10,7 +10,8 @@
  * 3. Playwright Chromium is installed in the worker Docker image.
  */
 
-import { JobModel, UserModel, AutomationLogModel, IntegrationConnectionModel, ApplicationModel } from "@jobflow/database/models";
+import { JobModel, UserModel, AutomationLogModel, IntegrationConnectionModel } from "@jobflow/database/models";
+import { documentApplicationEvent } from "@jobflow/database";
 import { runApply } from "@jobflow/integrations/playwright";
 import { detectPlatform } from "@jobflow/integrations/playwright";
 import type { JobApplyPayload } from "@jobflow/shared/types/queue";
@@ -199,31 +200,20 @@ export async function processJobApply(payload: JobApplyPayload): Promise<{
   // Update job based on result
   if (result.success) {
     const now = new Date();
-    await JobModel.findByIdAndUpdate(payload.jobId, {
-      status: "Applied",
-      dateApplied: now.toISOString(),
-      lastUpdated: now,
+    await documentApplicationEvent({
+      tenantId: payload.tenantId,
+      userId: payload.userId ?? "system",
+      jobId: payload.jobId,
+      applicationStatus: "Applied",
+      applyMethod: "linkedin_auto",
+      appliedAt: now,
     });
-    await ApplicationModel.findOneAndUpdate(
-      { tenantId: payload.tenantId, jobId: payload.jobId },
-      {
-        applicationStatus: "Applied",
-        dateApplied: now,
-        appliedAutomationStatus: "Completed",
-        appliedAutomationCompletedAt: now,
-        lastStatusChangedAt: now,
-      }
-    ).catch(() => void 0);
   } else if (result.isExternalOnly) {
     // Job only has an external Apply button — cannot automate. Mark for manual action.
     await JobModel.findByIdAndUpdate(payload.jobId, {
       status: "External Apply Required",
       lastUpdated: new Date(),
     });
-    await ApplicationModel.findOneAndUpdate(
-      { tenantId: payload.tenantId, jobId: payload.jobId },
-      { appliedAutomationStatus: "External", lastStatusChangedAt: new Date() }
-    ).catch(() => void 0);
   } else if (result.sessionExpired) {
     // LinkedIn blocks re-login from cloud server IPs — session must be refreshed
     // via the keep-alive scheduler or manually via cookie import in the UI.

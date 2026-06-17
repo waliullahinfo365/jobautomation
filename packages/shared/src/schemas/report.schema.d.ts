@@ -1,0 +1,47 @@
+import { z } from "zod";
+export declare const reportSchema: z.ZodObject<{
+    tenantId: z.ZodString;
+    createdBy: z.ZodString;
+    name: z.ZodString;
+    type: z.ZodEnum<["Daily Digest", "Weekly Performance", "PDF Export", "Manual Report"]>;
+    status: z.ZodEnum<["Sent", "Generated", "Failed", "Scheduled"]>;
+    periodKey: z.ZodOptional<z.ZodString>;
+    periodStart: z.ZodOptional<z.ZodString>;
+    periodEnd: z.ZodOptional<z.ZodString>;
+    deliveryStatus: z.ZodOptional<z.ZodEnum<["Not Sent", "Queued", "Sent", "Failed"]>>;
+    summaryText: z.ZodOptional<z.ZodString>;
+    metrics: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    recommendations: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    generatedBy: z.ZodOptional<z.ZodString>;
+    idempotencyKey: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    type: "PDF Export" | "Daily Digest" | "Weekly Performance" | "Manual Report";
+    status: "Failed" | "Scheduled" | "Sent" | "Generated";
+    tenantId: string;
+    createdBy: string;
+    idempotencyKey?: string | undefined;
+    periodKey?: string | undefined;
+    periodStart?: string | undefined;
+    periodEnd?: string | undefined;
+    deliveryStatus?: "Queued" | "Failed" | "Sent" | "Not Sent" | undefined;
+    summaryText?: string | undefined;
+    metrics?: Record<string, unknown> | undefined;
+    recommendations?: string[] | undefined;
+    generatedBy?: string | undefined;
+}, {
+    name: string;
+    type: "PDF Export" | "Daily Digest" | "Weekly Performance" | "Manual Report";
+    status: "Failed" | "Scheduled" | "Sent" | "Generated";
+    tenantId: string;
+    createdBy: string;
+    idempotencyKey?: string | undefined;
+    periodKey?: string | undefined;
+    periodStart?: string | undefined;
+    periodEnd?: string | undefined;
+    deliveryStatus?: "Queued" | "Failed" | "Sent" | "Not Sent" | undefined;
+    summaryText?: string | undefined;
+    metrics?: Record<string, unknown> | undefined;
+    recommendations?: string[] | undefined;
+    generatedBy?: string | undefined;
+}>;

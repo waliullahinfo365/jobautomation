@@ -1,52 +1,31 @@
-export const AI_MODEL_OPTIONS = [
-    {
-        provider: "OpenAI",
-        model: "gpt-4o-mini",
-        displayName: "GPT-4o mini",
-        recommendedFor: ["drafts", "classification", "low-latency"],
-        supportsJson: true,
-        maxTokens: 128_000,
-    },
-    {
-        provider: "OpenAI",
-        model: "gpt-4.1-mini",
-        displayName: "GPT-4.1 mini",
-        recommendedFor: ["research", "drafts"],
-        supportsJson: true,
-        maxTokens: 128_000,
-    },
-    {
-        provider: "OpenAI",
-        model: "gpt-4.1",
-        displayName: "GPT-4.1",
-        recommendedFor: ["complex reasoning", "long context"],
-        supportsJson: true,
-        maxTokens: 128_000,
-    },
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_AI_MODEL = exports.DEFAULT_AI_PROVIDER = exports.AI_MODEL_OPTIONS = void 0;
+exports.AI_MODEL_OPTIONS = [
     {
         provider: "Claude",
-        model: "claude-3-5-haiku-latest",
-        displayName: "Claude 3.5 Haiku",
-        recommendedFor: ["fast drafts", "summaries"],
+        model: "claude-sonnet-4-6",
+        displayName: "Claude Sonnet 4.6 (Recommended)",
+        recommendedFor: ["research", "drafts", "analysis"],
         supportsJson: true,
         maxTokens: 200_000,
     },
     {
         provider: "Claude",
-        model: "claude-3-7-sonnet-latest",
-        displayName: "Claude 3.7 Sonnet",
-        recommendedFor: ["research", "long-form"],
+        model: "claude-opus-4-7",
+        displayName: "Claude Opus 4.7 (Most capable)",
+        recommendedFor: ["complex reasoning", "long-form"],
         supportsJson: true,
         maxTokens: 200_000,
     },
     {
-        provider: "Stub",
-        model: "deterministic-stub-v1",
-        displayName: "Deterministic stub (dev)",
-        recommendedFor: ["local dev", "deterministic demos"],
-        supportsJson: false,
-        maxTokens: 0,
+        provider: "Claude",
+        model: "claude-haiku-4-5-20251001",
+        displayName: "Claude Haiku 4.5 (Fast)",
+        recommendedFor: ["fast drafts", "summaries", "classification"],
+        supportsJson: true,
+        maxTokens: 200_000,
     },
 ];
-export const DEFAULT_AI_PROVIDER = "Stub";
-export const DEFAULT_AI_MODEL = "deterministic-stub-v1";
+exports.DEFAULT_AI_PROVIDER = "Claude";
+exports.DEFAULT_AI_MODEL = "claude-sonnet-4-6";

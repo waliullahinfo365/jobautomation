@@ -25,14 +25,13 @@ const SOURCES: { label: string; value: JobSource }[] = [
 
 const STATUSES: { label: string; value: JobStatus }[] = [
   { label: "New", value: "New" },
-  { label: "Research", value: "Research" },
+  { label: "Saved", value: "Saved" },
   { label: "Drafting", value: "Drafting" },
-  { label: "Ready to Apply", value: "Ready to Apply" },
+  { label: "Ready", value: "Ready" },
   { label: "Applied", value: "Applied" },
   { label: "Interview", value: "Interview" },
   { label: "Offer", value: "Offer" },
-  { label: "Rejected", value: "Rejected" },
-  { label: "Archived", value: "Archived" },
+  { label: "Closed", value: "Closed" },
 ];
 
 const PRIORITIES: { label: string; value: JobPriority }[] = [
@@ -69,14 +68,13 @@ function sourceKey(value: JobSource) {
 function statusKey(value: JobStatus) {
   const map: Record<JobStatus, string> = {
     New: "new",
-    Research: "research",
+    Saved: "saved",
     Drafting: "drafting",
-    "Ready to Apply": "readyToApply",
+    Ready: "ready",
     Applied: "applied",
     Interview: "interview",
     Offer: "offer",
-    Rejected: "rejected",
-    Archived: "archived",
+    Closed: "closed",
   };
   return map[value];
 }

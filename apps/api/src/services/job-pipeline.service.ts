@@ -1,5 +1,12 @@
 import { ApplicationModel, DocumentModel, InterviewModel, JobModel } from "@jobflow/database/models";
-import { jobPipelineStages, type JobPipelineStage } from "@jobflow/shared/constants/pipeline";
+import { syncJobPipelineFromApplication as syncJobPipelineFromApplicationDb } from "@jobflow/database";
+import {
+  applicationStatusToPipelineStage,
+  jobPipelineStages,
+  legacyJobStatusToPipelineStage,
+  type JobPipelineStage,
+} from "@jobflow/shared/constants/pipeline";
+import { shouldSyncJobPipelineFromApplicationStatus } from "@jobflow/shared/constants/application-documentation";
 
 /** Demo/test jobs excluded from Today and pipeline counts. */
 export function buildTestJobFilter(): Record<string, unknown> {
@@ -105,6 +112,92 @@ export function pipelineCountsToSummary(counts: Record<JobPipelineStage, number>
   return { pipeline, totalActive };
 }
 
+/** Write-through: Application status drives Job.pipelineStage (and legacy status when needed). */
+export async function syncJobPipelineFromApplication(input: {
+  tenantId: string;
+  jobId: string;
+  applicationStatus: string;
+  userId?: string;
+}) {
+  return syncJobPipelineFromApplicationDb(input);
+}
+
+export async function setJobPipelineStage(input: {
+  tenantId: string;
+  jobId: string;
+  pipelineStage: JobPipelineStage;
+  userId?: string;
+  /** Skip if an Application already owns this job's pipeline. */
+  skipIfApplicationExists?: boolean;
+}) {
+  if (input.skipIfApplicationExists) {
+    const app = await ApplicationModel.exists({ tenantId: input.tenantId, jobId: input.jobId });
+    if (app) return;
+  }
+  const legacyStatus = pipelineStageToLegacyStatus(input.pipelineStage);
+  await JobModel.findOneAndUpdate(
+    { _id: input.jobId, tenantId: input.tenantId },
+    {
+      $set: {
+        pipelineStage: input.pipelineStage,
+        ...(legacyStatus ? { status: legacyStatus } : {}),
+        lastStatusChangedAt: new Date(),
+        updatedBy: input.userId ?? "system",
+      },
+    }
+  );
+}
+
+function pipelineStageToLegacyStatus(stage: JobPipelineStage): string | null {
+  switch (stage) {
+    case "New":
+      return "New";
+    case "Saved":
+      return "Saved";
+    case "Drafting":
+      return "Drafting";
+    case "Ready":
+      return "Ready to Apply";
+    case "Applied":
+      return "Applied";
+    case "Interview":
+      return "Interview";
+    case "Offer":
+      return "Offer";
+    case "Closed":
+      return "Rejected";
+    default:
+      return null;
+  }
+}
+
+export async function backfillJobPipelineStage(tenantId: string): Promise<number> {
+  const jobs = await JobModel.find(baseTrackedJobsFilter(tenantId)).select("_id status reviewStatus pipelineStage").lean();
+  let updated = 0;
+  for (const row of jobs as Array<Record<string, unknown>>) {
+    const jobId = String(row._id);
+    const app = await ApplicationModel.findOne({ tenantId, jobId }).select("applicationStatus").lean();
+    let stage: JobPipelineStage;
+    if (app) {
+      const appStatus = String((app as Record<string, unknown>).applicationStatus ?? "Applied");
+      stage = shouldSyncJobPipelineFromApplicationStatus(appStatus)
+        ? applicationStatusToPipelineStage(appStatus)
+        : legacyJobStatusToPipelineStage(String(row.status ?? "New"));
+    } else if (row.reviewStatus === "saved") {
+      stage = "Saved";
+    } else if (row.reviewStatus === "rejected") {
+      stage = "Closed";
+    } else {
+      stage = legacyJobStatusToPipelineStage(String(row.status ?? "New"));
+    }
+    if (row.pipelineStage !== stage) {
+      await JobModel.updateOne({ _id: jobId }, { $set: { pipelineStage: stage } });
+      updated += 1;
+    }
+  }
+  return updated;
+}
+
 export async function countFollowUpsDue(tenantId: string): Promise<number> {
   const now = new Date();
   return ApplicationModel.countDocuments({
@@ -129,6 +222,7 @@ const workspaceJobFilter = {
   $or: [{ jobId: { $exists: false } }, { jobId: null }, { jobId: "" }],
 };
 
+/** Active CV exists when Drive file metadata is present (no server-side bytes required). */
 async function hasDriveLinkedProfileDoc(
   tenantId: string,
   userId: string,

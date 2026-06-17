@@ -1,5 +1,98 @@
 import { model, models, Schema } from "mongoose";
 import { applyBaseIndexes, withBaseFields } from "../schemas/base.schema";
-const ApplicationSchema = new Schema(withBaseFields({ jobId: { type: String, required: false }, company: { type: String, required: true }, position: { type: String, required: true }, source: String, jobUrl: String, applicationStatus: { type: String, enum: ["Drafted", "Ready", "Applied", "Follow-Up Due", "Replied", "Interview", "Offer", "Rejected", "Archived"], required: true }, responseStatus: { type: String, enum: ["No Response", "Positive Reply", "Negative Reply", "Auto Reply", "Needs Review"], default: "No Response" }, followUpStatus: { type: String, enum: ["Not Needed", "Scheduled", "Due Today", "Overdue", "Sent"], default: "Not Needed" }, dateApplied: Date, followUpDate: Date, contactEmail: String, lastEmailSubject: String, lastReplySnippet: String, responseDetected: Boolean, aiClassification: String, followUpMessagePreview: String, reminderStatus: String, reminderSentDate: Date, appliedAutomationStatus: { type: String, enum: ["Not Started", "Queued", "Completed", "Failed"], default: "Not Started" }, appliedAutomationCompletedAt: Date, followUpReminderKey: String, followUpReminderSentAt: Date, followUpReminderLastCheckedAt: Date, followUpReminderError: String, lastProviderMessageId: String, providerThreadId: String, replyDetectedAt: Date, replyClassificationConfidence: Number, replyClassificationReason: String, lastStatusChangedAt: Date, notes: String, offerStage: { type: String, enum: ["discussion", "verbal_offer", "written_offer", "negotiation", "not_offer"] }, offerSummary: String, offerDetectedAt: Date, offerDetectionKey: String, offerNextAction: String, offerConfidence: Number, offerDetectionError: String }), { timestamps: true });
-applyBaseIndexes(ApplicationSchema, true); ApplicationSchema.index({ tenantId: 1, jobId: 1 }); ApplicationSchema.index({ tenantId: 1, applicationStatus: 1 }); ApplicationSchema.index({ followUpDate: 1 }); ApplicationSchema.index({ tenantId: 1, offerDetectionKey: 1 }, { sparse: true });
+
+const StatusHistoryEntrySchema = new Schema(
+  {
+    status: { type: String, required: true },
+    at: { type: Date, required: true },
+    source: { type: String, required: true },
+    notes: String,
+  },
+  { _id: false }
+);
+
+const ApplicationSchema = new Schema(
+  withBaseFields({
+    jobId: { type: String, required: false },
+    company: { type: String, required: true },
+    position: { type: String, required: true },
+    source: String,
+    jobUrl: String,
+    applicationStatus: {
+      type: String,
+      enum: [
+        "Drafted",
+        "Ready",
+        "In Progress",
+        "Applied",
+        "Follow-Up Due",
+        "Replied",
+        "Interview",
+        "Offer",
+        "Rejected",
+        "Archived",
+      ],
+      required: true,
+    },
+    applyMethod: {
+      type: String,
+      enum: ["manual", "linkedin_auto", "manual_log", "manual_assistant"],
+    },
+    documentIds: { type: [String], default: [] },
+    statusHistory: { type: [StatusHistoryEntrySchema], default: [] },
+    responseStatus: {
+      type: String,
+      enum: ["No Response", "Positive Reply", "Negative Reply", "Auto Reply", "Needs Review"],
+      default: "No Response",
+    },
+    followUpStatus: {
+      type: String,
+      enum: ["Not Needed", "Scheduled", "Due Today", "Overdue", "Sent"],
+      default: "Not Needed",
+    },
+    dateApplied: Date,
+    followUpDate: Date,
+    contactEmail: String,
+    lastEmailSubject: String,
+    lastReplySnippet: String,
+    responseDetected: Boolean,
+    aiClassification: String,
+    followUpMessagePreview: String,
+    reminderStatus: String,
+    reminderSentDate: Date,
+    appliedAutomationStatus: {
+      type: String,
+      enum: ["Not Started", "Queued", "Completed", "Failed"],
+      default: "Not Started",
+    },
+    appliedAutomationCompletedAt: Date,
+    followUpReminderKey: String,
+    followUpReminderSentAt: Date,
+    followUpReminderLastCheckedAt: Date,
+    followUpReminderError: String,
+    lastProviderMessageId: String,
+    providerThreadId: String,
+    replyDetectedAt: Date,
+    replyClassificationConfidence: Number,
+    replyClassificationReason: String,
+    lastStatusChangedAt: Date,
+    notes: String,
+    offerStage: {
+      type: String,
+      enum: ["discussion", "verbal_offer", "written_offer", "negotiation", "not_offer"],
+    },
+    offerSummary: String,
+    offerDetectedAt: Date,
+    offerDetectionKey: String,
+    offerNextAction: String,
+    offerConfidence: Number,
+    offerDetectionError: String,
+  }),
+  { timestamps: true }
+);
+applyBaseIndexes(ApplicationSchema, true);
+ApplicationSchema.index({ tenantId: 1, jobId: 1 });
+ApplicationSchema.index({ tenantId: 1, applicationStatus: 1 });
+ApplicationSchema.index({ followUpDate: 1 });
+ApplicationSchema.index({ tenantId: 1, offerDetectionKey: 1 }, { sparse: true });
 export const ApplicationModel = models.Application || model("Application", ApplicationSchema);

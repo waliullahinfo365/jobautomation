@@ -10,6 +10,7 @@ import { checkDuplicateJob as checkDuplicateAgainstExisting } from "../services/
 import { getAiProcessingStatus as getAiStatusForJob, runDraftGeneration, runFullAiProcessing, runResearchGeneration } from "../services/ai-processing.service";
 import { provisionJobFolders } from "../services/folder-automation.service";
 import { enqueueAutomationModule } from "../services/automation-queue.service";
+import { setJobPipelineStage, syncJobPipelineFromApplication } from "../services/job-pipeline.service";
 import { getProfileDocumentContextFlags } from "../services/profile-document-context.service";
 import { assertCanCreateJob } from "../services/plan-limit.service";
 import { incrementUsage } from "../services/usage.service";
@@ -26,24 +27,12 @@ function buildTestJobFilter(): Record<string, unknown> {
   };
 }
 
-const PIPELINE_STATUSES = ["New", "Research", "Drafting", "Ready to Apply", "Applying", "Applied", "External Apply Required", "Interview", "Offer", "Rejected"];
+import { getPipelineCounts, pipelineCountsToSummary } from "../services/job-pipeline.service";
 
 export const getPipelineSummary = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
-  const filter: Record<string, unknown> = { ...buildTenantFilter(tenantId), status: { $nin: ["Archived"] } };
-  filter.$nor = [buildTestJobFilter()];
-
-  const agg = await JobModel.aggregate([
-    { $match: filter },
-    { $group: { _id: "$status", count: { $sum: 1 } } },
-  ]);
-
-  const byStatus: Record<string, number> = {};
-  for (const row of agg) byStatus[String(row._id)] = Number(row.count);
-
-  const pipeline = PIPELINE_STATUSES.map((status) => ({ status, count: byStatus[status] ?? 0 }));
-  const totalActive = pipeline.reduce((sum, d) => sum + d.count, 0);
-
+  const counts = await getPipelineCounts(tenantId);
+  const { pipeline, totalActive } = pipelineCountsToSummary(counts);
   return successResponse(res, { pipeline, totalActive });
 });
 
@@ -215,6 +204,13 @@ export const reviewJob = asyncHandler(async (req: Request, res) => {
     reviewAction: reviewAction ?? reviewStatus,
     previousReviewStatus,
   });
+  if (reviewStatus === "saved") {
+    await setJobPipelineStage({ tenantId, jobId, pipelineStage: "Saved", userId });
+  } else if (reviewStatus === "rejected") {
+    await setJobPipelineStage({ tenantId, jobId, pipelineStage: "Closed", userId });
+  } else if (reviewStatus === "apply_next") {
+    await setJobPipelineStage({ tenantId, jobId, pipelineStage: "Ready", userId, skipIfApplicationExists: true });
+  }
   return successResponse(res, {
     jobId,
     reviewStatus,

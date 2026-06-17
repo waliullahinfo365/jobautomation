@@ -16,7 +16,7 @@ interface RecentJobsTableProps {
 function getPriorityKey(job: JobSummary): "high" | "medium" | "low" {
   if (job.status === "Offer" || job.status === "Interview") return "high";
   if (job.deadline && isOverdue(job.deadline)) return "high";
-  if (job.status === "Ready to Apply" || job.status === "Applied") return "medium";
+  if (job.status === "Ready" || job.status === "Applied") return "medium";
   return "low";
 }
 

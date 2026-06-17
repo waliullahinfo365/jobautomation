@@ -296,7 +296,7 @@ export const SIDEBAR_NAV_PRIMARY = [
   {
     sectionKey: "navSection.main",
     items: [
-      { labelKey: "nav.today", icon: DashboardIcon, href: "/dashboard" },
+      { labelKey: "nav.today", icon: DashboardIcon, href: "/today" },
       { labelKey: "nav.jobs", icon: JobsIcon, href: "/jobs" },
       { labelKey: "nav.applications", icon: ApplicationsIcon, href: "/applications" },
       { labelKey: "nav.documents", icon: DocumentsIcon, href: "/documents" },
@@ -312,8 +312,8 @@ export const SIDEBAR_NAV_SECONDARY = [
     items: [
       { labelKey: "nav.contacts", icon: ContactsIcon, href: "/contacts" },
       { labelKey: "nav.interviews", icon: InterviewsIcon, href: "/interviews" },
-      { labelKey: "nav.insights", icon: ReportsIcon, href: "/reports" },
-      { labelKey: "nav.jobAssistant", icon: AutomationIcon, href: "/automation" },
+      { labelKey: "nav.insights", icon: ReportsIcon, href: "/insights" },
+      { labelKey: "nav.jobGuru", icon: AutomationIcon, href: "/job-guru" },
       { labelKey: "nav.settings", icon: SettingsIcon, href: "/settings" },
     ],
   },

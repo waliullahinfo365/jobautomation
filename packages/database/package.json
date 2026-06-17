@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
       "models": ["./src/models/index.ts"],
       "models/*": ["./src/models/*.ts"],
+      "services/*": ["./src/services/*.ts"],
       "seed/*": ["./src/seed/*.ts"]
     }
   },
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
@@ -23,6 +24,12 @@
       "require": "./dist/models/index.js",
       "import": "./dist/models/index.js",
       "default": "./dist/models/index.js"
+    },
+    "./services/application-documentation": {
+      "types": "./src/services/application-documentation.service.ts",
+      "require": "./dist/services/application-documentation.service.js",
+      "import": "./dist/services/application-documentation.service.js",
+      "default": "./dist/services/application-documentation.service.js"
     },
     "./seed/seedAutomationModules": {
       "types": "./src/seed/seedAutomationModules.ts",
@@ -38,6 +45,7 @@
     "lint": "echo 'database lint placeholder'"
   },
   "dependencies": {
+    "@jobflow/shared": "workspace:*",
     "mongoose": "^8.19.2"
   },
   "devDependencies": {

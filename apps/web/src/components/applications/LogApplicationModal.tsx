@@ -89,6 +89,7 @@ export function LogApplicationModal({
   const appStatusOptions = useMemo(() => [
     { label: t("applications.applicationStatus.drafted"), value: "Drafted" },
     { label: t("applications.applicationStatus.ready"), value: "Ready" },
+    { label: t("applications.applicationStatus.inProgress"), value: "In Progress" },
     { label: t("applications.applicationStatus.applied"), value: "Applied" },
     { label: t("applications.applicationStatus.followUpDue"), value: "Follow-Up Due" },
     { label: t("applications.applicationStatus.replied"), value: "Replied" },

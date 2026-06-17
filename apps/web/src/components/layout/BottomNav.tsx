@@ -7,7 +7,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", icon: DashboardIcon, labelKey: "nav.today" },
+  { href: "/today", icon: DashboardIcon, labelKey: "nav.today" },
   { href: "/jobs", icon: JobsIcon, labelKey: "nav.jobs" },
   { href: "/applications", icon: ApplicationsIcon, labelKey: "nav.applications" },
   { href: "/documents", icon: DocumentsIcon, labelKey: "nav.documents" },

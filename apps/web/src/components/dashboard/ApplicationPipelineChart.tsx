@@ -28,13 +28,13 @@ interface ApplicationPipelineChartProps {
 
 const STAGE_KEY_MAP: Record<string, string> = {
   New: "new",
-  Research: "research",
+  Saved: "saved",
   Drafting: "drafting",
-  "Ready to Apply": "readyToApply",
+  Ready: "ready",
   Applied: "applied",
   Interview: "interview",
   Offer: "offer",
-  Rejected: "rejected",
+  Closed: "closed",
 };
 
 function useNarrowChart() {
@@ -71,7 +71,7 @@ export function ApplicationPipelineChart({ data, loading, error, isUsingFallback
 
   function stageLabel(status: string): string {
     const key = STAGE_KEY_MAP[status];
-    return key ? t(`dashboard.pipelineStages.${key}`) : status;
+    return key ? t(`today.pipeline.${key}`) : status;
   }
 
   return (
@@ -82,7 +82,7 @@ export function ApplicationPipelineChart({ data, loading, error, isUsingFallback
             <PipelineIcon size={18} />
           </div>
           <div className="min-w-0">
-            <h3 className="jf-panel-title">{t("dashboard.pipeline.title")}</h3>
+            <h3 className="jf-panel-title">{t("today.applicationPipeline")}</h3>
             <p className="jf-panel-sub">{t("dashboard.pipeline.subtitle")}</p>
           </div>
         </div>

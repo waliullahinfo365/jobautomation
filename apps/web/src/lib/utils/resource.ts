@@ -1,4 +1,5 @@
 import type { Job, JobDocument, JobTimelineEvent, JobAutomationLog, JobSource } from "@/types/job";
+import { resolvePipelineStage } from "@/lib/jobs/pipeline-stage";
 import type { Application } from "@/types/application";
 import type { Contact, ContactAutomationLog, ContactCommunicationEvent, ContactRelatedJob } from "@/types/contact";
 import type { DocumentRecord, DocumentStatus, DocumentType, PDFExportStatus } from "@/types/document";
@@ -247,7 +248,7 @@ export function normalizeJobForUi(raw: unknown): Job {
     position: ((j.position ?? j.title) as string) ?? "",
     title: ((j.position ?? j.title) as string) ?? "",
     source: normalizeJobSourceForUi(j.source),
-    status: (j.status as Job["status"]) ?? "New",
+    status: resolvePipelineStage(j),
     priority: (j.priority as Job["priority"]) ?? "Medium",
     location: (j.location as string) ?? "",
     remote: Boolean(j.remote),

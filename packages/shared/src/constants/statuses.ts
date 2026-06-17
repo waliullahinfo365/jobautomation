@@ -1,7 +1,7 @@
 export const tenantStatuses = ["Active", "Trialing", "Past Due", "Suspended", "Cancelled"] as const;
 export const userStatuses = ["Active", "Invited", "Suspended", "Removed"] as const;
 export const jobStatuses = ["New", "Research", "Drafting", "Ready to Apply", "Applied", "Interview", "Offer", "Rejected", "Archived"] as const;
-export const applicationStatuses = ["Drafted", "Ready", "Applied", "Follow-Up Due", "Replied", "Interview", "Offer", "Rejected", "Archived"] as const;
+export const applicationStatuses = ["Drafted", "Ready", "In Progress", "Applied", "Follow-Up Due", "Replied", "Interview", "Offer", "Rejected", "Archived"] as const;
 export const duplicateStatuses = ["Unique", "Possible Duplicate", "Duplicate", "Skipped"] as const;
 export const responseStatuses = ["No Response", "Positive Reply", "Negative Reply", "Auto Reply", "Needs Review"] as const;
 export const followUpStatuses = ["Not Needed", "Scheduled", "Due Today", "Overdue", "Sent"] as const;

@@ -17,14 +17,13 @@ interface JobFiltersProps {
 const STATUSES = [
   "All",
   "New",
-  "Research",
+  "Saved",
   "Drafting",
-  "Ready to Apply",
+  "Ready",
   "Applied",
   "Interview",
   "Offer",
-  "Rejected",
-  "Archived",
+  "Closed",
 ] as const satisfies readonly JobFiltersType["status"][];
 
 const PRIORITIES = ["All", "Low", "Medium", "High", "Urgent"] as const satisfies readonly JobFiltersType["priority"][];

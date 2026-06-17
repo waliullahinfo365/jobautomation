@@ -1,6 +1,9 @@
-export const subscriptionPlans = ["Free Trial", "Starter", "Pro", "Agency", "Enterprise"];
-export const tenantRoles = ["Owner", "Admin", "Member", "Viewer"];
-export const PLAN_DEFINITIONS = {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.planDefinitions = exports.displayPlanToPlanKey = exports.PLAN_DEFINITIONS = exports.tenantRoles = exports.subscriptionPlans = void 0;
+exports.subscriptionPlans = ["Free Trial", "Starter", "Pro", "Agency", "Enterprise"];
+exports.tenantRoles = ["Owner", "Admin", "Member", "Viewer"];
+exports.PLAN_DEFINITIONS = {
     free_trial: {
         planKey: "free_trial",
         displayName: "Free Trial",
@@ -93,7 +96,7 @@ export const PLAN_DEFINITIONS = {
     },
 };
 /** Legacy display name -> planKey */
-export const displayPlanToPlanKey = {
+exports.displayPlanToPlanKey = {
     "Free Trial": "free_trial",
     Starter: "starter",
     Pro: "pro",
@@ -101,7 +104,7 @@ export const displayPlanToPlanKey = {
     Enterprise: "enterprise",
 };
 /** @deprecated Use PLAN_DEFINITIONS */
-export const planDefinitions = {
+exports.planDefinitions = {
     "Free Trial": { maxJobs: 25, maxAutomationRuns: 100, maxAiCredits: 50, maxUsers: 1, maxStorageMb: 100 },
     Starter: { maxJobs: 100, maxAutomationRuns: 1000, maxAiCredits: 300, maxUsers: 2, maxStorageMb: 1000 },
     Pro: { maxJobs: 500, maxAutomationRuns: 5000, maxAiCredits: 1500, maxUsers: 5, maxStorageMb: 5000 },

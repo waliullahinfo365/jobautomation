@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { JobsIcon } from "@/components/icons";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { AddJobModal } from "@/components/jobs/AddJobModal";
@@ -18,7 +19,7 @@ import { ApiError } from "@/lib/api/client";
 import { buildCreateJobPayload, type CreateJobFormPayload } from "@/lib/api/jobs.api";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
-import { normalizeJobForUi } from "@/lib/utils/resource";
+import { normalizeJobForUi, normalizeJobSourceForUi } from "@/lib/utils/resource";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { Job, JobFilters as JobFiltersType } from "@/types/job";
@@ -68,12 +69,13 @@ type JobTab = "new" | "saved" | "all";
 
 const TAB_STATUSES: Record<JobTab, string[] | null> = {
   new: ["New"],
-  saved: ["Research", "Drafting", "Ready to Apply"],
+  saved: ["Saved", "Drafting", "Ready"],
   all: null,
 };
 
 export default function JobsPage() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
   const pipeline = useJobPipelineSummary();
   const [filters, setFilters] = useState<JobFiltersType>(initialFilters);
   const [view, setView] = useState<ViewMode>("table");
@@ -81,11 +83,27 @@ export default function JobsPage() {
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [localJobsOverlay, setLocalJobsOverlay] = useState<Job[]>([]);
 
-  /** Match list fetch to the active tab so counts (50 New, etc.) align with the table, not only the latest 20 rows. */
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const source = searchParams.get("source");
+    const next: JobFiltersType = { ...initialFilters };
+    if (status && status !== "All") {
+      next.status = status as JobFiltersType["status"];
+      if (status === "New") setActiveTab("new");
+      else if (["Saved", "Drafting", "Ready"].includes(status)) setActiveTab("saved");
+      else setActiveTab("all");
+    }
+    if (source) {
+      next.source = normalizeJobSourceForUi(source);
+    }
+    if (status || source) setFilters(next);
+  }, [searchParams]);
+
+  /** Match list fetch to the active tab so counts align with the table. */
   const jobsListParams = useMemo(() => {
     const limit = 200;
     if (activeTab === "new") return { limit, status: "New" };
-    if (activeTab === "saved") return { limit, status: "Research,Drafting,Ready to Apply" };
+    if (activeTab === "saved") return { limit, status: "Saved,Drafting,Ready,Research,Ready to Apply" };
     return { limit };
   }, [activeTab]);
 
@@ -111,7 +129,7 @@ export default function JobsPage() {
   const countStatus = (status: string) =>
     useServerPipelineCounts ? pipeline.count(status) : jobs.filter((j) => j.status === status).length;
   const savedTabCount = useServerPipelineCounts
-    ? pipeline.count("Research") + pipeline.count("Drafting") + pipeline.count("Ready to Apply")
+    ? pipeline.count("Saved") + pipeline.count("Drafting") + pipeline.count("Ready")
     : jobs.filter((j) => TAB_STATUSES.saved!.includes(j.status)).length;
   const allTabCount = useServerPipelineCounts ? pipeline.totalActive : jobs.length;
 
@@ -239,11 +257,11 @@ export default function JobsPage() {
 
       <div className="jf-kpi-grid">
         <KpiCard label={t("jobs.kpiNew")} value={countStatus("New")} />
-        <KpiCard label={t("jobs.kpiReady")} value={countStatus("Ready to Apply")} />
+        <KpiCard label={t("jobs.kpiReady")} value={countStatus("Ready")} />
         <KpiCard label={t("jobs.kpiApplied")} value={countStatus("Applied")} />
         <KpiCard label={t("jobs.kpiInterviews")} value={countStatus("Interview")} />
         <KpiCard label={t("jobs.kpiOffers")} value={countStatus("Offer")} />
-        <KpiCard label={t("jobs.kpiRejected")} value={countStatus("Rejected")} />
+        <KpiCard label={t("jobs.kpiRejected")} value={countStatus("Closed")} />
       </div>
 
       {/* Status tabs */}

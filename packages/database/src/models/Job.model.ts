@@ -5,7 +5,12 @@ const JobSchema = new Schema(
     company: { type: String, required: true },
     position: { type: String, required: true },
     source: String,
-    status: { type: String, enum: ["New", "Research", "Drafting", "Ready to Apply", "Applying", "Applied", "External Apply Required", "Interview", "Offer", "Rejected", "Archived"], required: true },
+    status: { type: String, enum: ["New", "Saved", "Research", "Drafting", "Ready to Apply", "Applying", "Applied", "External Apply Required", "Interview", "Offer", "Rejected", "Archived"], required: true },
+    /** Canonical Today/Jobs pipeline stage; mirrors Application.status once an Application exists. */
+    pipelineStage: {
+      type: String,
+      enum: ["New", "Saved", "Drafting", "Ready", "Applied", "Interview", "Offer", "Closed"],
+    },
     priority: { type: String, enum: ["Low", "Medium", "High", "Urgent"], default: "Medium" },
     location: String,
     jobUrl: String,
@@ -114,6 +119,7 @@ const JobSchema = new Schema(
 
 applyBaseIndexes(JobSchema, true);
 JobSchema.index({ tenantId: 1, status: 1 });
+JobSchema.index({ tenantId: 1, pipelineStage: 1 });
 JobSchema.index({ tenantId: 1, company: 1, position: 1 });
 JobSchema.index({ tenantId: 1, jobUrl: 1 });
 JobSchema.index({ tenantId: 1, fingerprintHash: 1 }, { unique: true, sparse: true });

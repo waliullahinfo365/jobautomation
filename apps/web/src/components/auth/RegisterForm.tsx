@@ -21,7 +21,7 @@ export function RegisterForm() {
   useEffect(() => {
     const token = getAuthToken();
     if (token) {
-      router.replace("/dashboard");
+      router.replace("/today");
       return;
     }
     setRedirecting(false);
@@ -32,7 +32,7 @@ export function RegisterForm() {
     clearError();
     try {
       await register({ name, email, password, workspaceName });
-      router.push("/dashboard");
+      router.push("/today");
       router.refresh();
     } catch {
       /* surfaced via hook */

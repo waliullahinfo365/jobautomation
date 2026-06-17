@@ -1,6 +1,7 @@
 export type ApplicationStatus =
   | "Drafted"
   | "Ready"
+  | "In Progress"
   | "Applied"
   | "Follow-Up Due"
   | "Replied"
@@ -78,6 +79,15 @@ export interface Application {
   followUpSentAt?: Date | string;
   responseReceivedAt?: Date | string;
   interviewIds?: string[];
+
+  applyMethod?: "manual" | "linkedin_auto" | "manual_log";
+  documentIds?: string[];
+  statusHistory?: Array<{
+    status: string;
+    at: string;
+    source: string;
+    notes?: string;
+  }>;
 
   /** Gmail thread id when synced — used by reply-test demo */
   providerThreadId?: string;
