@@ -22,6 +22,7 @@ import { jobRoutes } from "./job.routes";
 import { reportRoutes } from "./report.routes";
 import { systemRoutes } from "./system.routes";
 import { tenantRoutes } from "./tenant.routes";
+import { todayRoutes } from "./today.routes";
 
 export const apiRoutes = Router();
 
@@ -37,6 +38,7 @@ apiRoutes.use("/billing", billingRoutes);
 apiRoutes.use("/tenants", tenantRoutes);
 apiRoutes.use(jobIntakeRoutes);
 apiRoutes.use("/jobs", jobRoutes);
+apiRoutes.use("/today", todayRoutes);
 apiRoutes.use("/applications", applicationRoutes);
 apiRoutes.use("/contacts", contactRoutes);
 apiRoutes.use("/interviews", interviewRoutes);
