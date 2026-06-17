@@ -86,7 +86,7 @@ export async function getTodaySummary(input: { tenantId: string; userId: string;
     actions.push({
       type: "missing_cv",
       title: "Your CV is missing",
-      description: "Connect Google Drive and set your default CV so Job Guru can prepare applications.",
+      description: "Connect Google Drive and set your default CV so Job Assistant can prepare applications.",
       cta: "Upload CV",
       href: "/documents/upload?type=cv",
     });
@@ -161,7 +161,7 @@ export async function getTodaySummary(input: { tenantId: string; userId: string;
     pipelineStages: pipeline,
     totalTracked: totalActive,
     systemStatus: {
-      label: "Job Guru active",
+      label: "Job Assistant active",
       enabledAutomations: enabledAutomations || exposed.length,
       totalExposed: exposed.length,
       status: needsSetup ? "needs_setup" : "ready",
