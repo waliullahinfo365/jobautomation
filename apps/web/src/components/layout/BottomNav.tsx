@@ -23,7 +23,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-subtle)] bg-[var(--bg-1)]/95 backdrop-blur-md md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="flex h-[56px] items-stretch">
+      <div className="flex min-h-[var(--mobile-nav-height)] items-stretch">
         {NAV_ITEMS.map(({ href, icon: Icon, labelKey }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (
@@ -31,17 +31,17 @@ export function BottomNav() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-0.5 text-center transition-colors",
+                "relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 text-center transition-colors mobile-touch-target",
                 isActive
                   ? "text-[var(--accent-hi)]"
                   : "text-[var(--text-4)] hover:text-[var(--text-2)]"
               )}
             >
-              <Icon size={20} />
+              <Icon size={22} />
               <span className="text-[10px] font-medium leading-tight">{t(labelKey)}</span>
-              {isActive && (
-                <span className="absolute bottom-0 h-[2px] w-8 rounded-full bg-[var(--accent-hi)]" />
-              )}
+              {isActive ? (
+                <span className="absolute bottom-1 left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-[var(--accent-hi)]" />
+              ) : null}
             </Link>
           );
         })}

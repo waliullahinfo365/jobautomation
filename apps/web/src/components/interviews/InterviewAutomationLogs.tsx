@@ -25,6 +25,28 @@ export function InterviewAutomationLogs({ logs }: { logs: InterviewAutomationLog
 
   return (
     <SectionCard title={t("interviews.logs.title")} description={t("interviews.logs.subtitle")} contentClassName="p-0">
+      <div className="grid gap-3 p-4 md:hidden">
+        {logs.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("interviews.logs.noLogs")}</p>
+        ) : (
+          logs.map((log) => (
+            <article key={log.id} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs text-[var(--text-4)]">{timeFmt.format(new Date(log.time))}</span>
+                <Badge variant={log.status === "success" ? "success" : log.status === "warning" ? "warning" : "danger"}>
+                  {t(STATUS_KEY[log.status] ?? log.status)}
+                </Badge>
+              </div>
+              <p className="mt-2 text-sm font-medium text-[var(--text-1)]">{t(MODULE_KEY[log.module] ?? log.module)}</p>
+              <p className="mt-1 line-clamp-3 text-sm text-[var(--text-2)]">{log.message}</p>
+              <p className="mt-2 text-xs text-[var(--text-4)]">
+                {log.relatedInterview} · {log.durationMs} ms
+              </p>
+            </article>
+          ))
+        )}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -62,6 +84,7 @@ export function InterviewAutomationLogs({ logs }: { logs: InterviewAutomationLog
           ))}
         </TableBody>
       </Table>
+      </div>
     </SectionCard>
   );
 }

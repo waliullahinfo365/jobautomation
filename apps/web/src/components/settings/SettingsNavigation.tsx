@@ -26,7 +26,7 @@ export function SettingsNavigation({ sections, activeSection, onChange }: Settin
       key={section}
       onClick={() => onChange(section)}
       className={cn(
-        "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
+        "w-full rounded-md px-3 py-3 text-left text-sm transition-colors min-h-[44px]",
         activeSection === section
           ? "bg-[var(--accent-bg)] text-[var(--accent-hi)]"
           : "text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]"

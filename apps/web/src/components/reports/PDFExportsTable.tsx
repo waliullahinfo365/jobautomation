@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { ReportStatusBadge } from "./ReportStatusBadge";
 import { ReportTypeBadge } from "./ReportTypeBadge";
+import { PDFExportCard } from "./PDFExportCard";
 import type { PDFExportRecord } from "@/types/report";
 import { useTranslation } from "@/i18n/I18nProvider";
 
@@ -25,6 +26,18 @@ export function PDFExportsTable({
 
   return (
     <SectionCard title={t("reports.pdf.title")} description={t("reports.pdf.subtitle")} contentClassName="p-0">
+      <div className="grid gap-3 p-4 md:hidden">
+        {records.map((record) => (
+          <PDFExportCard
+            key={record.id}
+            record={record}
+            onPreviewText={onPreviewText}
+            onExportAgain={onExportAgain}
+            busyId={busyId}
+          />
+        ))}
+      </div>
+      <div className="hidden md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -109,6 +122,7 @@ export function PDFExportsTable({
           ))}
         </TableBody>
       </Table>
+      </div>
     </SectionCard>
   );
 }

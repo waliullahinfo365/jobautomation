@@ -23,6 +23,7 @@ import { ApiError } from "@/lib/api/client";
 import { buildCreateApplicationPayload, type CreateApplicationFormPayload } from "@/lib/api/applications.api";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeJobForUi } from "@/lib/utils/resource";
+import { cn } from "@/lib/utils";
 import { resolvePipelineStage } from "@/lib/jobs/pipeline-stage";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import { mockJobs } from "@/data/mockJobs";
@@ -253,6 +254,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         disabled={actionDisabled}
         onClick={handleCheckDuplicate}
         variant="outline"
+        className="hidden md:inline-flex"
       />
       <ActionButton
         label={t("jobs.generateResearch")}
@@ -273,6 +275,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         loading={actionLoading === "ai"}
         disabled={actionDisabled}
         onClick={handleRunAiProcessing}
+        className="hidden md:inline-flex"
       />
       <ActionButton
         label={t("jobDetail.provisionFolders")}
@@ -280,9 +283,10 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         disabled={actionDisabled}
         onClick={handleProvisionFolders}
         variant="outline"
+        className="hidden lg:inline-flex"
       />
-      <Link href={`/jobs/${id}/apply`}>
-        <Button type="button" variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+      <Link href={`/jobs/${id}/apply`} className={showStickyBar ? "hidden md:inline-flex" : "inline-flex"}>
+        <Button type="button" variant="default" className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white">
           {t("applyAssistant.applyCta")}
         </Button>
       </Link>
@@ -319,7 +323,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const profileContextLine = profileAiContextCopy(job);
 
   return (
-    <div className={showStickyBar ? "space-y-6 pb-24 md:pb-20" : "space-y-6"}>
+    <div className={showStickyBar ? "space-y-6 pb-mobile-sticky md:pb-20" : "space-y-6"}>
       <JobDetailHeader job={job} renderActions={<ErrorBoundary>{actionBar}</ErrorBoundary>} />
 
       {duplicateFollowUp ? (
@@ -444,9 +448,10 @@ function ActionButton({ label, loading, disabled, onClick, variant = "default", 
   return (
     <Button
       variant={variant}
+      size="lg"
       disabled={disabled}
       onClick={() => { void Promise.resolve(onClick()).catch(() => void 0); }}
-      className={className}
+      className={cn("shrink-0 md:h-10 md:min-h-[38px] md:px-4", className)}
       suppressHydrationWarning
     >
       <span className="contents" suppressHydrationWarning>

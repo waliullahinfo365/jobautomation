@@ -10,7 +10,7 @@ import { ContactRelatedJobs } from "./ContactRelatedJobs";
 import { ContactCommunicationTimeline } from "./ContactCommunicationTimeline";
 import { ContactAutomationActivity } from "./ContactAutomationActivity";
 import { formatDate } from "@/lib/utils";
-import { AnimatePresence, motion } from "framer-motion";
+import { ResponsiveDetailPanel } from "@/components/shared/ResponsiveDetailPanel";
 import { useTranslation } from "@/i18n/useTranslation";
 import { contactAutomationModuleLabelKey } from "./contact-labels";
 
@@ -26,23 +26,9 @@ export function ContactDetailPanel({
   const { t } = useTranslation();
 
   return (
-    <AnimatePresence>
-      {open && contact ? (
-        <div className="fixed inset-0 z-50 flex">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 bg-black/40"
-            onClick={onClose}
-          />
-          <motion.aside
-            initial={{ x: 40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 24, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="h-full w-full max-w-2xl overflow-y-auto border-l border-border bg-card/95 p-6 backdrop-blur-xl"
-          >
+    <ResponsiveDetailPanel open={open && !!contact} onClose={onClose}>
+      {contact ? (
+        <>
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-foreground">{contact.name}</h2>
@@ -124,10 +110,9 @@ export function ContactDetailPanel({
                 <ContactAutomationActivity logs={contact.automationLogs} />
               </SectionCard>
             </div>
-          </motion.aside>
-        </div>
+        </>
       ) : null}
-    </AnimatePresence>
+    </ResponsiveDetailPanel>
   );
 }
 

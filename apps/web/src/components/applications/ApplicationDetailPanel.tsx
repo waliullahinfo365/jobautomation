@@ -8,10 +8,10 @@ import { ResponseStatusBadge } from "./ResponseStatusBadge";
 import { FollowUpStatusBadge } from "./FollowUpStatusBadge";
 import { ApplicationTimeline } from "./ApplicationTimeline";
 import { ApplicationAutomationLogList } from "./ApplicationAutomationLog";
+import { ResponsiveDetailPanel } from "@/components/shared/ResponsiveDetailPanel";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { AnimatePresence, motion } from "framer-motion";
 
 interface ApplicationDetailPanelProps {
   application: Application | null;
@@ -36,23 +36,9 @@ export function ApplicationDetailPanel({
 }: ApplicationDetailPanelProps) {
   const { t } = useTranslation();
   return (
-    <AnimatePresence>
-      {open && application ? (
-        <div className="fixed inset-0 z-50 flex">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 bg-black/40"
-            onClick={onClose}
-          />
-          <motion.aside
-            initial={{ x: 40, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 24, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="h-full w-full max-w-2xl overflow-y-auto border-l border-border bg-card p-6"
-          >
+    <ResponsiveDetailPanel open={open && !!application} onClose={onClose}>
+      {application ? (
+        <>
         <div className="mb-5 flex items-start justify-between">
           <div>
             <p className="text-sm text-[var(--text-3)]">{application.company}</p>
@@ -145,10 +131,9 @@ export function ApplicationDetailPanel({
             <ApplicationAutomationLogList logs={application.automationLogs} />
           </SectionCard>
         </div>
-          </motion.aside>
-        </div>
+        </>
       ) : null}
-    </AnimatePresence>
+    </ResponsiveDetailPanel>
   );
 }
 

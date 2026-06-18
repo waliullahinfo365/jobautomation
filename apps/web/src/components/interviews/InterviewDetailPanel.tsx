@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { ResponsiveDetailPanel } from "@/components/shared/ResponsiveDetailPanel";
 import { CloseIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
@@ -32,17 +32,9 @@ export function InterviewDetailPanel({
   const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
   return (
-    <AnimatePresence>
-      {open && interview ? (
-        <div className="fixed inset-0 z-50 flex">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 bg-black/40" onClick={onClose} />
-          <motion.aside
-            initial={{ x: 36, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 24, opacity: 0 }}
-            transition={{ duration: 0.24 }}
-            className="h-full w-full max-w-2xl overflow-y-auto border-l border-border bg-card/95 p-6 backdrop-blur-xl"
-          >
+    <ResponsiveDetailPanel open={open && !!interview} onClose={onClose}>
+      {interview ? (
+        <>
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold text-foreground">{interview.company}</h2>
@@ -112,10 +104,9 @@ export function InterviewDetailPanel({
 
               <InterviewAutomationLogs logs={interview.automationLogs} />
             </div>
-          </motion.aside>
-        </div>
+        </>
       ) : null}
-    </AnimatePresence>
+    </ResponsiveDetailPanel>
   );
 }
 

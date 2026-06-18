@@ -45,7 +45,31 @@ export function RecentJobsTable({ jobs }: RecentJobsTableProps) {
         </Link>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <div className="grid gap-3 p-4 md:hidden">
+          {jobs.map((job) => {
+            const priorityKey = getPriorityKey(job);
+            return (
+              <Link
+                key={job._id}
+                href={`/jobs/${job._id}`}
+                className="block rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm transition-colors hover:bg-[var(--surface-2)]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--text-1)]">{job.title}</p>
+                    <p className="mt-0.5 truncate text-xs text-[var(--text-3)]">{job.company}</p>
+                  </div>
+                  <JobStatusBadge status={job.status} />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-4)]">
+                  <Badge variant={priorityVariant(priorityKey)}>{t(`dashboard.priority.${priorityKey}`)}</Badge>
+                  <span>{fmtDate(job.updatedAt)}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+        <div className="hidden overflow-x-auto [-webkit-overflow-scrolling:touch] md:block">
           <Table className="min-w-[720px]">
           <TableHeader>
             <TableRow>

@@ -13,13 +13,17 @@ import { cn } from "@/lib/utils";
 import { me } from "@/lib/api/auth.api";
 import { useLogoutAction } from "@/hooks/useLogoutAction";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { NotificationBell } from "./NotificationBell";
+import { MobileSearchSheet } from "./MobileSearchSheet";
 import { ThemeToggle } from "./ThemeToggle";
+import { SearchIcon, PlusIcon } from "@/components/icons";
 import { useTheme } from "next-themes";
 
 const flatNav: SidebarNavItem[] = SIDEBAR_NAV.flatMap((s) => [...s.items]);
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [account, setAccount] = useState<{ name: string; email: string } | null>(null);
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -77,12 +81,28 @@ export function MobileNav() {
           <Image src={BRAND.iconPath} alt={BRAND.name} width={26} height={26} priority />
           <span className="truncate text-sm font-semibold text-[var(--text-1)]">{BRAND.name}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-2)]"
+            aria-label={t("topbar.searchPlaceholder")}
+          >
+            <SearchIcon size={20} />
+          </button>
+          <Link
+            href="/jobs?add=1"
+            className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-2)]"
+            aria-label={t("jobs.addJob")}
+          >
+            <PlusIcon size={20} />
+          </Link>
+          <NotificationBell />
           <LanguageSwitcher compact />
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="grid h-10 min-h-[40px] min-w-[40px] place-items-center rounded-md text-[var(--text-2)]"
+            className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-2)]"
             aria-label={t("common.openMenu")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -106,7 +126,7 @@ export function MobileNav() {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="grid h-10 min-h-[40px] min-w-[40px] place-items-center rounded-md text-[var(--text-3)] hover:bg-[var(--surface-3)]"
+                className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-3)] hover:bg-[var(--surface-3)]"
                 aria-label={t("common.close")}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -193,6 +213,7 @@ export function MobileNav() {
           </nav>
         </div>
       )}
+      <MobileSearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

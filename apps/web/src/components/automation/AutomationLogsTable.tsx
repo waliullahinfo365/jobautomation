@@ -42,7 +42,34 @@ export function AutomationLogsTable({ logs }: { logs: AutomationLog[] }) {
         description={t("automation.logs.recentDesc")}
         contentClassName="p-0"
       >
-        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <div className="grid gap-3 p-4 md:hidden">
+          {logs.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">{t("automation.logs.empty")}</p>
+          ) : (
+            logs.map((log) => {
+              const displayMessage = friendlyAutomationLogMessage(log.technicalMessage ?? log.message);
+              return (
+                <article key={log.id} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-xs text-[var(--text-4)]">{fmtTime(log.createdAt)}</span>
+                    <Badge variant={log.status === "Success" ? "success" : log.status === "Warning" ? "warning" : "danger"}>
+                      {logStatusLabel(log.status, t)}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-sm font-medium text-[var(--text-1)]">{log.moduleName}</p>
+                  <p className="mt-1 line-clamp-3 text-sm text-[var(--text-2)]">{displayMessage}</p>
+                  <p className="mt-2 text-xs text-[var(--text-4)]">
+                    {log.relatedRecord} · {log.duration}
+                  </p>
+                  <Button className="mt-3 w-full" variant="outline" type="button" onClick={() => setDetailLog(log)}>
+                    {t("jobs.view")}
+                  </Button>
+                </article>
+              );
+            })
+          )}
+        </div>
+        <div className="hidden overflow-x-auto [-webkit-overflow-scrolling:touch] md:block">
           <Table className="min-w-[680px]">
             <TableHeader>
               <TableRow>

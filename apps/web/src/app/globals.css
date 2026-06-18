@@ -4,6 +4,7 @@
 
 @import "../styles/jobflow-premium.css";
 @import "../styles/jobflow-shadcn-bridge.css";
+@import "../styles/mobile-chrome.css";
 
 @layer base {
   :root {

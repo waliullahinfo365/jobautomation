@@ -86,6 +86,8 @@ export default function JobsPage() {
   useEffect(() => {
     const status = searchParams.get("status");
     const source = searchParams.get("source");
+    const q = searchParams.get("q");
+    if (searchParams.get("add") === "1") setIsAddJobOpen(true);
     const next: JobFiltersType = { ...initialFilters };
     if (status && status !== "All") {
       next.status = status as JobFiltersType["status"];
@@ -96,7 +98,11 @@ export default function JobsPage() {
     if (source) {
       next.source = normalizeJobSourceForUi(source);
     }
-    if (status || source) setFilters(next);
+    if (q) {
+      next.query = q;
+      setActiveTab("all");
+    }
+    if (status || source || q) setFilters(next);
   }, [searchParams]);
 
   /** Match list fetch to the active tab so counts align with the table. */

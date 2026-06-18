@@ -7,6 +7,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentStatusBadge } from "./DocumentStatusBadge";
 import { DocumentTypeBadge } from "./DocumentTypeBadge";
+import { DocumentCard } from "./DocumentCard";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { DocumentRecord } from "@/types/document";
 import { updateDocument, getDocument } from "@/lib/api/documents.api";
@@ -75,7 +76,21 @@ export function AllDocumentsTable({
 
   return (
     <>
-      <SectionCard title={t("documents.all.title")} description={t("documents.all.subtitle")} contentClassName="p-0">
+      <SectionCard title={t("documents.all.title")} description={t("documents.all.subtitle")} contentClassName="p-0 md:p-0">
+        <div className="grid gap-3 p-4 md:hidden">
+          {records.map((record) => (
+            <DocumentCard
+              key={record.id}
+              record={record}
+              onView={(r) => void openRecord(r)}
+              onExportPdf={onExportPdf}
+              onRouteCv={onRouteCv}
+              onOpenFolder={onOpenFolder}
+              onSetActive={onSetActive}
+            />
+          ))}
+        </div>
+        <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -135,6 +150,7 @@ export function AllDocumentsTable({
             ))}
           </TableBody>
         </Table>
+        </div>
       </SectionCard>
 
       <Modal

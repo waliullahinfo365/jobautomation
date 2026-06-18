@@ -35,6 +35,31 @@ export function CompletedInterviewsSection({ interviews }: { interviews: Complet
   return (
     <>
       <SectionCard title={t("interviews.completed.title")} description={t("interviews.completed.subtitle")} contentClassName="p-0">
+        <div className="grid gap-3 p-4 md:hidden">
+          {interviews.map((iv) => (
+            <article key={iv.id} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-[var(--text-1)]">{iv.company}</h3>
+                  <p className="mt-0.5 truncate text-xs text-[var(--text-3)]">{iv.position}</p>
+                </div>
+                <span className="shrink-0 text-xs text-[var(--text-3)]">{dateFmt.format(new Date(iv.completedDate))}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-3)]">
+                <span>{t(TYPE_KEY[iv.interviewType as InterviewType] ?? iv.interviewType)}</span>
+                <span>·</span>
+                <span>{t(OUTCOME_KEY[iv.outcome as string] ?? iv.outcome)}</span>
+                <span>·</span>
+                <span>{iv.followUpSent ? t("interviews.completed.yes") : t("interviews.completed.no")}</span>
+              </div>
+              {iv.notesSummary ? <p className="mt-2 line-clamp-2 text-sm text-[var(--text-2)]">{iv.notesSummary}</p> : null}
+              <Button className="mt-3 w-full" variant="outline" onClick={() => setNotesInterview(iv)}>
+                {t("interviews.completed.showNotes")}
+              </Button>
+            </article>
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -67,6 +92,7 @@ export function CompletedInterviewsSection({ interviews }: { interviews: Complet
             ))}
           </TableBody>
         </Table>
+        </div>
       </SectionCard>
 
       <Modal

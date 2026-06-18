@@ -172,7 +172,7 @@ export function ManualApplyAssistantClient() {
     docStatus?.cv.delivery === "content_text" || docStatus?.coverLetter.delivery === "content_text";
 
   return (
-    <div className="pb-36">
+    <div className="pb-mobile-sticky">
       <PageHeader
         icon={JobsIcon}
         eyebrow={t("applyAssistant.eyebrow")}
@@ -218,7 +218,8 @@ export function ManualApplyAssistantClient() {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            size="lg"
+            className="w-full min-h-[44px]"
             disabled={docLoading !== null || missingCv}
             onClick={() => void handleDocument("cv")}
           >
@@ -227,7 +228,8 @@ export function ManualApplyAssistantClient() {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            size="lg"
+            className="w-full min-h-[44px]"
             disabled={docLoading !== null || missingCoverLetter}
             onClick={() => void handleDocument("cover_letter")}
           >
@@ -246,7 +248,8 @@ export function ManualApplyAssistantClient() {
           <div className="flex gap-2">
             <Button
               type="button"
-              className="flex-1"
+              size="lg"
+              className="flex-1 min-h-[44px]"
               disabled={answerLoading || !questionText.trim()}
               onClick={() => void handleGenerateAnswer()}
             >
@@ -264,11 +267,17 @@ export function ManualApplyAssistantClient() {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)] p-3 md:bottom-0 md:left-[var(--sidebar-width,0px)]">
+      <div
+        className={cn(
+          "fixed inset-x-0 z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)] p-3",
+          "mobile-sticky-above-nav md:left-[var(--sidebar-width,0px)]"
+        )}
+      >
         <div className="mx-auto max-w-lg">
           <Button
             type="button"
-            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            size="lg"
+            className="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700"
             onClick={() => setSheetOpen(true)}
           >
             {t("applyAssistant.completeTitle")}
@@ -277,8 +286,9 @@ export function ManualApplyAssistantClient() {
       </div>
 
       {sheetOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 md:items-center">
-          <div className="w-full max-w-md rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 md:items-center md:p-4">
+          <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-xl md:rounded-2xl">
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-subtle)] md:hidden" aria-hidden />
             <h3 className="text-base font-semibold text-[var(--text-1)]">{t("applyAssistant.completeTitle")}</h3>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {(
@@ -293,7 +303,7 @@ export function ManualApplyAssistantClient() {
                   key={value}
                   type="button"
                   onClick={() => setCompleteStatus(value)}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
+                  className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm ${
                     completeStatus === value
                       ? "border-[var(--accent-hi)] bg-[var(--accent-bg)] text-[var(--accent-hi)]"
                       : "border-[var(--border-subtle)] text-[var(--text-2)]"
@@ -308,21 +318,25 @@ export function ManualApplyAssistantClient() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t("applyAssistant.notesPlaceholder")}
               rows={3}
-              className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-sm"
+              className="mt-3 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-base"
             />
             <input
               value={proofDocumentId}
               onChange={(e) => setProofDocumentId(e.target.value)}
               placeholder={t("applyAssistant.proofDocumentId")}
-              className="mt-2 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-sm"
+              className="mt-2 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-base"
             />
-            <div className="mt-4 flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setSheetOpen(false)}>
+            <div
+              className="mt-4 flex gap-2"
+              style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
+            >
+              <Button type="button" variant="outline" size="lg" className="min-h-[44px] flex-1" onClick={() => setSheetOpen(false)}>
                 Cancel
               </Button>
               <Button
                 type="button"
-                className="flex-1"
+                size="lg"
+                className="min-h-[44px] flex-1"
                 disabled={completeLoading}
                 onClick={() => void handleComplete()}
               >

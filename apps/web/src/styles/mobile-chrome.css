@@ -1,0 +1,54 @@
+/**
+ * Shared mobile layout tokens — bottom nav, safe areas, stacked sticky bars.
+ * Use on <md> only; desktop ignores these via md: overrides in components.
+ */
+:root {
+  --mobile-nav-height: 56px;
+  --mobile-topbar-height: 52px;
+  --mobile-chrome-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  --mobile-chrome-top: calc(var(--mobile-topbar-height) + env(safe-area-inset-top, 0px));
+  --mobile-sticky-bar-height: 72px;
+  --mobile-page-pad: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --mobile-chrome-bottom: 0px;
+    --mobile-chrome-top: 0px;
+  }
+}
+
+.pb-mobile-shell {
+  padding-bottom: calc(var(--mobile-page-pad) + var(--mobile-chrome-bottom));
+}
+
+@media (min-width: 768px) {
+  .pb-mobile-shell {
+    padding-bottom: 1.75rem;
+  }
+}
+
+.pb-mobile-sticky {
+  padding-bottom: calc(var(--mobile-page-pad) + var(--mobile-chrome-bottom) + var(--mobile-sticky-bar-height));
+}
+
+@media (min-width: 768px) {
+  .pb-mobile-sticky {
+    padding-bottom: 5rem;
+  }
+}
+
+.mobile-sticky-above-nav {
+  bottom: var(--mobile-chrome-bottom);
+}
+
+@media (min-width: 768px) {
+  .mobile-sticky-above-nav {
+    bottom: 0;
+  }
+}
+
+.mobile-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}

@@ -12,7 +12,7 @@ export default function LoginPage() {
   return (
     <>
       <LoginBackground />
-      <main className="relative z-10 flex min-h-screen items-center justify-center px-4">
+      <main className="relative z-10 flex min-h-screen items-center justify-center px-4 pb-[env(safe-area-inset-bottom)]">
         <div className="w-full max-w-sm space-y-6">
           <div className="flex flex-col items-center gap-2 text-center">
             <BrandIcon size={40} />

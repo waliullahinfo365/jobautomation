@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { ReportTab } from "@/types/report";
 import { useTranslation } from "@/i18n/I18nProvider";
+import { ScrollableTabBar, scrollableTabButtonClass } from "@/components/shared/ScrollableTabBar";
 
 const tabs: { key: ReportTab; i18n: string }[] = [
   { key: "Overview", i18n: "reports.tabs.overview" },
@@ -15,19 +16,19 @@ const tabs: { key: ReportTab; i18n: string }[] = [
 export function ReportTabs({ value, onChange }: { value: ReportTab; onChange: (tab: ReportTab) => void }) {
   const { t } = useTranslation();
   return (
-    <div className="inline-flex items-center rounded-lg bg-[var(--surface-3)] p-1">
+    <ScrollableTabBar>
       {tabs.map(({ key, i18n }) => (
         <button
           key={key}
           onClick={() => onChange(key)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm transition-colors",
+            scrollableTabButtonClass,
             value === key ? "bg-[var(--surface-2)] text-[var(--text-1)] shadow-sm" : "text-[var(--text-2)] hover:text-[var(--text-1)]"
           )}
         >
           {t(i18n)}
         </button>
       ))}
-    </div>
+    </ScrollableTabBar>
   );
 }

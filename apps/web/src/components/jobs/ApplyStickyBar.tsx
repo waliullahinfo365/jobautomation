@@ -5,6 +5,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { resolvePipelineStage, type PipelineStage } from "@/lib/jobs/pipeline-stage";
 import type { Job } from "@/types/job";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const STICKY_STAGES: PipelineStage[] = ["Ready", "Applied", "Interview", "Offer"];
 
@@ -28,15 +29,18 @@ export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDi
 
   return (
     <div
-      className="fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:bottom-0 md:left-[var(--sidebar-width,0px)]"
-      style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      className={cn(
+        "fixed inset-x-0 z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md",
+        "mobile-sticky-above-nav md:left-[var(--sidebar-width,0px)]"
+      )}
     >
       <div className="mx-auto flex max-w-lg gap-2">
         {showAutoApply ? (
           <Button
             type="button"
             variant="outline"
-            className="shrink-0"
+            size="lg"
+            className="shrink-0 min-h-[44px]"
             disabled={autoApplyDisabled || autoApplyLoading}
             onClick={onAutoApply}
           >
@@ -45,7 +49,7 @@ export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDi
         ) : null}
         <Link
           href={`/jobs/${jobId}/apply`}
-          className="flex flex-1 items-center justify-center rounded-xl bg-[var(--accent-hi)] px-4 py-3 text-sm font-semibold text-white hover:brightness-110"
+          className="flex min-h-[44px] flex-1 items-center justify-center rounded-xl bg-[var(--accent-hi)] px-4 text-sm font-semibold text-white hover:brightness-110"
         >
           {t("applyAssistant.applyCta")}
         </Link>

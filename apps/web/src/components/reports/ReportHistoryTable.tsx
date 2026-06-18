@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { ReportStatusBadge } from "./ReportStatusBadge";
 import { ReportTypeBadge } from "./ReportTypeBadge";
+import { ReportHistoryCard } from "./ReportHistoryCard";
 import type { ReportHistoryRecord } from "@/types/report";
 import { useTranslation } from "@/i18n/I18nProvider";
 
@@ -57,6 +58,18 @@ export function ReportHistoryTable({
 
   return (
     <SectionCard title={t("reports.reportHistory")} description={t("reports.allGeneratedAndScheduledReports")} contentClassName="p-0">
+      <div className="grid gap-3 p-4 md:hidden">
+        {records.map((record) => (
+          <ReportHistoryCard
+            key={record.id}
+            record={record}
+            onView={onView}
+            onSendTest={onSendTest}
+            busyId={busyId}
+          />
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -106,6 +119,7 @@ export function ReportHistoryTable({
           })}
         </TableBody>
       </Table>
+      </div>
     </SectionCard>
   );
 }

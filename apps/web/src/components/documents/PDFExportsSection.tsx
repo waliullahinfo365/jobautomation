@@ -23,6 +23,38 @@ export function PDFExportsSection({
 
   return (
     <SectionCard title={t("documents.pdfExports.title")} description={t("documents.pdfExports.subtitle")} contentClassName="p-0">
+      <div className="grid gap-3 p-4 md:hidden">
+        {records.map((r) => (
+          <article key={r.id} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold text-[var(--text-1)]">{r.documentName}</h3>
+                <p className="mt-0.5 truncate text-xs text-[var(--text-3)]">{r.relatedJob || "—"}</p>
+              </div>
+              <DocumentTypeBadge type={r.sourceType} />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <ReportStatusBadge status={r.exportStatus} />
+              <span className="text-xs text-[var(--text-4)]">{dateFmt.format(new Date(r.createdAt))}</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {r.exportPublicUrl ? (
+                <Button type="button" variant="outline" className="col-span-2 w-full" onClick={() => window.open(r.exportPublicUrl, "_blank", "noopener,noreferrer")}>
+                  {t("documents.actions.openPdf")}
+                </Button>
+              ) : r.textPreviewAvailable && onPreviewText ? (
+                <Button type="button" variant="outline" className="col-span-2 w-full" onClick={() => onPreviewText?.(r)}>
+                  {t("documents.actions.previewText")}
+                </Button>
+              ) : null}
+              <Button type="button" variant="secondary" className="col-span-2 w-full" onClick={() => onExportAgain?.(r)}>
+                {t("documents.actions.exportAgain")}
+              </Button>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto md:block">
       <Table>
         <TableHeader>
           <TableRow>
@@ -79,6 +111,7 @@ export function PDFExportsSection({
           ))}
         </TableBody>
       </Table>
+      </div>
     </SectionCard>
   );
 }

@@ -17,10 +17,10 @@ const buttonVariants = cva(
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
       },
       size: {
-        default: "h-10 min-h-[38px] px-4 py-2",
-        sm: "h-8 min-h-[32px] rounded-[var(--r-md,10px)] px-3 text-xs duration-[var(--dur-fast)]",
+        default: "h-11 min-h-[44px] px-4 py-2 md:h-10 md:min-h-[38px]",
+        sm: "h-10 min-h-[44px] rounded-[var(--r-md,10px)] px-3 text-xs duration-[var(--dur-fast)] md:h-8 md:min-h-[32px]",
         lg: "h-11 min-h-[44px] rounded-[var(--r-lg,14px)] px-8",
-        icon: "h-10 w-10 min-h-[34px] min-w-[34px] duration-[var(--dur-fast)]",
+        icon: "h-11 w-11 min-h-[44px] min-w-[44px] duration-[var(--dur-fast)] md:h-10 md:w-10 md:min-h-[34px] md:min-w-[34px]",
       },
     },
     defaultVariants: {
