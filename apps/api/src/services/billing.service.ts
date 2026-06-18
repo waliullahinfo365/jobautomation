@@ -62,6 +62,87 @@ function planPriceId(planKey: SubscriptionPlanKey, cycle: "monthly" | "yearly"):
   return process.env[envKey]?.trim() ?? process.env[`STRIPE_PRICE_${planKey.toUpperCase()}`]?.trim() ?? null;
 }
 
+function buildPriceIdToPlanKeyMap(): Map<string, SubscriptionPlanKey> {
+  const map = new Map<string, SubscriptionPlanKey>();
+  for (const planKey of Object.keys(PLAN_DEFINITIONS) as SubscriptionPlanKey[]) {
+    if (planKey === "free_trial" || planKey === "enterprise") continue;
+    for (const cycle of ["monthly", "yearly"] as const) {
+      const priceId = planPriceId(planKey, cycle);
+      if (priceId) map.set(priceId, planKey);
+    }
+  }
+  return map;
+}
+
+const PRICE_ID_TO_PLAN_KEY = buildPriceIdToPlanKeyMap();
+
+function planKeyFromStripePriceId(priceId: string | undefined): SubscriptionPlanKey | null {
+  if (!priceId) return null;
+  return PRICE_ID_TO_PLAN_KEY.get(priceId) ?? null;
+}
+
+export function isStripeBillingConfigured(): boolean {
+  return isStripeConfigured();
+}
+
+export function getConfiguredStripePlans(): Record<SubscriptionPlanKey, { monthly: boolean; yearly: boolean }> {
+  const out = {} as Record<SubscriptionPlanKey, { monthly: boolean; yearly: boolean }>;
+  for (const planKey of Object.keys(PLAN_DEFINITIONS) as SubscriptionPlanKey[]) {
+    out[planKey] = {
+      monthly: Boolean(planPriceId(planKey, "monthly")),
+      yearly: Boolean(planPriceId(planKey, "yearly")),
+    };
+  }
+  return out;
+}
+
+async function applyPlanToTenant(
+  tenantId: string,
+  planKey: SubscriptionPlanKey,
+  extra?: {
+    billingStatus?: BillingStatus;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    cancelAtPeriodEnd?: boolean;
+    currentPeriodStart?: Date;
+    currentPeriodEnd?: Date;
+  }
+) {
+  const def = PLAN_DEFINITIONS[planKey];
+  if (!def) return;
+
+  const billingStatus = extra?.billingStatus ?? "Active";
+  const set: Record<string, unknown> = {
+    plan: def.displayName,
+    billingStatus,
+    limits: {
+      maxJobs: def.limits.maxJobs,
+      maxAutomationRuns: def.limits.maxAutomationRuns,
+      maxAiCredits: def.limits.maxAiCredits,
+      maxUsers: def.limits.maxUsers,
+      maxStorageMb: def.limits.maxStorageMb,
+      maxIntegrations: def.limits.maxIntegrations,
+      maxReportsPerMonth: def.limits.maxReportsPerMonth,
+    },
+    "billing.planKey": planKey,
+    "billing.billingStatus": billingStatus,
+  };
+
+  if (extra?.stripeCustomerId) {
+    set["billing.stripeCustomerId"] = extra.stripeCustomerId;
+    set.stripeCustomerId = extra.stripeCustomerId;
+  }
+  if (extra?.stripeSubscriptionId) {
+    set["billing.stripeSubscriptionId"] = extra.stripeSubscriptionId;
+    set.stripeSubscriptionId = extra.stripeSubscriptionId;
+  }
+  if (extra?.cancelAtPeriodEnd !== undefined) set["billing.cancelAtPeriodEnd"] = extra.cancelAtPeriodEnd;
+  if (extra?.currentPeriodStart) set["billing.currentPeriodStart"] = extra.currentPeriodStart;
+  if (extra?.currentPeriodEnd) set["billing.currentPeriodEnd"] = extra.currentPeriodEnd;
+
+  await TenantModel.updateOne(tenantQuery(tenantId), { $set: set });
+}
+
 function tenantQuery(tenantId: string) {
   return { $or: [{ _id: tenantId }, { slug: tenantId }] };
 }
@@ -213,16 +294,21 @@ export async function createCheckoutSession(input: {
   }
 
   const tenant = await TenantModel.findOne({ $or: [{ _id: input.tenantId }, { slug: input.tenantId }] }).lean() as Record<string, unknown> | null;
-  const appBaseUrl = process.env.APP_BASE_URL ?? "https://newjob.guru";
+  const appBaseUrl = (process.env.APP_BASE_URL ?? process.env.APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
+  const settingsReturn = `${appBaseUrl}/settings?section=Billing`;
 
   const params: Record<string, string> = {
     "line_items[0][price]": priceId,
     "line_items[0][quantity]": "1",
     mode: "subscription",
-    success_url: `${appBaseUrl}/billing?checkout=success&plan=${input.planKey}`,
-    cancel_url: `${appBaseUrl}/billing?checkout=cancelled`,
+    success_url: `${settingsReturn}&checkout=success`,
+    cancel_url: `${settingsReturn}&checkout=cancelled`,
+    client_reference_id: input.tenantId,
     "metadata[tenantId]": input.tenantId,
     "metadata[planKey]": input.planKey,
+    "metadata[billingCycle]": input.billingCycle,
+    "subscription_data[metadata][tenantId]": input.tenantId,
+    "subscription_data[metadata][planKey]": input.planKey,
   };
 
   // Attach existing Stripe customer if available
@@ -247,23 +333,15 @@ export async function changePlanDirect(input: { tenantId: string; planKey: Subsc
   const def = PLAN_DEFINITIONS[input.planKey];
   if (!def) throw new ApiError("Invalid planKey", 422, "VALIDATION_ERROR");
 
-  await TenantModel.updateOne(tenantQuery(tenantId), {
-    $set: {
-      plan: def.displayName,
-      billingStatus: "Active",
-      "billing.planKey": input.planKey,
-      "billing.billingStatus": "Active",
-      limits: {
-        maxJobs: def.limits.maxJobs,
-        maxAutomationRuns: def.limits.maxAutomationRuns,
-        maxAiCredits: def.limits.maxAiCredits,
-        maxUsers: def.limits.maxUsers,
-        maxStorageMb: def.limits.maxStorageMb,
-        maxIntegrations: def.limits.maxIntegrations,
-        maxReportsPerMonth: def.limits.maxReportsPerMonth,
-      },
-    },
-  });
+  if (isStripeConfigured() && process.env.ALLOW_DIRECT_PLAN_CHANGE !== "true") {
+    throw new ApiError(
+      "Plan changes must go through Stripe checkout when billing is enabled.",
+      422,
+      "USE_STRIPE_CHECKOUT"
+    );
+  }
+
+  await applyPlanToTenant(tenantId, input.planKey, { billingStatus: "Active" });
 
   await AuditLogModel.create({
     tenantId,
@@ -291,8 +369,6 @@ export async function cancelSubscription(input: { tenantId: string }) {
   await TenantModel.updateOne(tenantQuery(tenantId), {
     $set: {
       "billing.cancelAtPeriodEnd": true,
-      billingStatus: "Cancelled",
-      "billing.billingStatus": "Cancelled",
     },
   });
   return getCurrentPlan({ tenantId });
@@ -340,22 +416,17 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
 
   switch (eventType) {
     case "checkout.session.completed": {
-      const tenantId = String((data.metadata as Record<string, string> | undefined)?.tenantId ?? "");
-      const planKey = String((data.metadata as Record<string, string> | undefined)?.planKey ?? "") as SubscriptionPlanKey;
+      const metadata = (data.metadata ?? {}) as Record<string, string>;
+      const tenantId = String(metadata.tenantId ?? data.client_reference_id ?? "");
+      const planKey = String(metadata.planKey ?? "") as SubscriptionPlanKey;
       const customerId = String(data.customer ?? "");
       const subscriptionId = String(data.subscription ?? "");
       if (!tenantId || !planKey || !PLAN_DEFINITIONS[planKey]) break;
-      const def = PLAN_DEFINITIONS[planKey];
-      await TenantModel.updateOne(tenantQuery(tenantId), {
-        $set: {
-          plan: def.displayName,
-          billingStatus: "Active",
-          "billing.planKey": planKey,
-          "billing.billingStatus": "Active",
-          "billing.stripeCustomerId": customerId,
-          "billing.stripeSubscriptionId": subscriptionId,
-          "billing.cancelAtPeriodEnd": false,
-        },
+      await applyPlanToTenant(tenantId, planKey, {
+        billingStatus: "Active",
+        stripeCustomerId: customerId || undefined,
+        stripeSubscriptionId: subscriptionId || undefined,
+        cancelAtPeriodEnd: false,
       });
       break;
     }
@@ -364,31 +435,60 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
       const subscriptionId = String(data.id ?? "");
       const cancelAtPeriodEnd = Boolean(data.cancel_at_period_end);
       const rawStatus = String(data.status ?? "");
-      const billingStatus: BillingStatus = rawStatus === "active" ? "Active" : rawStatus === "trialing" ? "Trialing" : rawStatus === "past_due" ? "Past Due" : "Cancelled";
+      const billingStatus: BillingStatus =
+        rawStatus === "active"
+          ? "Active"
+          : rawStatus === "trialing"
+            ? "Trialing"
+            : rawStatus === "past_due"
+              ? "Past Due"
+              : rawStatus === "canceled"
+                ? "Cancelled"
+                : "Cancelled";
       const periodStart = data.current_period_start ? new Date(Number(data.current_period_start) * 1000) : undefined;
       const periodEnd = data.current_period_end ? new Date(Number(data.current_period_end) * 1000) : undefined;
-      const update: Record<string, unknown> = {
-        billingStatus,
-        "billing.billingStatus": billingStatus,
-        "billing.stripeCustomerId": customerId,
-        "billing.stripeSubscriptionId": subscriptionId,
-        "billing.cancelAtPeriodEnd": cancelAtPeriodEnd,
-      };
-      if (periodStart) { update["billing.currentPeriodStart"] = periodStart; }
-      if (periodEnd) { update["billing.currentPeriodEnd"] = periodEnd; }
-      await TenantModel.updateOne({ "billing.stripeSubscriptionId": subscriptionId }, { $set: update });
+      const subMetadata = (data.metadata ?? {}) as Record<string, string>;
+      const items = (data.items as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data ?? [];
+      const priceId = items[0]?.price?.id;
+      const planKey =
+        planKeyFromStripePriceId(priceId) ??
+        (subMetadata.planKey as SubscriptionPlanKey | undefined) ??
+        null;
+
+      const filter = subscriptionId
+        ? { "billing.stripeSubscriptionId": subscriptionId }
+        : customerId
+          ? { "billing.stripeCustomerId": customerId }
+          : null;
+      if (!filter) break;
+
+      const tenant = await TenantModel.findOne(filter).lean() as Record<string, unknown> | null;
+      const tenantId = String(tenant?._id ?? "");
+      if (!tenantId) break;
+
+      const resolvedPlanKey =
+        planKey && PLAN_DEFINITIONS[planKey]
+          ? planKey
+          : resolvePlanKey((tenant ?? {}) as { plan?: string; billing?: { planKey?: string } });
+
+      await applyPlanToTenant(tenantId, resolvedPlanKey, {
+        billingStatus: cancelAtPeriodEnd && billingStatus === "Active" ? "Active" : billingStatus,
+        stripeCustomerId: customerId || undefined,
+        stripeSubscriptionId: subscriptionId || undefined,
+        cancelAtPeriodEnd,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
+      });
       break;
     }
     case "customer.subscription.deleted": {
       const subscriptionId = String(data.id ?? "");
-      await TenantModel.updateOne({ "billing.stripeSubscriptionId": subscriptionId }, {
-        $set: {
-          billingStatus: "Cancelled",
-          "billing.billingStatus": "Cancelled",
-          "billing.cancelAtPeriodEnd": false,
-          plan: PLAN_DEFINITIONS["free_trial"].displayName,
-          "billing.planKey": "free_trial",
-        },
+      const tenant = await TenantModel.findOne({ "billing.stripeSubscriptionId": subscriptionId }).lean() as Record<string, unknown> | null;
+      const tenantId = String(tenant?._id ?? "");
+      if (!tenantId) break;
+      await applyPlanToTenant(tenantId, "free_trial", {
+        billingStatus: "Cancelled",
+        cancelAtPeriodEnd: false,
       });
       break;
     }
@@ -417,10 +517,10 @@ export async function createBillingPortalSession(input: { tenantId: string }): P
   if (!customerId) {
     throw new ApiError("No Stripe customer found. Complete a checkout first.", 422, "NO_STRIPE_CUSTOMER");
   }
-  const appBaseUrl = process.env.APP_BASE_URL ?? "https://newjob.guru";
+  const appBaseUrl = (process.env.APP_BASE_URL ?? process.env.APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
   const session = await stripeRequest<{ url: string }>("POST", "/billing_portal/sessions", {
     customer: customerId,
-    return_url: `${appBaseUrl}/settings?section=billing`,
+    return_url: `${appBaseUrl}/settings?section=Billing`,
   });
   return { portalUrl: session.url };
 }

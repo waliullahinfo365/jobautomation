@@ -1,4 +1,4 @@
-# Billing and Plan Limits (Stub Foundation)
+# Billing and Plan Limits
 
 ## Plans
 
@@ -28,32 +28,27 @@ Stored on `Tenant.usage` and reconciled via `POST /billing/recalculate-usage` or
 
 ## Billing endpoints
 
-All require `x-tenant-id` (and normal auth) except the public webhook.
+All require auth + tenant context except the public webhook.
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/billing/plan` | Current plan snapshot, limits, usage, percentages, catalog |
 | GET | `/billing/usage` | Usage counters only |
-| POST | `/billing/checkout` | Stub checkout (`checkoutUrl` fake) |
-| POST | `/billing/change-plan` | Stub plan change + limits sync + audit log |
-| POST | `/billing/cancel` | Stub cancel (`cancelAtPeriodEnd`) |
+| POST | `/billing/checkout` | Stripe Checkout session (`checkoutUrl`) |
+| POST | `/billing/portal` | Stripe Customer Portal session |
+| POST | `/billing/change-plan` | Direct plan change (blocked when Stripe is configured unless `ALLOW_DIRECT_PLAN_CHANGE=true`) |
+| POST | `/billing/cancel` | Schedule subscription cancel at period end |
 | POST | `/billing/recalculate-usage` | Recompute usage from DB |
-| POST | `/billing/webhook` | Public stub Stripe webhook (no verification) |
+| POST | `/billing/webhook` | Stripe webhook (signature verified when `STRIPE_WEBHOOK_SECRET` is set) |
 
-## Stub checkout
-
-Returns:
-
-- `checkoutUrl`: `https://billing.example.local/checkout/{sessionId}`
-- `sessionId`: deterministic stub id
-- No Stripe API calls.
+See [stripe-setup.md](./stripe-setup.md) for Dashboard and env configuration.
 
 ## Where limits are enforced
 
 - `POST /jobs` — `assertCanCreateJob`; increments `jobsCount` on success.
 - Job intake (`processJobIntakeEmail`) — before `JobModel.create`; increments `jobsCount`.
 - `enqueueAutomationModule` — `assertCanRunAutomation`; increments `automationRunsThisMonth` when queue accepts (`queued` / `scheduled`, not `skipped`).
-- AI processing (`runResearchGeneration` / `runDraftGeneration`) — `assertCanUseAiCredits` before work; increments credits after stub usage.
+- AI processing (`runResearchGeneration` / `runDraftGeneration`) — `assertCanUseAiCredits` before work; increments credits after usage.
 - Report generation (`generateDailyDigest` / `generateWeeklyReport`) — `assertCanGenerateReport`; increments `reportsGeneratedThisMonth` after upsert.
 - `POST /integrations/:provider/connect` — `assertCanAddIntegration`.
 
@@ -62,17 +57,8 @@ An `AutomationLog` with `moduleKey: billing` and `status: Warning` is written.
 
 ## How to test locally
 
-1. Set tenant headers: `x-tenant-id`, `x-user-id` (non-production dev user is optional).
-2. `GET /billing/plan` — inspect limits vs usage.
-3. `POST /billing/change-plan` with `{ "planKey": "starter" }` — limits should update.
-4. `POST /billing/checkout` — receive fake `checkoutUrl`.
-5. Exhaust a limit (e.g. lower `maxJobs` in DB) and `POST /jobs` — expect 402.
-6. `POST /billing/recalculate-usage` — counters refresh from models.
-
-## TODO (production)
-
-- Real Stripe Checkout / Customer / Subscription APIs.
-- Webhook signature verification and idempotent event handling.
-- Customer portal and invoice PDFs.
-- Proration, tax, and billing address.
-- Hard enforcement in workers (queue consumers) mirroring API checks.
+1. Set Stripe test keys and price IDs (see `stripe-setup.md`).
+2. `GET /billing/plan` — inspect limits vs usage and `stripeConfigured`.
+3. Settings → Billing → Upgrade — complete Stripe test checkout.
+4. Exhaust a limit and `POST /jobs` — expect 402.
+5. `POST /billing/recalculate-usage` — counters refresh from models.

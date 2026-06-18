@@ -8,9 +8,11 @@ import {
   changePlanDirect,
   createCheckoutSession,
   createBillingPortalSession,
+  getConfiguredStripePlans,
   getCurrentPlan,
   getTenantUsage,
   handleStripeWebhook,
+  isStripeBillingConfigured,
   verifyStripeWebhookSignature,
   usagePercentages,
 } from "../services/billing.service";
@@ -21,7 +23,8 @@ export const getPlan = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const snapshot = await getCurrentPlan({ tenantId });
   const percentages = usagePercentages(snapshot);
-  const stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+  const stripeConfigured = isStripeBillingConfigured();
+  const stripePrices = getConfiguredStripePlans();
   const availablePlans = Object.values(PLAN_DEFINITIONS).map((p) => ({
     planKey: p.planKey,
     displayName: p.displayName,
@@ -31,6 +34,8 @@ export const getPlan = asyncHandler(async (req: Request, res) => {
     trialDays: p.trialDays,
     features: p.features,
     limits: p.limits,
+    purchasableMonthly: Boolean(stripePrices[p.planKey]?.monthly),
+    purchasableYearly: Boolean(stripePrices[p.planKey]?.yearly),
   }));
   return successResponse(
     res,

@@ -12,8 +12,8 @@ interface SettingsNavigationProps {
   onChange: (section: SettingsSection) => void;
 }
 
-const PRIMARY_SECTIONS: SettingsSection[] = ["Profile", "Integrations", "Notifications"];
-const ADVANCED_SECTIONS: SettingsSection[] = ["Automation Rules", "Data & Storage", "Security", "Billing"];
+const PRIMARY_SECTIONS: SettingsSection[] = ["Profile", "Integrations", "Notifications", "Billing"];
+const ADVANCED_SECTIONS: SettingsSection[] = ["Automation Rules", "Data & Storage", "Security"];
 
 export function SettingsNavigation({ sections, activeSection, onChange }: SettingsNavigationProps) {
   const { t } = useTranslation();

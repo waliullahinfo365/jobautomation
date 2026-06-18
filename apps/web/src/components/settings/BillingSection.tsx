@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { BillingPlanResponse, AvailablePlan } from "@/lib/api/billing.api";
 import { SettingSectionCard } from "./SettingSectionCard";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,10 @@ export function BillingSection({
   onRetry,
   onCheckout,
   onOpenPortal,
+  onCancelSubscription,
 }: BillingSectionProps) {
   const { t } = useTranslation();
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   if (loading) {
     return <LoadingState title={t("settings.billing.loadingTitle")} description={t("settings.billing.loadingDescription")} />;
@@ -72,9 +75,16 @@ export function BillingSection({
             </p>
           </div>
           {stripeConfigured && hasActiveSubscription && (
-            <Button variant="outline" size="sm" onClick={onOpenPortal}>
-              {t("settings.billing.manageBilling")}
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" size="sm" onClick={onOpenPortal}>
+                {t("settings.billing.manageBilling")}
+              </Button>
+              {!cancelAtPeriodEnd && onCancelSubscription ? (
+                <Button variant="ghost" size="sm" className="text-rose-600" onClick={onCancelSubscription}>
+                  {t("settings.billing.cancelSubscription")}
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
       </div>
@@ -112,12 +122,31 @@ export function BillingSection({
       {/* Available plan upgrades */}
       {availablePlans.length > 0 && (
         <div className="mt-4 space-y-2">
-          <p className="text-xs font-medium text-[var(--text-2)]">{t("settings.billing.availablePlans")}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-[var(--text-2)]">{t("settings.billing.availablePlans")}</p>
+            <div className="inline-flex rounded-md border border-[var(--border)] p-0.5 text-xs">
+              <button
+                type="button"
+                className={`rounded px-2 py-1 ${billingCycle === "monthly" ? "bg-[var(--surface-3)] font-medium" : "text-[var(--text-3)]"}`}
+                onClick={() => setBillingCycle("monthly")}
+              >
+                {t("settings.billing.monthly")}
+              </button>
+              <button
+                type="button"
+                className={`rounded px-2 py-1 ${billingCycle === "yearly" ? "bg-[var(--surface-3)] font-medium" : "text-[var(--text-3)]"}`}
+                onClick={() => setBillingCycle("yearly")}
+              >
+                {t("settings.billing.yearly")}
+              </button>
+            </div>
+          </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {availablePlans.map((plan) => (
               <PlanCard
                 key={plan.planKey}
                 plan={plan}
+                billingCycle={billingCycle}
                 isCurrent={plan.planKey === currentPlanKey}
                 stripeConfigured={stripeConfigured}
                 onCheckout={onCheckout}
@@ -185,35 +214,43 @@ function UsageMeter({
 
 function PlanCard({
   plan,
+  billingCycle,
   isCurrent,
   stripeConfigured,
   onCheckout,
 }: {
   plan: AvailablePlan;
+  billingCycle: "monthly" | "yearly";
   isCurrent: boolean;
   stripeConfigured: boolean;
   onCheckout?: (planKey: string, billingCycle: "monthly" | "yearly") => void;
 }) {
+  const { t } = useTranslation();
+  const purchasable = billingCycle === "yearly" ? plan.purchasableYearly : plan.purchasableMonthly;
+  const price = billingCycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
+  const priceLabel =
+    billingCycle === "yearly"
+      ? `${plan.currency.toUpperCase()} ${price}/yr`
+      : `${plan.currency.toUpperCase()} ${price}/mo`;
+
   return (
     <div className={`rounded-md border p-3 text-xs ${isCurrent ? "border-blue-400 bg-blue-50" : "border-[var(--border)] bg-[var(--surface-2)]"}`}>
       <p className="font-semibold text-[var(--text-1)]">{plan.displayName}</p>
-      <p className="mt-0.5 text-[var(--text-3)]">
-        {plan.currency.toUpperCase()} {plan.priceMonthly}/mo
-      </p>
+      <p className="mt-0.5 text-[var(--text-3)]">{priceLabel}</p>
       <div className="mt-2">
         {isCurrent ? (
-          <span className="text-blue-600 font-medium">Current plan</span>
-        ) : stripeConfigured ? (
+          <span className="font-medium text-blue-600">{t("settings.billing.currentPlanBadge")}</span>
+        ) : stripeConfigured && purchasable ? (
           <Button
             size="sm"
             variant="outline"
             className="h-6 px-2 text-xs"
-            onClick={() => onCheckout?.(plan.planKey, "monthly")}
+            onClick={() => onCheckout?.(plan.planKey, billingCycle)}
           >
-            Upgrade
+            {t("settings.billing.upgrade")}
           </Button>
         ) : (
-          <span className="text-[var(--text-3)]">Billing not configured</span>
+          <span className="text-[var(--text-3)]">{t("settings.billing.notAvailable")}</span>
         )}
       </div>
     </div>

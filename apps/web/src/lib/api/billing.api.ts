@@ -8,6 +8,8 @@ export type AvailablePlan = {
   currency: string;
   features?: string[];
   limits?: Record<string, number | string>;
+  purchasableMonthly?: boolean;
+  purchasableYearly?: boolean;
 };
 
 export type BillingPlanResponse = {

@@ -30,24 +30,38 @@ const sections: SettingsSection[] = [
   "Notifications",
   "Data & Storage",
   "Security",
-  // "Billing" — hidden until Stripe is configured
+  "Billing",
 ];
 
 export function SettingsPageClient() {
   const { t } = useTranslation();
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<SettingsSection>("Integrations");
-
-  useEffect(() => {
-    const integration = searchParams.get("integration");
-    if (integration === "connected" || integration === "error" || searchParams.get("error")) {
-      setActiveSection("Integrations");
-    }
-  }, [searchParams]);
   const [profile, setProfile] = useState(mockProfileSettings);
   const [rules, setRules] = useState(mockAutomationRules);
   const [notifications, setNotifications] = useState(mockNotificationPreferences);
   const billing = useBillingApi({ fallbackToMock: false });
+
+  useEffect(() => {
+    const section = searchParams.get("section");
+    if (section === "Billing") {
+      setActiveSection("Billing");
+    }
+    const integration = searchParams.get("integration");
+    if (integration === "connected" || integration === "error" || searchParams.get("error")) {
+      setActiveSection("Integrations");
+    }
+    const checkout = searchParams.get("checkout");
+    if (checkout === "success") {
+      setActiveSection("Billing");
+      showSuccess(t("settings.billing.checkoutSuccess"));
+      void billing.plan.refetch();
+      void billing.usage.refetch();
+    } else if (checkout === "cancelled") {
+      setActiveSection("Billing");
+      showError(t("settings.billing.checkoutCancelled"));
+    }
+  }, [searchParams, t, billing.plan, billing.usage]);
 
   return (
     <div className="space-y-6">
@@ -103,6 +117,16 @@ export function SettingsPageClient() {
                   }
                 } catch (error) {
                   showError(error instanceof Error ? error.message : "Failed to open billing portal");
+                }
+              }}
+              onCancelSubscription={async () => {
+                if (!window.confirm(t("settings.billing.cancelConfirm"))) return;
+                try {
+                  await billing.cancel(undefined as never);
+                  showSuccess(t("settings.billing.cancelScheduled"));
+                  void billing.plan.refetch();
+                } catch (error) {
+                  showError(error instanceof Error ? error.message : t("settings.billing.cancelFailed"));
                 }
               }}
             />
