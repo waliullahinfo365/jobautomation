@@ -117,11 +117,31 @@ export type AnthropicMessagesErr = {
 
 export type AnthropicMessagesResult = AnthropicMessagesOk | AnthropicMessagesErr;
 
+export type AnthropicContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+
 /**
- * POST /v1/messages. Tries model candidates when the API returns model-not-found style errors.
+ * POST /v1/messages with text and/or image blocks. Tries model candidates when the API returns model-not-found style errors.
  */
 export async function callAnthropicMessages(input: {
   prompt: string;
+  apiKey: string;
+  modelCandidates: string[];
+  maxTokens?: number;
+  temperature?: number;
+}): Promise<AnthropicMessagesResult> {
+  return callAnthropicMessagesContent({
+    content: [{ type: "text", text: input.prompt }],
+    apiKey: input.apiKey,
+    modelCandidates: input.modelCandidates,
+    maxTokens: input.maxTokens,
+    temperature: input.temperature,
+  });
+}
+
+export async function callAnthropicMessagesContent(input: {
+  content: AnthropicContentBlock[];
   apiKey: string;
   modelCandidates: string[];
   maxTokens?: number;
@@ -146,7 +166,7 @@ export async function callAnthropicMessages(input: {
         messages: [
           {
             role: "user",
-            content: [{ type: "text", text: input.prompt }],
+            content: input.content,
           },
         ],
       }),

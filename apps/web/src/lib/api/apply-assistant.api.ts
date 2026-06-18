@@ -38,7 +38,33 @@ export type ApplyCompletePayload = {
 export type GenerateAnswerResponse = {
   answer: string;
   aiGenerated: boolean;
+  variant?: "full" | "compact";
+  maxCharacters?: number;
+  characterCount?: number;
 };
+
+export type ScreenshotAnswerItem = {
+  question: string;
+  answer: string;
+  characterCount: number;
+  maxCharacters?: number;
+};
+
+export type GenerateScreenshotAnswersResponse = {
+  items: ScreenshotAnswerItem[];
+  variant: "full" | "compact";
+  maxCharacters?: number;
+  aiGenerated: boolean;
+  questionCount: number;
+};
+
+export type ApplyAnswerVariant = "full" | "compact";
+
+export const APPLY_ANSWER_LIMIT_PRESETS = [100, 200, 300, 500] as const;
+
+export type GenerateAnswerOptions =
+  | { variant: "full" }
+  | { variant: "compact"; maxCharacters: number };
 
 export function getApplyDocumentStatus(jobId: string) {
   return apiFetch<ApplyDocumentStatus>(`/jobs/${jobId}/apply/documents/status`);
@@ -81,15 +107,20 @@ export async function fetchApplyDocumentBlob(
   return { blob, contentType, fileName };
 }
 
-export async function generateApplyAnswer(jobId: string, questionText: string) {
+export async function generateApplyAnswer(jobId: string, questionText: string, options: GenerateAnswerOptions = { variant: "compact", maxCharacters: 500 }) {
   const token = getAuthToken();
+  const body =
+    options.variant === "full"
+      ? { questionText, variant: "full" }
+      : { questionText, variant: "compact", maxCharacters: options.maxCharacters };
+
   const response = await fetch(`${env.api.url}/jobs/${jobId}/apply/generate-answer`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ questionText }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   const parsed = (await response.json()) as { success?: boolean; data?: GenerateAnswerResponse; error?: string | { message?: string } };
@@ -98,6 +129,39 @@ export async function generateApplyAnswer(jobId: string, questionText: string) {
     throw new ApiError(typeof err === "string" ? err : err?.message ?? "Generate answer failed", response.status);
   }
   return parsed.data as GenerateAnswerResponse;
+}
+
+export async function generateApplyAnswersFromScreenshot(
+  jobId: string,
+  imageBase64: string,
+  mediaType: string,
+  options: GenerateAnswerOptions = { variant: "compact", maxCharacters: 500 }
+) {
+  const token = getAuthToken();
+  const body =
+    options.variant === "full"
+      ? { imageBase64, mediaType, variant: "full" }
+      : { imageBase64, mediaType, variant: "compact", maxCharacters: options.maxCharacters };
+
+  const response = await fetch(`${env.api.url}/jobs/${jobId}/apply/generate-answers-from-screenshot`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const parsed = (await response.json()) as {
+    success?: boolean;
+    data?: GenerateScreenshotAnswersResponse;
+    error?: string | { message?: string };
+  };
+  if (!response.ok || !parsed.success) {
+    const err = parsed.error;
+    throw new ApiError(typeof err === "string" ? err : err?.message ?? "Screenshot answers failed", response.status);
+  }
+  return parsed.data as GenerateScreenshotAnswersResponse;
 }
 
 export async function completeApplyAssistant(jobId: string, payload: ApplyCompletePayload) {

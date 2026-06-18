@@ -5,9 +5,11 @@ import { assertTenantId } from "../services/baseTenant.service";
 import {
   completeApplyAssistant,
   generateApplyAnswer,
+  generateApplyAnswersFromScreenshot,
   getApplyDocumentStatus,
   streamApplyDocument,
   type ApplyCompleteStatus,
+  type ApplyAnswerVariant,
 } from "../services/apply-assistant.service";
 
 export const getApplyDocumentStatusHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -51,9 +53,43 @@ export const generateApplyAnswerHandler = asyncHandler(async (req: Request, res)
   const tenantId = assertTenantId(req.tenantId);
   const userId = req.user?.id ?? "system";
   const jobId = String(req.params.id);
-  const questionText = String((req.body as { questionText?: string }).questionText ?? "");
+  const body = req.body as { questionText?: string; variant?: ApplyAnswerVariant; maxCharacters?: number };
+  const questionText = String(body.questionText ?? "");
+  const variant = body.variant === "full" ? "full" : "compact";
 
-  const result = await generateApplyAnswer({ tenantId, userId, jobId, questionText });
+  const result = await generateApplyAnswer({
+    tenantId,
+    userId,
+    jobId,
+    questionText,
+    variant,
+    maxCharacters: body.maxCharacters,
+  });
+  return successResponse(res, result);
+});
+
+export const generateApplyAnswersFromScreenshotHandler = asyncHandler(async (req: Request, res) => {
+  const tenantId = assertTenantId(req.tenantId);
+  const userId = req.user?.id ?? "system";
+  const jobId = String(req.params.id);
+  const body = req.body as {
+    imageBase64?: string;
+    mediaType?: string;
+    variant?: ApplyAnswerVariant;
+    maxCharacters?: number;
+  };
+  const imageBase64 = String(body.imageBase64 ?? "");
+  const variant = body.variant === "full" ? "full" : "compact";
+
+  const result = await generateApplyAnswersFromScreenshot({
+    tenantId,
+    userId,
+    jobId,
+    imageBase64,
+    mediaType: body.mediaType,
+    variant,
+    maxCharacters: body.maxCharacters,
+  });
   return successResponse(res, result);
 });
 

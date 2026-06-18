@@ -1,6 +1,6 @@
 import { DocumentModel, JobModel } from "@jobflow/database/models";
 import { documentApplicationEvent } from "@jobflow/database";
-import { callAnthropicMessages, buildAnthropicModelCandidates, resolveAnthropicApiKey } from "@jobflow/integrations/ai/anthropic-messages";
+import { callAnthropicMessages, callAnthropicMessagesContent, buildAnthropicModelCandidates, resolveAnthropicApiKey } from "@jobflow/integrations/ai/anthropic-messages";
 import {
   formatProfileContextBlock,
   loadWorkspaceProfileForPrompt,
@@ -270,57 +270,222 @@ export async function streamApplyDocument(input: {
   };
 }
 
-export async function generateApplyAnswer(input: {
-  tenantId: string;
-  userId: string;
-  jobId: string;
-  questionText: string;
-}) {
-  const tenantId = assertTenantId(input.tenantId);
-  const job = (await findTenantScopedById(JobModel, tenantId, input.jobId)) as Record<string, unknown> | null;
+const COMPLETE_STATUSES = ["Applied", "In Progress", "Rejected", "Interview"] as const;
+export type ApplyCompleteStatus = (typeof COMPLETE_STATUSES)[number];
+
+export const APPLY_ANSWER_COMPACT_MAX_CHARS = 500;
+export const APPLY_ANSWER_MIN_CHARS = 50;
+export const APPLY_ANSWER_MAX_CHARS = 2000;
+export type ApplyAnswerVariant = "full" | "compact";
+
+const SCREENSHOT_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+export function resolveAnswerMaxCharacters(input: {
+  variant?: ApplyAnswerVariant;
+  maxCharacters?: number;
+}): number | null {
+  if (input.variant !== "compact") return null;
+  const raw = input.maxCharacters;
+  if (raw == null || Number.isNaN(raw)) return APPLY_ANSWER_COMPACT_MAX_CHARS;
+  const n = Math.floor(Number(raw));
+  if (n < APPLY_ANSWER_MIN_CHARS || n > APPLY_ANSWER_MAX_CHARS) {
+    throw new ApiError(
+      `maxCharacters must be between ${APPLY_ANSWER_MIN_CHARS} and ${APPLY_ANSWER_MAX_CHARS}`,
+      400,
+      "VALIDATION_ERROR"
+    );
+  }
+  return n;
+}
+
+function enforceCompactLength(text: string, maxChars: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  const slice = trimmed.slice(0, maxChars);
+  const lastSpace = slice.lastIndexOf(" ");
+  if (lastSpace > maxChars * 0.7) return `${slice.slice(0, lastSpace).trim()}…`;
+  return `${slice.trim()}…`;
+}
+
+function parseQuestionsJson(raw: string): string[] {
+  const stripped = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+  const parsed = JSON.parse(stripped) as { questions?: unknown };
+  if (!Array.isArray(parsed.questions)) return [];
+  return parsed.questions
+    .map((q) => (typeof q === "string" ? q.trim() : ""))
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+async function loadApplyAnswerContext(tenantId: string, userId: string, jobId: string) {
+  const job = (await findTenantScopedById(JobModel, tenantId, jobId)) as Record<string, unknown> | null;
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
-
-  const question = input.questionText.trim();
-  if (!question) throw new ApiError("questionText is required", 400, "VALIDATION_ERROR");
-
-  const apiKey = resolveAnthropicApiKey();
-  if (!apiKey) throw new ApiError("AI is not configured", 503, "AI_NOT_CONFIGURED");
-
-  const profile = await loadWorkspaceProfileForPrompt(tenantId, input.userId);
+  const profile = await loadWorkspaceProfileForPrompt(tenantId, userId);
   const profileBlock = formatProfileContextBlock(profile);
   const description = String(job.description ?? job.aiSummary ?? "").trim();
+  return { job, profileBlock, description };
+}
 
-  const prompt = [
+function buildAnswerPrompt(input: {
+  job: Record<string, unknown>;
+  profileBlock: string;
+  description: string;
+  question: string;
+  variant: ApplyAnswerVariant;
+  maxCharacters: number | null;
+}) {
+  const lengthRule =
+    input.variant === "compact" && input.maxCharacters
+      ? `Length: maximum ${input.maxCharacters} characters (letters and spaces). Stay under this hard limit. Be concise and direct.`
+      : "Length: 150–300 words.";
+
+  return [
     "Write a job application answer for the candidate.",
-    "Length: 150–300 words. First person. Professional tone. No markdown.",
+    lengthRule,
+    "First person. Professional tone. No markdown.",
     "",
-    `Company: ${String(job.company ?? "")}`,
-    `Role: ${String(job.position ?? job.title ?? "")}`,
-    description ? `Job description:\n${description.slice(0, 6000)}` : "",
-    profileBlock,
+    `Company: ${String(input.job.company ?? "")}`,
+    `Role: ${String(input.job.position ?? input.job.title ?? "")}`,
+    input.description ? `Job description:\n${input.description.slice(0, 6000)}` : "",
+    input.profileBlock,
     "",
-    `Application question:\n${question}`,
+    `Application question:\n${input.question}`,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+async function callApplyAnswerAi(prompt: string, variant: ApplyAnswerVariant, maxCharacters: number | null) {
+  const apiKey = resolveAnthropicApiKey();
+  if (!apiKey) throw new ApiError("AI is not configured", 503, "AI_NOT_CONFIGURED");
+
+  const compactMax = variant === "compact" ? maxCharacters ?? APPLY_ANSWER_COMPACT_MAX_CHARS : null;
+  const maxTokens =
+    compactMax != null ? Math.min(900, Math.max(120, Math.ceil(compactMax / 2) + 40)) : 900;
 
   const result = await callAnthropicMessages({
     prompt,
     apiKey,
     modelCandidates: buildAnthropicModelCandidates(),
-    maxTokens: 900,
+    maxTokens,
     temperature: 0.4,
   });
   if (!result.ok) throw new ApiError(result.message ?? "AI call failed", 502, "AI_FAILED");
 
-  const answer = result.text.trim();
+  let answer = result.text.trim();
   if (!answer) throw new ApiError("AI returned an empty answer", 502, "AI_EMPTY");
-
-  return { answer, aiGenerated: true };
+  if (compactMax != null) answer = enforceCompactLength(answer, compactMax);
+  return answer;
 }
 
-const COMPLETE_STATUSES = ["Applied", "In Progress", "Rejected", "Interview"] as const;
-export type ApplyCompleteStatus = (typeof COMPLETE_STATUSES)[number];
+export async function generateApplyAnswer(input: {
+  tenantId: string;
+  userId: string;
+  jobId: string;
+  questionText: string;
+  variant?: ApplyAnswerVariant;
+  maxCharacters?: number;
+}) {
+  const tenantId = assertTenantId(input.tenantId);
+  const question = input.questionText.trim();
+  if (!question) throw new ApiError("questionText is required", 400, "VALIDATION_ERROR");
+
+  const variant = input.variant ?? "compact";
+  const maxCharacters = resolveAnswerMaxCharacters({ variant, maxCharacters: input.maxCharacters });
+  const { job, profileBlock, description } = await loadApplyAnswerContext(tenantId, input.userId, input.jobId);
+  const prompt = buildAnswerPrompt({ job, profileBlock, description, question, variant, maxCharacters });
+  const answer = await callApplyAnswerAi(prompt, variant, maxCharacters);
+
+  return {
+    answer,
+    aiGenerated: true,
+    variant,
+    maxCharacters: maxCharacters ?? undefined,
+    characterCount: answer.length,
+  };
+}
+
+export async function generateApplyAnswersFromScreenshot(input: {
+  tenantId: string;
+  userId: string;
+  jobId: string;
+  imageBase64: string;
+  mediaType?: string;
+  variant?: ApplyAnswerVariant;
+  maxCharacters?: number;
+}) {
+  const tenantId = assertTenantId(input.tenantId);
+  const rawBase64 = input.imageBase64.trim();
+  if (!rawBase64) throw new ApiError("imageBase64 is required", 400, "VALIDATION_ERROR");
+  if (rawBase64.length > 7_000_000) {
+    throw new ApiError("Screenshot is too large (max ~5MB)", 400, "VALIDATION_ERROR");
+  }
+
+  const mediaType = (input.mediaType?.trim() || "image/png").toLowerCase();
+  if (!SCREENSHOT_MEDIA_TYPES.has(mediaType)) {
+    throw new ApiError("Unsupported image type. Use JPEG, PNG, WebP, or GIF.", 400, "VALIDATION_ERROR");
+  }
+
+  const variant = input.variant ?? "compact";
+  const maxCharacters = resolveAnswerMaxCharacters({ variant, maxCharacters: input.maxCharacters });
+  const apiKey = resolveAnthropicApiKey();
+  if (!apiKey) throw new ApiError("AI is not configured", 503, "AI_NOT_CONFIGURED");
+
+  const { job, profileBlock, description } = await loadApplyAnswerContext(tenantId, input.userId, input.jobId);
+
+  const extractResult = await callAnthropicMessagesContent({
+    apiKey,
+    modelCandidates: buildAnthropicModelCandidates(),
+    maxTokens: 1200,
+    temperature: 0.1,
+    content: [
+      {
+        type: "image",
+        source: { type: "base64", media_type: mediaType, data: rawBase64 },
+      },
+      {
+        type: "text",
+        text: [
+          "This screenshot shows a job application form.",
+          "Extract every distinct application question visible (ignore labels like Submit, Next, or file upload buttons).",
+          'Return ONLY valid JSON: {"questions":["question one","question two"]}.',
+          "Preserve question wording. If none found, return {\"questions\":[]}.",
+        ].join("\n"),
+      },
+    ],
+  });
+  if (!extractResult.ok) throw new ApiError(extractResult.message ?? "Could not read screenshot", 502, "AI_FAILED");
+
+  let questions: string[];
+  try {
+    questions = parseQuestionsJson(extractResult.text);
+  } catch {
+    throw new ApiError("Could not parse questions from screenshot", 502, "AI_PARSE_FAILED");
+  }
+  if (!questions.length) {
+    throw new ApiError("No application questions found in the screenshot", 422, "NO_QUESTIONS_FOUND");
+  }
+
+  const items: Array<{ question: string; answer: string; characterCount: number; maxCharacters?: number }> = [];
+  for (const question of questions) {
+    const prompt = buildAnswerPrompt({ job, profileBlock, description, question, variant, maxCharacters });
+    const answer = await callApplyAnswerAi(prompt, variant, maxCharacters);
+    items.push({
+      question,
+      answer,
+      characterCount: answer.length,
+      ...(maxCharacters ? { maxCharacters } : {}),
+    });
+  }
+
+  return {
+    items,
+    variant,
+    maxCharacters: maxCharacters ?? undefined,
+    aiGenerated: true,
+    questionCount: items.length,
+  };
+}
 
 export async function completeApplyAssistant(input: {
   tenantId: string;

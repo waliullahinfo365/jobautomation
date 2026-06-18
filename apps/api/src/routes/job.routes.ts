@@ -26,6 +26,7 @@ import {
 import {
   completeApplyAssistantHandler,
   generateApplyAnswerHandler,
+  generateApplyAnswersFromScreenshotHandler,
   getApplyDocumentStatusHandler,
   streamApplyDocumentHandler,
 } from "../controllers/apply-assistant.controller";
@@ -83,6 +84,12 @@ jobRoutes.post(
   requirePermission("jobs.update"),
   validateParams(jobIdParamSchema),
   generateApplyAnswerHandler
+);
+jobRoutes.post(
+  "/:id/apply/generate-answers-from-screenshot",
+  requirePermission("jobs.update"),
+  validateParams(jobIdParamSchema),
+  generateApplyAnswersFromScreenshotHandler
 );
 jobRoutes.post(
   "/:id/apply/complete",

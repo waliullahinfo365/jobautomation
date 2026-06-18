@@ -11,10 +11,15 @@ import { getJob } from "@/lib/api/jobs.api";
 import {
   completeApplyAssistant,
   generateApplyAnswer,
+  generateApplyAnswersFromScreenshot,
   getApplyDocumentStatus,
   shareApplyDocument,
+  APPLY_ANSWER_LIMIT_PRESETS,
+  type ApplyAnswerVariant,
   type ApplyCompleteStatus,
   type ApplyDocumentStatus,
+  type GenerateAnswerOptions,
+  type ScreenshotAnswerItem,
 } from "@/lib/api/apply-assistant.api";
 import { normalizeJobForUi } from "@/lib/utils/resource";
 import { showError, showSuccess } from "@/lib/ui/toast";
@@ -22,6 +27,95 @@ import type { Job } from "@/types/job";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+
+const CUSTOM_LIMIT_MIN = 50;
+const CUSTOM_LIMIT_MAX = 2000;
+
+function buildAnswerOptions(variant: ApplyAnswerVariant, maxCharacters: number): GenerateAnswerOptions {
+  if (variant === "full") return { variant: "full" };
+  return { variant: "compact", maxCharacters };
+}
+
+function clampCharacterLimit(value: number) {
+  return Math.min(CUSTOM_LIMIT_MAX, Math.max(CUSTOM_LIMIT_MIN, Math.floor(value)));
+}
+
+function AnswerLengthSelector({
+  variant,
+  maxCharacters,
+  customLimit,
+  onVariantChange,
+  onPresetSelect,
+  onCustomLimitChange,
+  t,
+}: {
+  variant: ApplyAnswerVariant;
+  maxCharacters: number;
+  customLimit: string;
+  onVariantChange: (variant: ApplyAnswerVariant) => void;
+  onPresetSelect: (limit: number) => void;
+  onCustomLimitChange: (value: string) => void;
+  t: (key: string) => string;
+}) {
+  const isPresetActive = (limit: number) => variant === "compact" && maxCharacters === limit && !customLimit;
+
+  return (
+    <div className="space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <p className="text-xs font-medium text-[var(--text-2)]">{t("applyAssistant.answerLengthLabel")}</p>
+      <p className="text-[11px] leading-relaxed text-[var(--text-4)]">{t("applyAssistant.limitHint")}</p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onVariantChange("full")}
+          className={cn(
+            "min-h-[40px] rounded-full border px-3 py-1.5 text-xs font-medium",
+            variant === "full"
+              ? "border-[var(--accent-hi)] bg-[var(--accent-bg)] text-[var(--accent-hi)]"
+              : "border-[var(--border-subtle)] text-[var(--text-3)]"
+          )}
+        >
+          {t("applyAssistant.fullAnswer")}
+        </button>
+        {APPLY_ANSWER_LIMIT_PRESETS.map((limit) => (
+          <button
+            key={limit}
+            type="button"
+            onClick={() => onPresetSelect(limit)}
+            className={cn(
+              "min-h-[40px] rounded-full border px-3 py-1.5 text-xs font-medium",
+              isPresetActive(limit)
+                ? "border-[var(--accent-hi)] bg-[var(--accent-bg)] text-[var(--accent-hi)]"
+                : "border-[var(--border-subtle)] text-[var(--text-3)]"
+            )}
+          >
+            {t("applyAssistant.limitPreset").replace("{{count}}", String(limit))}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="shrink-0 text-xs text-[var(--text-3)]" htmlFor="apply-custom-limit">
+          {t("applyAssistant.customLimit")}
+        </label>
+        <input
+          id="apply-custom-limit"
+          type="number"
+          min={CUSTOM_LIMIT_MIN}
+          max={CUSTOM_LIMIT_MAX}
+          inputMode="numeric"
+          value={customLimit}
+          onChange={(e) => onCustomLimitChange(e.target.value)}
+          placeholder={t("applyAssistant.customLimitPlaceholder")}
+          className="h-11 min-h-[44px] w-full max-w-[8rem] rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 text-base text-[var(--text-1)]"
+        />
+        {variant === "compact" ? (
+          <span className="text-xs text-[var(--text-4)]">
+            {t("applyAssistant.limitChars").replace("{{count}}", String(maxCharacters))}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function MissingDocumentCard({
   title,
@@ -68,6 +162,15 @@ export function ManualApplyAssistantClient() {
   const [docLoading, setDocLoading] = useState<"cv" | "cover_letter" | null>(null);
   const [questionText, setQuestionText] = useState("");
   const [answer, setAnswer] = useState("");
+  const [answerVariant, setAnswerVariant] = useState<ApplyAnswerVariant>("compact");
+  const [maxCharacters, setMaxCharacters] = useState(500);
+  const [customLimit, setCustomLimit] = useState("");
+  const [answerMode, setAnswerMode] = useState<"type" | "screenshot">("type");
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
+  const [screenshotMediaType, setScreenshotMediaType] = useState("image/png");
+  const [screenshotAnswers, setScreenshotAnswers] = useState<ScreenshotAnswerItem[]>([]);
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [answerLoading, setAnswerLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [completeStatus, setCompleteStatus] = useState<ApplyCompleteStatus>("Applied");
@@ -103,28 +206,94 @@ export function ManualApplyAssistantClient() {
     [id, t, docStatus]
   );
 
+  const answerOptions = buildAnswerOptions(answerVariant, maxCharacters);
+
+  const handlePresetSelect = useCallback((limit: number) => {
+    setAnswerVariant("compact");
+    setMaxCharacters(limit);
+    setCustomLimit("");
+  }, []);
+
+  const handleVariantChange = useCallback((next: ApplyAnswerVariant) => {
+    setAnswerVariant(next);
+    if (next === "compact" && !maxCharacters) setMaxCharacters(500);
+  }, [maxCharacters]);
+
+  const handleCustomLimitChange = useCallback((value: string) => {
+    setCustomLimit(value);
+    const parsed = Number(value);
+    if (!value.trim() || Number.isNaN(parsed)) return;
+    setAnswerVariant("compact");
+    setMaxCharacters(clampCharacterLimit(parsed));
+  }, []);
+
   const handleGenerateAnswer = useCallback(async () => {
     if (!questionText.trim()) return;
     setAnswerLoading(true);
     try {
-      const result = await generateApplyAnswer(id, questionText.trim());
+      const result = await generateApplyAnswer(id, questionText.trim(), answerOptions);
       setAnswer(result.answer);
     } catch (e) {
       showError(e instanceof ApiError ? e.message : "Generate answer failed");
     } finally {
       setAnswerLoading(false);
     }
-  }, [id, questionText]);
+  }, [id, questionText, answerOptions]);
 
-  const handleCopyAnswer = useCallback(async () => {
-    if (!answer) return;
+  const handleScreenshotSelect = useCallback((file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showError("Please choose an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showError("Image must be under 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      const [, base64 = ""] = result.split(",");
+      setScreenshotPreview(result);
+      setScreenshotBase64(base64);
+      setScreenshotMediaType(file.type || "image/png");
+      setScreenshotAnswers([]);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleAnalyzeScreenshot = useCallback(async () => {
+    if (!screenshotBase64) return;
+    setScreenshotLoading(true);
     try {
-      await navigator.clipboard.writeText(answer);
+      const result = await generateApplyAnswersFromScreenshot(
+        id,
+        screenshotBase64,
+        screenshotMediaType,
+        answerOptions
+      );
+      setScreenshotAnswers(result.items);
+      if (!result.items.length) showError("No questions found in screenshot");
+    } catch (e) {
+      showError(e instanceof ApiError ? e.message : "Screenshot analysis failed");
+    } finally {
+      setScreenshotLoading(false);
+    }
+  }, [id, screenshotBase64, screenshotMediaType, answerOptions]);
+
+  const handleCopyText = useCallback(async (text: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
       showSuccess(t("applyAssistant.copySuccess"));
     } catch {
       showError("Copy failed");
     }
-  }, [answer, t]);
+  }, [t]);
+
+  const handleCopyAnswer = useCallback(async () => {
+    await handleCopyText(answer);
+  }, [answer, handleCopyText]);
 
   const handleComplete = useCallback(async () => {
     setCompleteLoading(true);
@@ -237,33 +406,137 @@ export function ManualApplyAssistantClient() {
           </Button>
         </div>
 
-        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 space-y-3">
-          <textarea
-            value={questionText}
-            onChange={(e) => setQuestionText(e.target.value)}
-            placeholder={t("applyAssistant.questionPlaceholder")}
-            rows={3}
-            className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)]"
-          />
-          <div className="flex gap-2">
-            <Button
+        <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <button
               type="button"
-              size="lg"
-              className="flex-1 min-h-[44px]"
-              disabled={answerLoading || !questionText.trim()}
-              onClick={() => void handleGenerateAnswer()}
+              onClick={() => setAnswerMode("type")}
+              className={cn(
+                "min-h-[44px] rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                answerMode === "type"
+                  ? "border-[var(--accent-hi)] bg-[var(--accent-bg)] text-[var(--accent-hi)]"
+                  : "border-[var(--border-subtle)] text-[var(--text-2)]"
+              )}
             >
-              {answerLoading ? "…" : answer ? t("applyAssistant.regenerateAnswer") : t("applyAssistant.generateAnswer")}
-            </Button>
-            {answer ? (
-              <Button type="button" variant="secondary" onClick={() => void handleCopyAnswer()}>
-                {t("applyAssistant.copyAnswer")}
-              </Button>
-            ) : null}
+              {t("applyAssistant.answerModeType")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnswerMode("screenshot")}
+              className={cn(
+                "min-h-[44px] rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                answerMode === "screenshot"
+                  ? "border-[var(--accent-hi)] bg-[var(--accent-bg)] text-[var(--accent-hi)]"
+                  : "border-[var(--border-subtle)] text-[var(--text-2)]"
+              )}
+            >
+              {t("applyAssistant.answerModeScreenshot")}
+            </button>
           </div>
-          {answer ? (
-            <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--text-2)]">{answer}</p>
-          ) : null}
+
+          <AnswerLengthSelector
+            variant={answerVariant}
+            maxCharacters={maxCharacters}
+            customLimit={customLimit}
+            onVariantChange={handleVariantChange}
+            onPresetSelect={handlePresetSelect}
+            onCustomLimitChange={handleCustomLimitChange}
+            t={t}
+          />
+
+          {answerMode === "type" ? (
+            <>
+              <textarea
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+                placeholder={t("applyAssistant.questionPlaceholder")}
+                rows={3}
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 text-base text-[var(--text-1)]"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="flex-1 min-h-[44px]"
+                  disabled={answerLoading || !questionText.trim()}
+                  onClick={() => void handleGenerateAnswer()}
+                >
+                  {answerLoading ? "…" : answer ? t("applyAssistant.regenerateAnswer") : t("applyAssistant.generateAnswer")}
+                </Button>
+                {answer ? (
+                  <Button type="button" variant="secondary" size="lg" className="min-h-[44px]" onClick={() => void handleCopyAnswer()}>
+                    {t("applyAssistant.copyAnswer")}
+                  </Button>
+                ) : null}
+              </div>
+              {answer ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-[var(--text-4)]">
+                    <span className="rounded-full bg-[var(--accent-bg)] px-2 py-0.5 font-medium text-[var(--accent-hi)]">
+                      {answerVariant === "compact"
+                        ? t("applyAssistant.compactBadge").replace("{{count}}", String(maxCharacters))
+                        : t("applyAssistant.fullAnswer")}
+                    </span>
+                    <span>{t("applyAssistant.characterCount").replace("{{count}}", String(answer.length))}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--text-2)]">{answer}</p>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("applyAssistant.screenshotHint")}</p>
+              <label className="flex min-h-[44px] cursor-pointer items-center justify-center rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--surface-2)] px-4 py-3 text-sm font-medium text-[var(--text-2)]">
+                {t("applyAssistant.uploadScreenshot")}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) => handleScreenshotSelect(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              {screenshotPreview ? (
+                <img
+                  src={screenshotPreview}
+                  alt=""
+                  className="max-h-48 w-full rounded-lg border border-[var(--border-subtle)] object-contain bg-[var(--surface-2)]"
+                />
+              ) : (
+                <p className="text-xs text-[var(--text-4)]">{t("applyAssistant.noScreenshotSelected")}</p>
+              )}
+              <Button
+                type="button"
+                size="lg"
+                className="w-full min-h-[44px]"
+                disabled={screenshotLoading || !screenshotBase64}
+                onClick={() => void handleAnalyzeScreenshot()}
+              >
+                {screenshotLoading ? t("applyAssistant.analyzingScreenshot") : t("applyAssistant.analyzeScreenshot")}
+              </Button>
+              {screenshotAnswers.length > 0 ? (
+                <div className="space-y-3 border-t border-[var(--border-subtle)] pt-3">
+                  <p className="text-sm font-semibold text-[var(--text-1)]">{t("applyAssistant.screenshotAnswersTitle")}</p>
+                  {screenshotAnswers.map((item, index) => (
+                    <article key={`${index}-${item.question.slice(0, 24)}`} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                      <p className="text-xs font-semibold text-[var(--text-1)]">{item.question}</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--text-2)]">{item.answer}</p>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-[var(--text-4)]">
+                          {t("applyAssistant.characterCount").replace("{{count}}", String(item.characterCount))}
+                          {answerVariant === "compact"
+                            ? ` / ${t("applyAssistant.limitPreset").replace("{{count}}", String(item.maxCharacters ?? maxCharacters))}`
+                            : ""}
+                        </span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => void handleCopyText(item.answer)}>
+                          {t("applyAssistant.copyQuestionAnswer")}
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
 
