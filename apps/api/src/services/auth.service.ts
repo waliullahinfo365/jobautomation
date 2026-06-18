@@ -11,6 +11,7 @@ import { signAccessToken } from "../utils/jwt";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { ApiError } from "../utils/errors";
 import { logAuthEvent } from "./audit-log.service";
+import { ensureSuperAdminUser, resolveSuperAdminRole } from "./super-admin.service";
 
 // ─── Password reset token store (in-memory, single process) ─────────────────
 // For multi-instance deployments, replace with a DB-backed token model.
@@ -139,12 +140,14 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 function toPublicUser(doc: Record<string, unknown>): Omit<User, "passwordHash"> {
+  const email = String(doc.email);
+  const role = resolveSuperAdminRole(email, String(doc.role));
   return {
     id: String(doc._id ?? doc.id),
     tenantId: String(doc.tenantId),
     name: String(doc.name),
-    email: String(doc.email),
-    role: doc.role as User["role"],
+    email,
+    role,
     status: doc.status as User["status"],
     avatarUrl: doc.avatarUrl as string | undefined,
     timezone: doc.timezone as string | undefined,
@@ -310,7 +313,8 @@ export const authService = {
 
     await UserModel.updateOne({ _id: row._id }, { $set: { lastLoginAt: new Date() } });
 
-    const user = toPublicUser(row);
+    const role = await ensureSuperAdminUser(String(row._id), email, String(row.role ?? "Member"));
+    const user = { ...toPublicUser(row), role };
     const tenant = toPublicTenant(tenantDoc as Record<string, unknown>);
 
     const accessToken = signAccessToken({
@@ -432,6 +436,7 @@ export const authService = {
       userId = String(existingUser._id);
       tenantId = String(existingUser.tenantId);
       await UserModel.updateOne({ _id: existingUser._id }, { $set: { lastLoginAt: new Date() } });
+      await ensureSuperAdminUser(userId, email, String(existingUser.role ?? "Member"));
     } else {
       // First Google login — create user + tenant
       const newUserId = new mongoose.Types.ObjectId();

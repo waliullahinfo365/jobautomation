@@ -3,6 +3,7 @@ import { env } from "../config/env";
 import { errorResponse } from "../utils/apiResponse";
 import { verifyAccessToken } from "../utils/jwt";
 import { isPublicApiPath } from "./public-paths";
+import { resolveSuperAdminRole } from "../services/super-admin.service";
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   if (isPublicApiPath(req.path)) {
@@ -18,7 +19,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
       req.user = {
         id: payload.userId,
         tenantId: payload.tenantId,
-        role: payload.role,
+        role: resolveSuperAdminRole(payload.email, payload.role),
         email: payload.email,
       };
       return next();
