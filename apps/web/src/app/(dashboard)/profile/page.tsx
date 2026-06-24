@@ -86,14 +86,14 @@ export default function ProfilePage() {
         </p>
       </SectionCard>
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={() => setIsEditProfileOpen(true)}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Button type="button" className="w-full sm:w-auto" onClick={() => setIsEditProfileOpen(true)}>
           {t("profile.editProfile")}
         </Button>
-        <Button type="button" variant="outline" onClick={() => setIsChangePasswordOpen(true)}>
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setIsChangePasswordOpen(true)}>
           {t("profile.changePassword")}
         </Button>
-        <Button type="button" variant="secondary" onClick={() => router.push("/settings")}>
+        <Button type="button" variant="secondary" className="w-full sm:w-auto" onClick={() => router.push("/settings")}>
           {t("profile.backToSettings")}
         </Button>
       </div>

@@ -231,7 +231,7 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
       </div>
 
       {/* Action buttons */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {(["reject", "later", "save", "apply"] as ReviewAction[]).map((action) => {
           const cfg = ACTION_LABELS[action];
           const isActive = activeButton === action;
@@ -240,7 +240,7 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
               key={action}
               onClick={() => void handleAction(action)}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-xl px-2 py-3 text-xs font-semibold transition-all duration-150",
+                "flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-3 text-xs font-semibold transition-all duration-150 touch-manipulation",
                 isActive ? cfg.active : cfg.inactive,
               )}
             >

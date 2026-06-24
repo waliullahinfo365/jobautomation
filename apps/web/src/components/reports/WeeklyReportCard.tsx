@@ -36,7 +36,7 @@ export function WeeklyReportCard({ report }: WeeklyReportCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-5 grid grid-cols-3 gap-3">
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
           {[
             { label: t("reports.weeklyCard.jobsAdded"), value: report.jobsAdded },
             { label: t("reports.weeklyCard.applications"), value: report.applicationsSubmitted },

@@ -38,7 +38,7 @@ export function BottomNav() {
               )}
             >
               <Icon size={22} />
-              <span className="text-[10px] font-medium leading-tight">{t(labelKey)}</span>
+              <span className="max-w-[4.5rem] truncate text-[10px] font-medium leading-tight sm:max-w-none">{t(labelKey)}</span>
               {isActive ? (
                 <span className="absolute bottom-1 left-1/2 h-[2px] w-8 -translate-x-1/2 rounded-full bg-[var(--accent-hi)]" />
               ) : null}

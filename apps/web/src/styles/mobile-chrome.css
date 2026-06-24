@@ -52,3 +52,7 @@
   min-height: 44px;
   min-width: 44px;
 }
+
+.dashboard-bg {
+  overflow-x: hidden;
+}

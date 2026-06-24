@@ -76,12 +76,12 @@ export function MobileNav() {
 
   return (
     <>
-      <header className="jf-mobile-topbar flex min-h-[52px] items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] px-3 py-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:min-h-[56px] sm:px-4 md:hidden">
+      <header className="jf-mobile-topbar flex min-h-[52px] items-center justify-between gap-1.5 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] px-2.5 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-2 sm:px-4 md:hidden">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Image src={BRAND.iconPath} alt={BRAND.name} width={26} height={26} priority />
-          <span className="truncate text-sm font-semibold text-[var(--text-1)]">{BRAND.name}</span>
+          <Image src={BRAND.iconPath} alt={BRAND.name} width={26} height={26} priority className="shrink-0" />
+          <span className="max-w-[7rem] truncate text-sm font-semibold text-[var(--text-1)] sm:max-w-none">{BRAND.name}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
@@ -98,7 +98,6 @@ export function MobileNav() {
             <PlusIcon size={20} />
           </Link>
           <NotificationBell />
-          <LanguageSwitcher compact />
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -162,6 +161,13 @@ export function MobileNav() {
                   >
                     {t("common.settings")}
                   </Link>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-[var(--border-default)] px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[var(--text-3)]">{t("language.label")}</p>
+                  </div>
+                  <LanguageSwitcher compact />
                 </div>
 
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-[var(--border-default)] px-3 py-2">

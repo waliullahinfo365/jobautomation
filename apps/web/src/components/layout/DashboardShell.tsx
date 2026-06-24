@@ -24,7 +24,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div className="jf-app-grain" aria-hidden />
         <div className="jf-shell">
           <Sidebar />
-          <div className="flex min-w-0 flex-col bg-[var(--bg-0)]">
+          <div className="flex min-w-0 flex-col overflow-x-hidden bg-[var(--bg-0)]">
             <MobileNav />
             <Topbar />
             <main className="flex-1 overflow-y-auto">

@@ -33,7 +33,7 @@ export function PricingPageClient() {
   };
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 pb-10 sm:space-y-8">
       <PageHeader
         eyebrow="Pricing"
         title="Choose the plan that fits your job search"
@@ -66,7 +66,7 @@ export function PricingPageClient() {
 
       {taxNotice ? <p className="text-center text-xs text-[var(--text-3)]">{taxNotice}</p> : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {availablePlans.map((plan) => {
           const price = billingCycle === "yearly" ? plan.priceYearly : plan.priceMonthly;
           const purchasable = billingCycle === "yearly" ? plan.purchasableYearly : plan.purchasableMonthly;
@@ -121,10 +121,11 @@ export function PricingPageClient() {
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-5">
         <h3 className="font-semibold text-[var(--text-1)]">Extra AI credits</h3>
         <p className="mt-1 text-sm text-[var(--text-3)]">One-time packs. Purchased credits stay until used.</p>
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Button
             variant="outline"
             disabled={!stripeConfigured}
+            className="w-full sm:w-auto"
             onClick={async () => {
               try {
                 const result = await billing.creditsCheckout({ pack: "50" });
@@ -140,6 +141,7 @@ export function PricingPageClient() {
           <Button
             variant="outline"
             disabled={!stripeConfigured}
+            className="w-full sm:w-auto"
             onClick={async () => {
               try {
                 const result = await billing.creditsCheckout({ pack: "150" });

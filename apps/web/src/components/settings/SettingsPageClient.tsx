@@ -64,16 +64,16 @@ export function SettingsPageClient() {
   }, [searchParams, t, billing.plan, billing.usage]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <PageHeader
         icon={SettingsIcon}
         eyebrow={t("settings.eyebrow")}
         title={t("settings.title")}
         description={t("settings.description")}
-        actions={<Button>{t("settings.saveChanges")}</Button>}
+        actions={<Button className="hidden sm:inline-flex">{t("settings.saveChanges")}</Button>}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px,1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
         <div>
           <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
         </div>

@@ -120,6 +120,34 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
   return (
     <>
       <SectionCard title={t("documents.coverLetters.title")} description={t("documents.coverLetters.subtitle")} contentClassName="p-0">
+        <div className="divide-y divide-[var(--border-subtle)] md:hidden">
+          {records.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-[var(--text-3)]">No cover letters yet.</p>
+          ) : null}
+          {records.map((r) => (
+            <div key={r.id} className="space-y-3 p-4">
+              <div className="min-w-0">
+                <p className="truncate font-medium text-[var(--text-1)]">{r.fileName}</p>
+                <p className="mt-0.5 text-sm text-[var(--text-3)]">{r.company} · {r.position}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <DocumentStatusBadge status={r.status} />
+                <ReportStatusBadge status={r.pdfExportStatus} />
+                <span className="text-xs text-[var(--text-4)]">{dateFmt.format(new Date(r.lastUpdated))}</span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => void openRecord(r)}>
+                  {t("documents.actions.view")}
+                </Button>
+                <Button size="sm" variant="secondary" className="w-full sm:w-auto" onClick={() => void openRecord(r, true)}>
+                  {t("documents.actions.regenerate")}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -159,6 +187,7 @@ export function CoverLettersSection({ records }: { records: CoverLetterRecord[] 
             ))}
           </TableBody>
         </Table>
+        </div>
       </SectionCard>
 
       <Modal

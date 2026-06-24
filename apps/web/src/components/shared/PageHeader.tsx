@@ -16,7 +16,7 @@ export function PageHeader({ title, description, actions, className, eyebrow, ic
   return (
     <div
       className={cn(
-        "gradient-border flex flex-col gap-4 p-5 md:p-6 lg:flex-row lg:items-start lg:justify-between",
+        "gradient-border flex flex-col gap-3 p-4 sm:gap-4 sm:p-5 md:p-6 lg:flex-row lg:items-start lg:justify-between",
         className
       )}
     >
@@ -36,7 +36,7 @@ export function PageHeader({ title, description, actions, className, eyebrow, ic
                 {eyebrow}
               </span>
             ) : null}
-            <h1 className="font-display text-[26px] font-bold tracking-[-0.02em] text-[var(--text-1)] lg:text-[30px]">
+            <h1 className="font-display text-[22px] font-bold tracking-[-0.02em] text-[var(--text-1)] sm:text-[26px] lg:text-[30px]">
               {title}
             </h1>
             {description ? (
@@ -46,7 +46,7 @@ export function PageHeader({ title, description, actions, className, eyebrow, ic
         </div>
       </div>
       {actions ? (
-        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">{actions}</div>
+        <div className="flex w-full shrink-0 flex-col gap-2 [&_button]:w-full sm:[&_button]:w-auto sm:w-auto sm:flex-row sm:items-center">{actions}</div>
       ) : null}
     </div>
   );

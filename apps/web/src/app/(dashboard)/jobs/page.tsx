@@ -271,7 +271,7 @@ export default function JobsPage() {
       </div>
 
       {/* Status tabs */}
-      <div className="flex gap-1 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-1 [-webkit-overflow-scrolling:touch]">
         {(["new", "saved", "all"] as JobTab[]).map((tab) => {
           const labels: Record<JobTab, string> = { new: "New", saved: "Saved", all: "All Jobs" };
           const counts: Record<JobTab, number> = {
@@ -283,7 +283,7 @@ export default function JobsPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors ${
+              className={`flex min-w-[5.5rem] flex-1 items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] font-medium transition-colors sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[13px] ${
                 activeTab === tab
                   ? "bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm"
                   : "text-[var(--text-3)] hover:text-[var(--text-2)]"

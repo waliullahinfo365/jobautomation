@@ -66,8 +66,8 @@ export function BillingSection({
 
       {/* Current plan summary */}
       <div className="mb-4 rounded-md border bg-[var(--surface-2)] p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <p className="text-xs text-[var(--text-3)]">{t("settings.billing.currentPlan")}</p>
             <p className="text-base font-semibold text-[var(--text-1)]">{currentPlan?.displayName ?? t("settings.billing.unknown")}</p>
             <p className="mt-0.5 text-xs text-[var(--text-3)]">
@@ -76,12 +76,12 @@ export function BillingSection({
             </p>
           </div>
           {stripeConfigured && hasActiveSubscription && (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="outline" size="sm" onClick={onOpenPortal}>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:shrink-0">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onOpenPortal}>
                 {t("settings.billing.manageBilling")}
               </Button>
               {!cancelAtPeriodEnd && onCancelSubscription ? (
-                <Button variant="ghost" size="sm" className="text-rose-600" onClick={onCancelSubscription}>
+                <Button variant="ghost" size="sm" className="w-full text-rose-600 sm:w-auto" onClick={onCancelSubscription}>
                   {t("settings.billing.cancelSubscription")}
                 </Button>
               ) : null}
@@ -142,7 +142,7 @@ export function BillingSection({
               </button>
             </div>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {availablePlans.map((plan) => (
               <PlanCard
                 key={plan.planKey}
@@ -157,11 +157,11 @@ export function BillingSection({
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/pricing">
-          <Button variant="outline" size="sm">View all plans</Button>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Link href="/pricing" className="w-full sm:w-auto">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto">View all plans</Button>
         </Link>
-        <Button variant="ghost" size="sm" onClick={onRetry}>
+        <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={onRetry}>
           {t("settings.billing.refresh")}
         </Button>
       </div>
@@ -238,7 +238,7 @@ function PlanCard({
       : `${plan.currency.toUpperCase()} ${price}/mo`;
 
   return (
-    <div className={`rounded-md border p-3 text-xs ${isCurrent ? "border-blue-400 bg-blue-50" : "border-[var(--border)] bg-[var(--surface-2)]"}`}>
+    <div className={`rounded-md border p-3 text-xs sm:p-4 ${isCurrent ? "border-blue-400 bg-blue-50" : "border-[var(--border)] bg-[var(--surface-2)]"}`}>
       <p className="font-semibold text-[var(--text-1)]">{plan.displayName}</p>
       <p className="mt-0.5 text-[var(--text-3)]">{priceLabel}</p>
       <div className="mt-2">
@@ -248,7 +248,7 @@ function PlanCard({
           <Button
             size="sm"
             variant="outline"
-            className="h-6 px-2 text-xs"
+            className="mt-2 h-9 w-full px-3 text-xs sm:h-6 sm:w-auto sm:px-2"
             onClick={() => onCheckout?.(plan.planKey, billingCycle)}
           >
             {t("settings.billing.upgrade")}
