@@ -13,3 +13,4 @@ export * from "./Notification.model";
 export * from "./AuditLog.model";
 export * from "./AiUsageLog.model";
 export * from "./LifecycleInsight.model";
+export * from "./StripeEvent.model";

@@ -6,6 +6,8 @@ export type AvailablePlan = {
   priceMonthly: number;
   priceYearly: number;
   currency: string;
+  tagline?: string;
+  badge?: string;
   features?: string[];
   limits?: Record<string, number | string>;
   purchasableMonthly?: boolean;
@@ -19,6 +21,7 @@ export type BillingPlanResponse = {
     billingStatus: string;
     limits: Record<string, number | string>;
     usage: Record<string, number>;
+    features?: Record<string, boolean>;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
     cancelAtPeriodEnd?: boolean;
@@ -27,10 +30,13 @@ export type BillingPlanResponse = {
   billingStatus: string;
   limits: Record<string, number | string>;
   usage: Record<string, number>;
+  features?: Record<string, boolean>;
+  featureGates?: Record<string, unknown>;
   usagePercentages: Record<string, { current: number; limit: number | string; percent: number | null }>;
   availablePlans: AvailablePlan[];
   stripeConfigured: boolean;
   billingNotice: string | null;
+  taxNotice?: string;
 };
 
 export type CheckoutResult = { checkoutUrl: string; sessionId: string; planKey: string; status: string };
@@ -38,6 +44,8 @@ export type PortalResult = { portalUrl: string };
 
 export function getBillingPlan() { return apiFetch<BillingPlanResponse>("/billing/plan"); }
 export function createCheckout(payload: { planKey: string; billingCycle: "monthly" | "yearly" }) { return apiFetch<CheckoutResult>("/billing/checkout", { method: "POST", body: payload }); }
+export function createCreditsCheckout(payload: { pack: "50" | "150" }) { return apiFetch<CheckoutResult>("/billing/checkout/credits", { method: "POST", body: payload }); }
+export function getFeatureGates() { return apiFetch("/billing/feature-gates"); }
 export function openBillingPortal() { return apiFetch<PortalResult>("/billing/portal", { method: "POST", body: {} }); }
 export function changePlan(payload: { planKey: string }) { return apiFetch("/billing/change-plan", { method: "POST", body: payload }); }
 export function cancelSubscription() { return apiFetch("/billing/cancel", { method: "POST", body: {} }); }

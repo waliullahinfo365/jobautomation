@@ -216,7 +216,7 @@ export const authService = {
             status: "Trialing",
             billingStatus: "Trialing",
             billing: {
-              planKey: "free_trial",
+              planKey: "free",
               billingStatus: "Trialing",
               cancelAtPeriodEnd: false,
             },
@@ -456,7 +456,7 @@ export const authService = {
           plan: "Free Trial",
           status: "Trialing",
           billingStatus: "Trialing",
-          billing: { planKey: "free_trial", billingStatus: "Trialing", cancelAtPeriodEnd: false },
+          billing: { planKey: "free", billingStatus: "Trialing", cancelAtPeriodEnd: false },
           limits: freeTrialLimits,
           usage: { jobsCount: 0, automationRunsThisMonth: 0, aiCreditsUsedThisMonth: 0, documentsCount: 0, storageUsedMb: 0, usersCount: 1, integrationsCount: 0, reportsGeneratedThisMonth: 0 },
         }], { session });

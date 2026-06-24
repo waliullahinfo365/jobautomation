@@ -1,124 +1,282 @@
 import type { PlanDefinition, SubscriptionPlanKey } from "../types/billing";
 
-export const subscriptionPlans = ["Free Trial", "Starter", "Pro", "Agency", "Enterprise"] as const;
+export const subscriptionPlans = ["Free", "Plus", "Pro", "Executive", "Founding Member Pro"] as const;
 export const tenantRoles = ["Owner", "Admin", "Member", "Viewer"] as const;
 
-export const PLAN_DEFINITIONS: Record<SubscriptionPlanKey, PlanDefinition> = {
-  free_trial: {
-    planKey: "free_trial",
-    displayName: "Free Trial",
+const CORE_PLANS = {
+  free: {
+    planKey: "free",
+    displayName: "Free",
     priceMonthly: 0,
     priceYearly: 0,
-    currency: "USD",
-    trialDays: 14,
-    features: ["Core job tracking", "Limited automations", "Email intake stub"],
+    currency: "EUR",
+    trialDays: 0,
+    tagline: "Start organizing your job search.",
+    features: [
+      "Up to 25 active jobs",
+      "1 Gmail / job alert source",
+      "10 Quick Reviews per month",
+      "2 AI cover letters per month",
+      "Basic application tracking",
+      "Apply Assistant preview",
+    ],
     limits: {
       maxJobs: 25,
-      maxAutomationRuns: 100,
-      maxAiCredits: 50,
+      maxAiCredits: 2,
+      maxCvVersions: 1,
+      maxDocuments: 5,
+      maxQuickReviews: 10,
+      maxResearchDocs: 0,
+      maxPdfExports: 0,
+      maxIntegrations: 1,
+      maxAutomationRuns: 50,
       maxUsers: 1,
       maxStorageMb: 100,
-      maxIntegrations: 2,
-      maxReportsPerMonth: 10,
+      maxReportsPerMonth: 0,
+    },
+    featureFlags: {
+      applyAssistant: "preview",
+      replyDetection: false,
+      exportEnabled: false,
+      jobcenterReport: false,
+      advancedInsights: false,
+      prioritySupport: false,
+      quickReviewUnlimited: false,
+      telegramNotifications: false,
+      interviewPrep: false,
+      companyResearch: false,
     },
   },
-  starter: {
-    planKey: "starter",
-    displayName: "Starter",
-    priceMonthly: 29,
-    priceYearly: 290,
-    currency: "USD",
+  plus: {
+    planKey: "plus",
+    displayName: "Plus",
+    priceMonthly: 9.99,
+    priceYearly: 99,
+    currency: "EUR",
     trialDays: 0,
-    features: ["Everything in trial", "Higher limits", "Priority email support (stub)"],
+    tagline: "For active job seekers who want to stay organized and apply faster.",
+    features: [
+      "Up to 150 active jobs",
+      "Unlimited Quick Review",
+      "20 AI cover letters per month",
+      "10 research docs per month",
+      "Up to 3 CV versions",
+      "Basic reply detection",
+      "Job Assistant included",
+      "3 PDF exports per month",
+    ],
     limits: {
-      maxJobs: 100,
-      maxAutomationRuns: 1000,
-      maxAiCredits: 300,
+      maxJobs: 150,
+      maxAiCredits: 20,
+      maxCvVersions: 3,
+      maxDocuments: 50,
+      maxQuickReviews: "unlimited",
+      maxResearchDocs: 10,
+      maxPdfExports: 3,
+      maxIntegrations: 5,
+      maxAutomationRuns: 500,
       maxUsers: 2,
       maxStorageMb: 1000,
-      maxIntegrations: 5,
-      maxReportsPerMonth: 50,
+      maxReportsPerMonth: 10,
+    },
+    featureFlags: {
+      applyAssistant: "full",
+      replyDetection: true,
+      exportEnabled: true,
+      jobcenterReport: false,
+      advancedInsights: false,
+      prioritySupport: false,
+      quickReviewUnlimited: true,
+      telegramNotifications: true,
+      interviewPrep: false,
+      companyResearch: false,
     },
   },
   pro: {
     planKey: "pro",
     displayName: "Pro",
-    priceMonthly: 79,
-    priceYearly: 790,
-    currency: "USD",
+    priceMonthly: 19.99,
+    priceYearly: 199,
+    currency: "EUR",
     trialDays: 0,
-    features: ["Everything in Starter", "Advanced automations", "Team collaboration"],
+    badge: "most_popular",
+    tagline: "For serious job searches with AI documents, research, follow-ups, and reports.",
+    features: [
+      "Up to 500 active jobs",
+      "75 AI cover letters per month",
+      "50 research docs per month",
+      "Full Apply Assistant",
+      "Reply detection & follow-up engine",
+      "Interview prep & company research",
+      "PDF / Excel export",
+      "Jobcenter / agency reports",
+      "Full insights dashboard",
+    ],
     limits: {
       maxJobs: 500,
+      maxAiCredits: 75,
+      maxCvVersions: 10,
+      maxDocuments: 200,
+      maxQuickReviews: "unlimited",
+      maxResearchDocs: 50,
+      maxPdfExports: "unlimited",
+      maxIntegrations: 15,
       maxAutomationRuns: 5000,
-      maxAiCredits: 1500,
       maxUsers: 5,
       maxStorageMb: 5000,
-      maxIntegrations: 15,
       maxReportsPerMonth: 200,
     },
+    featureFlags: {
+      applyAssistant: "full",
+      replyDetection: true,
+      exportEnabled: true,
+      jobcenterReport: true,
+      advancedInsights: true,
+      prioritySupport: false,
+      quickReviewUnlimited: true,
+      telegramNotifications: true,
+      interviewPrep: true,
+      companyResearch: true,
+    },
   },
-  agency: {
-    planKey: "agency",
-    displayName: "Agency",
-    priceMonthly: 199,
-    priceYearly: 1990,
-    currency: "USD",
+  executive: {
+    planKey: "executive",
+    displayName: "Executive",
+    priceMonthly: 39.99,
+    priceYearly: 399,
+    currency: "EUR",
     trialDays: 0,
-    features: ["Everything in Pro", "Multi-seat agency workflow", "Higher throughput"],
+    tagline: "For high-volume applications, senior roles, and advanced career workflows.",
+    features: [
+      "Up to 1,500 active jobs",
+      "200 AI cover letters per month",
+      "150 research docs per month",
+      "Unlimited CV versions (fair use)",
+      "Multiple search profiles & CV strategies",
+      "Advanced company research & interview prep",
+      "Recruiter contact tracking",
+      "Priority support & early access",
+    ],
     limits: {
-      maxJobs: 2000,
+      maxJobs: 1500,
+      maxAiCredits: 200,
+      maxCvVersions: "unlimited",
+      maxDocuments: "unlimited",
+      maxQuickReviews: "unlimited",
+      maxResearchDocs: 150,
+      maxPdfExports: "unlimited",
+      maxIntegrations: 40,
       maxAutomationRuns: 20000,
-      maxAiCredits: 5000,
       maxUsers: 15,
       maxStorageMb: 25000,
-      maxIntegrations: 40,
       maxReportsPerMonth: 500,
     },
-  },
-  enterprise: {
-    planKey: "enterprise",
-    displayName: "Enterprise",
-    priceMonthly: 0,
-    priceYearly: 0,
-    currency: "USD",
-    trialDays: 0,
-    features: ["Custom limits", "Dedicated support", "SSO (future)", "Custom contracts"],
-    limits: {
-      maxJobs: "unlimited",
-      maxAutomationRuns: "unlimited",
-      maxAiCredits: "unlimited",
-      maxUsers: "unlimited",
-      maxStorageMb: "unlimited",
-      maxIntegrations: "unlimited",
-      maxReportsPerMonth: "unlimited",
+    featureFlags: {
+      applyAssistant: "full",
+      replyDetection: true,
+      exportEnabled: true,
+      jobcenterReport: true,
+      advancedInsights: true,
+      prioritySupport: true,
+      quickReviewUnlimited: true,
+      telegramNotifications: true,
+      interviewPrep: true,
+      companyResearch: true,
     },
   },
+  founding_pro: {
+    planKey: "founding_pro",
+    displayName: "Founding Member Pro",
+    priceMonthly: 19.99,
+    priceYearly: 99,
+    currency: "EUR",
+    trialDays: 0,
+    tagline: "Launch offer — Pro features at €99 for the first year.",
+    features: [
+      "All Pro features",
+      "€99 for the first billing year",
+      "Renews at standard Pro yearly price after year one",
+    ],
+    limits: {
+      maxJobs: 500,
+      maxAiCredits: 75,
+      maxCvVersions: 10,
+      maxDocuments: 200,
+      maxQuickReviews: "unlimited",
+      maxResearchDocs: 50,
+      maxPdfExports: "unlimited",
+      maxIntegrations: 15,
+      maxAutomationRuns: 5000,
+      maxUsers: 5,
+      maxStorageMb: 5000,
+      maxReportsPerMonth: 200,
+    },
+    featureFlags: {
+      applyAssistant: "full",
+      replyDetection: true,
+      exportEnabled: true,
+      jobcenterReport: true,
+      advancedInsights: true,
+      prioritySupport: false,
+      quickReviewUnlimited: true,
+      telegramNotifications: true,
+      interviewPrep: true,
+      companyResearch: true,
+    },
+  },
+} as const satisfies Record<string, PlanDefinition>;
+
+export const PLAN_DEFINITIONS: Record<SubscriptionPlanKey, PlanDefinition> = {
+  ...CORE_PLANS,
+  free_trial: { ...CORE_PLANS.free, planKey: "free_trial", displayName: "Free" },
+  starter: { ...CORE_PLANS.plus, planKey: "starter", displayName: "Plus" },
+  agency: { ...CORE_PLANS.executive, planKey: "agency", displayName: "Executive" },
+  enterprise: { ...CORE_PLANS.executive, planKey: "enterprise", displayName: "Executive" },
 };
 
-/** Legacy display name -> planKey */
-export const displayPlanToPlanKey: Record<(typeof subscriptionPlans)[number], SubscriptionPlanKey> = {
-  "Free Trial": "free_trial",
-  Starter: "starter",
-  Pro: "pro",
-  Agency: "agency",
-  Enterprise: "enterprise",
-};
-
-/** @deprecated Use PLAN_DEFINITIONS[planKey].limits for new code */
-export interface PlanLimits {
-  maxJobs: number | "unlimited";
-  maxAutomationRuns: number | "unlimited";
-  maxAiCredits: number | "custom";
-  maxUsers: number | "custom";
-  maxStorageMb: number | "custom";
+/** Normalize legacy plan keys to canonical keys */
+export function normalizePlanKey(planKey: string | undefined): SubscriptionPlanKey {
+  const aliases: Record<string, SubscriptionPlanKey> = {
+    free_trial: "free",
+    starter: "plus",
+    agency: "executive",
+    enterprise: "executive",
+  };
+  const key = (planKey ?? "free") as SubscriptionPlanKey;
+  return aliases[key] ?? (PLAN_DEFINITIONS[key] ? key : "free");
 }
 
+export function getPlanDefinition(planKey: string | undefined): PlanDefinition {
+  return PLAN_DEFINITIONS[normalizePlanKey(planKey)];
+}
+
+/** Legacy display name -> planKey */
+export const displayPlanToPlanKey: Record<string, SubscriptionPlanKey> = {
+  Free: "free",
+  "Free Trial": "free",
+  Plus: "plus",
+  Starter: "plus",
+  Pro: "pro",
+  Executive: "executive",
+  Agency: "executive",
+  Enterprise: "executive",
+  "Founding Member Pro": "founding_pro",
+};
+
+export const PAID_PLAN_KEYS: SubscriptionPlanKey[] = ["plus", "pro", "executive", "founding_pro"];
+
+export const AI_CREDIT_COSTS = {
+  coverLetter: 1,
+  researchDoc: 1,
+  tailorCv: 2,
+  interviewPrep: 2,
+  applicationPackage: 3,
+} as const;
+
 /** @deprecated Use PLAN_DEFINITIONS */
-export const planDefinitions: Record<(typeof subscriptionPlans)[number], PlanLimits> = {
-  "Free Trial": { maxJobs: 25, maxAutomationRuns: 100, maxAiCredits: 50, maxUsers: 1, maxStorageMb: 100 },
-  Starter: { maxJobs: 100, maxAutomationRuns: 1000, maxAiCredits: 300, maxUsers: 2, maxStorageMb: 1000 },
-  Pro: { maxJobs: 500, maxAutomationRuns: 5000, maxAiCredits: 1500, maxUsers: 5, maxStorageMb: 5000 },
-  Agency: { maxJobs: 2000, maxAutomationRuns: 20000, maxAiCredits: 5000, maxUsers: 15, maxStorageMb: 25000 },
-  Enterprise: { maxJobs: "unlimited", maxAutomationRuns: "unlimited", maxAiCredits: "custom", maxUsers: "custom", maxStorageMb: "custom" },
+export const planDefinitions = {
+  Free: { maxJobs: 25, maxAutomationRuns: 50, maxAiCredits: 2, maxUsers: 1, maxStorageMb: 100 },
+  Plus: { maxJobs: 150, maxAutomationRuns: 500, maxAiCredits: 20, maxUsers: 2, maxStorageMb: 1000 },
+  Pro: { maxJobs: 500, maxAutomationRuns: 5000, maxAiCredits: 75, maxUsers: 5, maxStorageMb: 5000 },
+  Executive: { maxJobs: 1500, maxAutomationRuns: 20000, maxAiCredits: 200, maxUsers: 15, maxStorageMb: 25000 },
 };

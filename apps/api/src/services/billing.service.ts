@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { AuditLogModel, TenantModel } from "@jobflow/database/models";
-import { PLAN_DEFINITIONS, displayPlanToPlanKey } from "@jobflow/shared/constants/plans";
+import { AuditLogModel, StripeEventModel, TenantModel } from "@jobflow/database/models";
+import { PLAN_DEFINITIONS, displayPlanToPlanKey, getPlanDefinition, normalizePlanKey, PAID_PLAN_KEYS } from "@jobflow/shared/constants/plans";
+import { buildFeatureAccess, buildFeatureGateSnapshot } from "@jobflow/shared/constants/feature-gates";
 import type {
   BillingStatus,
   CheckoutResult,
@@ -56,21 +57,39 @@ async function stripeRequest<T>(
 }
 
 function planPriceId(planKey: SubscriptionPlanKey, cycle: "monthly" | "yearly"): string | null {
+  const normalized = normalizePlanKey(planKey);
+  if (normalized === "free") return null;
+  if (normalized === "founding_pro") {
+    return process.env.STRIPE_PRICE_FOUNDING_PRO_YEARLY?.trim() ?? null;
+  }
   const envKey = cycle === "yearly"
-    ? `STRIPE_PRICE_${planKey.toUpperCase()}_YEARLY`
-    : `STRIPE_PRICE_${planKey.toUpperCase()}`;
-  return process.env[envKey]?.trim() ?? process.env[`STRIPE_PRICE_${planKey.toUpperCase()}`]?.trim() ?? null;
+    ? `STRIPE_PRICE_${normalized.toUpperCase()}_YEARLY`
+    : `STRIPE_PRICE_${normalized.toUpperCase()}`;
+  const primary = process.env[envKey]?.trim();
+  if (primary) return primary;
+  if (normalized === "plus") {
+    return (cycle === "yearly" ? process.env.STRIPE_PRICE_STARTER_YEARLY : process.env.STRIPE_PRICE_STARTER)?.trim() ?? null;
+  }
+  if (normalized === "executive") {
+    return (cycle === "yearly" ? process.env.STRIPE_PRICE_AGENCY_YEARLY : process.env.STRIPE_PRICE_AGENCY)?.trim() ?? null;
+  }
+  return null;
+}
+
+function aiCreditsPriceId(pack: "50" | "150"): string | null {
+  return process.env[`STRIPE_PRICE_AI_CREDITS_${pack}`]?.trim() ?? null;
 }
 
 function buildPriceIdToPlanKeyMap(): Map<string, SubscriptionPlanKey> {
   const map = new Map<string, SubscriptionPlanKey>();
-  for (const planKey of Object.keys(PLAN_DEFINITIONS) as SubscriptionPlanKey[]) {
-    if (planKey === "free_trial" || planKey === "enterprise") continue;
+  for (const planKey of [...PAID_PLAN_KEYS, "founding_pro"] as SubscriptionPlanKey[]) {
     for (const cycle of ["monthly", "yearly"] as const) {
       const priceId = planPriceId(planKey, cycle);
       if (priceId) map.set(priceId, planKey);
     }
   }
+  const foundingYearly = process.env.STRIPE_PRICE_FOUNDING_PRO_YEARLY?.trim();
+  if (foundingYearly) map.set(foundingYearly, "founding_pro");
   return map;
 }
 
@@ -85,9 +104,10 @@ export function isStripeBillingConfigured(): boolean {
   return isStripeConfigured();
 }
 
-export function getConfiguredStripePlans(): Record<SubscriptionPlanKey, { monthly: boolean; yearly: boolean }> {
-  const out = {} as Record<SubscriptionPlanKey, { monthly: boolean; yearly: boolean }>;
-  for (const planKey of Object.keys(PLAN_DEFINITIONS) as SubscriptionPlanKey[]) {
+export function getConfiguredStripePlans(): Record<string, { monthly: boolean; yearly: boolean }> {
+  const keys: SubscriptionPlanKey[] = ["free", "plus", "pro", "executive", "founding_pro"];
+  const out: Record<string, { monthly: boolean; yearly: boolean }> = {};
+  for (const planKey of keys) {
     out[planKey] = {
       monthly: Boolean(planPriceId(planKey, "monthly")),
       yearly: Boolean(planPriceId(planKey, "yearly")),
@@ -103,29 +123,24 @@ async function applyPlanToTenant(
     billingStatus?: BillingStatus;
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
+    stripePriceId?: string;
     cancelAtPeriodEnd?: boolean;
     currentPeriodStart?: Date;
     currentPeriodEnd?: Date;
   }
 ) {
-  const def = PLAN_DEFINITIONS[planKey];
+  const normalized = normalizePlanKey(planKey);
+  const def = getPlanDefinition(normalized);
   if (!def) return;
 
   const billingStatus = extra?.billingStatus ?? "Active";
   const set: Record<string, unknown> = {
     plan: def.displayName,
     billingStatus,
-    limits: {
-      maxJobs: def.limits.maxJobs,
-      maxAutomationRuns: def.limits.maxAutomationRuns,
-      maxAiCredits: def.limits.maxAiCredits,
-      maxUsers: def.limits.maxUsers,
-      maxStorageMb: def.limits.maxStorageMb,
-      maxIntegrations: def.limits.maxIntegrations,
-      maxReportsPerMonth: def.limits.maxReportsPerMonth,
-    },
-    "billing.planKey": planKey,
+    limits: { ...def.limits },
+    "billing.planKey": normalized,
     "billing.billingStatus": billingStatus,
+    "billing.featureFlags": def.featureFlags,
   };
 
   if (extra?.stripeCustomerId) {
@@ -136,6 +151,7 @@ async function applyPlanToTenant(
     set["billing.stripeSubscriptionId"] = extra.stripeSubscriptionId;
     set.stripeSubscriptionId = extra.stripeSubscriptionId;
   }
+  if (extra?.stripePriceId) set["billing.stripePriceId"] = extra.stripePriceId;
   if (extra?.cancelAtPeriodEnd !== undefined) set["billing.cancelAtPeriodEnd"] = extra.cancelAtPeriodEnd;
   if (extra?.currentPeriodStart) set["billing.currentPeriodStart"] = extra.currentPeriodStart;
   if (extra?.currentPeriodEnd) set["billing.currentPeriodEnd"] = extra.currentPeriodEnd;
@@ -148,11 +164,11 @@ function tenantQuery(tenantId: string) {
 }
 
 function resolvePlanKey(tenant: { plan?: string; billing?: { planKey?: string } }): SubscriptionPlanKey {
-  const fromBilling = tenant.billing?.planKey as SubscriptionPlanKey | undefined;
-  if (fromBilling && PLAN_DEFINITIONS[fromBilling]) return fromBilling;
-  const display = tenant.plan as keyof typeof displayPlanToPlanKey | undefined;
-  if (display && displayPlanToPlanKey[display]) return displayPlanToPlanKey[display];
-  return "free_trial";
+  const fromBilling = tenant.billing?.planKey;
+  if (fromBilling) return normalizePlanKey(fromBilling);
+  const display = tenant.plan;
+  if (display && displayPlanToPlanKey[display]) return normalizePlanKey(displayPlanToPlanKey[display]);
+  return "free";
 }
 
 function resolveBillingStatus(tenant: { billingStatus?: string; billing?: { billingStatus?: string } }): BillingStatus {
@@ -182,6 +198,11 @@ function usageForMetric(usage: Record<string, number | undefined>, limitName: Pl
     maxStorageMb: "storageUsedMb",
     maxIntegrations: "integrationsCount",
     maxReportsPerMonth: "reportsGeneratedThisMonth",
+    maxCvVersions: "cvVersionsCount",
+    maxDocuments: "documentsCount",
+    maxQuickReviews: "quickReviewsThisMonth",
+    maxResearchDocs: "researchDocsThisMonth",
+    maxPdfExports: "pdfExportsThisMonth",
   };
   const key = map[limitName];
   return Number(usage[key] ?? 0);
@@ -193,18 +214,26 @@ export async function getCurrentPlan(input: { tenantId: string }): Promise<Tenan
   if (!tenant) throw new ApiError("Tenant not found", 404, "TENANT_NOT_FOUND");
 
   const planKey = resolvePlanKey(tenant);
-  const plan = PLAN_DEFINITIONS[planKey];
+  const plan = getPlanDefinition(planKey);
   const billingStatus = resolveBillingStatus(tenant);
 
   const usage: PlanUsage = {
     jobsCount: tenant.usage?.jobsCount ?? 0,
     automationRunsThisMonth: tenant.usage?.automationRunsThisMonth ?? 0,
     aiCreditsUsedThisMonth: tenant.usage?.aiCreditsUsedThisMonth ?? 0,
+    purchasedAiCreditsBalance: tenant.usage?.purchasedAiCreditsBalance ?? 0,
+    cvVersionsCount: tenant.usage?.cvVersionsCount ?? 0,
+    documentsCount: tenant.usage?.documentsCount ?? 0,
+    quickReviewsThisMonth: tenant.usage?.quickReviewsThisMonth ?? 0,
+    researchDocsThisMonth: tenant.usage?.researchDocsThisMonth ?? 0,
+    pdfExportsThisMonth: tenant.usage?.pdfExportsThisMonth ?? 0,
     usersCount: tenant.usage?.usersCount ?? 0,
     storageUsedMb: tenant.usage?.storageUsedMb ?? 0,
     integrationsCount: tenant.usage?.integrationsCount ?? 0,
     reportsGeneratedThisMonth: tenant.usage?.reportsGeneratedThisMonth ?? 0,
   };
+
+  const features = buildFeatureAccess(planKey, billingStatus, plan);
 
   const periodStart = tenant.billing?.currentPeriodStart;
   const periodEnd = tenant.billing?.currentPeriodEnd;
@@ -216,8 +245,11 @@ export async function getCurrentPlan(input: { tenantId: string }): Promise<Tenan
     plan,
     limits: plan.limits,
     usage,
+    features,
     stripeCustomerId: tenant.billing?.stripeCustomerId ?? tenant.stripeCustomerId,
     stripeSubscriptionId: tenant.billing?.stripeSubscriptionId ?? tenant.stripeSubscriptionId,
+    stripePriceId: tenant.billing?.stripePriceId,
+    purchasedAiCreditsBalance: usage.purchasedAiCreditsBalance,
     currentPeriodStart: periodStart instanceof Date ? periodStart.toISOString() : undefined,
     currentPeriodEnd: periodEnd instanceof Date ? periodEnd.toISOString() : undefined,
     cancelAtPeriodEnd: tenant.billing?.cancelAtPeriodEnd ?? false,
@@ -268,13 +300,67 @@ export async function checkPlanLimit(input: {
   };
 }
 
+export async function getFeatureGates(input: { tenantId: string }) {
+  const snapshot = await getCurrentPlan(input);
+  return buildFeatureGateSnapshot({
+    planKey: snapshot.planKey,
+    billingStatus: snapshot.billingStatus,
+    plan: snapshot.plan,
+    usage: snapshot.usage,
+  });
+}
+
+export async function createAiCreditsCheckout(input: {
+  tenantId: string;
+  pack: "50" | "150";
+}): Promise<CheckoutResult> {
+  assertTenantId(input.tenantId);
+  if (!isStripeConfigured()) {
+    throw new ApiError("Billing is not configured.", 503, "BILLING_NOT_CONFIGURED");
+  }
+  const priceId = aiCreditsPriceId(input.pack);
+  if (!priceId) {
+    throw new ApiError(`No Stripe price for AI credits pack ${input.pack}.`, 503, "BILLING_NOT_CONFIGURED");
+  }
+
+  const tenant = await TenantModel.findOne(tenantQuery(input.tenantId)).lean() as Record<string, unknown> | null;
+  const appBaseUrl = (process.env.APP_BASE_URL ?? process.env.APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
+  const settingsReturn = `${appBaseUrl}/settings?section=Billing`;
+
+  const params: Record<string, string> = {
+    "line_items[0][price]": priceId,
+    "line_items[0][quantity]": "1",
+    mode: "payment",
+    success_url: `${settingsReturn}&checkout=credits_success`,
+    cancel_url: `${settingsReturn}&checkout=cancelled`,
+    client_reference_id: input.tenantId,
+    "metadata[tenantId]": input.tenantId,
+    "metadata[creditsPack]": input.pack,
+  };
+
+  const billing = (tenant?.billing ?? {}) as Record<string, unknown>;
+  const existingCustomerId = String(billing.stripeCustomerId ?? tenant?.stripeCustomerId ?? "");
+  if (existingCustomerId) params.customer = existingCustomerId;
+
+  const session = await stripeRequest<{ id: string; url: string }>("POST", "/checkout/sessions", params);
+  return {
+    checkoutUrl: session.url,
+    sessionId: session.id,
+    planKey: "free",
+    status: "open",
+  };
+}
+
 export async function createCheckoutSession(input: {
   tenantId: string;
   planKey: SubscriptionPlanKey;
   billingCycle: "monthly" | "yearly";
 }): Promise<CheckoutResult> {
   assertTenantId(input.tenantId);
-  if (!PLAN_DEFINITIONS[input.planKey]) throw new ApiError("Invalid planKey", 422, "VALIDATION_ERROR");
+  const normalized = normalizePlanKey(input.planKey);
+  if (normalized === "free") throw new ApiError("Cannot checkout free plan", 422, "VALIDATION_ERROR");
+  const def = getPlanDefinition(normalized);
+  if (!def) throw new ApiError("Invalid planKey", 422, "VALIDATION_ERROR");
 
   if (!isStripeConfigured()) {
     throw new ApiError(
@@ -284,10 +370,10 @@ export async function createCheckoutSession(input: {
     );
   }
 
-  const priceId = planPriceId(input.planKey, input.billingCycle);
+  const priceId = planPriceId(normalized, input.billingCycle);
   if (!priceId) {
     throw new ApiError(
-      `No Stripe price ID configured for plan "${input.planKey}" (${input.billingCycle}). Set STRIPE_PRICE_${input.planKey.toUpperCase()} in environment.`,
+      `No Stripe price ID configured for plan "${normalized}" (${input.billingCycle}).`,
       503,
       "BILLING_NOT_CONFIGURED"
     );
@@ -305,10 +391,10 @@ export async function createCheckoutSession(input: {
     cancel_url: `${settingsReturn}&checkout=cancelled`,
     client_reference_id: input.tenantId,
     "metadata[tenantId]": input.tenantId,
-    "metadata[planKey]": input.planKey,
+    "metadata[planKey]": normalized,
     "metadata[billingCycle]": input.billingCycle,
     "subscription_data[metadata][tenantId]": input.tenantId,
-    "subscription_data[metadata][planKey]": input.planKey,
+    "subscription_data[metadata][planKey]": normalized,
   };
 
   // Attach existing Stripe customer if available
@@ -323,7 +409,7 @@ export async function createCheckoutSession(input: {
   return {
     checkoutUrl: session.url,
     sessionId: session.id,
-    planKey: input.planKey,
+    planKey: normalized,
     status: "open",
   };
 }
@@ -414,22 +500,48 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
 
   if (!data) return { received: true, eventId, eventType, handled: false, reason: "no data object" };
 
+  if (eventId !== "unknown") {
+    const duplicate = await StripeEventModel.findOne({ eventId }).lean();
+    if (duplicate) return { received: true, eventId, eventType, handled: true, duplicate: true };
+  }
+
+  const markProcessed = async () => {
+    if (eventId !== "unknown") {
+      await StripeEventModel.create({ eventId, eventType }).catch(() => undefined);
+    }
+  };
+
   switch (eventType) {
     case "checkout.session.completed": {
       const metadata = (data.metadata ?? {}) as Record<string, string>;
       const tenantId = String(metadata.tenantId ?? data.client_reference_id ?? "");
-      const planKey = String(metadata.planKey ?? "") as SubscriptionPlanKey;
+      const mode = String(data.mode ?? "subscription");
+
+      if (mode === "payment" && metadata.creditsPack) {
+        const pack = metadata.creditsPack === "150" ? 150 : 50;
+        if (tenantId) {
+          await TenantModel.updateOne(tenantQuery(tenantId), {
+            $inc: { "usage.purchasedAiCreditsBalance": pack },
+          });
+        }
+        await markProcessed();
+        break;
+      }
+
+      const planKey = normalizePlanKey(String(metadata.planKey ?? ""));
       const customerId = String(data.customer ?? "");
       const subscriptionId = String(data.subscription ?? "");
-      if (!tenantId || !planKey || !PLAN_DEFINITIONS[planKey]) break;
+      if (!tenantId || planKey === "free") break;
       await applyPlanToTenant(tenantId, planKey, {
         billingStatus: "Active",
         stripeCustomerId: customerId || undefined,
         stripeSubscriptionId: subscriptionId || undefined,
         cancelAtPeriodEnd: false,
       });
+      await markProcessed();
       break;
     }
+    case "customer.subscription.created":
     case "customer.subscription.updated": {
       const customerId = String(data.customer ?? "");
       const subscriptionId = String(data.id ?? "");
@@ -475,10 +587,12 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
         billingStatus: cancelAtPeriodEnd && billingStatus === "Active" ? "Active" : billingStatus,
         stripeCustomerId: customerId || undefined,
         stripeSubscriptionId: subscriptionId || undefined,
+        stripePriceId: priceId,
         cancelAtPeriodEnd,
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
       });
+      await markProcessed();
       break;
     }
     case "customer.subscription.deleted": {
@@ -486,10 +600,21 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
       const tenant = await TenantModel.findOne({ "billing.stripeSubscriptionId": subscriptionId }).lean() as Record<string, unknown> | null;
       const tenantId = String(tenant?._id ?? "");
       if (!tenantId) break;
-      await applyPlanToTenant(tenantId, "free_trial", {
+      await applyPlanToTenant(tenantId, "free", {
         billingStatus: "Cancelled",
         cancelAtPeriodEnd: false,
       });
+      await markProcessed();
+      break;
+    }
+    case "invoice.payment_succeeded": {
+      const customerId = String(data.customer ?? "");
+      if (customerId) {
+        await TenantModel.updateOne({ "billing.stripeCustomerId": customerId }, {
+          $set: { billingStatus: "Active", "billing.billingStatus": "Active" },
+        });
+      }
+      await markProcessed();
       break;
     }
     case "invoice.payment_failed": {
@@ -497,6 +622,11 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
       await TenantModel.updateOne({ "billing.stripeCustomerId": customerId }, {
         $set: { billingStatus: "Past Due", "billing.billingStatus": "Past Due" },
       });
+      await markProcessed();
+      break;
+    }
+    case "customer.subscription.trial_will_end": {
+      await markProcessed();
       break;
     }
     default:

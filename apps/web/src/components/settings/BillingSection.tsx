@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { BillingPlanResponse, AvailablePlan } from "@/lib/api/billing.api";
 import { SettingSectionCard } from "./SettingSectionCard";
@@ -41,12 +42,12 @@ export function BillingSection({
   const stripeConfigured = snapshot?.stripeConfigured ?? false;
   const billingNotice = snapshot?.billingNotice ?? null;
   const currentPlan = snapshot?.currentPlan;
-  const currentPlanKey = currentPlan?.planKey ?? "free_trial";
+  const currentPlanKey = currentPlan?.planKey ?? "free";
   const billingStatus = snapshot?.billingStatus ?? "Trialing";
   const usage = snapshot?.usage ?? {};
   const limits = snapshot?.limits ?? {};
   const usagePercentages = snapshot?.usagePercentages ?? {};
-  const availablePlans = (snapshot?.availablePlans ?? []).filter((p) => p.planKey !== "free_trial");
+  const availablePlans = (snapshot?.availablePlans ?? []).filter((p) => !["free", "free_trial"].includes(p.planKey));
   const hasActiveSubscription = Boolean(currentPlan?.stripeSubscriptionId) && billingStatus === "Active";
   const cancelAtPeriodEnd = currentPlan?.cancelAtPeriodEnd ?? false;
   const periodEnd = currentPlan?.currentPeriodEnd
@@ -156,7 +157,10 @@ export function BillingSection({
         </div>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href="/pricing">
+          <Button variant="outline" size="sm">View all plans</Button>
+        </Link>
         <Button variant="ghost" size="sm" onClick={onRetry}>
           {t("settings.billing.refresh")}
         </Button>

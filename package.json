@@ -17,7 +17,8 @@
     "type-check": "turbo run type-check",
     "lint": "turbo run lint",
     "seed:demo": "pnpm --filter @jobflow/database seed:demo",
-    "smoke:api": "dotenv -e .env -- tsx scripts/smoke-api.ts"
+    "smoke:api": "dotenv -e .env -- tsx scripts/smoke-api.ts",
+    "stripe:setup": "dotenv -e .env -- tsx apps/api/src/scripts/setup-stripe-products.ts"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",

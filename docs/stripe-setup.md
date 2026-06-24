@@ -27,12 +27,15 @@ Set on the **API** service (Railway, etc.):
 | `STRIPE_SECRET_KEY` | Secret key (`sk_live_...` or `sk_test_...`) |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret from the webhook (`whsec_...`) |
 | `APP_BASE_URL` | Public web app URL (e.g. `https://jobautomation-production.up.railway.app`) |
-| `STRIPE_PRICE_STARTER` | Monthly Starter price ID |
-| `STRIPE_PRICE_STARTER_YEARLY` | Yearly Starter price ID |
-| `STRIPE_PRICE_PRO` | Monthly Pro price ID |
-| `STRIPE_PRICE_PRO_YEARLY` | Yearly Pro price ID |
-| `STRIPE_PRICE_AGENCY` | Monthly Agency price ID |
-| `STRIPE_PRICE_AGENCY_YEARLY` | Yearly Agency price ID |
+| `STRIPE_PRICE_PLUS` | Monthly Plus price ID (€9.99) |
+| `STRIPE_PRICE_PLUS_YEARLY` | Yearly Plus price ID (€99) |
+| `STRIPE_PRICE_PRO` | Monthly Pro price ID (€19.99) |
+| `STRIPE_PRICE_PRO_YEARLY` | Yearly Pro price ID (€199) |
+| `STRIPE_PRICE_EXECUTIVE` | Monthly Executive price ID (€39.99) |
+| `STRIPE_PRICE_EXECUTIVE_YEARLY` | Yearly Executive price ID (€399) |
+| `STRIPE_PRICE_FOUNDING_PRO_YEARLY` | Founding Member Pro first year (€99) |
+| `STRIPE_PRICE_AI_CREDITS_50` | One-time 50 AI credits (€4.99) |
+| `STRIPE_PRICE_AI_CREDITS_150` | One-time 150 AI credits (€9.99) |
 
 Optional on **web** (for future Stripe.js embeds):
 

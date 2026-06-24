@@ -1,27 +1,72 @@
-export type SubscriptionPlanKey = "free_trial" | "starter" | "pro" | "agency" | "enterprise";
+export type SubscriptionPlanKey =
+  | "free"
+  | "plus"
+  | "pro"
+  | "executive"
+  | "founding_pro"
+  /** @deprecated use `free` */
+  | "free_trial"
+  /** @deprecated use `plus` */
+  | "starter"
+  /** @deprecated use `executive` */
+  | "agency"
+  /** @deprecated use `executive` */
+  | "enterprise";
 
-export type BillingStatus = "Trialing" | "Active" | "Past Due" | "Cancelled" | "Suspended";
+export type BillingStatus =
+  | "Trialing"
+  | "Active"
+  | "Past Due"
+  | "Cancelled"
+  | "Suspended"
+  | "Incomplete"
+  | "Unpaid";
 
-/** Numeric limit or unlimited (enterprise) */
+/** Numeric limit or unlimited */
 export type LimitValue = number | "unlimited";
+
+export type ApplyAssistantAccess = "none" | "preview" | "full";
+
+export interface PlanFeatureFlags {
+  applyAssistant: ApplyAssistantAccess;
+  replyDetection: boolean;
+  exportEnabled: boolean;
+  jobcenterReport: boolean;
+  advancedInsights: boolean;
+  prioritySupport: boolean;
+  quickReviewUnlimited: boolean;
+  telegramNotifications: boolean;
+  interviewPrep: boolean;
+  companyResearch: boolean;
+}
+
+export interface PlanLimits {
+  maxJobs: LimitValue;
+  maxAiCredits: LimitValue;
+  maxCvVersions: LimitValue;
+  maxDocuments: LimitValue;
+  maxQuickReviews: LimitValue;
+  maxResearchDocs: LimitValue;
+  maxPdfExports: LimitValue;
+  maxIntegrations: LimitValue;
+  maxAutomationRuns: LimitValue;
+  maxUsers: LimitValue;
+  maxStorageMb: LimitValue;
+  maxReportsPerMonth: LimitValue;
+}
 
 export interface PlanDefinition {
   planKey: SubscriptionPlanKey;
-  displayName: "Free Trial" | "Starter" | "Pro" | "Agency" | "Enterprise";
+  displayName: string;
   priceMonthly: number;
   priceYearly: number;
   currency: string;
   trialDays: number;
+  badge?: "most_popular";
+  tagline: string;
   features: string[];
-  limits: {
-    maxJobs: LimitValue;
-    maxAutomationRuns: LimitValue;
-    maxAiCredits: LimitValue;
-    maxUsers: LimitValue;
-    maxStorageMb: LimitValue;
-    maxIntegrations: LimitValue;
-    maxReportsPerMonth: LimitValue;
-  };
+  limits: PlanLimits;
+  featureFlags: PlanFeatureFlags;
 }
 
 export interface BillingSubscription {
@@ -29,6 +74,7 @@ export interface BillingSubscription {
   billingStatus: BillingStatus;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  stripePriceId?: string;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
@@ -37,7 +83,7 @@ export interface BillingSubscription {
 /** Legacy flat billing shape (API responses may still expose this) */
 export interface Billing {
   tenantId: string;
-  plan: "Free Trial" | "Starter" | "Pro" | "Agency" | "Enterprise";
+  plan: string;
   status: BillingStatus;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
@@ -58,6 +104,12 @@ export interface PlanUsage {
   jobsCount: number;
   automationRunsThisMonth: number;
   aiCreditsUsedThisMonth: number;
+  purchasedAiCreditsBalance: number;
+  cvVersionsCount: number;
+  documentsCount: number;
+  quickReviewsThisMonth: number;
+  researchDocsThisMonth: number;
+  pdfExportsThisMonth: number;
   usersCount: number;
   storageUsedMb: number;
   integrationsCount: number;
@@ -71,7 +123,12 @@ export type PlanLimitName =
   | "maxUsers"
   | "maxStorageMb"
   | "maxIntegrations"
-  | "maxReportsPerMonth";
+  | "maxReportsPerMonth"
+  | "maxCvVersions"
+  | "maxDocuments"
+  | "maxQuickReviews"
+  | "maxResearchDocs"
+  | "maxPdfExports";
 
 export interface PlanLimitCheckResult {
   allowed: boolean;
@@ -82,16 +139,28 @@ export interface PlanLimitCheckResult {
   planKey: SubscriptionPlanKey;
 }
 
+export interface TenantFeatureAccess {
+  applyAssistant: boolean;
+  replyDetection: boolean;
+  exports: boolean;
+  jobcenterReport: boolean;
+  advancedInsights: boolean;
+  prioritySupport: boolean;
+}
+
 export interface TenantBillingSnapshot {
   planKey: SubscriptionPlanKey;
-  displayName: PlanDefinition["displayName"];
+  displayName: string;
   billingStatus: BillingStatus;
   plan: PlanDefinition;
-  limits: PlanDefinition["limits"];
+  limits: PlanLimits;
   usage: PlanUsage;
+  features: TenantFeatureAccess;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  stripePriceId?: string;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
+  purchasedAiCreditsBalance?: number;
 }

@@ -1,12 +1,18 @@
 import { z } from "zod";
 
+const planKeySchema = z.enum(["free", "plus", "pro", "executive", "founding_pro", "free_trial", "starter", "agency", "enterprise"]);
+
 export const billingCheckoutBodySchema = z.object({
-  planKey: z.enum(["free_trial", "starter", "pro", "agency", "enterprise"]),
+  planKey: planKeySchema,
   billingCycle: z.enum(["monthly", "yearly"]),
 });
 
 export const billingChangePlanBodySchema = z.object({
-  planKey: z.enum(["free_trial", "starter", "pro", "agency", "enterprise"]),
+  planKey: planKeySchema,
+});
+
+export const billingCreditsCheckoutBodySchema = z.object({
+  pack: z.enum(["50", "150"]),
 });
 
 export const billingWebhookBodySchema = z.object({
