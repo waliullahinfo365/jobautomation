@@ -159,6 +159,25 @@ async function applyPlanToTenant(
   await TenantModel.updateOne(tenantQuery(tenantId), { $set: set });
 }
 
+function webAppBaseUrl(): string {
+  const apiPublic = (process.env.API_PUBLIC_URL ?? process.env.API_URL ?? "").replace(/\/$/, "");
+  const candidate = (
+    process.env.WEB_APP_URL ??
+    process.env.APP_BASE_URL ??
+    process.env.APP_URL ??
+    "https://newjob.guru"
+  ).replace(/\/$/, "");
+
+  // APP_BASE_URL is often mistakenly set to the API Railway URL — Stripe must redirect to the web app.
+  if (apiPublic && candidate === apiPublic) {
+    return (process.env.WEB_APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
+  }
+  if (candidate.includes("railway.app") && !process.env.WEB_APP_URL) {
+    return "https://newjob.guru";
+  }
+  return candidate;
+}
+
 function tenantQuery(tenantId: string) {
   return { $or: [{ _id: tenantId }, { slug: tenantId }] };
 }
@@ -324,7 +343,7 @@ export async function createAiCreditsCheckout(input: {
   }
 
   const tenant = await TenantModel.findOne(tenantQuery(input.tenantId)).lean() as Record<string, unknown> | null;
-  const appBaseUrl = (process.env.APP_BASE_URL ?? process.env.APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
+  const appBaseUrl = webAppBaseUrl();
   const settingsReturn = `${appBaseUrl}/settings?section=Billing`;
 
   const params: Record<string, string> = {
@@ -380,7 +399,7 @@ export async function createCheckoutSession(input: {
   }
 
   const tenant = await TenantModel.findOne({ $or: [{ _id: input.tenantId }, { slug: input.tenantId }] }).lean() as Record<string, unknown> | null;
-  const appBaseUrl = (process.env.APP_BASE_URL ?? process.env.APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
+  const appBaseUrl = webAppBaseUrl();
   const settingsReturn = `${appBaseUrl}/settings?section=Billing`;
 
   const params: Record<string, string> = {
@@ -647,7 +666,7 @@ export async function createBillingPortalSession(input: { tenantId: string }): P
   if (!customerId) {
     throw new ApiError("No Stripe customer found. Complete a checkout first.", 422, "NO_STRIPE_CUSTOMER");
   }
-  const appBaseUrl = (process.env.APP_BASE_URL ?? process.env.APP_URL ?? "https://newjob.guru").replace(/\/$/, "");
+  const appBaseUrl = webAppBaseUrl();
   const session = await stripeRequest<{ url: string }>("POST", "/billing_portal/sessions", {
     customer: customerId,
     return_url: `${appBaseUrl}/settings?section=Billing`,

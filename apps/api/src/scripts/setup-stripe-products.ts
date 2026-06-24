@@ -115,7 +115,7 @@ async function ensureWebhook(url: string) {
 }
 
 async function main() {
-  const appBaseUrl = (process.env.APP_BASE_URL ?? "https://jobautomation-production.up.railway.app").replace(/\/$/, "");
+  const appBaseUrl = (process.env.WEB_APP_URL ?? process.env.APP_BASE_URL ?? "https://newjob.guru").replace(/\/$/, "");
   const webhookUrl = (process.env.STRIPE_WEBHOOK_URL ?? `${appBaseUrl.replace(/\/$/, "")}/billing/webhook`).replace(
     /\/$/,
     ""
