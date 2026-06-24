@@ -13,6 +13,7 @@ import type {
 } from "@jobflow/shared/types/billing";
 import { assertTenantId } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
+import { logger } from "../utils/logger";
 
 // ─── Stripe configuration helpers ─────────────────────────────────────────────
 
@@ -93,11 +94,144 @@ function buildPriceIdToPlanKeyMap(): Map<string, SubscriptionPlanKey> {
   return map;
 }
 
-const PRICE_ID_TO_PLAN_KEY = buildPriceIdToPlanKeyMap();
+function getPriceIdToPlanKeyMap(): Map<string, SubscriptionPlanKey> {
+  return buildPriceIdToPlanKeyMap();
+}
 
 function planKeyFromStripePriceId(priceId: string | undefined): SubscriptionPlanKey | null {
   if (!priceId) return null;
-  return PRICE_ID_TO_PLAN_KEY.get(priceId) ?? null;
+  return getPriceIdToPlanKeyMap().get(priceId) ?? null;
+}
+
+function extractStripeId(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "id" in value) {
+    return String((value as { id?: string }).id ?? "");
+  }
+  return "";
+}
+
+function isMongoObjectId(value: string): boolean {
+  return /^[a-f\d]{24}$/i.test(value);
+}
+
+/** Avoid Mongo CastError when tenantId is a slug rather than ObjectId */
+function safeTenantQuery(tenantId: string): Record<string, unknown> | null {
+  const trimmed = tenantId.trim();
+  if (!trimmed) return null;
+  const clauses: Record<string, unknown>[] = [{ slug: trimmed }];
+  if (isMongoObjectId(trimmed)) {
+    clauses.unshift({ _id: trimmed });
+  }
+  return { $or: clauses };
+}
+
+function tenantQuery(tenantId: string) {
+  return safeTenantQuery(tenantId) ?? { slug: "__invalid__" };
+}
+
+function parseStripeUnixSeconds(value: unknown): Date | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  const date = new Date(n * 1000);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function stripeStatusToBillingStatus(rawStatus: string): BillingStatus {
+  switch (rawStatus) {
+    case "active":
+      return "Active";
+    case "trialing":
+      return "Trialing";
+    case "past_due":
+      return "Past Due";
+    case "incomplete":
+    case "incomplete_expired":
+      return "Incomplete";
+    case "unpaid":
+      return "Unpaid";
+    case "canceled":
+      return "Cancelled";
+    default:
+      return "Cancelled";
+  }
+}
+
+function extractPriceIdFromSubscriptionObject(data: Record<string, unknown>): string | undefined {
+  const items = data.items;
+  if (items && typeof items === "object" && !Array.isArray(items)) {
+    const list = (items as { data?: Array<{ price?: { id?: string }; plan?: { id?: string } }> }).data ?? [];
+    return list[0]?.price?.id ?? list[0]?.plan?.id;
+  }
+  return undefined;
+}
+
+async function fetchSubscriptionPriceId(subscriptionId: string): Promise<string | undefined> {
+  if (!subscriptionId || !isStripeConfigured()) return undefined;
+  try {
+    const sub = await stripeRequest<{ items?: { data?: Array<{ price?: { id?: string } }> } }>(
+      "GET",
+      `/subscriptions/${subscriptionId}?expand[]=items.data.price`
+    );
+    return sub.items?.data?.[0]?.price?.id;
+  } catch (error) {
+    logger.warn({ subscriptionId, error }, "Failed to fetch Stripe subscription for price id");
+    return undefined;
+  }
+}
+
+async function findTenantForStripe(input: {
+  tenantId?: string;
+  customerId?: string;
+  subscriptionId?: string;
+}): Promise<Record<string, unknown> | null> {
+  if (input.tenantId) {
+    const query = safeTenantQuery(input.tenantId);
+    if (query) {
+      const byId = await TenantModel.findOne(query).lean() as Record<string, unknown> | null;
+      if (byId) return byId;
+    }
+  }
+  if (input.subscriptionId) {
+    const bySub = await TenantModel.findOne({
+      $or: [
+        { "billing.stripeSubscriptionId": input.subscriptionId },
+        { stripeSubscriptionId: input.subscriptionId },
+      ],
+    }).lean() as Record<string, unknown> | null;
+    if (bySub) return bySub;
+  }
+  if (input.customerId) {
+    const byCustomer = await TenantModel.findOne({
+      $or: [
+        { "billing.stripeCustomerId": input.customerId },
+        { stripeCustomerId: input.customerId },
+      ],
+    }).lean() as Record<string, unknown> | null;
+    if (byCustomer) return byCustomer;
+  }
+  return null;
+}
+
+function resolvePlanKeyForStripe(input: {
+  priceId?: string;
+  metadataPlanKey?: string;
+  tenant?: Record<string, unknown> | null;
+}): SubscriptionPlanKey {
+  const fromPrice = planKeyFromStripePriceId(input.priceId);
+  if (fromPrice) return normalizePlanKey(fromPrice);
+
+  if (input.metadataPlanKey) {
+    const fromMeta = normalizePlanKey(input.metadataPlanKey);
+    if (fromMeta !== "free") return fromMeta;
+  }
+
+  if (input.tenant) {
+    return resolvePlanKey(input.tenant as { plan?: string; billing?: { planKey?: string } });
+  }
+
+  return "free";
 }
 
 export function isStripeBillingConfigured(): boolean {
@@ -131,12 +265,18 @@ async function applyPlanToTenant(
 ) {
   const normalized = normalizePlanKey(planKey);
   const def = getPlanDefinition(normalized);
-  if (!def) return;
+  if (!def) {
+    logger.warn({ tenantId, planKey: normalized }, "applyPlanToTenant: unknown plan key");
+    return false;
+  }
 
   const billingStatus = extra?.billingStatus ?? "Active";
+  const tenantStatus =
+    billingStatus === "Active" || billingStatus === "Trialing" ? billingStatus : "Active";
   const set: Record<string, unknown> = {
     plan: def.displayName,
-    billingStatus,
+    status: tenantStatus,
+    billingStatus: billingStatus === "Incomplete" || billingStatus === "Unpaid" ? "Past Due" : billingStatus,
     limits: { ...def.limits },
     "billing.planKey": normalized,
     "billing.billingStatus": billingStatus,
@@ -156,7 +296,18 @@ async function applyPlanToTenant(
   if (extra?.currentPeriodStart) set["billing.currentPeriodStart"] = extra.currentPeriodStart;
   if (extra?.currentPeriodEnd) set["billing.currentPeriodEnd"] = extra.currentPeriodEnd;
 
-  await TenantModel.updateOne(tenantQuery(tenantId), { $set: set });
+  const query = safeTenantQuery(tenantId);
+  if (!query) {
+    logger.warn({ tenantId, planKey: normalized }, "applyPlanToTenant: invalid tenant id");
+    return false;
+  }
+
+  const result = await TenantModel.updateOne(query, { $set: set });
+  if (result.matchedCount === 0) {
+    logger.warn({ tenantId, planKey: normalized }, "applyPlanToTenant: tenant not found");
+    return false;
+  }
+  return true;
 }
 
 function webAppBaseUrl(): string {
@@ -176,10 +327,6 @@ function webAppBaseUrl(): string {
     return "https://newjob.guru";
   }
   return candidate;
-}
-
-function tenantQuery(tenantId: string) {
-  return { $or: [{ _id: tenantId }, { slug: tenantId }] };
 }
 
 function resolvePlanKey(tenant: { plan?: string; billing?: { planKey?: string } }): SubscriptionPlanKey {
@@ -530,126 +677,160 @@ export async function handleStripeWebhook(input: { event: Record<string, unknown
     }
   };
 
-  switch (eventType) {
-    case "checkout.session.completed": {
-      const metadata = (data.metadata ?? {}) as Record<string, string>;
-      const tenantId = String(metadata.tenantId ?? data.client_reference_id ?? "");
-      const mode = String(data.mode ?? "subscription");
+  try {
+    switch (eventType) {
+      case "checkout.session.completed": {
+        const metadata = (data.metadata ?? {}) as Record<string, string>;
+        const tenantId = String(metadata.tenantId ?? data.client_reference_id ?? "");
+        const mode = String(data.mode ?? "subscription");
 
-      if (mode === "payment" && metadata.creditsPack) {
-        const pack = metadata.creditsPack === "150" ? 150 : 50;
-        if (tenantId) {
-          await TenantModel.updateOne(tenantQuery(tenantId), {
-            $inc: { "usage.purchasedAiCreditsBalance": pack },
-          });
+        if (mode === "payment" && metadata.creditsPack) {
+          const pack = metadata.creditsPack === "150" ? 150 : 50;
+          if (tenantId) {
+            const query = safeTenantQuery(tenantId);
+            if (query) {
+              await TenantModel.updateOne(query, { $inc: { "usage.purchasedAiCreditsBalance": pack } });
+            }
+          }
+          await markProcessed();
+          break;
+        }
+
+        const customerId = extractStripeId(data.customer);
+        const subscriptionId = extractStripeId(data.subscription);
+        let planKey = normalizePlanKey(String(metadata.planKey ?? ""));
+
+        if (planKey === "free" && subscriptionId) {
+          try {
+            const sub = await stripeRequest<{ metadata?: Record<string, string> }>("GET", `/subscriptions/${subscriptionId}`);
+            planKey = normalizePlanKey(String(sub.metadata?.planKey ?? ""));
+          } catch (error) {
+            logger.warn({ subscriptionId, error }, "checkout.session.completed: could not load subscription metadata");
+          }
+        }
+
+        if (!tenantId || planKey === "free") {
+          logger.warn({ eventId, tenantId, planKey, metadata }, "checkout.session.completed: missing tenant or plan");
+          await markProcessed();
+          break;
+        }
+
+        const applied = await applyPlanToTenant(tenantId, planKey, {
+          billingStatus: "Active",
+          stripeCustomerId: customerId || undefined,
+          stripeSubscriptionId: subscriptionId || undefined,
+          cancelAtPeriodEnd: false,
+        });
+
+        if (!applied) {
+          return { received: true, eventId, eventType, handled: false, reason: "tenant not found for checkout" };
+        }
+
+        await markProcessed();
+        break;
+      }
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const customerId = extractStripeId(data.customer);
+        const subscriptionId = extractStripeId(data.id);
+        const subMetadata = (data.metadata ?? {}) as Record<string, string>;
+        const tenantIdHint = String(subMetadata.tenantId ?? "");
+
+        let priceId = extractPriceIdFromSubscriptionObject(data);
+        if (!priceId && subscriptionId) {
+          priceId = await fetchSubscriptionPriceId(subscriptionId);
+        }
+
+        const tenant = await findTenantForStripe({
+          tenantId: tenantIdHint || undefined,
+          customerId: customerId || undefined,
+          subscriptionId: subscriptionId || undefined,
+        });
+
+        if (!tenant) {
+          logger.warn({ eventId, customerId, subscriptionId, tenantIdHint }, "subscription event: tenant not found");
+          await markProcessed();
+          break;
+        }
+
+        const tenantId = String(tenant._id ?? "");
+        const resolvedPlanKey = resolvePlanKeyForStripe({
+          priceId,
+          metadataPlanKey: subMetadata.planKey,
+          tenant,
+        });
+
+        if (resolvedPlanKey === "free") {
+          logger.warn({ eventId, priceId, subscriptionId }, "subscription event: could not resolve plan key");
+          await markProcessed();
+          break;
+        }
+
+        const billingStatus = stripeStatusToBillingStatus(String(data.status ?? ""));
+        const cancelAtPeriodEnd = Boolean(data.cancel_at_period_end);
+        const periodStart = parseStripeUnixSeconds(data.current_period_start);
+        const periodEnd = parseStripeUnixSeconds(data.current_period_end);
+
+        await applyPlanToTenant(tenantId, resolvedPlanKey, {
+          billingStatus: cancelAtPeriodEnd && billingStatus === "Active" ? "Active" : billingStatus,
+          stripeCustomerId: customerId || undefined,
+          stripeSubscriptionId: subscriptionId || undefined,
+          stripePriceId: priceId,
+          cancelAtPeriodEnd,
+          currentPeriodStart: periodStart,
+          currentPeriodEnd: periodEnd,
+        });
+
+        await markProcessed();
+        break;
+      }
+      case "customer.subscription.deleted": {
+        const subscriptionId = extractStripeId(data.id);
+        const tenant = await findTenantForStripe({ subscriptionId });
+        const tenantId = String(tenant?._id ?? "");
+        if (!tenantId) {
+          await markProcessed();
+          break;
+        }
+        await applyPlanToTenant(tenantId, "free", {
+          billingStatus: "Cancelled",
+          cancelAtPeriodEnd: false,
+        });
+        await markProcessed();
+        break;
+      }
+      case "invoice.payment_succeeded": {
+        const customerId = extractStripeId(data.customer);
+        if (customerId) {
+          await TenantModel.updateOne(
+            { $or: [{ "billing.stripeCustomerId": customerId }, { stripeCustomerId: customerId }] },
+            { $set: { billingStatus: "Active", "billing.billingStatus": "Active", status: "Active" } }
+          );
         }
         await markProcessed();
         break;
       }
-
-      const planKey = normalizePlanKey(String(metadata.planKey ?? ""));
-      const customerId = String(data.customer ?? "");
-      const subscriptionId = String(data.subscription ?? "");
-      if (!tenantId || planKey === "free") break;
-      await applyPlanToTenant(tenantId, planKey, {
-        billingStatus: "Active",
-        stripeCustomerId: customerId || undefined,
-        stripeSubscriptionId: subscriptionId || undefined,
-        cancelAtPeriodEnd: false,
-      });
-      await markProcessed();
-      break;
-    }
-    case "customer.subscription.created":
-    case "customer.subscription.updated": {
-      const customerId = String(data.customer ?? "");
-      const subscriptionId = String(data.id ?? "");
-      const cancelAtPeriodEnd = Boolean(data.cancel_at_period_end);
-      const rawStatus = String(data.status ?? "");
-      const billingStatus: BillingStatus =
-        rawStatus === "active"
-          ? "Active"
-          : rawStatus === "trialing"
-            ? "Trialing"
-            : rawStatus === "past_due"
-              ? "Past Due"
-              : rawStatus === "canceled"
-                ? "Cancelled"
-                : "Cancelled";
-      const periodStart = data.current_period_start ? new Date(Number(data.current_period_start) * 1000) : undefined;
-      const periodEnd = data.current_period_end ? new Date(Number(data.current_period_end) * 1000) : undefined;
-      const subMetadata = (data.metadata ?? {}) as Record<string, string>;
-      const items = (data.items as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data ?? [];
-      const priceId = items[0]?.price?.id;
-      const planKey =
-        planKeyFromStripePriceId(priceId) ??
-        (subMetadata.planKey as SubscriptionPlanKey | undefined) ??
-        null;
-
-      const filter = subscriptionId
-        ? { "billing.stripeSubscriptionId": subscriptionId }
-        : customerId
-          ? { "billing.stripeCustomerId": customerId }
-          : null;
-      if (!filter) break;
-
-      const tenant = await TenantModel.findOne(filter).lean() as Record<string, unknown> | null;
-      const tenantId = String(tenant?._id ?? "");
-      if (!tenantId) break;
-
-      const resolvedPlanKey =
-        planKey && PLAN_DEFINITIONS[planKey]
-          ? planKey
-          : resolvePlanKey((tenant ?? {}) as { plan?: string; billing?: { planKey?: string } });
-
-      await applyPlanToTenant(tenantId, resolvedPlanKey, {
-        billingStatus: cancelAtPeriodEnd && billingStatus === "Active" ? "Active" : billingStatus,
-        stripeCustomerId: customerId || undefined,
-        stripeSubscriptionId: subscriptionId || undefined,
-        stripePriceId: priceId,
-        cancelAtPeriodEnd,
-        currentPeriodStart: periodStart,
-        currentPeriodEnd: periodEnd,
-      });
-      await markProcessed();
-      break;
-    }
-    case "customer.subscription.deleted": {
-      const subscriptionId = String(data.id ?? "");
-      const tenant = await TenantModel.findOne({ "billing.stripeSubscriptionId": subscriptionId }).lean() as Record<string, unknown> | null;
-      const tenantId = String(tenant?._id ?? "");
-      if (!tenantId) break;
-      await applyPlanToTenant(tenantId, "free", {
-        billingStatus: "Cancelled",
-        cancelAtPeriodEnd: false,
-      });
-      await markProcessed();
-      break;
-    }
-    case "invoice.payment_succeeded": {
-      const customerId = String(data.customer ?? "");
-      if (customerId) {
-        await TenantModel.updateOne({ "billing.stripeCustomerId": customerId }, {
-          $set: { billingStatus: "Active", "billing.billingStatus": "Active" },
-        });
+      case "invoice.payment_failed": {
+        const customerId = extractStripeId(data.customer);
+        if (customerId) {
+          await TenantModel.updateOne(
+            { $or: [{ "billing.stripeCustomerId": customerId }, { stripeCustomerId: customerId }] },
+            { $set: { billingStatus: "Past Due", "billing.billingStatus": "Past Due" } }
+          );
+        }
+        await markProcessed();
+        break;
       }
-      await markProcessed();
-      break;
+      case "customer.subscription.trial_will_end": {
+        await markProcessed();
+        break;
+      }
+      default:
+        return { received: true, eventId, eventType, handled: false };
     }
-    case "invoice.payment_failed": {
-      const customerId = String(data.customer ?? "");
-      await TenantModel.updateOne({ "billing.stripeCustomerId": customerId }, {
-        $set: { billingStatus: "Past Due", "billing.billingStatus": "Past Due" },
-      });
-      await markProcessed();
-      break;
-    }
-    case "customer.subscription.trial_will_end": {
-      await markProcessed();
-      break;
-    }
-    default:
-      return { received: true, eventId, eventType, handled: false };
+  } catch (error) {
+    logger.error({ eventId, eventType, error }, "Stripe webhook handler failed");
+    throw error;
   }
 
   return { received: true, eventId, eventType, handled: true };
