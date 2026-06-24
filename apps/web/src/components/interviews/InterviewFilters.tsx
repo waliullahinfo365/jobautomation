@@ -67,9 +67,9 @@ export function InterviewFilters({
             { label: t("interviews.interviewStatus.noShow"), value: "No Show" },
           ]}
         />
-        <div className="flex gap-2">
+        <div className="filter-reset-row">
           <Select
-            className="flex-1"
+            className="w-full sm:flex-1"
             value={filters.dateRange}
             onChange={(e) => onChange({ ...filters, dateRange: e.target.value as InterviewFilterState["dateRange"] })}
             options={[
@@ -78,7 +78,7 @@ export function InterviewFilters({
               { label: t("interviews.filters.nextWeek"), value: "Next Week" },
             ]}
           />
-          <Button variant="outline" onClick={onClear}>
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onClear}>
             {t("interviews.filters.clear")}
           </Button>
         </div>

@@ -18,7 +18,7 @@ export function MotionCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
       whileHover={{ y: -2 }}
-      className={cn("premium-card", className)}
+      className={cn("premium-card min-w-0 overflow-hidden", className)}
     >
       {children}
     </motion.div>

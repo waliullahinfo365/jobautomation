@@ -53,6 +53,51 @@
   min-width: 44px;
 }
 
+/* Shared mobile card patterns */
+.mobile-list-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mobile-card-actions {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-card-actions > button,
+.mobile-card-actions > a {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .mobile-card-actions--row-sm {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .mobile-card-actions--row-sm > button,
+  .mobile-card-actions--row-sm > a {
+    width: auto;
+    flex: 1 1 auto;
+  }
+}
+
+.filter-reset-row {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .filter-reset-row {
+    flex-direction: row;
+  }
+}
+
 .dashboard-bg {
   overflow-x: clip;
 }

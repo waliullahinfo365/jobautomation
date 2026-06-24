@@ -231,7 +231,7 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
       </div>
 
       {/* Action buttons */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
         {(["reject", "later", "save", "apply"] as ReviewAction[]).map((action) => {
           const cfg = ACTION_LABELS[action];
           const isActive = activeButton === action;

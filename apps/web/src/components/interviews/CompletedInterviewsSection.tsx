@@ -37,11 +37,11 @@ export function CompletedInterviewsSection({ interviews }: { interviews: Complet
       <SectionCard title={t("interviews.completed.title")} description={t("interviews.completed.subtitle")} contentClassName="p-0">
         <div className="grid gap-3 p-4 md:hidden">
           {interviews.map((iv) => (
-            <article key={iv.id} className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold text-[var(--text-1)]">{iv.company}</h3>
-                  <p className="mt-0.5 truncate text-xs text-[var(--text-3)]">{iv.position}</p>
+            <article key={iv.id} className="mobile-list-card rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-1)]">{iv.company}</h3>
+                  <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-[var(--text-3)]">{iv.position}</p>
                 </div>
                 <span className="shrink-0 text-xs text-[var(--text-3)]">{dateFmt.format(new Date(iv.completedDate))}</span>
               </div>

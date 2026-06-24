@@ -30,7 +30,7 @@ export function DailyDigestPreview({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           <Metric label={t("reports.newJobs")} value={digest.newJobsDetected} />
           <Metric label={t("reports.applicationsSent")} value={digest.applicationsSent} />
           <Metric label={t("reports.followUpsDue")} value={digest.followUpsDue} />

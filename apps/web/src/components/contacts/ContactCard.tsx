@@ -31,67 +31,61 @@ export function ContactCard({ contact, onView, onMarkFollowedUp }: ContactCardPr
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border bg-[var(--surface-1)] p-4 shadow-sm transition-shadow hover:shadow-md",
+        "mobile-list-card flex flex-col gap-3 rounded-xl border bg-[var(--surface-1)] p-4 shadow-sm transition-shadow hover:shadow-md",
         followUpDue ? "border-amber-500/40" : "border-[var(--border-default)]"
       )}
     >
-      {/* Header */}
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent-bg)] text-[13px] font-bold text-[var(--accent-hi)]">
           {initials}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold text-[var(--text-1)]">{contact.name}</p>
-          <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-3)]">
+          <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-[var(--text-1)]">{contact.name}</p>
+          <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-[var(--text-3)]">
             {contact.role || contact.title}{contact.company ? ` · ${contact.company}` : ""}
           </p>
         </div>
         <ContactRelationshipBadge relationship={contact.relationship} />
       </div>
 
-      {/* Related job */}
-      {relatedJob && (
-        <div className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[12px] text-[var(--text-3)]">
+      {relatedJob ? (
+        <div className="flex min-w-0 items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[12px] text-[var(--text-3)]">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-hi)]" />
-          <span className="truncate">{relatedJob.position} at {relatedJob.company}</span>
+          <span className="min-w-0 break-words">{relatedJob.position} at {relatedJob.company}</span>
         </div>
-      )}
+      ) : null}
 
-      {/* Meta */}
-      <div className="flex flex-wrap items-center justify-between gap-1 text-[11.5px] text-[var(--text-4)]">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-[var(--text-4)]">
         <span>Last contact: {timeAgoShort(contact.lastContacted ?? contact.lastContactedAt)}</span>
-        {contact.followUpStatus !== "Not Needed" && (
-          <ContactFollowUpStatusBadge status={contact.followUpStatus} />
-        )}
+        {contact.followUpStatus !== "Not Needed" ? <ContactFollowUpStatusBadge status={contact.followUpStatus} /> : null}
       </div>
 
-      {/* Actions */}
-      {(onView || onMarkFollowedUp) && (
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {onView && (
-            <Button size="sm" variant="outline" className="flex-1 text-[12px]" onClick={() => onView(contact)}>
+      {(onView || onMarkFollowedUp) ? (
+        <div className="mobile-card-actions pt-1">
+          {onView ? (
+            <Button size="sm" variant="outline" className="min-h-[44px] text-[12px]" onClick={() => onView(contact)}>
               View
             </Button>
-          )}
-          {followUpDue && onMarkFollowedUp && (
+          ) : null}
+          {followUpDue && onMarkFollowedUp ? (
             <Button
               size="sm"
-              className="flex-1 bg-amber-500/15 text-amber-700 text-[12px] hover:bg-amber-500/25 border-0"
+              className="min-h-[44px] border-0 bg-amber-500/15 text-[12px] text-amber-700 hover:bg-amber-500/25"
               onClick={() => onMarkFollowedUp(contact.id)}
             >
               Mark contacted
             </Button>
-          )}
-          {contact.email && (
+          ) : null}
+          {contact.email ? (
             <a
               href={`mailto:${contact.email}`}
-              className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border-default)] px-3 text-[12px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-[var(--border-default)] px-3 text-center text-[12px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
             >
               Email
             </a>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

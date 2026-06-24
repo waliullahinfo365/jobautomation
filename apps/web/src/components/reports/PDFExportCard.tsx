@@ -28,11 +28,11 @@ export function PDFExportCard({
     }).format(new Date(iso));
 
   return (
-    <article className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <article className="mobile-list-card rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-[var(--text-1)]">{record.documentName}</h3>
-          <p className="mt-0.5 truncate text-xs text-[var(--text-3)]">{record.relatedJob || "—"}</p>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-1)]">{record.documentName}</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--text-3)]">{record.relatedJob || "—"}</p>
         </div>
         <ReportTypeBadge type={record.type} />
       </div>
@@ -43,12 +43,12 @@ export function PDFExportCard({
         />
         <span className="text-xs text-[var(--text-4)]">{fmt(record.createdAt)}</span>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 mobile-card-actions">
         {record.exportPublicUrl ? (
           <Button
             type="button"
             variant="outline"
-            className="col-span-2 w-full"
+            className="col-span-2 w-full min-h-[44px]"
             onClick={() => window.open(record.exportPublicUrl, "_blank", "noopener,noreferrer")}
           >
             {t("reports.openPdf")}

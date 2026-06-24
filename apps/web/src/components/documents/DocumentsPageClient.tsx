@@ -506,13 +506,13 @@ export function DocumentsPageClient() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Active CV / Resume</p>
-          <p className="mt-2 truncate text-sm font-semibold text-[var(--text-1)]">{activeCv?.fileName ?? "—"}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" type="button" onClick={() => setUploadOpen(true)}>
+          <p className="mt-2 line-clamp-2 break-all text-sm font-semibold leading-snug text-[var(--text-1)]">{activeCv?.fileName ?? "—"}</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button size="sm" variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setUploadOpen(true)}>
               Upload New Version
             </Button>
             {activeCv ? (
-              <Button size="sm" variant="ghost" type="button" onClick={() => handleOpenFolder(activeCv)}>
+              <Button size="sm" variant="ghost" type="button" className="w-full sm:w-auto" onClick={() => handleOpenFolder(activeCv)}>
                 Download/Open in Drive
               </Button>
             ) : null}
@@ -520,13 +520,13 @@ export function DocumentsPageClient() {
         </div>
         <div className="rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Active Cover Letter Template</p>
-          <p className="mt-2 truncate text-sm font-semibold text-[var(--text-1)]">{activeTemplate?.fileName ?? "—"}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" type="button" onClick={() => setUploadOpen(true)}>
+          <p className="mt-2 line-clamp-2 break-all text-sm font-semibold leading-snug text-[var(--text-1)]">{activeTemplate?.fileName ?? "—"}</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button size="sm" variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setUploadOpen(true)}>
               Upload New Version
             </Button>
             {activeTemplate ? (
-              <Button size="sm" variant="ghost" type="button" onClick={() => handleOpenFolder(activeTemplate)}>
+              <Button size="sm" variant="ghost" type="button" className="w-full sm:w-auto" onClick={() => handleOpenFolder(activeTemplate)}>
                 Download/Open in Drive
               </Button>
             ) : null}

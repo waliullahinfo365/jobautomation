@@ -279,7 +279,7 @@ export function IntegrationConnectModal({
                   <li>Password: Gmail App Password (not your login password)</li>
                 </ul>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">{t("integrations.modal.smtpHost")}</p>
                   <Input

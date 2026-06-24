@@ -83,24 +83,25 @@ export function ResearchDocsSection({ records }: { records: ResearchDocumentReco
       <SectionCard title={t("documents.research.title")} description={t("documents.research.subtitle")}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {records.map((r) => (
-            <Card key={r.id}>
+            <Card key={r.id} className="min-w-0 overflow-hidden">
               <CardContent className="space-y-3 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-[var(--text-1)]">{r.documentName}</p>
-                    <p className="text-xs text-[var(--text-3)]">{r.company} · {r.position}</p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 font-medium leading-snug text-[var(--text-1)]">{r.documentName}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--text-3)]">{r.company} · {r.position}</p>
                   </div>
                   <DocumentStatusBadge status={r.researchStatus} />
                 </div>
-                <p className="text-sm text-[var(--text-2)]">{r.aiSummarySnippet}</p>
+                <p className="text-sm leading-relaxed text-[var(--text-2)]">{r.aiSummarySnippet}</p>
                 <p className="text-xs text-[var(--text-3)]">{t("documents.research.created")} {dateFmt.format(new Date(r.createdAt))}</p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => void openRecord(r)}>
+                <div className="mobile-card-actions">
+                  <Button size="sm" variant="outline" className="min-h-[44px]" onClick={() => void openRecord(r)}>
                     {t("documents.actions.viewResearch")}
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
+                    className="min-h-[44px]"
                     disabled={updating === r.id}
                     onClick={() => void handleUpdate(r)}
                   >

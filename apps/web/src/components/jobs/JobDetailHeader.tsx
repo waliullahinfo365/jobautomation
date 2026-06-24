@@ -24,7 +24,7 @@ export function JobDetailHeader({ job, renderActions }: JobDetailHeaderProps) {
             <JobPriorityBadge priority={job.priority} />
           </div>
         </div>
-        <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden">
           {renderActions ?? (
             <>
               <Button variant="outline">{t("jobs.editJob")}</Button>

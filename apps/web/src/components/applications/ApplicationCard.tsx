@@ -43,20 +43,18 @@ export function ApplicationCard({ application: app, onView, onMarkFollowUpSent }
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border bg-[var(--surface-1)] p-4 shadow-sm transition-shadow hover:shadow-md",
+        "mobile-list-card flex flex-col gap-3 rounded-xl border bg-[var(--surface-1)] p-4 shadow-sm transition-shadow hover:shadow-md",
         followUpDue ? "border-amber-500/40" : "border-[var(--border-default)]"
       )}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold text-[var(--text-1)]">{app.position}</p>
-          <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">{app.company}</p>
+          <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-[var(--text-1)]">{app.position}</p>
+          <p className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-[var(--text-3)]">{app.company}</p>
         </div>
         <ApplicationStatusBadge status={app.applicationStatus} />
       </div>
 
-      {/* Next action */}
       <div
         className={cn(
           "flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium",
@@ -69,39 +67,26 @@ export function ApplicationCard({ application: app, onView, onMarkFollowUpSent }
         {nextAction.label}
       </div>
 
-      {/* Meta */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[var(--text-4)]">
-        {app.dateApplied && (
-          <span>Applied {timeAgoShort(app.dateApplied)}</span>
-        )}
-        {app.source && <span>· {app.source}</span>}
-        {app.followUpStatus !== "Not Needed" && (
-          <span className="ml-auto">
-            <FollowUpStatusBadge status={app.followUpStatus} />
-          </span>
-        )}
+        {app.dateApplied ? <span>Applied {timeAgoShort(app.dateApplied)}</span> : null}
+        {app.source ? <span>· {app.source}</span> : null}
+        {app.followUpStatus !== "Not Needed" ? <FollowUpStatusBadge status={app.followUpStatus} /> : null}
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <Button
-          size="sm"
-          variant="outline"
-          className="flex-1 text-[12px]"
-          onClick={() => onView(app)}
-        >
+      <div className="mobile-card-actions pt-1">
+        <Button size="sm" variant="outline" className="min-h-[44px] text-[12px]" onClick={() => onView(app)}>
           View
         </Button>
-        {followUpDue && (
+        {followUpDue ? (
           <Button
             size="sm"
-            className="flex-1 bg-amber-500/15 text-amber-700 text-[12px] hover:bg-amber-500/25 border-0"
+            className="min-h-[44px] border-0 bg-amber-500/15 text-[12px] text-amber-700 hover:bg-amber-500/25"
             onClick={() => onMarkFollowUpSent(app.id)}
           >
             Mark follow-up sent
           </Button>
-        )}
-        {app.contactEmail && (
+        ) : null}
+        {app.contactEmail ? (
           <a
             href={
               app.providerThreadId
@@ -110,11 +95,11 @@ export function ApplicationCard({ application: app, onView, onMarkFollowUpSent }
             }
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-[var(--border-default)] px-3 text-[12px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-[var(--border-default)] px-3 text-center text-[12px] font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
           >
             Email
           </a>
-        )}
+        ) : null}
       </div>
     </div>
   );

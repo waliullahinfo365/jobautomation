@@ -34,13 +34,13 @@ export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDi
         "mobile-sticky-above-nav md:left-[var(--sidebar-width,0px)]"
       )}
     >
-      <div className="mx-auto flex max-w-lg gap-2">
+      <div className="mx-auto flex max-w-lg flex-col gap-2 sm:flex-row">
         {showAutoApply ? (
           <Button
             type="button"
             variant="outline"
             size="lg"
-            className="shrink-0 min-h-[44px]"
+            className="min-h-[44px] w-full sm:shrink-0 sm:w-auto"
             disabled={autoApplyDisabled || autoApplyLoading}
             onClick={onAutoApply}
           >
@@ -49,7 +49,7 @@ export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDi
         ) : null}
         <Link
           href={`/jobs/${jobId}/apply`}
-          className="flex min-h-[44px] flex-1 items-center justify-center rounded-xl bg-[var(--accent-hi)] px-4 text-sm font-semibold text-white hover:brightness-110"
+          className="flex min-h-[44px] w-full flex-1 items-center justify-center rounded-xl bg-[var(--accent-hi)] px-4 text-sm font-semibold text-white hover:brightness-110 sm:w-auto"
         >
           {t("applyAssistant.applyCta")}
         </Link>

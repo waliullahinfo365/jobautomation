@@ -52,10 +52,10 @@ export function ReportHistoryCard({
   const rawLabel = deliveryLabelRaw(record);
 
   return (
-    <article className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <article className="mobile-list-card rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-[var(--text-1)]">{record.reportName}</h3>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-1)]">{record.reportName}</h3>
           <p className="mt-0.5 text-xs text-[var(--text-3)]">{record.sentTo || "—"}</p>
         </div>
         <ReportTypeBadge type={record.type} />
@@ -67,14 +67,14 @@ export function ReportHistoryCard({
           {DELIVERY_LABEL_KEY[rawLabel] ? t(DELIVERY_LABEL_KEY[rawLabel]) : rawLabel}
         </span>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" className="w-full" onClick={() => onView?.(record)}>
+      <div className="mt-4 mobile-card-actions">
+        <Button type="button" variant="outline" className="min-h-[44px]" onClick={() => onView?.(record)}>
           {t("reports.history.view")}
         </Button>
         <Button
           type="button"
           variant="secondary"
-          className="w-full"
+          className="min-h-[44px]"
           onClick={() => onSendTest?.(record)}
           disabled={busyId === record.id}
         >

@@ -157,7 +157,7 @@ export function AutomationModuleCard({ module, variant = "default", onView, onTo
             </div>
           )}
 
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[var(--text-3)]">
+          <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[var(--text-3)] sm:grid-cols-2">
             <span>
               {isDash ? t("dashboard.automationHealth.totalRuns") : t("automation.moduleCard.totalRunsLabel")}: {module.totalRuns}
             </span>
@@ -184,16 +184,16 @@ export function AutomationModuleCard({ module, variant = "default", onView, onTo
             </div>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => onView?.(module)}>
+          <div className="mt-4 mobile-card-actions mobile-card-actions--row-sm">
+            <Button size="sm" variant="outline" className="min-h-[44px] sm:w-auto" onClick={() => onView?.(module)}>
               <EyeIcon size={14} className="mr-1" />
               {isDash ? t("dashboard.automationHealth.details") : t("automation.moduleCard.viewDetails")}
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => onConfigure?.(module)}>
+            <Button size="sm" variant="secondary" className="min-h-[44px] sm:w-auto" onClick={() => onConfigure?.(module)}>
               {isDash ? t("dashboard.automationHealth.configure") : t("automation.moduleCard.configure")}
             </Button>
             {canToggle ? (
-              <Button size="sm" variant="ghost" onClick={() => onToggle?.(module.id, nextStatus)}>
+              <Button size="sm" variant="ghost" className="min-h-[44px] sm:w-auto" onClick={() => onToggle?.(module.id, nextStatus)}>
                 {module.status === "Active" ? t("automation.moduleCard.pause") : t("automation.moduleCard.resume")}
               </Button>
             ) : null}

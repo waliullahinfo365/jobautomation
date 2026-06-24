@@ -407,7 +407,7 @@ export function ManualApplyAssistantClient() {
         </div>
 
         <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setAnswerMode("type")}
@@ -563,7 +563,7 @@ export function ManualApplyAssistantClient() {
           <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-xl md:rounded-2xl">
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-subtle)] md:hidden" aria-hidden />
             <h3 className="text-base font-semibold text-[var(--text-1)]">{t("applyAssistant.completeTitle")}</h3>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               {(
                 [
                   ["Applied", t("applyAssistant.statusApplied")],

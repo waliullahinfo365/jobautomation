@@ -62,9 +62,9 @@ export function ReportFilters({
             { label: t("reports.filters.scheduled"), value: "Scheduled" },
           ]}
         />
-        <div className="flex gap-2">
+        <div className="filter-reset-row">
           <Select
-            className="flex-1"
+            className="w-full sm:flex-1"
             value={filters.dateRange}
             onChange={(e) => onChange({ ...filters, dateRange: e.target.value as ReportFilterState["dateRange"] })}
             options={[
@@ -73,7 +73,7 @@ export function ReportFilters({
               { label: t("reports.filters.last30Days"), value: "Last 30 Days" },
             ]}
           />
-          <Button variant="outline" onClick={onClear}>
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onClear}>
             {t("reports.filters.clear")}
           </Button>
         </div>

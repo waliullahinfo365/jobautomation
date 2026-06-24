@@ -34,7 +34,7 @@ export function ReportsOverview({ summary, weeklyTrendData, statusBreakdownData,
     <div className="space-y-6">
       <Card>
         <CardHeader><CardTitle>{t("reports.performanceSummary")}</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
           {stats.map(([label, value]) => (
             <div key={String(label)} className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
               <p className="text-xs text-[var(--text-3)]">{label}</p>

@@ -28,7 +28,7 @@ export function WeeklyReportPreview({
           <CardDescription>{report.weekRange}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
             <Metric label={t("reports.weekly.totalJobsFound")} value={report.totalJobsFound} />
             <Metric label={t("reports.weekly.applicationsSubmitted")} value={report.applicationsSubmitted} />
             <Metric label={t("reports.weekly.responseRate")} value={`${report.responseRate}%`} />

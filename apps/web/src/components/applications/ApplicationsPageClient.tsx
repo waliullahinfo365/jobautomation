@@ -493,7 +493,7 @@ export function ApplicationsPageClient() {
         ) : (
           <>
             {/* Mobile: card grid */}
-            <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+            <div className="grid min-w-0 gap-3 md:hidden">
               {filteredApplications.map((app) => (
                 <ApplicationCard
                   key={app.id}

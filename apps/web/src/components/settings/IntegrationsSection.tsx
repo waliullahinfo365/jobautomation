@@ -605,7 +605,7 @@ export function IntegrationsSection() {
         <ApiStatusIndicator usingMock={isUsingFallback} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-3">
         <HealthMini label={t("integrations.connected")} value={healthSummary.connected} />
         <HealthMini label={t("integrations.needsAttention")} value={healthSummary.needsAttention} />
         <HealthMini label={t("integrations.notConnected")} value={healthSummary.notConnected} />

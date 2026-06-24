@@ -23,7 +23,7 @@ export function DailyDigestCard({ report }: DailyDigestCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
           {[
             { label: t("reports.digestCard.totalJobs"), value: report.totalJobs },
             { label: t("reports.digestCard.active"), value: report.activeJobs },

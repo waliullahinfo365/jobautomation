@@ -86,9 +86,9 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
           ]}
         />
 
-        <div className="flex gap-2">
+        <div className="filter-reset-row">
           <Select
-            className="flex-1"
+            className="w-full sm:flex-1"
             value={filters.dateRange}
             onChange={(e) => onChange({ ...filters, dateRange: e.target.value as ApplicationFilterState["dateRange"] })}
             options={[
@@ -97,7 +97,7 @@ export function ApplicationFilters({ filters, onChange, onClear, aside }: Applic
               { label: t("applications.filters.last30Days"), value: "Last 30 Days" },
             ]}
           />
-          <Button variant="outline" onClick={onClear}>
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onClear}>
             {t("applications.filters.clear")}
           </Button>
         </div>

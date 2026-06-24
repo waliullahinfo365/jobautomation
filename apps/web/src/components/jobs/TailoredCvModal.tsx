@@ -339,7 +339,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
             </div>
 
             {/* Tabs */}
-            <div className="-mx-1 flex gap-1 overflow-x-auto overscroll-x-contain rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-1 sm:mx-0">
+            <div className="flex gap-1 overflow-x-auto overscroll-x-contain rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-1 sm:flex-wrap sm:overflow-visible">
               {tabs.map((tabItem) => (
                 <button
                   key={tabItem.id}
