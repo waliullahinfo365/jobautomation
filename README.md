@@ -76,3 +76,4 @@ GitHub Actions (`.github/workflows/ci.yml`) runs install, type-check, and builds
 ## License
 
 Private / proprietary unless otherwise stated.
+# job-automation
