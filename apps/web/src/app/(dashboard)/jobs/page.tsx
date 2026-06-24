@@ -306,7 +306,7 @@ export default function JobsPage() {
       </div>
 
       {/* Mobile: card grid always */}
-      <div className="grid gap-3 sm:grid-cols-2 md:hidden">
+      <div className="grid min-w-0 gap-3 md:hidden">
         {filteredJobs.map((job, index) => (
           <JobCard key={job.id ? job.id : `job-card-${index}`} job={job} />
         ))}

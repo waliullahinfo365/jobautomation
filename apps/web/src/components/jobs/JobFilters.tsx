@@ -77,7 +77,7 @@ export function JobFilters({ filters, onChange, onClear }: JobFiltersProps) {
           }))}
         />
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Select
             value={filters.source ?? "All"}
             onChange={(e) => onChange({ ...filters, source: e.target.value as JobFiltersType["source"] })}
@@ -85,9 +85,9 @@ export function JobFilters({ filters, onChange, onClear }: JobFiltersProps) {
               value: String(value),
               label: jobFilterSourceLabel(value as JobFiltersType["source"], t),
             }))}
-            className="flex-1"
+            className="w-full sm:flex-1"
           />
-          <Button type="button" variant="outline" onClick={onClear}>
+          <Button type="button" variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onClear}>
             {t("jobs.clear")}
           </Button>
         </div>

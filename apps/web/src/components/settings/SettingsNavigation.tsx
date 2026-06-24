@@ -55,7 +55,7 @@ export function SettingsNavigation({ sections, activeSection, onChange }: Settin
 
   return (
     <>
-      <div className="sticky top-0 z-10 -mx-1 bg-[var(--bg-0)]/95 pb-2 backdrop-blur-sm lg:hidden">
+      <div className="sticky top-0 z-10 bg-[var(--bg-0)]/95 pb-2 backdrop-blur-sm lg:hidden">
         <ScrollableTabBar className="px-1">
           {sections.map(tabButton)}
         </ScrollableTabBar>

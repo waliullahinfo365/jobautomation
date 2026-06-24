@@ -66,9 +66,9 @@ export function DocumentFilters({
             { label: t("documents.documentStatus.archived"), value: "Archived" },
           ]}
         />
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Select
-            className="flex-1"
+            className="w-full sm:flex-1"
             value={filters.relatedJob}
             onChange={(e) => onChange({ ...filters, relatedJob: e.target.value as DocumentFilterState["relatedJob"] })}
             options={[
@@ -76,7 +76,7 @@ export function DocumentFilters({
               { label: t("documents.filters.recentJobs"), value: "Recent Jobs" },
             ]}
           />
-          <Button variant="outline" onClick={onClear}>
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={onClear}>
             {t("documents.filters.clear")}
           </Button>
         </div>

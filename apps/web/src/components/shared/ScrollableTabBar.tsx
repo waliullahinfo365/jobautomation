@@ -13,7 +13,7 @@ export function ScrollableTabBar({ children, className, innerClassName }: Scroll
   return (
     <div
       className={cn(
-        "-mx-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "overflow-x-auto px-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
     >

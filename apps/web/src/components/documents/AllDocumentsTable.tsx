@@ -77,7 +77,7 @@ export function AllDocumentsTable({
   return (
     <>
       <SectionCard title={t("documents.all.title")} description={t("documents.all.subtitle")} contentClassName="p-0 md:p-0">
-        <div className="grid gap-3 p-4 md:hidden">
+        <div className="grid gap-3 p-3 sm:gap-3 sm:p-4 md:hidden">
           {records.map((record) => (
             <DocumentCard
               key={record.id}

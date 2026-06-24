@@ -27,12 +27,52 @@ export function DocumentCard({
   const bcp47 = locale === "de" ? "de-DE" : "en-US";
   const dateFmt = new Intl.DateTimeFormat(bcp47, { month: "short", day: "numeric", year: "numeric" });
 
+  const secondaryActions = [
+    onExportPdf
+      ? {
+          key: "export",
+          label: t("documents.actions.exportPdf"),
+          onClick: () => void onExportPdf(record),
+          variant: "secondary" as const,
+        }
+      : null,
+    record.type === "CV" && onRouteCv
+      ? {
+          key: "route",
+          label: t("documents.actions.routeCv"),
+          onClick: () => void onRouteCv(record),
+          variant: "outline" as const,
+        }
+      : null,
+    (record.type === "CV" || record.type === "Cover Letter Template") && onSetActive
+      ? {
+          key: "active",
+          label: record.isActiveProfileDocument ? "Active" : "Set as Active",
+          onClick: () => void onSetActive(record),
+          variant: "outline" as const,
+        }
+      : null,
+    onOpenFolder
+      ? {
+          key: "folder",
+          label: t("documents.actions.openFolder"),
+          onClick: () => void onOpenFolder(record),
+          variant: "ghost" as const,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    key: string;
+    label: string;
+    onClick: () => void;
+    variant: "secondary" | "outline" | "ghost";
+  }>;
+
   return (
-    <article className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
+    <article className="min-w-0 overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-sm">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-[var(--text-1)]">{record.fileName}</h3>
-          <p className="mt-0.5 truncate text-xs text-[var(--text-3)]">
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-1)]">{record.fileName}</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--text-3)]">
             {[record.company, record.relatedJob].filter(Boolean).join(" · ") || "—"}
           </p>
         </div>
@@ -50,41 +90,25 @@ export function DocumentCard({
       </div>
 
       {record.storageLocation ? (
-        <p className="mt-2 truncate text-xs text-[var(--text-3)]">{record.storageLocation}</p>
+        <p className="mt-2 break-all text-xs leading-relaxed text-[var(--text-3)]">{record.storageLocation}</p>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button type="button" variant="outline" size="lg" className="min-h-[44px] w-full" onClick={() => onView(record)}>
+      <div className="mt-4 flex min-w-0 flex-col gap-2">
+        <Button type="button" variant="outline" size="lg" className="h-11 min-h-[44px] w-full min-w-0" onClick={() => onView(record)}>
           {t("documents.actions.view")}
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          className="min-h-[44px] w-full"
-          onClick={() => void onExportPdf?.(record)}
-        >
-          {t("documents.actions.exportPdf")}
-        </Button>
-        {record.type === "CV" ? (
-          <Button type="button" variant="outline" size="lg" className="min-h-[44px] w-full" onClick={() => void onRouteCv?.(record)}>
-            {t("documents.actions.routeCv")}
+        {secondaryActions.map((action) => (
+          <Button
+            key={action.key}
+            type="button"
+            variant={action.variant}
+            size="lg"
+            className="h-11 min-h-[44px] w-full min-w-0 whitespace-normal text-center leading-tight"
+            onClick={action.onClick}
+          >
+            {action.label}
           </Button>
-        ) : null}
-        {record.type === "CV" || record.type === "Cover Letter Template" ? (
-          <Button type="button" variant="outline" size="lg" className="min-h-[44px] w-full" onClick={() => void onSetActive?.(record)}>
-            {record.isActiveProfileDocument ? "Active" : "Set as Active"}
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="min-h-[44px] w-full col-span-2"
-          onClick={() => void onOpenFolder?.(record)}
-        >
-          {t("documents.actions.openFolder")}
-        </Button>
+        ))}
       </div>
     </article>
   );

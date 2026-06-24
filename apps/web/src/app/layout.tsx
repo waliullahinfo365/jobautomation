@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${poppins.variable} ${poppins.className} min-h-screen bg-background font-sans text-foreground antialiased`}
+        className={`${poppins.variable} ${poppins.className} min-h-screen overflow-x-clip bg-background font-sans text-foreground antialiased`}
         style={
           {
             "--font-display": "var(--font-ui)",

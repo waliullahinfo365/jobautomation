@@ -27,9 +27,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
           <div className="flex min-w-0 flex-col overflow-x-hidden bg-[var(--bg-0)]">
             <MobileNav />
             <Topbar />
-            <main className="flex-1 overflow-y-auto">
+            <main className="flex-1 overflow-x-clip overflow-y-auto">
               <PageTransition>
-                <div className="mx-auto w-full min-w-0 max-w-[1480px] px-3 py-5 pb-mobile-shell sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">{children}</div>
+                <div className="mx-auto w-full min-w-0 max-w-[1480px] overflow-x-clip px-3 py-5 pb-mobile-shell sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">{children}</div>
               </PageTransition>
             </main>
             <BottomNav />

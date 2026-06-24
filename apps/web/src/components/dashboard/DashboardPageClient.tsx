@@ -199,7 +199,7 @@ export function DashboardPageClient() {
             </Link>
           </div>
           <p className="mb-3 text-[12.5px] text-[var(--text-3)]">{t("dashboard.importChannels.subtitle")}</p>
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          <div className="flex gap-2 overflow-x-auto px-1 pb-1 [-webkit-overflow-scrolling:touch]">
             {importChannelCounts.map(([source, count]) => (
               <Link
                 key={source}
