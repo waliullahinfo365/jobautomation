@@ -29,7 +29,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <Topbar />
             <main className="flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-y-contain">
               <PageTransition>
-                <div className="mx-auto w-full min-w-0 max-w-[1480px] overflow-x-clip px-3 py-5 pb-mobile-shell sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">{children}</div>
+                <div className="mx-auto w-full min-w-0 max-w-[1480px] overflow-x-clip px-3 py-5 pb-mobile-shell sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">
+                  {children}
+                  <div className="h-6 shrink-0 md:hidden" aria-hidden />
+                </div>
               </PageTransition>
             </main>
             <BottomNav />
