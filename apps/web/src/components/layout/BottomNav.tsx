@@ -23,7 +23,7 @@ export function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-subtle)] bg-[var(--bg-1)]/95 backdrop-blur-md md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="flex min-h-[var(--mobile-nav-height)] items-stretch">
+      <div className="flex h-[var(--mobile-nav-height)] items-stretch">
         {NAV_ITEMS.map(({ href, icon: Icon, labelKey, shortLabelKey }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (

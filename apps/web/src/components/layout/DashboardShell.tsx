@@ -24,10 +24,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div className="jf-app-grain" aria-hidden />
         <div className="jf-shell">
           <Sidebar />
-          <div className="flex min-w-0 flex-col overflow-x-hidden bg-[var(--bg-0)]">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-x-hidden bg-[var(--bg-0)] md:min-h-screen">
             <MobileNav />
             <Topbar />
-            <main className="flex-1 overflow-x-clip overflow-y-auto">
+            <main className="flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto overscroll-y-contain">
               <PageTransition>
                 <div className="mx-auto w-full min-w-0 max-w-[1480px] overflow-x-clip px-3 py-5 pb-mobile-shell sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">{children}</div>
               </PageTransition>
