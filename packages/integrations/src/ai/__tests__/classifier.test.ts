@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isRealJobOpportunity } from "../ai.service";
+import { isRealJobOpportunity, validateExtractedJobFields } from "../ai.service";
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 
 function makePayload(overrides: Partial<JobIntakeEmailPayload>): JobIntakeEmailPayload {
@@ -304,5 +304,31 @@ describe("Fixture J — Meinestadt job alert (accepted)", () => {
   it("should be classified as a job", () => {
     const result = isRealJobOpportunity(payload);
     expect(result.isJob).toBe(true);
+  });
+});
+
+describe("Fixture K — Agency job search update (rejected)", () => {
+  const payload = makePayload({
+    from: "recruiter@employment-agency.de",
+    subject: "Update on your job search in Cologne",
+    bodyText: [
+      "Dear Benjamin,",
+      "Just a quick update on your job search in Cologne.",
+      "We wanted to check in and see how things are going.",
+      "Best regards,",
+      "Your recruitment team",
+    ].join("\n"),
+  });
+
+  it("should not be classified as a job", () => {
+    const result = isRealJobOpportunity(payload);
+    expect(result.isJob).toBe(false);
+  });
+});
+
+describe("validateExtractedJobFields — agency update", () => {
+  it("rejects employment agency + job search update title", () => {
+    const result = validateExtractedJobFields("employment agency", "Update on your job search in Cologne");
+    expect(result.valid).toBe(false);
   });
 });

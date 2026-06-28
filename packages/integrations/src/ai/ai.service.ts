@@ -161,6 +161,14 @@ const HARD_REJECT_SUBJECT_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/\b(empfohlene|empfehlung|unsere empfehlung|wir empfehlen)\b/i, "newsletter"],
   [/\b\d+\s+unternehmen (suchen|sucht)\b/i, "newsletter"],
   [/\bpassende stellen für sie\b/i, "newsletter"],
+  // Agency / recruitment status updates — not a specific job posting
+  [/\bupdate on your job search\b/i, "newsletter"],
+  [/\byour job search (in|for|update)\b/i, "newsletter"],
+  [/\b(status|update) (of|on) your (job search|application|cv|resume)\b/i, "newsletter"],
+  [/\b(checking in|follow.?up) (on|about) your (job search|application|cv)\b/i, "newsletter"],
+  [/\bhow is your job search\b/i, "newsletter"],
+  [/\bany (news|update) (on|about) your (job search|application)\b/i, "newsletter"],
+  [/\bwe('ve| have) (an )?update (for you|about your job search)\b/i, "newsletter"],
 ];
 
 /** Body signals that indicate a non-job email */
@@ -196,6 +204,8 @@ const HARD_REJECT_BODY_PATTERNS: [RegExp, DetectedEmailType][] = [
   [/\byour (google workspace|microsoft 365|office 365|dropbox|slack|zoom) (account|subscription|billing)\b/i, "newsletter"],
   // Ebook / content download body
   [/\b(download|access|get) (your )?(free )?(ebook|guide|whitepaper|report|checklist)\b/i, "newsletter"],
+  [/\bupdate on your job search\b/i, "newsletter"],
+  [/\b(status of your|update on your) (job search|application|cv|resume)\b/i, "newsletter"],
 ];
 
 /** Strong positive signals in body */
@@ -386,6 +396,71 @@ export function resolveJobSourceFromEmail(from: string, sourceType?: string): st
   if (sourceType && typeMap[sourceType]) return typeMap[sourceType];
   if (ATS_SENDER_PATTERNS.some((p) => p.test(from))) return "Company Website";
   return "Gmail";
+}
+
+const FAKE_COMPANY_EXACT =
+  /^(job\s?agent|jobbörse|job\s?board|jobmail|linkedin|stepstone|xing|indeed|glassdoor|monster|email|gmail|google|slack|unknown\s*(company)?|n\/a|by confidential|confidential careers?|recruiter|anonymous|this group|employment agency|recruitment agency|staffing agency|placement agency|personnel agency|job search agency|job search service|career service|your recruiter|headhunting agency|recruiting firm)$/i;
+const FAKE_COMPANY_BY_PREFIX = /^by\s+\w/i;
+const INVALID_COMPANY_PATTERNS = [
+  /^(employment|recruitment|staffing|placement|personnel|job search|job hunt|career) (agency|service|consultant|advisor|firm)s?$/i,
+  /\b(employment|recruitment|staffing) agency\b/i,
+];
+
+const FAKE_POSITION_EXACT =
+  /^(jobs?\s+alerts?|job\s+alert|new job opportunit(y|ies)( for you)?|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you|free ebook.*|payment (failure|failed).*|updated?\s+.{0,20}privacy (notice|policy)|.*capital news|content roundup.*|.*ends? in \d+ days.*|#\w.*)$/i;
+const INVALID_POSITION_PATTERNS = [
+  /\bupdate on your job search\b/i,
+  /\byour job search (in|for|update)\b/i,
+  /\b(status|update) (of|on) your (job search|application|cv|resume)\b/i,
+  /\b(checking in|follow.?up) (on|about) your (job search|application|cv)\b/i,
+  /\bhow is your job search\b/i,
+  /\bany (news|update) (on|about) your (job search|application)\b/i,
+  /\bwe('ve| have) (an )?update (for you|about your job search)\b/i,
+  /\bkeeping you (updated|informed) (on|about) your job search\b/i,
+];
+
+/** Reject platform names, agency updates, and other non-job titles before creating a Job record. */
+export function validateExtractedJobFields(
+  company: string,
+  position: string
+): { valid: true } | { valid: false; reason: string } {
+  const c = company.trim();
+  const p = position.trim();
+
+  if (!c || c === "Unknown Company") return { valid: false, reason: "Missing company" };
+  if (!p || p === "Unknown Position") return { valid: false, reason: "Missing position" };
+
+  if (FAKE_COMPANY_EXACT.test(c) || FAKE_COMPANY_BY_PREFIX.test(c)) {
+    return { valid: false, reason: `Company "${c}" is not a hiring company` };
+  }
+  for (const pattern of INVALID_COMPANY_PATTERNS) {
+    if (pattern.test(c)) {
+      return { valid: false, reason: `Company "${c}" looks like an agency/service, not an employer` };
+    }
+  }
+
+  if (FAKE_POSITION_EXACT.test(p)) {
+    return { valid: false, reason: `Position "${p}" is not a real job title` };
+  }
+  for (const pattern of INVALID_POSITION_PATTERNS) {
+    if (pattern.test(p)) {
+      return { valid: false, reason: `Position "${p}" looks like a job-search update, not a job posting` };
+    }
+  }
+
+  return { valid: true };
+}
+
+function isInvalidJobPosition(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  return validateExtractedJobFields("Acme Corp", trimmed).valid === false;
+}
+
+function isInvalidJobCompany(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  return validateExtractedJobFields(trimmed, "Software Engineer").valid === false;
 }
 
 // ─── Dedicated job board classifier ──────────────────────────────────────────
@@ -677,30 +752,46 @@ function parseJobBoardJobCard(body: string): { position: string; company: string
 
 function extractCompany(payload: JobIntakeEmailPayload): string {
   const card = parseJobBoardJobCard(payload.bodyText);
-  if (card?.company && card.company.toLowerCase() !== "linkedin") return card.company;
+  if (card?.company && !isInvalidJobCompany(card.company)) return card.company;
 
   const subjectMatch = payload.subject.match(/\bat\s+([A-Za-z0-9][A-Za-z0-9\s.&'-]{1,40})\s*$/i);
-  if (subjectMatch?.[1]) return subjectMatch[1].trim();
+  if (subjectMatch?.[1] && !isInvalidJobCompany(subjectMatch[1])) return subjectMatch[1].trim();
 
   // Do not fall back to platform name as company
   const domain = payload.from.split("@")[1]?.split(".")[0];
-  if (!domain || domain === "linkedin" || domain === "indeed" || domain === "stepstone" || domain === "xing" || domain === "noreply") {
+  if (
+    !domain ||
+    domain === "linkedin" ||
+    domain === "indeed" ||
+    domain === "stepstone" ||
+    domain === "xing" ||
+    domain === "noreply" ||
+    domain === "employment" ||
+    domain === "recruitment" ||
+    domain === "staffing"
+  ) {
     return "Unknown Company";
   }
-  return domain.replace(/[-_]/g, " ");
+  const fromDomain = domain.replace(/[-_]/g, " ");
+  return isInvalidJobCompany(fromDomain) ? "Unknown Company" : fromDomain;
 }
 
 function extractPosition(payload: JobIntakeEmailPayload): string {
   const card = parseJobBoardJobCard(payload.bodyText);
-  if (card?.position) return card.position;
+  if (card?.position && !isInvalidJobPosition(card.position)) return card.position;
 
   const subject = payload.subject.trim();
   // Strip "job alert for X" → X is the search query, not a job title; don't use as position
   if (/^your job alert for\s+/i.test(subject)) return "Unknown Position";
+  if (isInvalidJobPosition(subject)) return "Unknown Position";
 
   const atIndex = subject.toLowerCase().indexOf(" at ");
-  if (atIndex > 0) return subject.slice(0, atIndex).trim();
-  return subject || "Unknown Position";
+  if (atIndex > 0) {
+    const candidate = subject.slice(0, atIndex).trim();
+    if (!isInvalidJobPosition(candidate)) return candidate;
+  }
+  if (subject && !isInvalidJobPosition(subject) && subject.length <= 80) return subject;
+  return "Unknown Position";
 }
 
 /** Legacy export — deterministic extraction (no external API). */
@@ -790,7 +881,8 @@ Rules:
 - position: the EXACT JOB TITLE as stated in the posting (e.g. "Senior Software Engineer", "Marketing Manager (m/w/d)"). NEVER use: email subject lines verbatim, generic phrases like "New job opportunity for you", "Our recommendation", "Popular job", "Jobs matching your profile", or any marketing copy. If you cannot identify a clear job title, set is_job_opportunity to false.
 - If the email contains MULTIPLE job listings (a digest), extract the FIRST job only — do not reject solely because there are multiple jobs.
 - source_type: one of "linkedin_job_alert" | "saved_job_reminder" | "ats_job_alert" | "direct_recruiter" | "stepstone_job_alert" | "xing_job_alert" | "indeed_job_alert" | "glassdoor_job_alert" | "monster_job_alert" | "job_board_alert" | "unknown"
-- If confidence < 0.85, set is_job_opportunity to false and explain in reject_reason.
+- Set is_job_opportunity to false for agency job-search status updates (e.g. "Update on your job search", "checking in on your application") — these are not job postings.
+- NEVER use generic agency names like "employment agency" or "recruitment agency" as the company.
 - requirements and skills: max 8 items each, plain strings.
 - deadline: ISO date string or null.
 
@@ -862,7 +954,8 @@ export async function runAiExtraction(input: {
               base.company &&
               base.company !== "Unknown Company" &&
               base.position &&
-              base.position !== "Unknown Position";
+              base.position !== "Unknown Position" &&
+              validateExtractedJobFields(base.company, base.position).valid;
 
             // If Claude says it's not a job, fall back to deterministic parsing for trusted job boards
             if (!parsed.is_job_opportunity) {
@@ -888,8 +981,21 @@ export async function runAiExtraction(input: {
                 usage: usageFromLengths(body.length, result.text.length),
               };
             }
-            const company = parsed.company?.trim() || base.company;
+            const company = /^(linkedin|stepstone|xing|indeed|glassdoor|monster)$/i.test(parsed.company?.trim() || "")
+              ? base.company
+              : (parsed.company?.trim() || base.company);
             const position = parsed.position?.trim() || base.position;
+            const fieldValidation = validateExtractedJobFields(company, position);
+            if (!fieldValidation.valid) {
+              return {
+                provider: "Claude",
+                model: result.model,
+                usedStub: false,
+                confidence: 0,
+                data: { ...base, company: "", position: "" },
+                usage: usageFromLengths(body.length, result.text.length),
+              };
+            }
             const confidence = typeof parsed.confidence === "number" ? parsed.confidence : base.confidence;
             return {
               provider: "Claude",
@@ -897,7 +1003,7 @@ export async function runAiExtraction(input: {
               usedStub: false,
               confidence,
               data: {
-                company: /^(linkedin|stepstone|xing|indeed|glassdoor|monster)$/i.test(company) ? base.company : company,
+                company,
                 position,
                 location: parsed.location ?? base.location,
                 jobUrl: parsed.job_url ?? base.jobUrl,
@@ -917,12 +1023,25 @@ export async function runAiExtraction(input: {
     }
   }
 
+  const stubData = { ...base, source: resolveJobSourceFromEmail(input.payload.from) };
+  const stubValidation = validateExtractedJobFields(stubData.company, stubData.position);
+  if (!stubValidation.valid) {
+    return {
+      provider,
+      model: usedStub ? DEFAULT_AI_MODEL : (input.config.model ?? DEFAULT_AI_MODEL),
+      usedStub,
+      confidence: 0,
+      data: { ...stubData, company: "", position: "" },
+      usage: usageFromLengths(body.length, JSON.stringify(base).length),
+    };
+  }
+
   return {
     provider,
     model: usedStub ? DEFAULT_AI_MODEL : (input.config.model ?? DEFAULT_AI_MODEL),
     usedStub,
     confidence: base.confidence,
-    data: { ...base, source: resolveJobSourceFromEmail(input.payload.from) },
+    data: stubData,
     usage: usageFromLengths(body.length, JSON.stringify(base).length),
   };
 }

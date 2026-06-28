@@ -1,6 +1,6 @@
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import { AutomationLogModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
-import { runAiExtraction, isRealJobOpportunity, resolveJobSourceFromEmail } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, isRealJobOpportunity, resolveJobSourceFromEmail, validateExtractedJobFields } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import { checkDuplicateJobWorker } from "../lib/duplicate-job-check";
 import { loadGoogleAccessToken } from "../lib/google-auth";
@@ -288,7 +288,11 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
     const data = extraction.data;
     const UNKNOWN_COMPANY = !data.company || data.company === "Unknown Company";
     const UNKNOWN_POSITION = !data.position || data.position === "Unknown Position";
-    if (UNKNOWN_COMPANY || UNKNOWN_POSITION) {
+    const fieldValidation =
+      UNKNOWN_COMPANY || UNKNOWN_POSITION
+        ? { valid: false as const, reason: "Missing company or position" }
+        : validateExtractedJobFields(data.company, data.position);
+    if (!fieldValidation.valid) {
       nonJobSkipped += 1;
       processedMessageIds.add(normalized.providerMessageId);
       if (!payload.dryRun) {
@@ -298,7 +302,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
           moduleKey: "job-intake",
           moduleName: "job-intake",
           status: "Warning",
-          message: `Email skipped (extraction failed — no company/position): ${normalized.subject || "(no subject)"}`,
+          message: `Email skipped (invalid job data — ${fieldValidation.reason}): ${normalized.subject || "(no subject)"}`,
           operationId,
           metadata: {
             gmailMessageId: normalized.providerMessageId,
@@ -306,6 +310,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
             subject: normalized.subject,
             extractedCompany: data.company,
             extractedPosition: data.position,
+            rejectReason: fieldValidation.reason,
             usedStub: extraction.usedStub,
           },
         });

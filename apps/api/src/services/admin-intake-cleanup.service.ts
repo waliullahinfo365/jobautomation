@@ -1,5 +1,5 @@
 import { JobModel, TenantModel } from "@jobflow/database/models";
-import { isRealJobOpportunity } from "@jobflow/integrations/ai/ai.service";
+import { isRealJobOpportunity, validateExtractedJobFields } from "@jobflow/integrations/ai/ai.service";
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 
 const NON_JOB_COMPANY_NAMES = new Set(["linkedin", "unknown company", "unknown", "noreply"]);
@@ -11,12 +11,6 @@ const NON_JOB_BODY_MARKERS = [
   /linkedin\.com\/sales\/contract-chooser/i,
   /sales navigator/i,
   /unsubscribe from this (email|newsletter|digest)/i,
-];
-
-const NON_JOB_POSITION_PATTERNS = [
-  /\b(why|how|what|are|is|the|an|a)\b.{20,}/i, // Looks like article title
-  /\d+ (people|connections?)\s*(viewed|have updates)/i,
-  /newsletter/i,
 ];
 
 function isNonJobByContent(job: {
@@ -53,11 +47,10 @@ function isNonJobByContent(job: {
     }
   }
 
-  // Position looks like an article title
-  for (const pattern of NON_JOB_POSITION_PATTERNS) {
-    if (pattern.test(position)) {
-      return { isNonJob: true, reason: `Position looks like article title: "${position.slice(0, 80)}"` };
-    }
+  // Position/company heuristics for bad imports
+  const fieldValidation = validateExtractedJobFields(job.company ?? "", job.position ?? "");
+  if (!fieldValidation.valid) {
+    return { isNonJob: true, reason: fieldValidation.reason };
   }
 
   return { isNonJob: false, reason: "" };
