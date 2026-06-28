@@ -69,7 +69,6 @@ const MARKETING_SENDER_PATTERNS: RegExp[] = [
   /jobnotify\./i,
   /talentalert\./i,
   /jobalarm\./i,
-  /meinestadt\.de/i,
 ];
 
 /** Senders that are ATS platforms — high confidence real jobs */
@@ -353,6 +352,7 @@ const JOB_BOARD_SOURCE_MAP: [RegExp, string][] = [
   [/glassdoor\.(com|de|co\.uk|fr)/i, "Glassdoor"],
   [/monster\.(de|com|co\.uk|fr|at)/i, "Monster"],
   [/linkedin\./i, "LinkedIn"],
+  [/indeedemail\.com/i, "Indeed"],
 ];
 
 export function detectJobBoardSource(from: string): string {
@@ -361,6 +361,31 @@ export function detectJobBoardSource(from: string): string {
     if (pattern.test(f)) return name;
   }
   return "email";
+}
+
+export function isJobBoardSender(from: string): boolean {
+  const f = from.toLowerCase();
+  return JOB_BOARD_SOURCE_MAP.some(([pattern]) => pattern.test(f));
+}
+
+export function resolveJobSourceFromEmail(from: string, sourceType?: string): string {
+  const detected = detectJobBoardSource(from);
+  if (detected !== "email") return detected;
+
+  const typeMap: Record<string, string> = {
+    linkedin_job_alert: "LinkedIn",
+    stepstone_job_alert: "Stepstone",
+    xing_job_alert: "Xing",
+    indeed_job_alert: "Indeed",
+    glassdoor_job_alert: "Glassdoor",
+    monster_job_alert: "Monster",
+    job_board_alert: "Other",
+    ats_job_alert: "Company Website",
+    direct_recruiter: "Referral",
+  };
+  if (sourceType && typeMap[sourceType]) return typeMap[sourceType];
+  if (ATS_SENDER_PATTERNS.some((p) => p.test(from))) return "Company Website";
+  return "Gmail";
 }
 
 // ─── Dedicated job board classifier ──────────────────────────────────────────
@@ -462,16 +487,15 @@ export function isRealJobOpportunity(payload: JobIntakeEmailPayload): EmailClass
   const subject = payload.subject;
   const body = payload.bodyText;
 
+  // Job boards first — some legitimate boards were on the marketing blocklist
+  if (JOB_BOARD_SOURCE_MAP.some(([pattern]) => pattern.test(from))) {
+    if (from.includes("linkedin.com")) return classifyLinkedInEmail(payload);
+    return classifyJobBoardEmail(payload);
+  }
+
   // Reject known marketing / SaaS / ad-network senders immediately
   if (MARKETING_SENDER_PATTERNS.some((p) => p.test(from))) {
     return { isJob: false, confidence: 0.98, reason: "Known marketing/SaaS sender — not a job portal", detectedType: "newsletter" };
-  }
-
-  // German / DACH job boards — checked first (client is German-market)
-  if (JOB_BOARD_SOURCE_MAP.some(([pattern]) => pattern.test(from))) {
-    // LinkedIn has its own more nuanced classifier
-    if (from.includes("linkedin.com")) return classifyLinkedInEmail(payload);
-    return classifyJobBoardEmail(payload);
   }
 
   // ATS platform sender — high-confidence real job
@@ -574,28 +598,101 @@ function parseLinkedInJobCard(body: string): { position: string; company: string
   return { position, company, location };
 }
 
-function extractCompany(payload: JobIntakeEmailPayload): string {
-  // LinkedIn job alerts — parse the actual job card, not the sender domain
-  if (payload.from.toLowerCase().includes("linkedin.com")) {
-    const card = parseLinkedInJobCard(payload.bodyText);
-    if (card?.company && card.company.toLowerCase() !== "linkedin") return card.company;
+const JOB_CARD_SPLIT_PATTERNS = [
+  /\bview job\b/i,
+  /\bjetzt bewerben\b/i,
+  /\bzur stellenanzeige\b/i,
+  /\bapply now\b/i,
+  /\beasily apply\b/i,
+  /\bsee job\b/i,
+  /\bopen position\b/i,
+  /\bbewerben\b/i,
+];
+
+const JOB_CARD_HEADER_SKIP = [
+  /^your job alert/i,
+  /^job alert/i,
+  /^neue jobs/i,
+  /^passende stellen/i,
+  /^beliebter job/i,
+  /^top.job/i,
+  /^empfohlene stelle/i,
+  /^here are/i,
+  /^new jobs/i,
+  /^jobs matching/i,
+  /^unsubscribe/i,
+  /^ihr job-alarm/i,
+  /^stepstone/i,
+  /^xing/i,
+  /^indeed/i,
+  /^glassdoor/i,
+  /^monster/i,
+];
+
+/** Parse the first job card from Stepstone, Indeed, Xing, and similar digest alerts. */
+function parseJobBoardJobCard(body: string): { position: string; company: string; location?: string } | null {
+  const linkedInCard = parseLinkedInJobCard(body);
+  if (linkedInCard) return linkedInCard;
+
+  let firstBlock = body;
+  for (const pattern of JOB_CARD_SPLIT_PATTERNS) {
+    const parts = body.split(pattern);
+    if (parts.length > 1) {
+      firstBlock = parts[0] ?? body;
+      break;
+    }
   }
+
+  const lines = firstBlock
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && l.length < 120);
+  const contentLines = lines.filter((l) => !JOB_CARD_HEADER_SKIP.some((p) => p.test(l)));
+
+  if (contentLines.length < 2) return null;
+
+  let position = contentLines[0];
+  let company = contentLines[1];
+  let location: string | undefined;
+
+  if (/^(beliebter job|passende stelle|recommended|popular job|top job)/i.test(position) && contentLines.length >= 3) {
+    position = contentLines[1];
+    company = contentLines[2];
+    location = contentLines[3];
+  }
+
+  const dashMatch = company.match(/^(.+?)\s*[-–—]\s*(.+)$/);
+  if (dashMatch && dashMatch[1].length < 60 && dashMatch[2].length < 80) {
+    company = dashMatch[1].trim();
+    location = dashMatch[2].trim();
+  } else if (contentLines[2] && !/^(€|\$|apply|bewerb|http|salary|gehalt)/i.test(contentLines[2])) {
+    location = contentLines[2];
+  }
+
+  if (!position || !company) return null;
+  if (/^(stepstone|xing|indeed|glassdoor|monster|linkedin)$/i.test(company)) return null;
+
+  return { position, company, location };
+}
+
+function extractCompany(payload: JobIntakeEmailPayload): string {
+  const card = parseJobBoardJobCard(payload.bodyText);
+  if (card?.company && card.company.toLowerCase() !== "linkedin") return card.company;
 
   const subjectMatch = payload.subject.match(/\bat\s+([A-Za-z0-9][A-Za-z0-9\s.&'-]{1,40})\s*$/i);
   if (subjectMatch?.[1]) return subjectMatch[1].trim();
 
-  // Do not fall back to "linkedin" as a company name
+  // Do not fall back to platform name as company
   const domain = payload.from.split("@")[1]?.split(".")[0];
-  if (!domain || domain === "linkedin" || domain === "noreply") return "Unknown Company";
+  if (!domain || domain === "linkedin" || domain === "indeed" || domain === "stepstone" || domain === "xing" || domain === "noreply") {
+    return "Unknown Company";
+  }
   return domain.replace(/[-_]/g, " ");
 }
 
 function extractPosition(payload: JobIntakeEmailPayload): string {
-  // LinkedIn job alerts — parse the actual job card
-  if (payload.from.toLowerCase().includes("linkedin.com")) {
-    const card = parseLinkedInJobCard(payload.bodyText);
-    if (card?.position) return card.position;
-  }
+  const card = parseJobBoardJobCard(payload.bodyText);
+  if (card?.position) return card.position;
 
   const subject = payload.subject.trim();
   // Strip "job alert for X" → X is the search query, not a job title; don't use as position
@@ -608,20 +705,19 @@ function extractPosition(payload: JobIntakeEmailPayload): string {
 
 /** Legacy export — deterministic extraction (no external API). */
 export async function extractJobFromEmail(payload: JobIntakeEmailPayload): Promise<JobExtractionResult> {
-  const isLinkedIn = payload.from.toLowerCase().includes("linkedin.com");
-  const linkedInCard = isLinkedIn ? parseLinkedInJobCard(payload.bodyText) : null;
+  const jobBoardCard = parseJobBoardJobCard(payload.bodyText);
 
   // Prefer /jobs/view/ URL for LinkedIn, otherwise first URL in body
   const jobsViewMatch = payload.bodyText.match(/https?:\/\/[^\s)]*linkedin\.com\/jobs\/view\/[^\s)]*/i);
   const urlMatch = jobsViewMatch ?? payload.bodyText.match(/https?:\/\/[^\s)]+/i);
 
-  const salaryMatch = payload.bodyText.match(/(?:\$|USD|CAD|EUR)\s?[\d,.kK]+(?:\s?-\s?(?:\$|USD|CAD|EUR)?\s?[\d,.kK]+)?/i);
+  const salaryMatch = payload.bodyText.match(/(?:\$|USD|CAD|EUR|€)\s?[\d,.kK]+(?:\s?-\s?(?:\$|USD|CAD|EUR|€)?\s?[\d,.kK]+)?/i);
 
   // Deadline extraction: "apply by", "closes on", "deadline: <date>"
   const deadlineMatch = payload.bodyText.match(/(?:apply by|deadline[:\s]+|closes?\s+on[:\s]+|applications?\s+close[:\s]+)(\w+ \d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
   const deadline = deadlineMatch ? (() => { try { const d = new Date(deadlineMatch[1]); return isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10); } catch { return undefined; } })() : undefined;
 
-  const locationFromCard = linkedInCard?.location;
+  const locationFromCard = jobBoardCard?.location;
   const locationKw = locationFromCard ?? LOCATION_KEYWORDS.find((keyword) =>
     payload.bodyText.toLowerCase().includes(keyword)
   );
@@ -629,7 +725,7 @@ export async function extractJobFromEmail(payload: JobIntakeEmailPayload): Promi
   const company = extractCompany(payload);
   const position = extractPosition(payload);
 
-  const signals = [Boolean(urlMatch), Boolean(salaryMatch), Boolean(locationKw), Boolean(payload.subject), Boolean(linkedInCard)].filter(Boolean).length;
+  const signals = [Boolean(urlMatch), Boolean(salaryMatch), Boolean(locationKw), Boolean(payload.subject), Boolean(jobBoardCard)].filter(Boolean).length;
   const confidence = Math.min(0.9, 0.6 + signals * 0.06);
 
   return {
@@ -639,7 +735,7 @@ export async function extractJobFromEmail(payload: JobIntakeEmailPayload): Promi
     jobUrl: urlMatch?.[0],
     salaryRange: salaryMatch?.[0],
     deadline,
-    source: payload.provider,
+    source: resolveJobSourceFromEmail(payload.from),
     confidence,
     description: payload.bodyText.slice(0, 1000),
     raw: {
@@ -688,10 +784,11 @@ Return ONLY valid JSON with this exact shape (no extra keys, no markdown fences)
 }
 
 Rules:
-- is_job_opportunity: true ONLY for a single, specific real job posting with a clear job title and hiring company. Set false for: newsletters, digests with multiple jobs, marketing/promotional emails, recommendation digests, account notifications, GDPR/consent emails, SaaS tool emails.
+- is_job_opportunity: true ONLY for a real job posting with a clear job title and hiring company. Set false for: newsletters, marketing/promotional emails, account notifications, GDPR/consent emails, SaaS tool emails.
+- For job board digest emails (Stepstone, Indeed, Xing, LinkedIn, etc.) with MULTIPLE listings, extract the FIRST job only and set is_job_opportunity to true if that first job has a clear title and company.
 - company: the ACTUAL HIRING COMPANY name (the organisation that will employ the person). NEVER use: "linkedin", "stepstone", "xing", "indeed", "job agent", "jobbörse", "job board", the email sender name, or the name of a recruitment platform.
 - position: the EXACT JOB TITLE as stated in the posting (e.g. "Senior Software Engineer", "Marketing Manager (m/w/d)"). NEVER use: email subject lines verbatim, generic phrases like "New job opportunity for you", "Our recommendation", "Popular job", "Jobs matching your profile", or any marketing copy. If you cannot identify a clear job title, set is_job_opportunity to false.
-- If the email contains MULTIPLE job listings (a digest), set is_job_opportunity to false — only single-job emails qualify.
+- If the email contains MULTIPLE job listings (a digest), extract the FIRST job only — do not reject solely because there are multiple jobs.
 - source_type: one of "linkedin_job_alert" | "saved_job_reminder" | "ats_job_alert" | "direct_recruiter" | "stepstone_job_alert" | "xing_job_alert" | "indeed_job_alert" | "glassdoor_job_alert" | "monster_job_alert" | "job_board_alert" | "unknown"
 - If confidence < 0.85, set is_job_opportunity to false and explain in reject_reason.
 - requirements and skills: max 8 items each, plain strings.
@@ -760,8 +857,28 @@ export async function runAiExtraction(input: {
         if (result.ok) {
           const parsed = parseExtractionJson(result.text);
           if (parsed && parsed.is_job_opportunity !== undefined) {
-            // If Claude says it's not a job, bail out immediately
+            const resolvedSource = resolveJobSourceFromEmail(input.payload.from, parsed.source_type);
+            const hasValidBase =
+              base.company &&
+              base.company !== "Unknown Company" &&
+              base.position &&
+              base.position !== "Unknown Position";
+
+            // If Claude says it's not a job, fall back to deterministic parsing for trusted job boards
             if (!parsed.is_job_opportunity) {
+              if (isJobBoardSender(input.payload.from) && hasValidBase) {
+                return {
+                  provider: "Claude",
+                  model: result.model,
+                  usedStub: false,
+                  confidence: base.confidence,
+                  data: {
+                    ...base,
+                    source: resolvedSource,
+                  },
+                  usage: usageFromLengths(body.length, result.text.length),
+                };
+              }
               return {
                 provider: "Claude",
                 model: result.model,
@@ -780,12 +897,12 @@ export async function runAiExtraction(input: {
               usedStub: false,
               confidence,
               data: {
-                company: company.toLowerCase() === "linkedin" ? base.company : company,
+                company: /^(linkedin|stepstone|xing|indeed|glassdoor|monster)$/i.test(company) ? base.company : company,
                 position,
                 location: parsed.location ?? base.location,
                 jobUrl: parsed.job_url ?? base.jobUrl,
                 salaryRange: parsed.salary ?? base.salaryRange,
-                source: payload_source(input.payload),
+                source: resolvedSource,
                 confidence,
                 description: parsed.summary || base.description,
                 raw: base.raw,
@@ -805,13 +922,14 @@ export async function runAiExtraction(input: {
     model: usedStub ? DEFAULT_AI_MODEL : (input.config.model ?? DEFAULT_AI_MODEL),
     usedStub,
     confidence: base.confidence,
-    data: base,
+    data: { ...base, source: resolveJobSourceFromEmail(input.payload.from) },
     usage: usageFromLengths(body.length, JSON.stringify(base).length),
   };
 }
 
+/** @deprecated Use resolveJobSourceFromEmail */
 function payload_source(payload: JobIntakeEmailPayload): string {
-  return payload.provider ?? "email";
+  return resolveJobSourceFromEmail(payload.from);
 }
 
 /** Legacy export — deterministic research. */

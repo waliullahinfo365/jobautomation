@@ -225,3 +225,84 @@ describe("Fixture G — LinkedIn network update (rejected)", () => {
     expect(["linkedin_update", "newsletter"]).toContain(result.detectedType);
   });
 });
+
+// ─── Fixture H: Stepstone job alert digest → ACCEPTED ─────────────────────
+
+describe("Fixture H — Stepstone job alert digest (accepted)", () => {
+  const payload = makePayload({
+    from: "newsletter@stepstone.de",
+    subject: "Passende Jobs für Sie",
+    bodyText: [
+      "Passende Stellen für Ihr Profil",
+      "",
+      "Senior Product Manager (m/w/d)",
+      "Acme GmbH",
+      "Berlin, Deutschland",
+      "",
+      "Jetzt bewerben",
+      "https://www.stepstone.de/stellenangebote--123456",
+      "",
+      "Marketing Lead (m/w/d)",
+      "Other GmbH",
+      "München, Deutschland",
+      "",
+      "Jetzt bewerben",
+    ].join("\n"),
+  });
+
+  it("should be classified as a job", () => {
+    const result = isRealJobOpportunity(payload);
+    expect(result.isJob).toBe(true);
+  });
+
+  it("should detect type as job_alert", () => {
+    const result = isRealJobOpportunity(payload);
+    expect(result.detectedType).toBe("job_alert");
+  });
+});
+
+// ─── Fixture I: Indeed job alert digest → ACCEPTED ────────────────────────
+
+describe("Fixture I — Indeed job alert digest (accepted)", () => {
+  const payload = makePayload({
+    from: "jobalert@indeedemail.com",
+    subject: "New jobs for you",
+    bodyText: [
+      "Jobs matching your alert",
+      "",
+      "Data Analyst",
+      "Global Corp - London, UK",
+      "",
+      "Easily apply",
+      "https://www.indeed.com/viewjob?jk=abc123",
+    ].join("\n"),
+  });
+
+  it("should be classified as a job", () => {
+    const result = isRealJobOpportunity(payload);
+    expect(result.isJob).toBe(true);
+  });
+});
+
+// ─── Fixture J: Meinestadt job board → ACCEPTED (not marketing blocklist) ─
+
+describe("Fixture J — Meinestadt job alert (accepted)", () => {
+  const payload = makePayload({
+    from: "jobs@meinestadt.de",
+    subject: "Neue Stellenangebote in Berlin",
+    bodyText: [
+      "Passende Jobs in Berlin",
+      "",
+      "Office Manager (m/w/d)",
+      "City Services GmbH",
+      "Berlin",
+      "",
+      "Zur Stellenanzeige",
+    ].join("\n"),
+  });
+
+  it("should be classified as a job", () => {
+    const result = isRealJobOpportunity(payload);
+    expect(result.isJob).toBe(true);
+  });
+});

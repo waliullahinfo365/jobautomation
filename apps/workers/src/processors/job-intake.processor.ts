@@ -1,6 +1,6 @@
 import type { JobIntakeEmailPayload } from "@jobflow/shared/types/job";
 import { AutomationLogModel, IntegrationConnectionModel, JobModel } from "@jobflow/database/models";
-import { runAiExtraction, isRealJobOpportunity, detectJobBoardSource } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, isRealJobOpportunity, resolveJobSourceFromEmail } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import { checkDuplicateJobWorker } from "../lib/duplicate-job-check";
 import { loadGoogleAccessToken } from "../lib/google-auth";
@@ -63,43 +63,65 @@ function parseProcessedMessageIds(metadata: Record<string, unknown> | undefined)
   return Array.isArray(raw) ? raw.map(String).filter(Boolean) : [];
 }
 
-function getGmailIntakeQuery(metadata: Record<string, unknown> | undefined): string {
+function buildDefaultGmailSenderQuery(): string {
+  return [
+    // German job board senders (Stepstone, Xing, Arbeitsagentur, etc.)
+    "from:stepstone.de",
+    "from:stepstone.at",
+    "from:messages.stepstone.de",
+    "from:xing.com",
+    "from:xing-mail.com",
+    "from:arbeitsagentur.de",
+    "from:jobware.de",
+    "from:karriere.at",
+    "from:jobs.ch",
+    "from:stellenanzeigen.de",
+    "from:meinestadt.de",
+    "from:jobscout24.de",
+    "from:experteer.de",
+    "from:absolventa.de",
+    "from:interamt.de",
+    "from:yourfirm.de",
+    "from:academics.de",
+    // Global job boards
+    "from:indeed.com",
+    "from:indeed.de",
+    "from:indeedemail.com",
+    "from:glassdoor.com",
+    "from:notification.glassdoor.com",
+    "from:monster.de",
+    "from:monster.com",
+    "from:e-mail.monster.de",
+    "from:linkedin.com",
+    // German subject keywords
+    'subject:(Jobalert OR Jobalarm OR Stellenangebot OR Stellenanzeige OR "m/w/d" OR "w/m/d" OR "Jetzt bewerben" OR "Passende Jobs")',
+    // English subject keywords
+    "subject:(job OR hiring OR opportunity OR interview OR vacancy)",
+  ].join(" OR ");
+}
+
+function buildDefaultGmailJobQuery(): string {
+  return [
+    "label:job-alerts",
+    'label:"Job Alerts"',
+    buildDefaultGmailSenderQuery(),
+  ].join(" OR ");
+}
+
+function getGmailIntakeQuery(_metadata: Record<string, unknown> | undefined): string {
   // Support both names — GMAIL_JOB_QUERY (documented in .env.example) and
   // GMAIL_JOB_ALERT_QUERY (legacy name used in earlier releases)
   // Only read from env vars — never from stored metadata (stale DB values caused wrong queries)
   const configured = process.env.GMAIL_JOB_QUERY || process.env.GMAIL_JOB_ALERT_QUERY || "";
-  return configured.trim() || [
-    // Gmail labels
-    'label:job-alerts',
-    'label:"Job Alerts"',
-    // German job board senders (Stepstone, Xing, Arbeitsagentur, etc.)
-    'from:stepstone.de',
-    'from:stepstone.at',
-    'from:xing.com',
-    'from:xing-mail.com',
-    'from:arbeitsagentur.de',
-    'from:jobware.de',
-    'from:karriere.at',
-    'from:jobs.ch',
-    'from:stellenanzeigen.de',
-    'from:meinestadt.de',
-    'from:jobscout24.de',
-    'from:experteer.de',
-    'from:absolventa.de',
-    'from:interamt.de',
-    'from:yourfirm.de',
-    'from:academics.de',
-    // Global job boards
-    'from:indeed.com',
-    'from:glassdoor.com',
-    'from:monster.de',
-    'from:monster.com',
-    'from:linkedin.com',
-    // German subject keywords
-    'subject:(Jobalert OR Jobalarm OR Stellenangebot OR Stellenanzeige OR "m/w/d" OR "w/m/d" OR "Jetzt bewerben" OR "Passende Jobs")',
-    // English subject keywords
-    'subject:(job OR hiring OR opportunity OR interview OR vacancy)',
-  ].join(' OR ');
+  const trimmed = configured.trim();
+  if (!trimmed) return buildDefaultGmailJobQuery();
+
+  // Label-only configs (e.g. label:job-alerts) often contain LinkedIn only — union with sender query
+  const isLabelOnly = /^\s*label:/i.test(trimmed) && !/\b(from:|subject:|\bOR\b)/i.test(trimmed);
+  if (isLabelOnly) {
+    return `(${trimmed}) OR (${buildDefaultGmailSenderQuery()})`;
+  }
+  return trimmed;
 }
 
 /** Returns true when the query is pre-filtered enough to use the relaxed confidence threshold */
@@ -112,19 +134,25 @@ function isPreFilteredQuery(query: string): boolean {
 }
 
 function buildBackfillQuery(input: { label?: string; days?: number; metadata?: Record<string, unknown> }) {
-  // If a custom query is configured via env var, use it directly for backfill too
   const envQuery = (process.env.GMAIL_JOB_QUERY || process.env.GMAIL_JOB_ALERT_QUERY)?.trim();
-  if (envQuery) return envQuery;
+  if (envQuery) {
+    const isLabelOnly = /^\s*label:/i.test(envQuery) && !/\b(from:|subject:|\bOR\b)/i.test(envQuery);
+    if (isLabelOnly) {
+      return `(${envQuery}) OR (${buildDefaultGmailSenderQuery()})`;
+    }
+    return envQuery;
+  }
   const days = Math.max(1, Math.min(30, Number(input.days ?? 7) || 7));
   const label = String(input.label || "job alerts").trim();
   const safeLabel = label.replace(/"/g, "");
-  if (safeLabel) return `newer_than:${days}d label:"${safeLabel}"`;
-  // Include German job board senders and keywords for backfill
+  if (safeLabel) {
+    return `newer_than:${days}d (label:"${safeLabel}" OR (${buildDefaultGmailSenderQuery()}))`;
+  }
   return [
     `newer_than:${days}d label:"job alerts"`,
-    `newer_than:${days}d (from:stepstone.de OR from:stepstone.at OR from:xing.com OR from:xing-mail.com OR from:arbeitsagentur.de OR from:jobware.de OR from:karriere.at OR from:jobs.ch OR from:stellenanzeigen.de OR from:indeed.com OR from:glassdoor.com OR from:monster.de OR from:linkedin.com)`,
+    `newer_than:${days}d (${buildDefaultGmailSenderQuery()})`,
     `newer_than:${days}d subject:(Jobalert OR Jobalarm OR Stellenangebot OR "m/w/d" OR "w/m/d" OR job OR hiring OR vacancy)`,
-  ].join(' OR ');
+  ].join(" OR ");
 }
 
 function getMessageHistoryId(message: any): number {
@@ -350,7 +378,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       createdBy: payload.userId,
       company: data.company,
       position: data.position,
-      source: detectJobBoardSource(normalized.from) || data.source || "gmail",
+      source: resolveJobSourceFromEmail(normalized.from),
       status: "New",
       priority: "Medium",
       location: data.location,
@@ -377,7 +405,7 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       tenantId: payload.tenantId,
       moduleKey: "job-intake",
       event: "new-job-detected",
-      message: `New job imported:\n${data.company} — ${data.position}\nSource: ${detectJobBoardSource(normalized.from) || "Gmail"}\nFolder: pending\nDraft: pending`,
+      message: `New job imported:\n${data.company} — ${data.position}\nSource: ${resolveJobSourceFromEmail(normalized.from)}\nFolder: pending\nDraft: pending`,
       operationId,
       metadata: { jobId: String(created._id) },
     });

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { JobModel } from "@jobflow/database/models";
-import { runAiExtraction, isRealJobOpportunity } from "@jobflow/integrations/ai/ai.service";
+import { runAiExtraction, isRealJobOpportunity, resolveJobSourceFromEmail } from "@jobflow/integrations/ai/ai.service";
 import { createJobFingerprint } from "@jobflow/shared/utils/fingerprint";
 import type { JobIntakeEmailPayload, JobIntakeResult } from "@jobflow/shared/types/job";
 import { createAutomationLog } from "./automation-log.service";
@@ -188,7 +188,7 @@ export async function processJobIntakeEmail(input: ProcessInput): Promise<JobInt
       deadline: extraction.deadline ? new Date(extraction.deadline) : undefined,
       contactEmail: extraction.contactEmail,
       description: extraction.description,
-      source: extraction.source,
+      source: resolveJobSourceFromEmail(input.payload.from, extraction.source),
       status: "New",
       priority: "Medium",
       fingerprintHash,
