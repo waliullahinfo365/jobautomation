@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { BillingPlanResponse, AvailablePlan } from "@/lib/api/billing.api";
 import { SettingSectionCard } from "./SettingSectionCard";
 import { Button } from "@/components/ui/button";
+import { CustomerSettingsSkeleton } from "@/components/shared/CustomerPageSkeletons";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -17,6 +18,7 @@ type BillingSectionProps = {
   onCheckout?: (planKey: string, billingCycle: "monthly" | "yearly") => void;
   onOpenPortal?: () => void;
   onCancelSubscription?: () => void;
+  variant?: "simple" | "advanced";
 };
 
 export function BillingSection({
@@ -27,12 +29,18 @@ export function BillingSection({
   onCheckout,
   onOpenPortal,
   onCancelSubscription,
+  variant = "advanced",
 }: BillingSectionProps) {
   const { t } = useTranslation();
+  const simple = variant === "simple";
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   if (loading) {
-    return <LoadingState title={t("settings.billing.loadingTitle")} description={t("settings.billing.loadingDescription")} />;
+    return simple ? (
+      <CustomerSettingsSkeleton />
+    ) : (
+      <LoadingState title={t("settings.billing.loadingTitle")} description={t("settings.billing.loadingDescription")} />
+    );
   }
   if (error) {
     return <ErrorState title={t("settings.billing.unavailable")} message={error} actionLabel={t("settings.billing.retry")} onAction={onRetry} />;
@@ -55,7 +63,10 @@ export function BillingSection({
     : null;
 
   return (
-    <SettingSectionCard title={t("settings.billing.title")} description={t("settings.billing.description")}>
+    <SettingSectionCard
+      title={simple ? t("settings.billing.simpleTitle") : t("settings.billing.title")}
+      description={simple ? t("settings.billing.simpleDescription") : t("settings.billing.description")}
+    >
       {/* Not configured notice */}
       {!stripeConfigured && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -78,7 +89,7 @@ export function BillingSection({
           {stripeConfigured && hasActiveSubscription && (
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:shrink-0">
               <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onOpenPortal}>
-                {t("settings.billing.manageBilling")}
+                {t("labels.manageBilling")}
               </Button>
               {!cancelAtPeriodEnd && onCancelSubscription ? (
                 <Button variant="ghost" size="sm" className="w-full text-rose-600 sm:w-auto" onClick={onCancelSubscription}>
@@ -99,29 +110,33 @@ export function BillingSection({
           limit={limits.maxJobs}
           info={usagePercentages.maxJobs}
         />
-        <UsageMeter
-          label={t("settings.billing.automationRuns")}
-          used={usage.automationRunsThisMonth ?? 0}
-          limit={limits.maxAutomationRuns}
-          info={usagePercentages.maxAutomationRuns}
-        />
-        <UsageMeter
-          label={t("settings.billing.aiCredits")}
-          used={usage.aiCreditsUsedThisMonth ?? 0}
-          limit={limits.maxAiCredits}
-          info={usagePercentages.maxAiCredits}
-        />
-        <UsageMeter
-          label={t("settings.billing.storageUsage")}
-          used={usage.storageUsedMb ?? 0}
-          limit={limits.maxStorageMb}
-          info={usagePercentages.maxStorageMb}
-          suffix="MB"
-        />
+        {!simple ? (
+          <>
+            <UsageMeter
+              label={t("settings.billing.automationRuns")}
+              used={usage.automationRunsThisMonth ?? 0}
+              limit={limits.maxAutomationRuns}
+              info={usagePercentages.maxAutomationRuns}
+            />
+            <UsageMeter
+              label={t("settings.billing.aiCredits")}
+              used={usage.aiCreditsUsedThisMonth ?? 0}
+              limit={limits.maxAiCredits}
+              info={usagePercentages.maxAiCredits}
+            />
+            <UsageMeter
+              label={t("settings.billing.storageUsage")}
+              used={usage.storageUsedMb ?? 0}
+              limit={limits.maxStorageMb}
+              info={usagePercentages.maxStorageMb}
+              suffix="MB"
+            />
+          </>
+        ) : null}
       </div>
 
       {/* Available plan upgrades */}
-      {availablePlans.length > 0 && (
+      {availablePlans.length > 0 && !simple ? (
         <div className="mt-4 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-medium text-[var(--text-2)]">{t("settings.billing.availablePlans")}</p>
@@ -155,12 +170,33 @@ export function BillingSection({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <Link href="/pricing" className="w-full sm:w-auto">
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">View all plans</Button>
-        </Link>
+        {simple && stripeConfigured && availablePlans.length > 0 ? (
+          <Button
+            type="button"
+            size="lg"
+            className="min-h-[44px] w-full sm:w-auto"
+            onClick={() => {
+              const nextPlan = availablePlans.find((p) => p.planKey !== currentPlanKey) ?? availablePlans[0];
+              if (nextPlan) onCheckout?.(nextPlan.planKey, billingCycle);
+            }}
+          >
+            {t("settings.billing.upgrade")}
+          </Button>
+        ) : null}
+        {!simple ? (
+          <Link href="/pricing" className="w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="w-full sm:w-auto">View all plans</Button>
+          </Link>
+        ) : (
+          <Link href="/pricing" className="w-full sm:w-auto">
+            <Button variant="outline" size="lg" className="min-h-[44px] w-full sm:w-auto">
+              {t("settings.billing.viewPlans")}
+            </Button>
+          </Link>
+        )}
         <Button variant="ghost" size="sm" className="w-full sm:w-auto" onClick={onRetry}>
           {t("settings.billing.refresh")}
         </Button>

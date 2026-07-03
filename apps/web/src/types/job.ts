@@ -119,6 +119,8 @@ export interface Job {
   tags: string[];
   notes?: string;
   contactIds: string[];
+  reviewStatus?: ReviewStatus;
+  reviewedAt?: string;
 }
 
 export interface JobSummary

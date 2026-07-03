@@ -38,7 +38,7 @@ export function ApiStatusIndicator({
 
   const copy =
     status === "connected"
-      ? { text: labels?.connected ?? "API Connected", className: "bg-emerald-100 text-emerald-700" }
+      ? { text: labels?.connected ?? "Connected", className: "bg-emerald-100 text-emerald-700" }
       : status === "mock"
         ? { text: labels?.mock ?? "Using Mock Data", className: "bg-amber-100 text-amber-700" }
         : { text: labels?.offline ?? "API Offline", className: "bg-rose-100 text-rose-700" };

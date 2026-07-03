@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { Suspense } from "react";
+import { me } from "@/lib/api/auth.api";
+import { getPostLoginPath } from "@/lib/auth/postLoginRedirect";
 import { invalidateApiCache, setAuthToken } from "@/lib/api/client";
 
 function CallbackHandler() {
@@ -29,7 +31,9 @@ function CallbackHandler() {
         /* ignore */
       }
       invalidateApiCache();
-      router.replace("/today");
+      void me()
+        .then((session) => router.replace(getPostLoginPath(session.user)))
+        .catch(() => router.replace("/today"));
       return;
     }
 

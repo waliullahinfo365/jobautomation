@@ -59,6 +59,24 @@
   min-width: 44px;
 }
 
+.jf-mobile-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.mobile-state-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Prevent horizontal scroll on narrow phones */
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 /* Shared mobile card patterns */
 .mobile-list-card {
   min-width: 0;

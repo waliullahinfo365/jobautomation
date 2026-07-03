@@ -8,7 +8,9 @@ export type AuthSessionPayload = {
     name: string;
     email: string;
     role: string;
+    productRole?: "user" | "admin" | "super_admin";
     status: string;
+    preferences?: Record<string, unknown>;
   };
   tenant: {
     id: string;

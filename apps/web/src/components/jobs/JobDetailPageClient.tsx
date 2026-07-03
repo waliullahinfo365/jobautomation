@@ -3,20 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoaderIcon, SparklesIcon } from "@/components/icons";
-import { JobDetailHeader } from "@/components/jobs/JobDetailHeader";
-import { JobOverviewCard } from "@/components/jobs/JobOverviewCard";
-import { JobTimeline } from "@/components/jobs/JobTimeline";
-import { JobDocumentsCard } from "@/components/jobs/JobDocumentsCard";
-import { JobAutomationActivity } from "@/components/jobs/JobAutomationActivity";
+import { LoaderIcon } from "@/components/icons";
+import { JobDetailAdvancedView } from "@/components/jobs/JobDetailAdvancedView";
+import { JobDetailSimpleView } from "@/components/jobs/JobDetailSimpleView";
+import { shouldShowApplyStickyBar } from "@/components/jobs/ApplyStickyBar";
 import { LogApplicationModal } from "@/components/applications/LogApplicationModal";
-import { ApplyStickyBar, shouldShowApplyStickyBar } from "@/components/jobs/ApplyStickyBar";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { SectionCard } from "@/components/shared/SectionCard";
-import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
 import { Button } from "@/components/ui/button";
+import { useAdvancedUi } from "@/context/AuthSessionContext";
 import { useApplicationsApi } from "@/hooks/api/useApplicationsApi";
 import { useJobDetail, useJobsApi } from "@/hooks/api/useJobsApi";
 import { ApiError } from "@/lib/api/client";
@@ -50,6 +46,7 @@ function profileAiContextCopy(job: Job): string | null {
 export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const { t } = useTranslation();
   const router = useRouter();
+  const advancedUi = useAdvancedUi();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [logAppOpen, setLogAppOpen] = useState(false);
   const [duplicateFollowUp, setDuplicateFollowUp] = useState<{ jobId: string; status: string } | null>(null);
@@ -182,12 +179,12 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
   const handleArchive = useCallback(async () => {
     try {
       await withLoading("archive", () => jobsApi.archive(id));
-      showSuccess(t("jobDetail.toast.archived"));
+      showSuccess(advancedUi ? t("jobDetail.toast.archived") : t("jobDetail.simple.toastNotInterested"));
       router.push("/jobs");
     } catch {
       showError(t("jobDetail.toast.archiveFail"));
     }
-  }, [id, jobsApi, router, withLoading, t]);
+  }, [id, jobsApi, router, withLoading, t, advancedUi]);
 
   const handleAutoApply = useCallback(async () => {
     try {
@@ -224,7 +221,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         }
       }
     },
-    [applicationsApi, id, jobsApi, refetchJob, t]
+    [applicationsApi, id, refetchJob, t]
   );
 
   if (loading && !job) {
@@ -286,7 +283,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         className="hidden lg:inline-flex"
       />
       <Link href={`/jobs/${id}/apply`} className={showStickyBar ? "hidden md:inline-flex" : "inline-flex"}>
-        <Button type="button" variant="default" className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white">
+        <Button type="button" variant="default" className="min-h-[44px] bg-emerald-600 text-white hover:bg-emerald-700">
           {t("applyAssistant.applyCta")}
         </Button>
       </Link>
@@ -298,7 +295,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
             disabled={actionDisabled}
             onClick={handleAutoApply}
             variant="default"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 text-white hover:bg-blue-700"
           />
           <ActionButton
             label={t("jobDetail.logApplication")}
@@ -320,41 +317,8 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
     </>
   );
 
-  const profileContextLine = profileAiContextCopy(job);
-
   return (
-    <div className={showStickyBar ? "space-y-6 pb-mobile-sticky md:pb-20" : "space-y-6"}>
-      <JobDetailHeader job={job} renderActions={<ErrorBoundary>{actionBar}</ErrorBoundary>} />
-
-      {duplicateFollowUp ? (
-        <div className="rounded-lg border border-[rgba(229,162,59,0.35)] bg-[var(--amber-bg)] px-4 py-3 text-sm text-[var(--text-2)]">
-          <span className="font-medium text-[var(--amber)]">{duplicateFollowUp.status}:</span> a matching job may exist.{" "}
-          <Link
-            href={`/jobs/${duplicateFollowUp.jobId}`}
-            className="font-medium text-[var(--violet)] underline underline-offset-2 hover:brightness-110"
-          >
-            Open matching job
-          </Link>
-        </div>
-      ) : null}
-
-      {job.profileDocumentContext ? (
-        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-3)] px-4 py-2.5 text-xs text-[var(--text-3)]">
-          <SparklesIcon size={14} className="shrink-0 text-[var(--violet)]" />
-          {profileContextLine ? (
-            <span className="text-[var(--text-2)]">{profileContextLine}</span>
-          ) : (
-            <span>
-              Upload a CV in{" "}
-              <Link href="/documents" className="font-medium text-[var(--violet)] underline underline-offset-2">
-                Documents
-              </Link>{" "}
-              to improve AI drafts.
-            </span>
-          )}
-        </div>
-      ) : null}
-
+    <>
       <LogApplicationModal
         open={logAppOpen}
         onClose={() => setLogAppOpen(false)}
@@ -364,74 +328,29 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         initialJob={job}
       />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
-          <JobOverviewCard job={job} />
-
-          <SectionCard title="Application Materials">
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <p className="text-xs font-medium text-[var(--text-3)]">Source CV used</p>
-                <p className="mt-1 text-[var(--text-1)] break-words">{job.sourceCvFileName ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-[var(--text-3)]">Template used</p>
-                <p className="mt-1 text-[var(--text-1)] break-words">{job.coverLetterTemplateFileName ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-[var(--text-3)]">Generated cover letter</p>
-                {job.generatedCoverLetterLink ? (
-                  <a className="mt-1 inline-flex text-[var(--violet)] underline underline-offset-2" href={job.generatedCoverLetterLink} target="_blank" rel="noreferrer">
-                    Open cover letter
-                  </a>
-                ) : (
-                  <p className="mt-1 text-[var(--text-1)]">—</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs font-medium text-[var(--text-3)]">Research document</p>
-                {job.researchDocumentLink ? (
-                  <a className="mt-1 inline-flex text-[var(--violet)] underline underline-offset-2" href={job.researchDocumentLink} target="_blank" rel="noreferrer">
-                    Open research
-                  </a>
-                ) : (
-                  <p className="mt-1 text-[var(--text-1)]">—</p>
-                )}
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard title={t("jobDetail.description")}>
-            <p className="text-sm leading-6 text-[var(--text-2)] whitespace-pre-wrap break-words overflow-hidden">{job.description}</p>
-            {job.aiSummary && (
-              <div className="mt-4 rounded-lg border border-purple-200 bg-purple-50 p-3">
-                <div className="mb-1 flex items-center gap-2">
-                  <SparklesIcon size={16} className="text-[var(--violet)]" />
-                  <p className="text-sm font-medium text-purple-800">{t("jobDetail.aiSummary")}</p>
-                </div>
-                <p className="text-sm text-purple-700">{job.aiSummary}</p>
-              </div>
-            )}
-          </SectionCard>
-
-          <JobTimeline timeline={job.timeline} />
-        </div>
-
-        <div className="space-y-6">
-          <JobDocumentsCard documents={job.documents} jobId={id} />
-          <JobAutomationActivity logs={job.automationLogs} />
-        </div>
-      </div>
-
-      {showStickyBar ? (
-        <ApplyStickyBar
+      {advancedUi ? (
+        <JobDetailAdvancedView
           job={job}
+          jobId={id}
+          actionBar={actionBar}
+          duplicateFollowUp={duplicateFollowUp}
+          profileContextLine={profileAiContextCopy(job)}
           onAutoApply={resolvePipelineStage(job) === "Ready" ? () => void handleAutoApply() : undefined}
           autoApplyLoading={actionLoading === "autoApply"}
           autoApplyDisabled={actionDisabled}
         />
-      ) : null}
-    </div>
+      ) : (
+        <JobDetailSimpleView
+          job={job}
+          jobId={id}
+          actionDisabled={actionDisabled}
+          actionLoading={actionLoading}
+          logAppLoading={applicationsApi.createApplicationLoading}
+          onMarkApplied={() => setLogAppOpen(true)}
+          onNotInterested={() => void handleArchive()}
+        />
+      )}
+    </>
   );
 }
 
@@ -450,7 +369,9 @@ function ActionButton({ label, loading, disabled, onClick, variant = "default", 
       variant={variant}
       size="lg"
       disabled={disabled}
-      onClick={() => { void Promise.resolve(onClick()).catch(() => void 0); }}
+      onClick={() => {
+        void Promise.resolve(onClick()).catch(() => void 0);
+      }}
       className={cn("shrink-0 md:h-10 md:min-h-[38px] md:px-4", className)}
       suppressHydrationWarning
     >

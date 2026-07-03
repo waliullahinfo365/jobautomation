@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
 import { BRAND } from "@/lib/brand";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,12 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { me } from "@/lib/api/auth.api";
 import { useLogoutAction } from "@/hooks/useLogoutAction";
+import { useAuthSession } from "@/context/AuthSessionContext";
+import {
+  getMobileDrawerNavItems,
+  isNavItemActive,
+  shouldUseCustomerNav,
+} from "@/config/navigation";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { MobileSearchSheet } from "./MobileSearchSheet";
@@ -19,13 +24,22 @@ import { ThemeToggle } from "./ThemeToggle";
 import { SearchIcon, PlusIcon } from "@/components/icons";
 import { useTheme } from "next-themes";
 
-const flatNav: SidebarNavItem[] = SIDEBAR_NAV.flatMap((s) => [...s.items]);
+function navItemKey(item: { id?: string; href: string }): string {
+  return item.id ?? item.href;
+}
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [account, setAccount] = useState<{ name: string; email: string } | null>(null);
   const pathname = usePathname();
+  const authSession = useAuthSession();
+  const productRole = authSession?.productRole ?? "user";
+  const customerNav = shouldUseCustomerNav(productRole);
+  const drawerNav = useMemo(
+    () => getMobileDrawerNavItems(productRole),
+    [productRole]
+  );
   const { t } = useTranslation();
   const { theme, resolvedTheme } = useTheme();
   const handleLogout = useLogoutAction(() => setOpen(false));
@@ -77,31 +91,33 @@ export function MobileNav() {
   return (
     <>
       <header className="jf-mobile-topbar flex min-h-[52px] items-center justify-between gap-1.5 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] px-2.5 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-2 sm:px-4 md:hidden">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Link href="/today" className="flex min-w-0 flex-1 items-center gap-2">
           <Image src={BRAND.iconPath} alt={BRAND.name} width={26} height={26} priority className="shrink-0" />
           <span className="max-w-[7rem] truncate text-sm font-semibold text-[var(--text-1)] sm:max-w-none">{BRAND.name}</span>
-        </div>
+        </Link>
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-2)]"
+            className="mobile-touch-target grid place-items-center rounded-xl text-[var(--text-2)] transition-colors active:bg-[var(--surface-3)]"
             aria-label={t("topbar.searchPlaceholder")}
           >
             <SearchIcon size={20} />
           </button>
-          <Link
-            href="/jobs?add=1"
-            className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-2)]"
-            aria-label={t("jobs.addJob")}
-          >
-            <PlusIcon size={20} />
-          </Link>
+          {!customerNav ? (
+            <Link
+              href="/jobs?add=1"
+              className="mobile-touch-target grid place-items-center rounded-xl text-[var(--text-2)] transition-colors active:bg-[var(--surface-3)]"
+              aria-label={t("jobs.addJob")}
+            >
+              <PlusIcon size={20} />
+            </Link>
+          ) : null}
           <NotificationBell />
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="grid h-11 min-h-[44px] min-w-[44px] place-items-center rounded-md text-[var(--text-2)]"
+            className="mobile-touch-target grid place-items-center rounded-xl text-[var(--text-2)] transition-colors active:bg-[var(--surface-3)]"
             aria-label={t("common.openMenu")}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -146,22 +162,34 @@ export function MobileNav() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <Link
-                    href="/profile"
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-[40px] items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
-                  >
-                    {t("common.profile")}
-                  </Link>
-                  <Link
-                    href="/settings"
-                    onClick={() => setOpen(false)}
-                    className="flex min-h-[40px] items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
-                  >
-                    {t("common.settings")}
-                  </Link>
-                </div>
+                {customerNav ? (
+                  <div className="mt-3">
+                    <Link
+                      href="/settings?section=Profile"
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-[44px] w-full items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+                    >
+                      {t("common.settings")}
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Link
+                      href="/profile"
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-[40px] items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+                    >
+                      {t("common.profile")}
+                    </Link>
+                    <Link
+                      href="/settings"
+                      onClick={() => setOpen(false)}
+                      className="flex min-h-[40px] items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+                    >
+                      {t("common.settings")}
+                    </Link>
+                  </div>
+                )}
 
                 <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-[var(--border-default)] px-3 py-2">
                   <div className="min-w-0">
@@ -181,29 +209,31 @@ export function MobileNav() {
                 </div>
               </div>
 
-              <ul className="flex flex-col gap-1">
-                {flatNav.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                  const Icon = item.icon;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className={cn(
-                          "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
-                          isActive
-                            ? "bg-[var(--accent-bg)] text-[var(--text-1)]"
-                            : "text-[var(--text-2)] hover:bg-[var(--surface-3)]"
-                        )}
-                      >
-                        <Icon size={16} />
-                        {t(item.labelKey)}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+              {!customerNav && drawerNav.length > 0 ? (
+                <ul className="flex flex-col gap-1">
+                  {drawerNav.map((item) => {
+                    const isActive = isNavItemActive(pathname, item);
+                    const Icon = item.icon;
+                    return (
+                      <li key={navItemKey(item)}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+                            isActive
+                              ? "bg-[var(--accent-bg)] text-[var(--text-1)]"
+                              : "text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+                          )}
+                        >
+                          <Icon size={16} />
+                          {t(item.labelKey)}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
             </div>
 
             <div className="border-t border-[var(--border-default)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

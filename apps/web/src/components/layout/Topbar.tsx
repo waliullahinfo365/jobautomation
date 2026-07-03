@@ -3,27 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
-import { ChevronDownIcon, PlusIcon, SearchIcon, SIDEBAR_NAV, type SidebarNavItem } from "@/components/icons";
+import { ChevronDownIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useLogoutAction } from "@/hooks/useLogoutAction";
+import { useAuthSession } from "@/context/AuthSessionContext";
+import { getNavTitleForPath, shouldUseCustomerNav } from "@/config/navigation";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "./ThemeToggle";
-
-const flatNav: SidebarNavItem[] = SIDEBAR_NAV.flatMap((s) => [...s.items]);
 
 export function Topbar() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const handleLogout = useLogoutAction();
-  const title = useMemo(() => {
-    const match = flatNav.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-    return match ? t(match.labelKey) : t("nav.dashboard");
-  }, [pathname, t]);
+  const authSession = useAuthSession();
+  const productRole = authSession?.productRole ?? "user";
+  const customerNav = shouldUseCustomerNav(productRole);
+  const title = useMemo(
+    () => getNavTitleForPath(pathname, productRole, t),
+    [pathname, productRole, t]
+  );
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -88,7 +91,10 @@ export function Topbar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem>
-              <Link href="/profile" className="block cursor-pointer">
+              <Link
+                href={customerNav ? "/settings?section=Profile" : "/profile"}
+                className="block cursor-pointer"
+              >
                 {t("topbar.accountProfile")}
               </Link>
             </DropdownMenuItem>

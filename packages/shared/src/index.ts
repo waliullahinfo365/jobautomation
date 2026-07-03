@@ -6,6 +6,7 @@ export * from "./constants/googleScopes";
 export * from "./constants/ai";
 export * from "./types/ai";
 export * from "./constants/plans";
+export * from "./constants/product-roles";
 export * from "./constants/permissions";
 export * from "./types/tenant";
 export * from "./types/user";

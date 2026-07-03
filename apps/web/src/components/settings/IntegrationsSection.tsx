@@ -15,6 +15,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api/client";
 import { IntegrationCard } from "./IntegrationCard";
+import { ConnectedAccountSimpleCard } from "./ConnectedAccountSimpleCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
 import { LinkedInSessionCard } from "./LinkedInSessionCard";
 
@@ -259,10 +260,11 @@ function isGoogleSlug(slug: string): boolean {
   return slug === "gmail" || slug === "google-drive" || slug === "google-calendar";
 }
 
-export function IntegrationsSection() {
+export function IntegrationsSection({ variant = "advanced" }: { variant?: "simple" | "advanced" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation();
+  const simple = variant === "simple";
   const {
     integrations,
     health,
@@ -393,6 +395,11 @@ export function IntegrationsSection() {
   }, [health, mergedItems]);
 
   const modalItem = modalSlug ? mergedItems.find((i) => i.slug === modalSlug) : undefined;
+
+  const visibleItems = useMemo(() => {
+    if (!simple) return mergedItems;
+    return mergedItems.filter((i) => i.slug === "gmail" || i.slug === "google-drive");
+  }, [mergedItems, simple]);
 
   async function handleConnectSubmit(body: Record<string, unknown>) {
     if (!modalSlug) return;
@@ -592,9 +599,13 @@ export function IntegrationsSection() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{t("settings.integrationsTitle")}</h2>
-          <p className="text-sm text-muted-foreground">{t("settings.integrationsSubtitle")}</p>
-          {integrationsError ? (
+          <h2 className="text-lg font-semibold tracking-tight">
+            {simple ? t("settings.connectedAccountsTitle") : t("settings.integrationsTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {simple ? t("settings.connectedAccountsSubtitle") : t("settings.integrationsSubtitle")}
+          </p>
+          {!simple && integrationsError ? (
             <p className="mt-2 text-sm text-destructive">
               {integrationsError.message}
               {" · "}
@@ -602,38 +613,48 @@ export function IntegrationsSection() {
             </p>
           ) : null}
         </div>
-        <ApiStatusIndicator usingMock={isUsingFallback} />
+        {!simple ? <ApiStatusIndicator usingMock={isUsingFallback} labels={{ connected: t("integrations.apiConnected") }} /> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-3">
-        <HealthMini label={t("integrations.connected")} value={healthSummary.connected} />
-        <HealthMini label={t("integrations.needsAttention")} value={healthSummary.needsAttention} />
-        <HealthMini label={t("integrations.notConnected")} value={healthSummary.notConnected} />
-        <HealthMini label={t("integrations.expiredDisabled")} value={healthSummary.expired + healthSummary.disabled} />
-      </div>
+      {!simple ? (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 sm:gap-3">
+          <HealthMini label={t("integrations.connected")} value={healthSummary.connected} />
+          <HealthMini label={t("integrations.needsAttention")} value={healthSummary.needsAttention} />
+          <HealthMini label={t("integrations.notConnected")} value={healthSummary.notConnected} />
+          <HealthMini label={t("integrations.expiredDisabled")} value={healthSummary.expired + healthSummary.disabled} />
+        </div>
+      ) : null}
 
       {integrationsLoading && !integrations?.length ? (
         <p className="text-sm text-muted-foreground">{t("integrations.loading")}</p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <LinkedInSessionCard />
-        {mergedItems.map((item) => (
-          <IntegrationCard
-            key={item.slug}
-            item={item}
-            pending={pending}
-            onConnect={() => setModalSlug(item.slug)}
-            onTest={() => void runTest(item.slug)}
-            onDisconnect={() => setDisconnectSlug(item.slug)}
-          />
-        ))}
+      <div className={simple ? "space-y-3" : "grid grid-cols-1 gap-4 xl:grid-cols-2"}>
+        <LinkedInSessionCard variant={simple ? "simple" : "advanced"} />
+        {simple
+          ? visibleItems.map((item) => (
+              <ConnectedAccountSimpleCard
+                key={item.slug}
+                item={item}
+                loading={pending?.slug === item.slug && pending.action === "connect"}
+                onReconnect={() => setModalSlug(item.slug)}
+              />
+            ))
+          : mergedItems.map((item) => (
+              <IntegrationCard
+                key={item.slug}
+                item={item}
+                pending={pending}
+                onConnect={() => setModalSlug(item.slug)}
+                onTest={() => void runTest(item.slug)}
+                onDisconnect={() => setDisconnectSlug(item.slug)}
+              />
+            ))}
       </div>
 
-      {/* Gmail Inbox Scan — shown when Gmail is connected */}
-      {mergedItems.some((i) => i.slug === "gmail" && i.status === "Connected") && (
+      {!simple && mergedItems.some((i) => i.slug === "gmail" && i.status === "Connected") ? (
         <GmailScanPanel />
-      )}
+      ) : null}
 
       <IntegrationConnectModal
         open={modalSlug !== null}

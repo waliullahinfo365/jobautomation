@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthApi } from "@/hooks/api/useAuthApi";
 import { getAuthToken } from "@/lib/api/client";
+import { me } from "@/lib/api/auth.api";
+import { getPostLoginPath } from "@/lib/auth/postLoginRedirect";
 import { useTranslation } from "@/i18n/useTranslation";
 
 export function RegisterForm() {
@@ -21,7 +23,9 @@ export function RegisterForm() {
   useEffect(() => {
     const token = getAuthToken();
     if (token) {
-      router.replace("/today");
+      void me()
+        .then((session) => router.replace(getPostLoginPath(session.user)))
+        .catch(() => router.replace("/today"));
       return;
     }
     setRedirecting(false);
@@ -31,8 +35,8 @@ export function RegisterForm() {
     e.preventDefault();
     clearError();
     try {
-      await register({ name, email, password, workspaceName });
-      router.push("/today");
+      const session = await register({ name, email, password, workspaceName });
+      router.push(getPostLoginPath(session.user));
       router.refresh();
     } catch {
       /* surfaced via hook */

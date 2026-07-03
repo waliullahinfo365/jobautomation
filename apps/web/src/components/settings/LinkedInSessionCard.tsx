@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkedinIcon } from "@/components/icons/moreIcons";
 import { ConnectionStatusBadge } from "./ConnectionStatusBadge";
+import { ConnectedAccountSimpleCard } from "./ConnectedAccountSimpleCard";
 import { LinkedInLoginModal } from "./LinkedInLoginModal";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import type { IntegrationListItem } from "@/types/integrations";
 import {
   startLinkedInLogin,
   getLinkedInSessionStatus,
@@ -26,7 +28,7 @@ function syncLoginErrorFromStatus(s: LinkedInSessionStatus) {
   return null;
 }
 
-export function LinkedInSessionCard() {
+export function LinkedInSessionCard({ variant = "advanced" }: { variant?: "simple" | "advanced" }) {
   const [status, setStatus] = useState<LinkedInSessionStatus | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
@@ -166,6 +168,47 @@ export function LinkedInSessionCard() {
         new Date(status.savedAt)
       )
     : null;
+
+  const linkedInItem: IntegrationListItem = {
+    slug: "linkedin",
+    provider: "LinkedIn",
+    purpose: "LinkedIn Easy Apply",
+    status: cardStatus,
+    requiredFor: [],
+    scopes: [],
+    metadata: {},
+    connectedEmail: status?.connected ? savedAt ?? "Active" : undefined,
+  };
+
+  if (variant === "simple") {
+    return (
+      <>
+        <ConnectedAccountSimpleCard
+          item={linkedInItem}
+          loading={connecting || polling}
+          onReconnect={() => setModalOpen(true)}
+        />
+        <LinkedInLoginModal
+          open={modalOpen}
+          loading={connecting}
+          onClose={() => {
+            if (!connecting) setModalOpen(false);
+          }}
+          onSubmitCredentials={handleLogin}
+          onSubmitCookies={handleCookieImport}
+        />
+        <ConfirmDialog
+          open={disconnectOpen}
+          title="Disconnect LinkedIn"
+          description="This will remove the saved LinkedIn session. You will need to log in again to use auto-apply."
+          confirmLabel="Disconnect"
+          variant="destructive"
+          onCancel={() => setDisconnectOpen(false)}
+          onConfirm={() => void handleDisconnect()}
+        />
+      </>
+    );
+  }
 
   return (
     <>

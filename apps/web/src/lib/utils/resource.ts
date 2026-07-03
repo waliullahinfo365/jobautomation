@@ -288,6 +288,8 @@ export function normalizeJobForUi(raw: unknown): Job {
     notes: (j.notes as string | undefined),
     contactIds: ((j.contactIds ?? []) as string[]),
     profileDocumentContext: (j.profileDocumentContext as Job["profileDocumentContext"]) ?? undefined,
+    reviewStatus: (j.reviewStatus as Job["reviewStatus"]) ?? undefined,
+    reviewedAt: (j.reviewedAt as string | undefined),
   };
 }
 

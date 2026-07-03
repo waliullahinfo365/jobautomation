@@ -23,10 +23,13 @@ type Props = {
   onClose: () => void;
   onSubmit: (payload: UploadPayload) => Promise<void>;
   loading?: boolean;
+  variant?: "full" | "simple";
+  initialType?: UploadPayload["type"];
 };
 
-export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props) {
+export function UploadDocumentModal({ open, onClose, onSubmit, loading, variant = "full", initialType }: Props) {
   const { t } = useTranslation();
+  const simple = variant === "simple";
   const jobsApi = useJobsApi({ fallbackToMock: false });
   const jobs = useMemo(() => normalizeListResponse<unknown>(jobsApi.data).map(normalizeJobForUi), [jobsApi.data]);
 
@@ -50,11 +53,11 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
   useEffect(() => {
     if (!open) return;
     setFile(null);
-    setType("CV");
+    setType(initialType ?? "CV");
     setJobId("");
     setContentText("");
     setNotes("");
-  }, [open]);
+  }, [open, initialType]);
 
   if (!open) return null;
 
@@ -99,45 +102,66 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading }: Props)
     ...jobs.map((j) => ({ label: `${j.company} — ${j.position}`, value: getResourceId(j) })),
   ];
 
+  const simpleTitle =
+    type === "CV"
+      ? t("documents.simple.uploadCv")
+      : type === "Cover Letter Template"
+        ? t("documents.simple.uploadCoverTemplate")
+        : t("documents.simple.uploadPortfolio");
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-y-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-4">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => !loading && onClose()} aria-hidden />
       <div className="relative z-50 my-auto flex max-h-[min(100dvh-1.25rem,90vh)] w-full min-w-0 max-w-lg flex-col overflow-y-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 shadow-xl sm:rounded-[var(--r-lg)] sm:p-6">
-        <h2 className="text-lg font-semibold text-[var(--text-1)]">{t("documents.upload.title")}</h2>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--text-3)]">{t("documents.upload.subtitle")}</p>
+        <h2 className="text-lg font-semibold text-[var(--text-1)]">{simple ? simpleTitle : t("documents.upload.title")}</h2>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--text-3)]">
+          {simple ? t("documents.simple.uploadModalHint") : t("documents.upload.subtitle")}
+        </p>
         <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
           <div className="space-y-2">
             <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.file")}</label>
             <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </div>
+          {!simple ? (
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.documentType")}</label>
+              <Select value={type} onChange={(e) => setType(e.target.value as UploadPayload["type"])} options={typeOptions} />
+            </div>
+          ) : null}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.documentType")}</label>
-            <Select value={type} onChange={(e) => setType(e.target.value as UploadPayload["type"])} options={typeOptions} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.documentText")}</label>
-            <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.documentTextHelp")}</p>
+            <label className="text-xs font-medium text-[var(--text-3)]">
+              {simple ? t("documents.simple.optionalText") : t("documents.upload.documentText")}
+            </label>
+            {!simple ? (
+              <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.documentTextHelp")}</p>
+            ) : null}
             <textarea
               className="flex min-h-[120px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={contentText}
               onChange={(e) => setContentText(e.target.value)}
-              placeholder={t("documents.upload.documentTextPlaceholder")}
+              placeholder={
+                simple ? t("documents.simple.optionalTextPlaceholder") : t("documents.upload.documentTextPlaceholder")
+              }
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.notes")}</label>
-            <textarea
-              className="flex min-h-[88px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t("documents.upload.notesPlaceholder")}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.relatedJob")}</label>
-            <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.relatedJobHint")}</p>
-            <Select value={jobId} onChange={(e) => setJobId(e.target.value)} options={jobOptions} />
-          </div>
+          {!simple ? (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.notes")}</label>
+                <textarea
+                  className="flex min-h-[88px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={t("documents.upload.notesPlaceholder")}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[var(--text-3)]">{t("documents.upload.relatedJob")}</label>
+                <p className="text-xs leading-relaxed text-[var(--text-3)]">{t("documents.upload.relatedJobHint")}</p>
+                <Select value={jobId} onChange={(e) => setJobId(e.target.value)} options={jobOptions} />
+              </div>
+            </>
+          ) : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="w-full touch-manipulation sm:w-auto">
               {t("documents.upload.cancel")}

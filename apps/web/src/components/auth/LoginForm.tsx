@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthApi } from "@/hooks/api/useAuthApi";
 import { getAuthToken, invalidateApiCache, setAuthToken } from "@/lib/api/client";
-import { getGoogleLoginUrl } from "@/lib/api/auth.api";
+import { getGoogleLoginUrl, me } from "@/lib/api/auth.api";
+import { getPostLoginPath } from "@/lib/auth/postLoginRedirect";
 import { useTranslation } from "@/i18n/useTranslation";
 import { showError } from "@/lib/ui/toast";
 
@@ -77,12 +78,16 @@ export function LoginForm() {
         /* ignore */
       }
       invalidateApiCache();
-      router.replace("/today");
+      void me()
+        .then((session) => router.replace(getPostLoginPath(session.user)))
+        .catch(() => router.replace("/today"));
       return;
     }
 
     if (getAuthToken()) {
-      router.replace("/today");
+      void me()
+        .then((session) => router.replace(getPostLoginPath(session.user)))
+        .catch(() => router.replace("/today"));
       return;
     }
 
@@ -94,8 +99,8 @@ export function LoginForm() {
     clearError();
     setGoogleError(null);
     try {
-      await login(email, password);
-      router.push("/today");
+      const session = await login(email, password);
+      router.push(getPostLoginPath(session.user));
       router.refresh();
     } catch {
       /* error surfaced via hook */

@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useSearchParams } from "next/navigation";
 import { DocumentsIcon } from "@/components/icons";
 import { useTranslation } from "@/i18n/useTranslation";
-import { PageHeader } from "@/components/shared/PageHeader";
+import { useAdvancedUi } from "@/context/AuthSessionContext";
 import type {
   CoverLetterRecord,
   CVVersion,
@@ -15,27 +15,20 @@ import type {
   PDFExportRecord,
   ResearchDocumentRecord,
 } from "@/types/document";
-import {
-  mockFolderAutomationSettings,
-} from "@/data/mockDocuments";
+import { mockFolderAutomationSettings } from "@/data/mockDocuments";
 import { apiFetch, withQuery, ApiError } from "@/lib/api/client";
-import { DocumentStatsCards } from "./DocumentStatsCards";
-import { DocumentTabs } from "./DocumentTabs";
-import { DocumentFilters, type DocumentFilterState } from "./DocumentFilters";
-import { AllDocumentsTable } from "./AllDocumentsTable";
-import { CVLibrarySection } from "./CVLibrarySection";
-import { CoverLettersSection } from "./CoverLettersSection";
-import { ResearchDocsSection } from "./ResearchDocsSection";
-import { PDFExportsSection } from "./PDFExportsSection";
-import { FolderAutomationSection } from "./FolderAutomationSection";
+import type { DocumentFilterState } from "./DocumentFilters";
+import { DocumentsAdvancedView } from "./DocumentsAdvancedView";
+import { DocumentsSimpleView } from "./DocumentsSimpleView";
 import { UploadDocumentModal, type UploadPayload } from "./UploadDocumentModal";
 import { useDocumentsApi } from "@/hooks/api/useDocumentsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { getResourceId, normalizeDocumentRecordsForUi, normalizeJobForUi } from "@/lib/utils/resource";
-import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
+import { CustomerListPageSkeleton } from "@/components/shared/CustomerPageSkeletons";
 import { LoadingState } from "@/components/shared/LoadingState";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
 import type { Job } from "@/types/job";
 import { getTenantUserIdsForApi } from "@/lib/api/jobs.api";
@@ -123,8 +116,18 @@ function toastQueuedPayload(label: string, result: unknown) {
   showSuccess(parts.length ? `${label}: ${parts.join(" · ")}` : `${label} queued.`);
 }
 
+function uploadTypeForRecord(record: DocumentRecord): UploadPayload["type"] {
+  if (record.type === "CV") return "CV";
+  if (record.type === "Cover Letter Template") return "Cover Letter Template";
+  if (record.type === "Cover Letter") return "Cover Letter";
+  if (record.type === "Research Document") return "Research";
+  return "Supporting Document";
+}
+
 export function DocumentsPageClient() {
   const { t } = useTranslation();
+  const searchParams = useSearchParams();
+  const advancedUi = useAdvancedUi();
   const documentsApi = useDocumentsApi({ fallbackToMock: false });
   const jobsApi = useJobsApi({ fallbackToMock: false });
 
@@ -137,6 +140,7 @@ export function DocumentsPageClient() {
   const [cvDefaultId, setCvDefaultId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadInitialType, setUploadInitialType] = useState<UploadPayload["type"]>("CV");
 
   const baseDocuments = useMemo(() => {
     const raw = normalizeListResponse<unknown>(documentsApi.data);
@@ -156,7 +160,7 @@ export function DocumentsPageClient() {
   }, [documentsApi.isUsingFallback]);
 
   useEffect(() => {
-    if (tab !== "Folder Automation") return;
+    if (!advancedUi || tab !== "Folder Automation") return;
     apiFetch<{ data?: unknown[] } | unknown[]>(withQuery("/automation/logs", { moduleKey: "folder-automation", limit: "20" }))
       .then((res) => {
         const rows = Array.isArray(res) ? res : (Array.isArray((res as any).data) ? (res as any).data : []);
@@ -172,7 +176,7 @@ export function DocumentsPageClient() {
         );
       })
       .catch(() => {/* leave previous state */});
-  }, [tab]);
+  }, [tab, advancedUi]);
 
   const documents = useMemo(() => {
     const patched = baseDocuments.map((doc) => {
@@ -306,12 +310,21 @@ export function DocumentsPageClient() {
     }
   };
 
-  const handleOpenFolder = (record: DocumentRecord) => {
-    if (record.storageUrl) {
-      window.open(record.storageUrl, "_blank", "noopener,noreferrer");
+  const handleOpenDocument = useCallback((record: DocumentRecord) => {
+    const url = record.pdfUrl || record.storageUrl || record.driveFileLink;
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
       return;
     }
-    showInfo(t("documents.toast.openFolderNote"));
+    if (advancedUi) {
+      showInfo(t("documents.toast.openFolderNote"));
+      return;
+    }
+    showInfo(t("documents.simple.openUnavailable"));
+  }, [advancedUi, t]);
+
+  const handleOpenFolder = (record: DocumentRecord) => {
+    handleOpenDocument(record);
   };
 
   const handleSetActive = async (record: DocumentRecord) => {
@@ -424,7 +437,7 @@ export function DocumentsPageClient() {
         ...prev,
       ]);
       showInfo(t("documents.toast.offlineDemo"));
-      showSuccess(t("documents.toast.documentRecordCreated"));
+      showSuccess(advancedUi ? t("documents.toast.documentRecordCreated") : t("documents.simple.uploadSuccess"));
       setUploadOpen(false);
       return;
     }
@@ -449,7 +462,7 @@ export function DocumentsPageClient() {
         sourceFileName: payload.fileName,
         metadata: !jobIdClean ? { workspaceLibrary: true, profileDocumentType } : undefined,
       });
-      showSuccess(t("documents.toast.documentRecordCreated"));
+      showSuccess(advancedUi ? t("documents.toast.documentRecordCreated") : t("documents.simple.uploadSuccess"));
       setUploadOpen(false);
       await documentsApi.refetch();
     } catch (err) {
@@ -458,148 +471,126 @@ export function DocumentsPageClient() {
     }
   }
 
+  const openUpload = useCallback((type: UploadPayload["type"]) => {
+    setUploadInitialType(type);
+    setUploadOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const upload = searchParams.get("upload");
+    if (upload === "cv") openUpload("CV");
+    else if (upload === "cover" || upload === "cover_letter_template") openUpload("Cover Letter Template");
+  }, [searchParams, openUpload]);
+
+  const handleSimpleReplace = useCallback(
+    (record: DocumentRecord) => {
+      openUpload(uploadTypeForRecord(record));
+    },
+    [openUpload]
+  );
+
   const isInitialLoading = documentsApi.loading && documentsApi.data === undefined;
 
   if (isInitialLoading) {
+    if (!advancedUi) {
+      return <CustomerListPageSkeleton withTabs />;
+    }
     return (
       <div className="space-y-6">
         <PageHeader
           icon={DocumentsIcon}
-          eyebrow={t("documents.eyebrow")}
-          title={t("documents.title")}
-          description={t("documents.description")}
-          actions={
-            <Button type="button" onClick={() => setUploadOpen(true)}>
-              {t("documents.actions.uploadDocument")}
-            </Button>
-          }
+          eyebrow={advancedUi ? t("documents.eyebrow") : undefined}
+          title={advancedUi ? t("documents.title") : t("documents.simple.title")}
+          description={advancedUi ? t("documents.description") : t("documents.simple.subtitle")}
         />
         <LoadingState title={t("documents.loadingTitle")} description={t("documents.loadingDesc")} />
       </div>
     );
   }
 
-  const emptyAll = documents.length === 0;
-  const emptyFiltered = !emptyAll && filteredAllDocuments.length === 0 && tab === "All Documents";
+  if (documentsApi.error && !documentsApi.data) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={DocumentsIcon}
+          eyebrow={advancedUi ? t("documents.eyebrow") : undefined}
+          title={advancedUi ? t("documents.title") : t("documents.simple.title")}
+          description={advancedUi ? t("documents.description") : t("documents.simple.subtitle")}
+        />
+        <ErrorState
+          title={t("documents.loadingTitle")}
+          description={documentsApi.error.message}
+          actionLabel={t("common.retry")}
+          onAction={() => void documentsApi.refetch()}
+        />
+      </div>
+    );
+  }
+
+  if (advancedUi) {
+    return (
+      <DocumentsAdvancedView
+        tab={tab}
+        onTabChange={setTab}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onFiltersClear={() => setFilters(initialFilters)}
+        stats={stats}
+        documents={documents}
+        filteredAllDocuments={filteredAllDocuments}
+        activeCv={activeCv}
+        activeTemplate={activeTemplate}
+        cvRows={cvRows}
+        coverRows={coverRows}
+        researchRows={researchRows}
+        pdfRows={pdfRows}
+        folderActivity={folderActivity}
+        folderSettings={folderSettings}
+        onFolderSettingsChange={setFolderSettings}
+        isUsingFallback={documentsApi.isUsingFallback}
+        uploadOpen={uploadOpen}
+        onUploadOpenChange={setUploadOpen}
+        onCreateDocument={handleCreateDocumentRecord}
+        createLoading={documentsApi.mutations.createLoading}
+        onExportPdf={(r) => void handleExportPdf(r)}
+        onRouteCv={(r) => void handleRouteCv(r)}
+        onOpenFolder={handleOpenFolder}
+        onSetActive={(r) => void handleSetActive(r)}
+        onProvisionFolder={() => void handleProvisionFolder()}
+        provisionDisabled={!!pendingAction || !firstJobId}
+        onCvSetDefault={(id) => setCvDefaultId(id)}
+        onCvView={(cv) => {
+          const doc = documents.find((d) => d.id === cv.id);
+          const url = doc?.pdfUrl || doc?.storageUrl;
+          if (url) window.open(url, "_blank", "noopener,noreferrer");
+          else showInfo("No file URL available for this CV.");
+        }}
+        onPdfExportAgain={(r) => {
+          const doc = documents.find((d) => d.id === r.id);
+          if (doc) void handleExportPdf(doc);
+        }}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        icon={DocumentsIcon}
-        eyebrow={t("documents.eyebrow")}
-        title={t("documents.title")}
-        description={t("documents.description")}
-        actions={
-          <Button type="button" onClick={() => setUploadOpen(true)}>
-            {t("documents.actions.uploadDocument")}
-          </Button>
-        }
+    <>
+      <DocumentsSimpleView
+        documents={documents}
+        activeCv={activeCv}
+        activeTemplate={activeTemplate}
+        onOpen={handleOpenDocument}
+        onReplace={handleSimpleReplace}
+        onUpload={openUpload}
       />
-
       <UploadDocumentModal
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onSubmit={handleCreateDocumentRecord}
         loading={documentsApi.mutations.createLoading}
+        variant="simple"
+        initialType={uploadInitialType}
       />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Active CV / Resume</p>
-          <p className="mt-2 line-clamp-2 break-all text-sm font-semibold leading-snug text-[var(--text-1)]">{activeCv?.fileName ?? "—"}</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button size="sm" variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setUploadOpen(true)}>
-              Upload New Version
-            </Button>
-            {activeCv ? (
-              <Button size="sm" variant="ghost" type="button" className="w-full sm:w-auto" onClick={() => handleOpenFolder(activeCv)}>
-                Download/Open in Drive
-              </Button>
-            ) : null}
-          </div>
-        </div>
-        <div className="rounded-[var(--r-md)] border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-3)]">Active Cover Letter Template</p>
-          <p className="mt-2 line-clamp-2 break-all text-sm font-semibold leading-snug text-[var(--text-1)]">{activeTemplate?.fileName ?? "—"}</p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Button size="sm" variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setUploadOpen(true)}>
-              Upload New Version
-            </Button>
-            {activeTemplate ? (
-              <Button size="sm" variant="ghost" type="button" className="w-full sm:w-auto" onClick={() => handleOpenFolder(activeTemplate)}>
-                Download/Open in Drive
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <DocumentStatsCards stats={stats} />
-      <DocumentTabs value={tab} onChange={setTab} />
-
-      {tab === "All Documents" ? (
-        <div className="space-y-4">
-          <DocumentFilters
-            filters={filters}
-            onChange={setFilters}
-            onClear={() => setFilters(initialFilters)}
-            aside={documentsApi.isUsingFallback ? <ApiStatusIndicator usingMock /> : null}
-          />
-          {emptyAll ? (
-            <EmptyState title={t("documents.empty.noDocuments")} description={t("documents.empty.noDocumentsDesc")} />
-          ) : emptyFiltered ? (
-            <EmptyState
-              title={t("documents.empty.noMatching")}
-              description={t("documents.empty.noMatchingDesc")}
-              actionLabel={t("documents.filters.clear")}
-              onAction={() => setFilters(initialFilters)}
-            />
-          ) : (
-            <AllDocumentsTable
-              records={filteredAllDocuments}
-              onExportPdf={(r) => void handleExportPdf(r)}
-              onRouteCv={(r) => void handleRouteCv(r)}
-              onOpenFolder={(r) => handleOpenFolder(r)}
-              onSetActive={(r) => void handleSetActive(r)}
-            />
-          )}
-        </div>
-      ) : null}
-
-      {tab === "CV Library" ? (
-        <CVLibrarySection
-          records={cvRows}
-          onSetDefault={(id) => {
-            setCvDefaultId(id);
-          }}
-          onView={(cv) => {
-            const doc = documents.find((d) => d.id === cv.id);
-            const url = doc?.pdfUrl || doc?.storageUrl;
-            if (url) window.open(url, "_blank", "noopener,noreferrer");
-            else showInfo("No file URL available for this CV.");
-          }}
-        />
-      ) : null}
-      {tab === "Cover Letters" ? <CoverLettersSection records={coverRows} /> : null}
-      {tab === "Research Docs" ? <ResearchDocsSection records={researchRows} /> : null}
-      {tab === "PDF Exports" ? (
-        <PDFExportsSection
-          records={pdfRows}
-          onExportAgain={(r) => {
-            const doc = documents.find((d) => d.id === r.id);
-            if (doc) void handleExportPdf(doc);
-          }}
-        />
-      ) : null}
-      {tab === "Folder Automation" ? (
-        <FolderAutomationSection
-          activity={folderActivity}
-          settings={folderSettings}
-          onChange={setFolderSettings}
-          onProvisionJobFolder={() => void handleProvisionFolder()}
-          provisionDisabled={!!pendingAction || !firstJobId}
-        />
-      ) : null}
-    </div>
+    </>
   );
 }

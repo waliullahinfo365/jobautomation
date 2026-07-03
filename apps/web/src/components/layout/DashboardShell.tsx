@@ -3,6 +3,8 @@
 import { useTheme } from "next-themes";
 import { PageTransition } from "@/components/shared/PageTransition";
 import { cn } from "@/lib/utils";
+import { useAuthSession } from "@/context/AuthSessionContext";
+import { getBottomNavItems } from "@/config/navigation";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -16,6 +18,9 @@ interface DashboardShellProps {
 export function DashboardShell({ children }: DashboardShellProps) {
   const { resolvedTheme } = useTheme();
   const themeClass = resolvedTheme === "dark" ? "dark" : "light";
+  const authSession = useAuthSession();
+  const productRole = authSession?.productRole ?? "user";
+  const hasMobileBottomNav = getBottomNavItems(productRole).length > 0;
 
   return (
     <JobPipelineSummaryProvider>
@@ -29,7 +34,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
             <Topbar />
             <main className="flex-1 overflow-x-clip">
               <PageTransition>
-                <div className="mx-auto w-full min-w-0 max-w-[1480px] overflow-x-clip px-3 py-5 pb-mobile-shell sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7">
+                <div
+                  className={cn(
+                    "mx-auto w-full min-w-0 max-w-[1480px] overflow-x-clip px-4 py-4 sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-7",
+                    hasMobileBottomNav
+                      ? "pb-mobile-shell"
+                      : "pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-7"
+                  )}
+                >
                   {children}
                 </div>
               </PageTransition>

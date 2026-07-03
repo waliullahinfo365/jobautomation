@@ -1,4 +1,5 @@
 import type { tenantRoles } from "../constants/plans";
+import type { ProductRole } from "../constants/product-roles";
 import type { userStatuses } from "../constants/statuses";
 
 /**
@@ -20,6 +21,8 @@ export interface User {
   passwordHash: string;
   avatarUrl?: string;
   role: TenantRole;
+  /** Derived SaaS role for UI routing (`user` | `admin` | `super_admin`). */
+  productRole?: ProductRole;
   status: UserStatus;
   timezone?: string;
   lastLoginAt?: string;

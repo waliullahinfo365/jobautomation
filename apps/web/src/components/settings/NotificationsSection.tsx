@@ -7,6 +7,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 interface NotificationsSectionProps {
   preferences: NotificationPreferences;
   onChange: (next: NotificationPreferences) => void;
+  variant?: "simple" | "advanced";
 }
 
 // Map event display names to translation keys
@@ -24,20 +25,28 @@ const EVENT_TRANSLATION_MAP: Record<string, string> = {
   "Weekly report": "settings.notifications.events.weeklyReport",
 };
 
-export function NotificationsSection({ preferences, onChange }: NotificationsSectionProps) {
+export function NotificationsSection({ preferences, onChange, variant = "advanced" }: NotificationsSectionProps) {
   const { t } = useTranslation();
+  const simple = variant === "simple";
+  const hiddenEvents = simple
+    ? new Set(["Duplicate skipped", "Automation failed", "Daily digest", "Weekly report"])
+    : null;
 
   return (
     <div className="space-y-4">
       <SettingSectionCard title={t("settings.notifications.channels.title")}>
         <ChannelRow label={t("settings.notifications.channels.email")} checked={preferences.channels.email} onChange={(checked) => onChange({ ...preferences, channels: { ...preferences.channels, email: checked } })} />
         <ChannelRow label={t("settings.notifications.channels.dashboard")} checked={preferences.channels.dashboard} onChange={(checked) => onChange({ ...preferences, channels: { ...preferences.channels, dashboard: checked } })} />
-        <ChannelRow label={t("settings.notifications.channels.slack")} checked={preferences.channels.slack} onChange={(checked) => onChange({ ...preferences, channels: { ...preferences.channels, slack: checked } })} />
+        {!simple ? (
+          <ChannelRow label={t("settings.notifications.channels.slack")} checked={preferences.channels.slack} onChange={(checked) => onChange({ ...preferences, channels: { ...preferences.channels, slack: checked } })} />
+        ) : null}
       </SettingSectionCard>
 
       <SettingSectionCard title={t("settings.notifications.events.title")}>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          {Object.entries(preferences.events).map(([event, enabled]) => {
+          {Object.entries(preferences.events)
+            .filter(([event]) => !hiddenEvents?.has(event))
+            .map(([event, enabled]) => {
             const translationKey = EVENT_TRANSLATION_MAP[event];
             const label = translationKey ? t(translationKey) : event;
             

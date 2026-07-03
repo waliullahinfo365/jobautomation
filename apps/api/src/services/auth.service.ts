@@ -3,6 +3,7 @@ import { seedAutomationModules } from "@jobflow/database/seed/seedAutomationModu
 import { TenantModel, UserModel } from "@jobflow/database/models";
 import type { Tenant } from "@jobflow/shared/types/tenant";
 import type { User, UserStatus } from "@jobflow/shared/types/user";
+import { resolveProductRole } from "@jobflow/shared/constants/product-roles";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
@@ -11,7 +12,7 @@ import { signAccessToken } from "../utils/jwt";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { ApiError } from "../utils/errors";
 import { logAuthEvent } from "./audit-log.service";
-import { ensureSuperAdminUser, resolveSuperAdminRole } from "./super-admin.service";
+import { ensureSuperAdminUser, isSuperAdminEmail, resolveSuperAdminRole } from "./super-admin.service";
 
 // ─── Password reset token store (in-memory, single process) ─────────────────
 // For multi-instance deployments, replace with a DB-backed token model.
@@ -142,12 +143,18 @@ async function uniqueSlug(base: string): Promise<string> {
 function toPublicUser(doc: Record<string, unknown>): Omit<User, "passwordHash"> {
   const email = String(doc.email);
   const role = resolveSuperAdminRole(email, String(doc.role));
+  const preferences = (doc.preferences as Record<string, unknown>) ?? {};
+  const productRole = resolveProductRole({
+    tenantRole: role,
+    isSuperAdmin: isSuperAdminEmail(email) || preferences.isSuperAdmin === true,
+  });
   return {
     id: String(doc._id ?? doc.id),
     tenantId: String(doc.tenantId),
     name: String(doc.name),
     email,
     role,
+    productRole,
     status: doc.status as User["status"],
     avatarUrl: doc.avatarUrl as string | undefined,
     timezone: doc.timezone as string | undefined,
@@ -155,7 +162,7 @@ function toPublicUser(doc: Record<string, unknown>): Omit<User, "passwordHash"> 
     emailVerifiedAt: doc.emailVerifiedAt
       ? new Date(doc.emailVerifiedAt as string | Date).toISOString()
       : undefined,
-    preferences: (doc.preferences as Record<string, unknown>) ?? {},
+    preferences,
     createdAt: new Date(doc.createdAt as string | Date).toISOString(),
     updatedAt: new Date(doc.updatedAt as string | Date).toISOString(),
   };
@@ -268,7 +275,10 @@ export const authService = {
       throw new ApiError("Registration failed to persist", 500, "REGISTER_FAILED");
     }
 
-    const user = toPublicUser(userDoc as Record<string, unknown>);
+    await ensureSuperAdminUser(userId.toString(), email, "Member");
+    const freshUserDoc = (await UserModel.findById(userId).lean()) ?? userDoc;
+
+    const user = toPublicUser(freshUserDoc as Record<string, unknown>);
     const tenant = toPublicTenant(tenantDoc as Record<string, unknown>);
 
     const accessToken = signAccessToken({
@@ -313,8 +323,9 @@ export const authService = {
 
     await UserModel.updateOne({ _id: row._id }, { $set: { lastLoginAt: new Date() } });
 
-    const role = await ensureSuperAdminUser(String(row._id), email, String(row.role ?? "Member"));
-    const user = { ...toPublicUser(row), role };
+    await ensureSuperAdminUser(String(row._id), email, String(row.role ?? "Member"));
+    const freshUserDoc = (await UserModel.findById(row._id).lean()) ?? row;
+    const user = toPublicUser(freshUserDoc as Record<string, unknown>);
     const tenant = toPublicTenant(tenantDoc as Record<string, unknown>);
 
     const accessToken = signAccessToken({
@@ -481,9 +492,10 @@ export const authService = {
       await seedAutomationModules(newTenantId.toString(), newUserId.toString());
       userId = newUserId.toString();
       tenantId = newTenantId.toString();
+      await ensureSuperAdminUser(userId, email, "Member");
     }
 
-    const userDoc = await UserModel.findById(userId).lean() as Record<string, unknown>;
+    const userDoc = (await UserModel.findById(userId).lean()) as Record<string, unknown> | null;
     const tenantDoc = await TenantModel.findById(tenantId).lean() as Record<string, unknown>;
     if (!userDoc || !tenantDoc) throw new ApiError("Login failed to load session", 500, "LOGIN_FAILED");
 

@@ -54,20 +54,9 @@ function handleUnauthorized(path: string): void {
     /* ignore */
   }
   if (authPath) return;
-  const protectedPrefixes = [
-    "/dashboard",
-    "/jobs",
-    "/applications",
-    "/contacts",
-    "/interviews",
-    "/documents",
-    "/reports",
-    "/automation",
-    "/settings",
-    "/system-status",
-    "/demo",
-  ];
-  const onProtected = protectedPrefixes.some((p) => window.location.pathname.startsWith(p));
+  const currentPath = window.location.pathname;
+  const publicPaths = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"];
+  const onProtected = !publicPaths.some((p) => currentPath === p || currentPath.startsWith(`${p}/`));
   if (onProtected) {
     showError("Session expired. Please login again.");
     window.location.replace("/login");

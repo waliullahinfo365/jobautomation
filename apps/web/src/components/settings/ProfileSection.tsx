@@ -6,16 +6,22 @@ import { AutoApplyProfileCard } from "./AutoApplyProfileCard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
+import { useTheme } from "next-themes";
 import type { Locale } from "@/i18n/translations";
 
 interface ProfileSectionProps {
   profile: ProfileSettings;
   onChange: (next: ProfileSettings) => void;
+  variant?: "simple" | "advanced";
 }
 
-export function ProfileSection({ profile, onChange }: ProfileSectionProps) {
+export function ProfileSection({ profile, onChange, variant = "advanced" }: ProfileSectionProps) {
   const { t, locale, setLocale } = useTranslation();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const simple = variant === "simple";
+  const isDark = (resolvedTheme ?? theme ?? "light") === "dark";
 
   return (
     <div className="space-y-6">
@@ -34,7 +40,33 @@ export function ProfileSection({ profile, onChange }: ProfileSectionProps) {
               className="max-w-xs"
             />
           </div>
-          <p className="mt-2 text-xs text-[var(--text-4)]">{t("profile.documentLanguageNote")}</p>
+          {!simple ? (
+            <p className="mt-2 text-xs text-[var(--text-4)]">{t("profile.documentLanguageNote")}</p>
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+          <p className="text-xs font-medium text-[var(--text-3)]">{t("settings.appearanceTitle")}</p>
+          <div className="mt-2 flex gap-2">
+            <Button
+              type="button"
+              variant={!isDark ? "default" : "outline"}
+              size="sm"
+              className="min-h-[40px] flex-1"
+              onClick={() => setTheme("light")}
+            >
+              {t("common.lightMode")}
+            </Button>
+            <Button
+              type="button"
+              variant={isDark ? "default" : "outline"}
+              size="sm"
+              className="min-h-[40px] flex-1"
+              onClick={() => setTheme("dark")}
+            >
+              {t("common.darkMode")}
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -45,24 +77,28 @@ export function ProfileSection({ profile, onChange }: ProfileSectionProps) {
         </div>
         <Input value={profile.name} onChange={(e) => onChange({ ...profile, name: e.target.value })} placeholder={t("form.label.name")} />
         <Input value={profile.email} onChange={(e) => onChange({ ...profile, email: e.target.value })} placeholder={t("form.label.email")} />
-        <Input
-          value={profile.workspaceName}
-          onChange={(e) => onChange({ ...profile, workspaceName: e.target.value })}
-          placeholder={t("form.label.workspaceName")}
-        />
-        <Input value={profile.role} onChange={(e) => onChange({ ...profile, role: e.target.value })} placeholder={t("form.label.role")} />
-        <Select
-          value={profile.timezone}
-          onChange={(e) => onChange({ ...profile, timezone: e.target.value })}
-          options={[
-            { label: "Asia/Karachi (UTC+5)", value: "Asia/Karachi (UTC+5)" },
-            { label: "UTC", value: "UTC" },
-            { label: "America/New_York (UTC-5)", value: "America/New_York (UTC-5)" },
-          ]}
-        />
+        {!simple ? (
+          <>
+            <Input
+              value={profile.workspaceName}
+              onChange={(e) => onChange({ ...profile, workspaceName: e.target.value })}
+              placeholder={t("form.label.workspaceName")}
+            />
+            <Input value={profile.role} onChange={(e) => onChange({ ...profile, role: e.target.value })} placeholder={t("form.label.role")} />
+            <Select
+              value={profile.timezone}
+              onChange={(e) => onChange({ ...profile, timezone: e.target.value })}
+              options={[
+                { label: "Asia/Karachi (UTC+5)", value: "Asia/Karachi (UTC+5)" },
+                { label: "UTC", value: "UTC" },
+                { label: "America/New_York (UTC-5)", value: "America/New_York (UTC-5)" },
+              ]}
+            />
+          </>
+        ) : null}
       </div>
     </SettingSectionCard>
-    <AutoApplyProfileCard />
+    {!simple ? <AutoApplyProfileCard /> : null}
     </div>
   );
 }
