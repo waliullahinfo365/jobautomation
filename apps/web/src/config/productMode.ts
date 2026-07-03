@@ -1,7 +1,15 @@
 /** Customer-facing SaaS roles (mirrors API `user.productRole`). */
 export type ProductRole = "user" | "admin" | "super_admin";
 
+/** Platform owner — always treated as `super_admin` (case-insensitive email match). */
+export const OWNER_EMAIL = "info@benjaminkueper.com";
+
 const PRODUCT_ROLES: readonly ProductRole[] = ["user", "admin", "super_admin"];
+
+function isPlatformOwnerEmail(email: string | undefined | null): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === OWNER_EMAIL;
+}
 
 export function isProductRole(value: unknown): value is ProductRole {
   return typeof value === "string" && PRODUCT_ROLES.includes(value as ProductRole);
@@ -45,8 +53,10 @@ export function resolveProductRoleFromTenantRole(
 export function normalizeProductRole(user: {
   productRole?: string | null;
   role?: string;
+  email?: string | null;
   preferences?: Record<string, unknown>;
 }): ProductRole {
+  if (isPlatformOwnerEmail(user.email)) return "super_admin";
   if (isProductRole(user.productRole)) return user.productRole;
   const prefs = user.preferences ?? {};
   return resolveProductRoleFromTenantRole(user.role, prefs.isSuperAdmin === true);

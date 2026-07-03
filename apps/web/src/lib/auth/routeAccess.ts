@@ -55,6 +55,7 @@ export function isNavItemVisible(): boolean {
 export function productRoleFromSessionUser(user: {
   productRole?: string | null;
   role?: string;
+  email?: string | null;
   preferences?: Record<string, unknown>;
 }): ProductRole {
   return normalizeProductRole(user);

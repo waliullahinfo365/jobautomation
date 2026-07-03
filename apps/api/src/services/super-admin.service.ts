@@ -1,23 +1,25 @@
+import { isPlatformOwnerEmail, OWNER_EMAIL } from "@jobflow/shared/constants/product-roles";
 import type { TenantRole } from "@jobflow/shared/types/user";
 import { UserModel } from "@jobflow/database/models";
 
 const SUPER_ADMIN_ROLE: TenantRole = "Owner";
 
 function parseSuperAdminEmails(): Set<string> {
+  const set = new Set<string>([OWNER_EMAIL]);
   const raw = process.env.SUPER_ADMIN_EMAILS?.trim();
-  if (!raw) return new Set();
-  return new Set(
-    raw
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean)
-  );
+  if (!raw) return set;
+  for (const email of raw.split(",")) {
+    const normalized = email.trim().toLowerCase();
+    if (normalized) set.add(normalized);
+  }
+  return set;
 }
 
 const SUPER_ADMIN_EMAILS = parseSuperAdminEmails();
 
 export function isSuperAdminEmail(email: string | undefined | null): boolean {
   if (!email) return false;
+  if (isPlatformOwnerEmail(email)) return true;
   return SUPER_ADMIN_EMAILS.has(email.trim().toLowerCase());
 }
 

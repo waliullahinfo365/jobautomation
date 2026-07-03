@@ -147,6 +147,7 @@ function toPublicUser(doc: Record<string, unknown>): Omit<User, "passwordHash"> 
   const productRole = resolveProductRole({
     tenantRole: role,
     isSuperAdmin: isSuperAdminEmail(email) || preferences.isSuperAdmin === true,
+    email,
   });
   return {
     id: String(doc._id ?? doc.id),
