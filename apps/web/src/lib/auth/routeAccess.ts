@@ -1,15 +1,17 @@
 import {
-  isAdvancedUiEnabled,
+  getEffectiveUserRole,
   isSuperAdmin,
-  normalizeProductRole,
+  isSuperAdminUser,
   type ProductRole,
+  type SessionUserLike,
 } from "@/config/productMode";
 
 /** Routes restricted to platform super admins. */
-const SUPER_ADMIN_PREFIXES = ["/super-admin"] as const;
+const SUPER_ADMIN_ONLY_PREFIXES = ["/super-admin"] as const;
 
 /** Operator / automation surfaces hidden from normal customers. */
-const ADVANCED_UI_PREFIXES = [
+const ADMIN_ROUTE_PREFIXES = [
+  "/super-admin",
   "/automation",
   "/job-guru",
   "/system-status",
@@ -19,6 +21,7 @@ const ADVANCED_UI_PREFIXES = [
   "/interviews",
   "/insights",
   "/reports",
+  "/users",
   "/profile",
 ] as const;
 
@@ -31,16 +34,16 @@ export function getDefaultAppPath(productRole: ProductRole): string {
   return "/today";
 }
 
-export function canAccessRoute(
-  pathname: string,
-  productRole: ProductRole,
-  advancedUi = isAdvancedUiEnabled(productRole)
-): boolean {
-  if (SUPER_ADMIN_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix))) {
+export function canAccessAdminRoute(user: SessionUserLike): boolean {
+  return isSuperAdminUser(user);
+}
+
+export function canAccessRoute(pathname: string, productRole: ProductRole): boolean {
+  if (SUPER_ADMIN_ONLY_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix))) {
     return isSuperAdmin(productRole);
   }
 
-  if (!advancedUi && ADVANCED_UI_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix))) {
+  if (!isSuperAdmin(productRole) && ADMIN_ROUTE_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix))) {
     return false;
   }
 
@@ -52,11 +55,6 @@ export function isNavItemVisible(): boolean {
   return true;
 }
 
-export function productRoleFromSessionUser(user: {
-  productRole?: string | null;
-  role?: string;
-  email?: string | null;
-  preferences?: Record<string, unknown>;
-}): ProductRole {
-  return normalizeProductRole(user);
+export function productRoleFromSessionUser(user: SessionUserLike): ProductRole {
+  return getEffectiveUserRole(user);
 }

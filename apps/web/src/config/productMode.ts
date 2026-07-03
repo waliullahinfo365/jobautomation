@@ -6,6 +6,13 @@ export const OWNER_EMAIL = "info@benjaminkueper.com";
 
 const PRODUCT_ROLES: readonly ProductRole[] = ["user", "admin", "super_admin"];
 
+export type SessionUserLike = {
+  productRole?: string | null;
+  role?: string;
+  email?: string | null;
+  preferences?: Record<string, unknown>;
+};
+
 function isPlatformOwnerEmail(email: string | undefined | null): boolean {
   if (!email) return false;
   return email.trim().toLowerCase() === OWNER_EMAIL;
@@ -20,7 +27,7 @@ export function isSimpleCustomerMode(role: ProductRole | string | null | undefin
   return role === "user" || !role;
 }
 
-/** Workspace / account administrator. */
+/** Workspace / account administrator (API may still return this; UI treats as normal user). */
 export function isAdminMode(role: ProductRole | string | null | undefined): boolean {
   return role === "admin";
 }
@@ -31,33 +38,43 @@ export function isSuperAdmin(role: ProductRole | string | null | undefined): boo
 }
 
 /**
- * Advanced automation, system, and operator UI.
- * Enabled for super admins or when `NEXT_PUBLIC_ADVANCED_UI=true`.
+ * Effective product role for navigation, route guards, and UI visibility.
+ * Only the platform owner email or an explicit super-admin flag qualifies.
  */
-export function isAdvancedUiEnabled(role?: ProductRole | string | null | undefined): boolean {
-  if (isSuperAdmin(role)) return true;
-  if (isAdminMode(role)) return true;
-  return process.env.NEXT_PUBLIC_ADVANCED_UI === "true";
+export function getEffectiveUserRole(user: SessionUserLike): ProductRole {
+  if (isPlatformOwnerEmail(user.email)) return "super_admin";
+  if (user.productRole === "super_admin") return "super_admin";
+  const prefs = user.preferences ?? {};
+  if (prefs.isSuperAdmin === true) return "super_admin";
+  return "user";
 }
 
-/** Fallback when API has not yet returned `productRole`. */
+export function isSuperAdminUser(user: SessionUserLike): boolean {
+  return getEffectiveUserRole(user) === "super_admin";
+}
+
+export function canSeeAdvancedNavigation(user: SessionUserLike): boolean {
+  return isSuperAdminUser(user);
+}
+
+/**
+ * Advanced automation, system, and operator UI — super admins only.
+ * `NEXT_PUBLIC_ADVANCED_UI` does not grant access to normal users.
+ */
+export function isAdvancedUiEnabled(role?: ProductRole | string | null | undefined): boolean {
+  return isSuperAdmin(role);
+}
+
+/** @deprecated Prefer `getEffectiveUserRole` — kept for legacy call sites. */
 export function resolveProductRoleFromTenantRole(
   tenantRole: string | undefined,
   isSuperAdminFlag?: boolean
 ): ProductRole {
   if (isSuperAdminFlag) return "super_admin";
-  if (tenantRole === "Owner" || tenantRole === "Admin") return "admin";
+  void tenantRole;
   return "user";
 }
 
-export function normalizeProductRole(user: {
-  productRole?: string | null;
-  role?: string;
-  email?: string | null;
-  preferences?: Record<string, unknown>;
-}): ProductRole {
-  if (isPlatformOwnerEmail(user.email)) return "super_admin";
-  if (isProductRole(user.productRole)) return user.productRole;
-  const prefs = user.preferences ?? {};
-  return resolveProductRoleFromTenantRole(user.role, prefs.isSuperAdmin === true);
+export function normalizeProductRole(user: SessionUserLike): ProductRole {
+  return getEffectiveUserRole(user);
 }

@@ -13,7 +13,7 @@ import {
   UserIcon,
   type IconProps,
 } from "@/components/icons";
-import { isAdvancedUiEnabled, isSuperAdmin, type ProductRole } from "@/config/productMode";
+import { isSuperAdmin, type ProductRole } from "@/config/productMode";
 
 export type AppNavItem = {
   id?: string;
@@ -25,8 +25,29 @@ export type AppNavItem = {
   activePrefixes?: readonly string[];
 };
 
-/** Simplified mobile-first navigation for normal customers. */
+/** Simplified desktop sidebar for normal customers. */
+export const CUSTOMER_SIDEBAR_NAV_ITEMS: readonly AppNavItem[] = [
+  { href: "/today", labelKey: "nav.today", shortLabelKey: "nav.todayShort", icon: DashboardIcon },
+  { href: "/jobs", labelKey: "nav.jobInbox", shortLabelKey: "nav.inboxShort", icon: JobsIcon },
+  { href: "/documents", labelKey: "nav.documents", shortLabelKey: "nav.docsShort", icon: DocumentsIcon },
+  { href: "/settings", labelKey: "nav.settings", shortLabelKey: "nav.settingsShort", icon: SettingsIcon },
+];
+
+/** Full customer navigation (includes apply — used for titles / legacy). */
 export const CUSTOMER_NAV_ITEMS: readonly AppNavItem[] = [
+  ...CUSTOMER_SIDEBAR_NAV_ITEMS.filter((item) => item.href !== "/settings"),
+  {
+    href: "/apply-assistant",
+    labelKey: "nav.apply",
+    shortLabelKey: "nav.applyShort",
+    icon: AutomationIcon,
+    activePrefixes: ["/apply-assistant"],
+  },
+  { href: "/settings", labelKey: "nav.settings", shortLabelKey: "nav.settingsShort", icon: SettingsIcon },
+];
+
+/** Mobile bottom bar — Today, Inbox, Apply, Docs only. */
+export const CUSTOMER_BOTTOM_NAV_ITEMS: readonly AppNavItem[] = [
   { href: "/today", labelKey: "nav.today", shortLabelKey: "nav.todayShort", icon: DashboardIcon },
   { href: "/jobs", labelKey: "nav.inbox", shortLabelKey: "nav.inboxShort", icon: JobsIcon },
   {
@@ -37,13 +58,7 @@ export const CUSTOMER_NAV_ITEMS: readonly AppNavItem[] = [
     activePrefixes: ["/apply-assistant"],
   },
   { href: "/documents", labelKey: "nav.docs", shortLabelKey: "nav.docsShort", icon: DocumentsIcon },
-  { href: "/settings", labelKey: "nav.settings", shortLabelKey: "nav.settingsShort", icon: SettingsIcon },
 ];
-
-/** Mobile bottom bar — settings live in the hamburger menu. */
-export const CUSTOMER_BOTTOM_NAV_ITEMS: readonly AppNavItem[] = CUSTOMER_NAV_ITEMS.filter(
-  (item) => item.href !== "/settings"
-);
 
 /** Full operator navigation for super admins. */
 export const SUPER_ADMIN_NAV_ITEMS: readonly AppNavItem[] = [
@@ -70,14 +85,12 @@ export const SUPER_ADMIN_NAV_ITEMS_ORDERED: readonly AppNavItem[] = [
 ];
 
 export function shouldUseCustomerNav(productRole: ProductRole): boolean {
-  if (isSuperAdmin(productRole)) return false;
-  if (isAdvancedUiEnabled(productRole)) return false;
-  return true;
+  return !isSuperAdmin(productRole);
 }
 
 export function getSidebarNavItems(productRole: ProductRole): readonly AppNavItem[] {
   if (isSuperAdmin(productRole)) return SUPER_ADMIN_NAV_ITEMS_ORDERED;
-  return shouldUseCustomerNav(productRole) ? CUSTOMER_NAV_ITEMS : SUPER_ADMIN_NAV_ITEMS_ORDERED;
+  return CUSTOMER_SIDEBAR_NAV_ITEMS;
 }
 
 export function getBottomNavItems(productRole: ProductRole): readonly AppNavItem[] {
@@ -134,7 +147,7 @@ export function getNavTitleForPath(
 export const SIDEBAR_NAV_PRIMARY = [
   {
     sectionKey: "navSection.main",
-    items: CUSTOMER_NAV_ITEMS.map((item) => ({
+    items: CUSTOMER_SIDEBAR_NAV_ITEMS.map((item) => ({
       labelKey: item.labelKey,
       icon: item.icon,
       href: item.href,

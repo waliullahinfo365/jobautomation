@@ -2,7 +2,12 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { AuthSessionPayload } from "@/lib/api/auth.api";
-import { isAdvancedUiEnabled, normalizeProductRole, type ProductRole } from "@/config/productMode";
+import {
+  canSeeAdvancedNavigation,
+  getEffectiveUserRole,
+  isAdvancedUiEnabled,
+  type ProductRole,
+} from "@/config/productMode";
 
 export type AuthSession = {
   user: AuthSessionPayload["user"];
@@ -34,17 +39,17 @@ export function useProductRole(): ProductRole {
 
 export function useAdvancedUi(): boolean {
   const session = useAuthSession();
-  return session?.advancedUi ?? isAdvancedUiEnabled();
+  return session?.advancedUi ?? false;
 }
 
 export function buildAuthSession(payload: {
   user: AuthSessionPayload["user"];
   tenant: AuthSessionPayload["tenant"];
 }): AuthSession {
-  const productRole = normalizeProductRole(payload.user);
+  const productRole = getEffectiveUserRole(payload.user);
   return {
     ...payload,
     productRole,
-    advancedUi: isAdvancedUiEnabled(productRole),
+    advancedUi: canSeeAdvancedNavigation(payload.user) && isAdvancedUiEnabled(productRole),
   };
 }

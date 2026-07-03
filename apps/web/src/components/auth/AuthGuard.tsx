@@ -30,7 +30,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       try {
         const payload = await me();
         const nextSession = buildAuthSession(payload);
-        if (!canAccessRoute(pathname, nextSession.productRole, nextSession.advancedUi)) {
+        if (!canAccessRoute(pathname, nextSession.productRole)) {
           router.replace(getDefaultAppPath(nextSession.productRole));
           return;
         }

@@ -1,5 +1,5 @@
 import { getDefaultAppPath } from "@/lib/auth/routeAccess";
-import { normalizeProductRole, type ProductRole } from "@/config/productMode";
+import { getEffectiveUserRole, type ProductRole } from "@/config/productMode";
 
 export function getPostLoginPath(user: {
   productRole?: string | null;
@@ -7,6 +7,6 @@ export function getPostLoginPath(user: {
   email?: string | null;
   preferences?: Record<string, unknown>;
 }): string {
-  const productRole: ProductRole = normalizeProductRole(user);
+  const productRole: ProductRole = getEffectiveUserRole(user);
   return getDefaultAppPath(productRole);
 }
