@@ -21,9 +21,9 @@ const FOOTER_LINKS = {
   Company: [
     { label: "About", href: "#" },
     { label: "Careers", href: "#" },
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Service", href: "#" },
-    { label: "Cookie Policy", href: "#" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
+    { label: "Cookie Policy", href: "/cookies" },
   ],
   Connect: [
     { label: "Contact Us", href: "mailto:hello@newjobguru.com" },
@@ -102,8 +102,14 @@ export function LandingFooter() {
             <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>All systems operational</span>
           </div>
           <div className="flex items-center gap-6">
-            {["Privacy", "Terms", "Cookies"].map((l) => (
-              <a key={l} href="#" className="text-xs hover:text-blue-400 transition-colors" style={{ color: "rgba(255,255,255,0.35)" }}>{l}</a>
+            {[
+              { label: "Privacy", href: "/privacy" },
+              { label: "Terms", href: "/terms" },
+              { label: "Cookies", href: "/cookies" },
+            ].map(({ label, href }) => (
+              <Link key={label} href={href} className="text-xs hover:text-blue-400 transition-colors" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {label}
+              </Link>
             ))}
           </div>
         </div>

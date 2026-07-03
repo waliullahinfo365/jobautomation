@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { APP_NAME } from "@/lib/constants";
 import { RegisterFooterCopy, RegisterHeaderCopy } from "@/components/auth/AuthPageCopy";
+import { AuthLegalNotice } from "@/components/auth/AuthLegalNotice";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { BrandIcon } from "@/components/auth/BrandIcon";
 
@@ -20,6 +21,7 @@ export default function RegisterPage() {
           <RegisterForm />
         </div>
 
+        <AuthLegalNotice />
         <RegisterFooterCopy />
       </div>
     </div>

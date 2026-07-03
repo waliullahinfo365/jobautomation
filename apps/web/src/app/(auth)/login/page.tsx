@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { APP_NAME } from "@/lib/constants";
 import { LoginBackground } from "@/components/auth/LoginBackground";
 import { LoginFooterCopy, LoginHeaderCopy } from "@/components/auth/AuthPageCopy";
+import { AuthLegalNotice } from "@/components/auth/AuthLegalNotice";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { BrandIcon } from "@/components/auth/BrandIcon";
 
@@ -26,6 +27,7 @@ export default function LoginPage() {
             </Suspense>
           </div>
 
+          <AuthLegalNotice />
           <LoginFooterCopy />
         </div>
       </main>
