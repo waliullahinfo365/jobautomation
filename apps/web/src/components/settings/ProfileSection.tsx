@@ -2,8 +2,8 @@
 
 import type { ProfileSettings } from "@/types/settings";
 import { SettingSectionCard } from "./SettingSectionCard";
+import { ProfilePhotoUpload } from "./ProfilePhotoUpload";
 import { AutoApplyProfileCard } from "./AutoApplyProfileCard";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,11 @@ import type { Locale } from "@/i18n/translations";
 interface ProfileSectionProps {
   profile: ProfileSettings;
   onChange: (next: ProfileSettings) => void;
+  onAvatarUpdated?: (avatarUrl?: string) => void;
   variant?: "simple" | "advanced";
 }
 
-export function ProfileSection({ profile, onChange, variant = "advanced" }: ProfileSectionProps) {
+export function ProfileSection({ profile, onChange, onAvatarUpdated, variant = "advanced" }: ProfileSectionProps) {
   const { t, locale, setLocale } = useTranslation();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const simple = variant === "simple";
@@ -69,12 +70,16 @@ export function ProfileSection({ profile, onChange, variant = "advanced" }: Prof
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarFallback>{profile.avatarInitials}</AvatarFallback>
-          </Avatar>
-          <p className="text-sm text-[var(--text-2)]">{t("profile.avatarPlaceholder")}</p>
-        </div>
+        <ProfilePhotoUpload
+          name={profile.name}
+          avatarUrl={profile.avatarUrl}
+          avatarInitials={profile.avatarInitials}
+          onUpdated={(avatarUrl) => {
+            onChange({ ...profile, avatarUrl });
+            onAvatarUpdated?.(avatarUrl);
+          }}
+        />
+
         <Input value={profile.name} onChange={(e) => onChange({ ...profile, name: e.target.value })} placeholder={t("form.label.name")} />
         <Input value={profile.email} onChange={(e) => onChange({ ...profile, email: e.target.value })} placeholder={t("form.label.email")} />
         {!simple ? (

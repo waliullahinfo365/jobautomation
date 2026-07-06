@@ -84,6 +84,26 @@ export const updateProfileHandler = asyncHandler(async (req: Request, res: Respo
   return successResponse(res, { user }, "Profile updated");
 });
 
+export const uploadAvatarHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const tenantId = req.user?.tenantId;
+  if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
+  const user = await authService.updateCurrentUserAvatar({
+    userId,
+    tenantId,
+    imageData: req.body.imageData,
+  });
+  return successResponse(res, { user }, "Profile photo updated");
+});
+
+export const removeAvatarHandler = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  const tenantId = req.user?.tenantId;
+  if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
+  const user = await authService.removeCurrentUserAvatar({ userId, tenantId });
+  return successResponse(res, { user }, "Profile photo removed");
+});
+
 export const changePasswordHandler = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?.id;
   const tenantId = req.user?.tenantId;

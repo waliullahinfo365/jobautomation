@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { CV_TEMPLATE_OPTIONS } from "@/lib/cv-templates/types";
 import type { CvTemplateId } from "@/lib/cv-templates/types";
 import { useTranslation } from "@/i18n/useTranslation";
+import { me } from "@/lib/api/auth.api";
 
 // Client-side only — @react-pdf/renderer cannot run on the server
 const CvPdfClientDownload = dynamic(
@@ -154,6 +155,37 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
   const [selectedTemplate, setSelectedTemplate] = useState<CvTemplateId>("modern-no-photo");
   const [downloading, setDownloading] = useState(false);
   const [personalInfo, setPersonalInfo] = useState({ fullName: "", email: "", phone: "", location: "", linkedIn: "" });
+  const [photoUrl, setPhotoUrl] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let mounted = true;
+    void me()
+      .then((session) => {
+        if (!mounted) return;
+        const user = session.user;
+        const prefs = (user.preferences ?? {}) as Record<string, string>;
+        setPersonalInfo((prev) => ({
+          fullName: user.name || prev.fullName,
+          email: user.email || prev.email,
+          phone: prefs.phone || prev.phone,
+          location: prefs.location || prev.location,
+          linkedIn: prefs.linkedinUrl || prev.linkedIn,
+        }));
+        if (user.avatarUrl) {
+          setPhotoUrl(user.avatarUrl);
+          setSelectedTemplate((current) =>
+            current.endsWith("no-photo") ? (current.replace("no-photo", "with-photo") as CvTemplateId) : current
+          );
+        }
+      })
+      .catch(() => {
+        /* optional profile data */
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
 
   const handleGenerate = useCallback(async () => {
     setLoading(true);
@@ -187,6 +219,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
             phone: personalInfo.phone,
             location: personalInfo.location,
             linkedIn: personalInfo.linkedIn,
+            photoUrl,
             headline: data.headline,
             summary: data.summary,
             skills: data.keywords,
@@ -214,7 +247,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
     } finally {
       setDownloading(false);
     }
-  }, [data, jobId, selectedTemplate, personalInfo, company]);
+  }, [data, jobId, selectedTemplate, personalInfo, photoUrl, company]);
 
   const copyToClipboard = useCallback((text: string, which: "cv" | "cl") => {
     void navigator.clipboard.writeText(text).then(() => {
@@ -434,6 +467,7 @@ export function TailoredCvModal({ jobId, jobTitle, company, isOpen, onClose, ini
                           phone: personalInfo.phone,
                           location: personalInfo.location,
                           linkedIn: personalInfo.linkedIn,
+                          photoUrl,
                           headline: data.headline ?? "",
                           summary: data.summary ?? "",
                           skills: data.keywords ?? [],

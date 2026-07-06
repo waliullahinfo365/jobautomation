@@ -10,6 +10,7 @@ export type AuthSessionPayload = {
     role: string;
     productRole?: "user" | "admin" | "super_admin";
     status: string;
+    avatarUrl?: string;
     preferences?: Record<string, unknown>;
   };
   tenant: {
@@ -66,6 +67,18 @@ export async function me(): Promise<{ user: AuthSessionPayload["user"]; tenant: 
 
 export async function updateProfile(payload: { name: string }): Promise<{ user: AuthSessionPayload["user"] }> {
   return apiFetch("/auth/me", { method: "PATCH", body: payload });
+}
+
+export async function uploadAvatar(imageData: string): Promise<{ user: AuthSessionPayload["user"] }> {
+  const result = await apiFetch<{ user: AuthSessionPayload["user"] }>("/auth/me/avatar", { method: "POST", body: { imageData } });
+  invalidateApiCache();
+  return result;
+}
+
+export async function removeAvatar(): Promise<{ user: AuthSessionPayload["user"] }> {
+  const result = await apiFetch<{ user: AuthSessionPayload["user"] }>("/auth/me/avatar", { method: "DELETE" });
+  invalidateApiCache();
+  return result;
 }
 
 export async function changePassword(payload: {

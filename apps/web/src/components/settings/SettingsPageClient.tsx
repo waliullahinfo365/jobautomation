@@ -27,6 +27,13 @@ import { useAdvancedUi } from "@/context/AuthSessionContext";
 import { showError, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
 import { resolveSettingsSection, settingsSectionHref } from "@/lib/settings-routing";
+import { me } from "@/lib/api/auth.api";
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (parts[0] ?? "U").slice(0, 2).toUpperCase();
+}
 
 const ADVANCED_SECTIONS: SettingsSection[] = [
   "Profile",
@@ -59,6 +66,31 @@ export function SettingsPageClient() {
   const checkoutHandled = useRef(false);
 
   useEffect(() => {
+    let mounted = true;
+    void me()
+      .then((session) => {
+        if (!mounted) return;
+        const user = session.user;
+        const tenant = session.tenant;
+        setProfile((prev) => ({
+          ...prev,
+          name: user?.name ?? prev.name,
+          email: user?.email ?? prev.email,
+          workspaceName: tenant?.name ?? prev.workspaceName,
+          role: user?.role ?? prev.role,
+          avatarUrl: user?.avatarUrl,
+          avatarInitials: initialsFromName(user?.name ?? prev.name),
+        }));
+      })
+      .catch(() => {
+        /* keep mock fallback */
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const checkout = searchParams.get("checkout");
     if (!checkout) {
       checkoutHandled.current = false;
@@ -82,7 +114,12 @@ export function SettingsPageClient() {
     <>
       {activeSection === "Integrations" ? <IntegrationsSection variant={uiVariant} /> : null}
       {activeSection === "Profile" ? (
-        <ProfileSection profile={profile} onChange={setProfile} variant={uiVariant} />
+        <ProfileSection
+          profile={profile}
+          onChange={setProfile}
+          onAvatarUpdated={(avatarUrl) => setProfile((prev) => ({ ...prev, avatarUrl }))}
+          variant={uiVariant}
+        />
       ) : null}
       {activeSection === "Automation Rules" ? <AutomationRulesSection rules={rules} onChange={setRules} /> : null}
       {activeSection === "Notifications" ? (

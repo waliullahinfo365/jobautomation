@@ -38,6 +38,7 @@ export interface ProfileSettings {
   timezone: string;
   role: string;
   avatarInitials: string;
+  avatarUrl?: string;
 }
 
 export interface AutomationRules {

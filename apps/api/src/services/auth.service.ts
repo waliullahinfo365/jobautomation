@@ -11,6 +11,7 @@ import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED } from "../config/google-oauth";
 import { signAccessToken } from "../utils/jwt";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { ApiError } from "../utils/errors";
+import { parseAvatarDataUrl } from "../utils/avatar";
 import { logAuthEvent } from "./audit-log.service";
 import { ensureSuperAdminUser, isSuperAdminEmail, resolveSuperAdminRole } from "./super-admin.service";
 
@@ -368,6 +369,27 @@ export const authService = {
     const userDoc = await UserModel.findOneAndUpdate(
       { _id: input.userId, tenantId: input.tenantId },
       { $set: { name } },
+      { new: true }
+    ).lean();
+    if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");
+    return toPublicUser(userDoc as Record<string, unknown>);
+  },
+
+  async updateCurrentUserAvatar(input: { userId: string; tenantId: string; imageData: string }) {
+    const { dataUrl } = parseAvatarDataUrl(input.imageData);
+    const userDoc = await UserModel.findOneAndUpdate(
+      { _id: input.userId, tenantId: input.tenantId },
+      { $set: { avatarUrl: dataUrl } },
+      { new: true }
+    ).lean();
+    if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");
+    return toPublicUser(userDoc as Record<string, unknown>);
+  },
+
+  async removeCurrentUserAvatar(input: { userId: string; tenantId: string }) {
+    const userDoc = await UserModel.findOneAndUpdate(
+      { _id: input.userId, tenantId: input.tenantId },
+      { $unset: { avatarUrl: "" } },
       { new: true }
     ).lean();
     if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");

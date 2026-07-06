@@ -27,6 +27,10 @@ export const updateProfileBodySchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
 });
 
+export const uploadAvatarBodySchema = z.object({
+  imageData: z.string().min(1, "Image data is required").max(3_000_000),
+});
+
 export const changePasswordBodySchema = z.object({
   currentPassword: z.string().min(1, "Current password is required"),
   newPassword: passwordSchema,

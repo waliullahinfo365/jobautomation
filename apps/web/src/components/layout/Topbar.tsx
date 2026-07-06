@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
 import { ChevronDownIcon, PlusIcon, SearchIcon } from "@/components/icons";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,13 @@ export function Topbar() {
     [pathname, productRole, t]
   );
   const searchRef = useRef<HTMLInputElement>(null);
+  const avatarUrl = authSession?.user?.avatarUrl;
+  const displayName = authSession?.user?.name ?? t("topbar.you");
+  const initials = useMemo(() => {
+    const parts = displayName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return displayName.slice(0, 2).toUpperCase();
+  }, [displayName]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -83,9 +90,10 @@ export function Topbar() {
               aria-label={t("topbar.accountMenu")}
             >
               <Avatar className="h-[26px] w-[26px] border-0 bg-gradient-to-br from-[#4FC2D8] to-[#637CFF] text-[10.5px] font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]">
-                <AvatarFallback className="bg-transparent text-white">WU</AvatarFallback>
+                {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+                <AvatarFallback className="bg-transparent text-white">{initials}</AvatarFallback>
               </Avatar>
-              <span className="jf-avatar-name text-[12.5px] font-semibold text-[var(--text-1)]">{t("topbar.you")}</span>
+              <span className="jf-avatar-name text-[12.5px] font-semibold text-[var(--text-1)]">{displayName}</span>
               <ChevronDownIcon size={12} className="mr-1 text-[var(--text-3)]" />
             </button>
           </DropdownMenuTrigger>

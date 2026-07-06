@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { BRAND } from "@/lib/brand";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ function navItemKey(item: { id?: string; href: string }): string {
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [account, setAccount] = useState<{ name: string; email: string } | null>(null);
+  const [account, setAccount] = useState<{ name: string; email: string; avatarUrl?: string } | null>(null);
   const pathname = usePathname();
   const authSession = useAuthSession();
   const productRole = authSession?.productRole ?? "user";
@@ -52,7 +52,6 @@ export function MobileNav() {
   }, [account, t]);
 
   useEffect(() => {
-    if (!open || account) return;
     let mounted = true;
     void me()
       .then((session) => {
@@ -60,6 +59,7 @@ export function MobileNav() {
         setAccount({
           name: session.user?.name || t("topbar.you"),
           email: session.user?.email || "",
+          avatarUrl: session.user?.avatarUrl,
         });
       })
       .catch(() => {
@@ -69,7 +69,16 @@ export function MobileNav() {
     return () => {
       mounted = false;
     };
-  }, [account, open, t]);
+  }, [t]);
+
+  useEffect(() => {
+    const onPhotoUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ avatarUrl?: string }>).detail;
+      setAccount((prev) => (prev ? { ...prev, avatarUrl: detail.avatarUrl } : prev));
+    };
+    window.addEventListener("profile-photo-updated", onPhotoUpdated);
+    return () => window.removeEventListener("profile-photo-updated", onPhotoUpdated);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -154,6 +163,7 @@ export function MobileNav() {
               <div className="mb-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar className="h-10 w-10 shrink-0 border-0 bg-gradient-to-br from-[#4FC2D8] to-[#637CFF] text-xs font-bold text-white">
+                    {account?.avatarUrl ? <AvatarImage src={account.avatarUrl} alt={account.name} /> : null}
                     <AvatarFallback className="bg-transparent text-white">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
