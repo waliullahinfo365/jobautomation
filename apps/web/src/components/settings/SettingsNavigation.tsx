@@ -5,7 +5,6 @@ import { SETTINGS_SECTION_I18N_KEY } from "@/i18n/settings-sections";
 import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollableTabBar, ScrollableTabButton } from "@/components/shared/ScrollableTabBar";
 
 interface SettingsNavigationProps {
   sections: SettingsSection[];
@@ -25,6 +24,7 @@ export function SettingsNavigation({ sections, activeSection, onChange }: Settin
   const renderButton = (section: SettingsSection) => (
     <button
       key={section}
+      type="button"
       onClick={() => onChange(section)}
       className={cn(
         "w-full rounded-md px-3 py-3 text-left text-sm transition-colors min-h-[44px]",
@@ -37,45 +37,23 @@ export function SettingsNavigation({ sections, activeSection, onChange }: Settin
     </button>
   );
 
-  const tabButton = (section: SettingsSection) => (
-    <ScrollableTabButton
-      key={section}
-      onPress={() => onChange(section)}
-      className={cn(
-        activeSection === section
-          ? "bg-[var(--surface-1)] font-medium text-[var(--text-1)] shadow-sm"
-          : "text-[var(--text-3)] hover:text-[var(--text-2)]"
-      )}
-    >
-      {t(SETTINGS_SECTION_I18N_KEY[section])}
-    </ScrollableTabButton>
-  );
-
   return (
-    <>
-      <div className="sticky top-0 z-20 bg-[var(--bg-0)]/95 pb-2 backdrop-blur-sm lg:hidden">
-        <ScrollableTabBar wrap className="px-1">
-          {sections.map(tabButton)}
-        </ScrollableTabBar>
-      </div>
-
-      <Card className="hidden lg:block">
-        <CardContent className="p-3">
-          <nav className="space-y-1">
-            {primary.map(renderButton)}
-            {advanced.length > 0 && (
-              <>
-                <div className="pb-1 pt-3">
-                  <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
-                    Advanced
-                  </p>
-                </div>
-                {advanced.map(renderButton)}
-              </>
-            )}
-          </nav>
-        </CardContent>
-      </Card>
-    </>
+    <Card className="hidden lg:block">
+      <CardContent className="p-3">
+        <nav className="space-y-1">
+          {primary.map(renderButton)}
+          {advanced.length > 0 && (
+            <>
+              <div className="pb-1 pt-3">
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
+                  Advanced
+                </p>
+              </div>
+              {advanced.map(renderButton)}
+            </>
+          )}
+        </nav>
+      </CardContent>
+    </Card>
   );
 }

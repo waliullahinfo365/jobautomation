@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { SettingsIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { SettingsNavigation } from "./SettingsNavigation";
+import { SettingsMobileTabs } from "./SettingsMobileTabs";
 import { IntegrationsSection } from "./IntegrationsSection";
 import { AutomationRulesSection } from "./AutomationRulesSection";
 import { NotificationsSection } from "./NotificationsSection";
@@ -138,8 +139,13 @@ export function SettingsPageClient() {
     return (
       <SimplePageShell className="space-y-4 lg:max-w-none lg:space-y-6">
         <SimplePageHeader title={t("settings.simpleTitle")} description={t("settings.simpleDescription")} />
+        <div className="sticky top-0 z-30 -mx-1 bg-[var(--bg-0)] px-1 pb-3 pt-1 lg:hidden">
+          <SettingsMobileTabs sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+        </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
-          <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+          <div className="hidden lg:block">
+            <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+          </div>
           <div>{content}</div>
         </div>
       </SimplePageShell>
@@ -156,8 +162,14 @@ export function SettingsPageClient() {
         actions={<Button className="hidden sm:inline-flex">{t("settings.saveChanges")}</Button>}
       />
 
+      <div className="sticky top-0 z-30 -mx-1 bg-[var(--bg-0)] px-1 pb-3 pt-1 lg:hidden">
+        <SettingsMobileTabs sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
-        <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+        <div className="hidden lg:block">
+          <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+        </div>
         <div>{content}</div>
       </div>
     </div>
