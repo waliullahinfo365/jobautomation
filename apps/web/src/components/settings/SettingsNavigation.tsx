@@ -5,7 +5,7 @@ import { SETTINGS_SECTION_I18N_KEY } from "@/i18n/settings-sections";
 import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { ScrollableTabBar, scrollableTabButtonClass } from "@/components/shared/ScrollableTabBar";
+import { ScrollableTabBar, ScrollableTabButton } from "@/components/shared/ScrollableTabBar";
 
 interface SettingsNavigationProps {
   sections: SettingsSection[];
@@ -38,25 +38,23 @@ export function SettingsNavigation({ sections, activeSection, onChange }: Settin
   );
 
   const tabButton = (section: SettingsSection) => (
-    <button
+    <ScrollableTabButton
       key={section}
-      type="button"
-      onClick={() => onChange(section)}
+      onPress={() => onChange(section)}
       className={cn(
-        scrollableTabButtonClass,
         activeSection === section
           ? "bg-[var(--surface-1)] font-medium text-[var(--text-1)] shadow-sm"
           : "text-[var(--text-3)] hover:text-[var(--text-2)]"
       )}
     >
       {t(SETTINGS_SECTION_I18N_KEY[section])}
-    </button>
+    </ScrollableTabButton>
   );
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-[var(--bg-0)]/95 pb-2 backdrop-blur-sm lg:hidden">
-        <ScrollableTabBar className="px-1">
+      <div className="sticky top-0 z-20 bg-[var(--bg-0)]/95 pb-2 backdrop-blur-sm lg:hidden">
+        <ScrollableTabBar wrap className="px-1">
           {sections.map(tabButton)}
         </ScrollableTabBar>
       </div>

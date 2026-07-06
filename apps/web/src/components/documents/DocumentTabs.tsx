@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { DocumentTab } from "@/types/document";
-import { ScrollableTabBar, scrollableTabButtonClass } from "@/components/shared/ScrollableTabBar";
+import { ScrollableTabBar, ScrollableTabButton } from "@/components/shared/ScrollableTabBar";
 
 const tabKeys: { key: DocumentTab; i18n: string }[] = [
   { key: "All Documents", i18n: "documents.tabs.allDocuments" },
@@ -19,16 +19,15 @@ export function DocumentTabs({ value, onChange }: { value: DocumentTab; onChange
   return (
     <ScrollableTabBar>
       {tabKeys.map(({ key, i18n }) => (
-        <button
+        <ScrollableTabButton
           key={key}
-          onClick={() => onChange(key)}
+          onPress={() => onChange(key)}
           className={cn(
-            scrollableTabButtonClass,
             value === key ? "bg-[var(--surface-2)] text-[var(--text-1)] shadow-sm" : "text-[var(--text-2)] hover:text-[var(--text-1)]"
           )}
         >
           {t(i18n)}
-        </button>
+        </ScrollableTabButton>
       ))}
     </ScrollableTabBar>
   );
