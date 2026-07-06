@@ -12,6 +12,7 @@ import { ApiError, getAuthToken } from "@/lib/api/client";
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { showError, showInfo, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
+import { settingsSectionHref } from "@/lib/settings-routing";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api/client";
 import { IntegrationCard } from "./IntegrationCard";
@@ -308,11 +309,11 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
     if (integration === "connected") {
       showSuccess(providerSlug ? t("integrations.toast.integrationConnectedWithProvider").replace("{provider}", providerSlug) : t("integrations.toast.integrationConnected"));
       void refetch();
-      router.replace("/settings", { scroll: false });
+      router.replace(settingsSectionHref("Integrations"), { scroll: false });
     } else if (integration === "error" || err) {
       showError(err ?? t("integrations.toast.connectionFailed"));
       void refetch();
-      router.replace("/settings", { scroll: false });
+      router.replace(settingsSectionHref("Integrations"), { scroll: false });
     }
   }, [searchParams, refetch, router]);
 

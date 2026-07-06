@@ -1,7 +1,7 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SimplePageHeader } from "@/components/shared/SimplePageHeader";
 import { SimplePageShell } from "@/components/shared/SimplePageShell";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -26,6 +26,7 @@ import { useBillingApi } from "@/hooks/api/useBillingApi";
 import { useAdvancedUi } from "@/context/AuthSessionContext";
 import { showError, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
+import { resolveSettingsSection, settingsSectionHref } from "@/lib/settings-routing";
 
 const ADVANCED_SECTIONS: SettingsSection[] = [
   "Profile",
@@ -42,35 +43,40 @@ const SIMPLE_SECTIONS: SettingsSection[] = ["Profile", "Integrations", "Notifica
 export function SettingsPageClient() {
   const { t } = useTranslation();
   const advancedUi = useAdvancedUi();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sections = useMemo(() => (advancedUi ? ADVANCED_SECTIONS : SIMPLE_SECTIONS), [advancedUi]);
-  const [activeSection, setActiveSection] = useState<SettingsSection>(advancedUi ? "Integrations" : "Profile");
+  const defaultSection = advancedUi ? "Integrations" : "Profile";
+  const activeSection = useMemo(
+    () => resolveSettingsSection(searchParams, sections, defaultSection),
+    [searchParams, sections, defaultSection]
+  );
   const [profile, setProfile] = useState(mockProfileSettings);
   const [rules, setRules] = useState(mockAutomationRules);
   const [notifications, setNotifications] = useState(mockNotificationPreferences);
   const billing = useBillingApi({ fallbackToMock: false });
   const uiVariant = advancedUi ? "advanced" : "simple";
+  const checkoutHandled = useRef(false);
 
   useEffect(() => {
-    const section = searchParams.get("section") as SettingsSection | null;
-    if (section && sections.includes(section)) {
-      setActiveSection(section);
-    }
-    const integration = searchParams.get("integration");
-    if (integration === "connected" || integration === "error" || searchParams.get("error")) {
-      setActiveSection("Integrations");
-    }
     const checkout = searchParams.get("checkout");
+    if (!checkout) {
+      checkoutHandled.current = false;
+      return;
+    }
+    if (checkoutHandled.current) return;
+    checkoutHandled.current = true;
+
     if (checkout === "success") {
-      setActiveSection("Billing");
       showSuccess(t("settings.billing.checkoutSuccess"));
       void billing.plan.refetch();
       void billing.usage.refetch();
     } else if (checkout === "cancelled") {
-      setActiveSection("Billing");
       showError(t("settings.billing.checkoutCancelled"));
     }
-  }, [searchParams, t, billing.plan, billing.usage, sections]);
+
+    router.replace(settingsSectionHref("Billing"), { scroll: false });
+  }, [searchParams, t, router, billing.plan.refetch, billing.usage.refetch]);
 
   const content = (
     <>
@@ -139,12 +145,12 @@ export function SettingsPageClient() {
     return (
       <SimplePageShell className="space-y-4 lg:max-w-none lg:space-y-6">
         <SimplePageHeader title={t("settings.simpleTitle")} description={t("settings.simpleDescription")} />
-        <div className="sticky top-0 z-30 -mx-1 bg-[var(--bg-0)] px-1 pb-3 pt-1 lg:hidden">
-          <SettingsMobileTabs sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+        <div className="relative z-40 bg-[var(--bg-0)] pb-3 pt-1 lg:hidden">
+          <SettingsMobileTabs sections={sections} activeSection={activeSection} />
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
           <div className="hidden lg:block">
-            <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+            <SettingsNavigation sections={sections} activeSection={activeSection} />
           </div>
           <div>{content}</div>
         </div>
@@ -162,13 +168,13 @@ export function SettingsPageClient() {
         actions={<Button className="hidden sm:inline-flex">{t("settings.saveChanges")}</Button>}
       />
 
-      <div className="sticky top-0 z-30 -mx-1 bg-[var(--bg-0)] px-1 pb-3 pt-1 lg:hidden">
-        <SettingsMobileTabs sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+      <div className="relative z-40 bg-[var(--bg-0)] pb-3 pt-1 lg:hidden">
+        <SettingsMobileTabs sections={sections} activeSection={activeSection} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
         <div className="hidden lg:block">
-          <SettingsNavigation sections={sections} activeSection={activeSection} onChange={setActiveSection} />
+          <SettingsNavigation sections={sections} activeSection={activeSection} />
         </div>
         <div>{content}</div>
       </div>
