@@ -208,7 +208,7 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
     return <ReviewSummary stats={stats} onRestart={queue.length > currentIndex ? () => setDone(false) : undefined} />;
   }
 
-  const cardHeight = "calc(100dvh - 340px)";
+  const cardHeight = "calc(100dvh - 360px)";
 
   return (
     <div className="flex flex-col gap-3">
@@ -217,7 +217,7 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
       {/* Card stack */}
       <div
         className="relative w-full"
-        style={{ height: cardHeight, minHeight: "320px", maxHeight: "560px" }}
+        style={{ height: cardHeight, minHeight: "360px", maxHeight: "620px" }}
       >
         <AnimatePresence>
           {nextJob && (

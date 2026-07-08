@@ -329,7 +329,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex, prefetchedAi }: Pr
         <SwipeIndicator action="apply"  opacity={applyOpacity} />
         <SwipeIndicator action="later"  opacity={laterOpacity} />
 
-        <div className="rounded-2xl bg-[var(--surface-1)] border border-[var(--border-default)] shadow-xl overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] shadow-xl">
           {/* Header */}
           <div className="px-4 pt-4 pb-3">
             <div className="flex items-start gap-3">
@@ -378,7 +378,7 @@ export function SwipeCard({ job, onAction, isTop, stackIndex, prefetchedAi }: Pr
           <div className="border-t border-[var(--border-default)]" />
 
           {/* AI insights — compact preview */}
-          <div className="px-4 py-3 space-y-2 overflow-hidden" style={{ maxHeight: "28vh" }}>
+          <div className="space-y-2 overflow-hidden px-4 py-3 sm:px-4" style={{ maxHeight: "min(30vh, 16rem)" }}>
             {ai ? (
               <>
                 {ai.reasons.length > 0 && (
@@ -423,15 +423,15 @@ export function SwipeCard({ job, onAction, isTop, stackIndex, prefetchedAi }: Pr
           </div>
 
           {/* Footer: see more + swipe hint */}
-          <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-4 py-2 flex items-center justify-between">
+          <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-4 py-2.5">
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); setShowDetails(true); }}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+              className="block text-left text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
             >
               See full details ↗
             </button>
-            <p className="text-[10px] text-[var(--text-3)] tracking-wide">
+            <p className="mt-1 hidden text-[10px] tracking-wide text-[var(--text-3)] sm:block">
               ← Reject · Save → · ↑ Apply · ↓ Later
             </p>
           </div>
