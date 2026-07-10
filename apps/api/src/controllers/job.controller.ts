@@ -11,6 +11,7 @@ import { getAiProcessingStatus as getAiStatusForJob, runDraftGeneration, runFull
 import { provisionJobFolders } from "../services/folder-automation.service";
 import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { setJobPipelineStage, syncJobPipelineFromApplication } from "../services/job-pipeline.service";
+import { createUserNotification } from "../services/in-app-notification.service";
 import { getProfileDocumentContextFlags } from "../services/profile-document-context.service";
 import { assertCanCreateJob } from "../services/plan-limit.service";
 import { incrementUsage } from "../services/usage.service";
@@ -210,6 +211,25 @@ export const reviewJob = asyncHandler(async (req: Request, res) => {
     await setJobPipelineStage({ tenantId, jobId, pipelineStage: "Closed", userId });
   } else if (reviewStatus === "apply_next") {
     await setJobPipelineStage({ tenantId, jobId, pipelineStage: "Ready", userId, skipIfApplicationExists: true });
+    const j = job as Record<string, unknown>;
+    const company = String(j.company ?? "Company");
+    const position = String(j.position ?? j.title ?? "Role");
+    try {
+      await createUserNotification({
+        tenantId,
+        userId,
+        title: "Ready to apply",
+        message: `${position} at ${company} — CV and cover letter are ready. Tap to open Apply Assistant.`,
+        type: "success",
+        module: "apply-assistant",
+        relatedRecordType: "Job",
+        relatedRecordId: jobId,
+        actionUrl: `/jobs/${jobId}/apply`,
+        metadata: { jobId, company, position },
+      });
+    } catch {
+      // Non-fatal — review still succeeds
+    }
   }
   return successResponse(res, {
     jobId,
@@ -631,6 +651,15 @@ export const applyToJob = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);
   const { id } = req.params as { id: string };
   const userId = req.user?.id ?? "system";
+
+  const { isLinkedInCloudAutoApplyEnabled } = await import("@jobflow/shared/constants/linkedin-automation");
+  if (!isLinkedInCloudAutoApplyEnabled()) {
+    throw new ApiError(
+      "Cloud LinkedIn auto-apply is disabled. Open Apply Assistant on your phone to apply with your prepared CV and cover letter.",
+      503,
+      "LINKEDIN_CLOUD_AUTO_APPLY_DISABLED"
+    );
+  }
 
   const job = await findTenantScopedById(JobModel, tenantId, id);
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");

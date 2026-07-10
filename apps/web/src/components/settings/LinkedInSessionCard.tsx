@@ -17,6 +17,7 @@ import {
   type LinkedInSessionStatus,
 } from "@/lib/api/linkedin-session.api";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
+import { useTranslation } from "@/i18n/useTranslation";
 
 const POLL_INTERVAL_MS = 4_000;
 const POLL_MAX_ATTEMPTS = 20; // ~80 seconds total
@@ -29,6 +30,7 @@ function syncLoginErrorFromStatus(s: LinkedInSessionStatus) {
 }
 
 export function LinkedInSessionCard({ variant = "advanced" }: { variant?: "simple" | "advanced" }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<LinkedInSessionStatus | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
@@ -220,7 +222,7 @@ export function LinkedInSessionCard({ variant = "advanced" }: { variant?: "simpl
               <div>
                 <CardTitle className="text-base">LinkedIn</CardTitle>
                 <CardDescription className="mt-1">
-                  Automated Easy Apply — log in once to enable one-click job applications.
+                  {t("integrations.linkedinSession.desktopOnlyDescription")}
                 </CardDescription>
               </div>
             </div>

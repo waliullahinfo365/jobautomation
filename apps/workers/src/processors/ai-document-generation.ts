@@ -9,6 +9,7 @@ import { loadGoogleAccessToken } from "../lib/google-auth";
 import { createGoogleDoc, ensureWorkspaceFolderStructure, findOrCreateFolder } from "../lib/google-drive";
 import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
 import { notifyAutomationEvent } from "../lib/notifications";
+import { createInAppNotification } from "../lib/in-app-notifications";
 import { logger } from "../utils/logger";
 import { redactForLog, serializeWorkerError } from "../utils/worker-error";
 
@@ -794,6 +795,23 @@ export async function createCoverLetterDocument(input: {
     operationId: ctx.operationId,
     metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
   });
+
+  try {
+    await createInAppNotification({
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      title: "Documents ready",
+      message: `CV and cover letter are ready for ${ctx.position} at ${ctx.company}. Open Apply Assistant to apply on your phone.`,
+      type: "success",
+      module: "apply-assistant",
+      relatedRecordType: "Job",
+      relatedRecordId: ctx.jobId,
+      actionUrl: `/jobs/${ctx.jobId}/apply`,
+      metadata: { jobId: ctx.jobId, documentId: toId(doc._id) },
+    });
+  } catch {
+    // Non-fatal
+  }
 
   return {
     ...suppressFlag,

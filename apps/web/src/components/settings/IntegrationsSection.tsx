@@ -18,7 +18,9 @@ import { apiFetch } from "@/lib/api/client";
 import { IntegrationCard } from "./IntegrationCard";
 import { ConnectedAccountSimpleCard } from "./ConnectedAccountSimpleCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
+import { ApplyAssistantIntegrationCard } from "./ApplyAssistantIntegrationCard";
 import { LinkedInSessionCard } from "./LinkedInSessionCard";
+import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
 
 function summarizeHealth(items: IntegrationListItem[]): IntegrationHealthSummary {
   const summary: IntegrationHealthSummary = {
@@ -631,7 +633,11 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
       ) : null}
 
       <div className={simple ? "space-y-3" : "grid grid-cols-1 gap-4 xl:grid-cols-2"}>
-        <LinkedInSessionCard variant={simple ? "simple" : "advanced"} />
+        {simple || !isLinkedInCloudAutoApplyEnabled() ? (
+          <ApplyAssistantIntegrationCard />
+        ) : (
+          <LinkedInSessionCard variant="advanced" />
+        )}
         {simple
           ? visibleItems.map((item) => (
               <ConnectedAccountSimpleCard

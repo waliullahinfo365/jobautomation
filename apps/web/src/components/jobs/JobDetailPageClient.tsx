@@ -20,8 +20,9 @@ import { buildCreateApplicationPayload, type CreateApplicationFormPayload } from
 import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeJobForUi } from "@/lib/utils/resource";
 import { cn } from "@/lib/utils";
-import { resolvePipelineStage } from "@/lib/jobs/pipeline-stage";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
+import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
+import { resolvePipelineStage } from "@/lib/jobs/pipeline-stage";
 import { mockJobs } from "@/data/mockJobs";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { Job } from "@/types/job";
@@ -241,6 +242,7 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
 
   const actionDisabled = actionLoading !== null;
   const showStickyBar = shouldShowApplyStickyBar(job);
+  const cloudAutoApplyEnabled = isLinkedInCloudAutoApplyEnabled();
 
   const actionBar = (
     <>
@@ -289,14 +291,16 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
       </Link>
       {!showStickyBar ? (
         <>
-          <ActionButton
-            label="⚡ Auto Apply"
-            loading={actionLoading === "autoApply"}
-            disabled={actionDisabled}
-            onClick={handleAutoApply}
-            variant="default"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-          />
+          {cloudAutoApplyEnabled && resolvePipelineStage(job) === "Ready" ? (
+            <ActionButton
+              label="⚡ Auto Apply"
+              loading={actionLoading === "autoApply"}
+              disabled={actionDisabled}
+              onClick={handleAutoApply}
+              variant="default"
+              className="hidden md:inline-flex bg-blue-600 text-white hover:bg-blue-700"
+            />
+          ) : null}
           <ActionButton
             label={t("jobDetail.logApplication")}
             loading={applicationsApi.createApplicationLoading}
@@ -335,9 +339,6 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
           actionBar={actionBar}
           duplicateFollowUp={duplicateFollowUp}
           profileContextLine={profileAiContextCopy(job)}
-          onAutoApply={resolvePipelineStage(job) === "Ready" ? () => void handleAutoApply() : undefined}
-          autoApplyLoading={actionLoading === "autoApply"}
-          autoApplyDisabled={actionDisabled}
         />
       ) : (
         <JobDetailSimpleView

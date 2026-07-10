@@ -20,9 +20,6 @@ interface JobDetailAdvancedViewProps {
   actionBar: ReactNode;
   duplicateFollowUp: { jobId: string; status: string } | null;
   profileContextLine: string | null;
-  onAutoApply?: () => void;
-  autoApplyLoading: boolean;
-  autoApplyDisabled: boolean;
 }
 
 export function JobDetailAdvancedView({
@@ -31,9 +28,6 @@ export function JobDetailAdvancedView({
   actionBar,
   duplicateFollowUp,
   profileContextLine,
-  onAutoApply,
-  autoApplyLoading,
-  autoApplyDisabled,
 }: JobDetailAdvancedViewProps) {
   const { t } = useTranslation();
   const showStickyBar = shouldShowApplyStickyBar(job);
@@ -143,14 +137,7 @@ export function JobDetailAdvancedView({
         </div>
       </div>
 
-      {showStickyBar ? (
-        <ApplyStickyBar
-          job={job}
-          onAutoApply={onAutoApply}
-          autoApplyLoading={autoApplyLoading}
-          autoApplyDisabled={autoApplyDisabled}
-        />
-      ) : null}
+      {showStickyBar ? <ApplyStickyBar job={job} /> : null}
     </div>
   );
 }

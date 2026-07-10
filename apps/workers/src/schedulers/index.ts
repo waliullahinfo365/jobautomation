@@ -35,6 +35,8 @@ export function registerSchedulers() {
   const weeklyEveryMs = Number(process.env.WEEKLY_REPORT_INTERVAL_MS ?? 7 * 24 * 60 * 60_000);
   const keepAliveEveryMs = Number(process.env.LINKEDIN_KEEPALIVE_INTERVAL_MS ?? 4 * 60 * 60_000);
   const autoApplyEveryMs = Number(process.env.AUTO_APPLY_INTERVAL_MS ?? 30 * 60_000);
+  const linkedInCloudAutoApply =
+    process.env.LINKEDIN_CLOUD_AUTO_APPLY_ENABLED === "true";
   const appliedStatusEveryMs = Number(process.env.APPLIED_STATUS_INTERVAL_MS ?? 60 * 60_000);
 
   setInterval(() => void scheduleFollowUpReminderSweep(), reminderEveryMs);
@@ -45,14 +47,18 @@ export function registerSchedulers() {
   setInterval(() => void scheduleDailyDigestForAllTenants(), dailyDigestEveryMs);
   setInterval(() => void scheduleWeeklyReportsForAllTenants(), weeklyEveryMs);
   setInterval(() => void scheduleJobIntakeSweep(), intakeEveryMs);
-  setInterval(() => void scheduleLinkedInSessionKeepAlive(), keepAliveEveryMs);
-  setInterval(() => void scheduleAutoApplySweep(), autoApplyEveryMs);
+  if (linkedInCloudAutoApply) {
+    setInterval(() => void scheduleLinkedInSessionKeepAlive(), keepAliveEveryMs);
+    setInterval(() => void scheduleAutoApplySweep(), autoApplyEveryMs);
+  }
   setInterval(() => void scheduleAppliedStatusSweep(), appliedStatusEveryMs);
 
   // Run immediately on startup
   void scheduleJobIntakeSweep();
-  void scheduleLinkedInSessionKeepAlive();
-  void scheduleAutoApplySweep();
+  if (linkedInCloudAutoApply) {
+    void scheduleLinkedInSessionKeepAlive();
+    void scheduleAutoApplySweep();
+  }
   void scheduleAppliedStatusSweep();
   void scheduleDailyDigestForAllTenants();
   void scheduleWeeklyReportsForAllTenants();

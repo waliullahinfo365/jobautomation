@@ -253,7 +253,7 @@ export const messages: Record<
       startApply: "Bewerben",
     },
     applyAssistant: {
-      eyebrow: "Manuelle Bewerbung",
+      eyebrow: "Mobile Bewerbung",
       title: "Bewerbungs-Assistent",
       loading: "Bewerbungs-Assistent wird geladen…",
       notFound: "Job nicht gefunden.",
@@ -1082,7 +1082,7 @@ export const messages: Record<
       simpleTitle: "Einstellungen",
       simpleDescription: "Profil, verbundene Konten, Benachrichtigungen und Tarif.",
       connectedAccountsTitle: "Verbundene Konten",
-      connectedAccountsSubtitle: "Gmail, Google Drive und LinkedIn für Ihre Bewerbungen.",
+      connectedAccountsSubtitle: "Gmail und Google Drive für Jobs, Dokumente und Erinnerungen.",
       appearanceTitle: "Design",
       connectedAccounts: {
         connect: "Verbinden",
@@ -1090,7 +1090,7 @@ export const messages: Record<
         gmailDesc: "Job-Alerts und Antworten aus Ihrem Posteingang.",
         driveDesc: "Lebenslauf und Anschreiben für Bewerbungen.",
         calendarDesc: "Termine für Vorstellungsgespräche.",
-        linkedinDesc: "LinkedIn für schnellere Bewerbungen.",
+        linkedinDesc: "Auf dem Handy: Bewerbungs-Assistent (keine Serververbindung nötig).",
       },
       profileLanguage: "Sprache",
       profileLanguageDe: "🇩🇪 Deutsch",
@@ -1306,6 +1306,15 @@ export const messages: Record<
       },
     },
     integrations: {
+      applyAssistantCard: {
+        title: "Bewerbung auf dem Handy",
+        description: "Gmail und Google Drive einmal verbinden — wir bereiten CV und Anschreiben vor.",
+        body: "Für LinkedIn und andere Jobseiten nutzen Sie den Bewerbungs-Assistenten: Dokumente teilen, KI-Antworten kopieren und Bewerbung in wenigen Tippen dokumentieren. Keine LinkedIn-Serververbindung nötig.",
+      },
+      linkedinSession: {
+        desktopOnlyDescription:
+          "Nur Desktop-Beta — erfordert stabilen Proxy. Auf dem Handy den Bewerbungs-Assistenten nutzen.",
+      },
       connected: "Verbunden",
       needsAttention: "Benötigt Aufmerksamkeit",
       notConnected: "Nicht verbunden",
@@ -1381,7 +1390,7 @@ export const messages: Record<
         },
         linkedin: {
           description:
-            "Playwright-Browsersitzung für LinkedIn Easy Apply. Sitzungen sind IP-gebunden — setzen Sie PROXY_URL auf den Worker, wenn Cookies auf einem anderen Netzwerk erstellt wurden.",
+            "Optional: Desktop-Beta für Cloud-Auto-Apply. Mobile Nutzer verwenden den Bewerbungs-Assistenten.",
         },
         claude: {
           description: "Anthropic Claude für Recherche, Entwürfe, Extraktion und Klassifizierung.",
@@ -3334,7 +3343,7 @@ export const messages: Record<
       startApply: "Apply",
     },
     applyAssistant: {
-      eyebrow: "Manual apply",
+      eyebrow: "Mobile apply",
       title: "Apply Assistant",
       loading: "Loading Apply Assistant…",
       notFound: "Job not found.",
@@ -4161,7 +4170,7 @@ export const messages: Record<
       simpleTitle: "Settings",
       simpleDescription: "Profile, connected accounts, notifications, and billing.",
       connectedAccountsTitle: "Connected Accounts",
-      connectedAccountsSubtitle: "Gmail, Google Drive, and LinkedIn for your applications.",
+      connectedAccountsSubtitle: "Gmail and Google Drive for jobs, documents, and reminders.",
       appearanceTitle: "Appearance",
       connectedAccounts: {
         connect: "Connect",
@@ -4169,7 +4178,7 @@ export const messages: Record<
         gmailDesc: "Job alerts and replies from your inbox.",
         driveDesc: "Resume and cover letters for applications.",
         calendarDesc: "Interview scheduling on your calendar.",
-        linkedinDesc: "LinkedIn for faster applications.",
+        linkedinDesc: "On mobile: Apply Assistant (no server connection needed).",
       },
       profileLanguage: "Language",
       profileLanguageDe: "🇩🇪 Deutsch",
@@ -4382,6 +4391,15 @@ export const messages: Record<
       },
     },
     integrations: {
+      applyAssistantCard: {
+        title: "Apply on your phone",
+        description: "Connect Gmail and Google Drive once — we prepare your CV and cover letter per job.",
+        body: "For LinkedIn and other job sites, use Apply Assistant: share documents, copy AI answers, and log your application in a few taps. No LinkedIn server connection required.",
+      },
+      linkedinSession: {
+        desktopOnlyDescription:
+          "Desktop beta only — requires a stable proxy. On mobile, use Apply Assistant.",
+      },
       connected: "Connected",
       needsAttention: "Needs attention",
       notConnected: "Not connected",
@@ -4457,7 +4475,7 @@ export const messages: Record<
         },
         linkedin: {
           description:
-            "Playwright browser session for LinkedIn Easy Apply. Sessions are IP-bound — set PROXY_URL on workers when cookies were created on another network.",
+            "Optional desktop beta for cloud auto-apply. Mobile users should use Apply Assistant instead.",
         },
         claude: {
           description: "Anthropic Claude for research, drafts, extraction, and classification.",

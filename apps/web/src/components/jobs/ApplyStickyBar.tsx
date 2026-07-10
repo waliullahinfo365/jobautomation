@@ -2,30 +2,16 @@
 
 import Link from "next/link";
 import { useTranslation } from "@/i18n/useTranslation";
-import { resolvePipelineStage, type PipelineStage } from "@/lib/jobs/pipeline-stage";
 import type { Job } from "@/types/job";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const STICKY_STAGES: PipelineStage[] = ["Ready", "Applied", "Interview", "Offer"];
-
-export function shouldShowApplyStickyBar(job: Job): boolean {
-  const stage = resolvePipelineStage(job);
-  return STICKY_STAGES.includes(stage);
-}
 
 interface ApplyStickyBarProps {
   job: Job;
-  onAutoApply?: () => void;
-  autoApplyLoading?: boolean;
-  autoApplyDisabled?: boolean;
 }
 
-export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDisabled }: ApplyStickyBarProps) {
+export function ApplyStickyBar({ job }: ApplyStickyBarProps) {
   const { t } = useTranslation();
-  const stage = resolvePipelineStage(job);
   const jobId = job.id ?? job._id ?? "";
-  const showAutoApply = stage === "Ready" && onAutoApply;
 
   return (
     <div
@@ -34,22 +20,10 @@ export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDi
         "mobile-sticky-above-nav md:left-[var(--sidebar-width,0px)]"
       )}
     >
-      <div className="mx-auto flex max-w-lg flex-col gap-2 sm:flex-row">
-        {showAutoApply ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="min-h-[44px] w-full sm:shrink-0 sm:w-auto"
-            disabled={autoApplyDisabled || autoApplyLoading}
-            onClick={onAutoApply}
-          >
-            {autoApplyLoading ? t("applyAssistant.autoApplyLoading") : t("applyAssistant.autoApply")}
-          </Button>
-        ) : null}
+      <div className="mx-auto flex max-w-lg">
         <Link
           href={`/jobs/${jobId}/apply`}
-          className="flex min-h-[44px] w-full flex-1 items-center justify-center rounded-xl bg-[var(--accent-hi)] px-4 text-sm font-semibold text-white hover:brightness-110 sm:w-auto"
+          className="flex min-h-[44px] w-full flex-1 items-center justify-center rounded-xl bg-[var(--accent-hi)] px-4 text-sm font-semibold text-white hover:brightness-110"
         >
           {t("applyAssistant.applyCta")}
         </Link>
@@ -57,3 +31,5 @@ export function ApplyStickyBar({ job, onAutoApply, autoApplyLoading, autoApplyDi
     </div>
   );
 }
+
+export { shouldShowApplyStickyBar } from "./apply-sticky-bar-utils";

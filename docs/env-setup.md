@@ -16,7 +16,10 @@ Use root `.env.example` as source of required variables.
 
 ## LinkedIn Playwright (Easy Apply)
 
-- **`PROXY_URL` / `PLAYWRIGHT_PROXY_URL`**: HTTP(S) proxy used by workers for headless LinkedIn. LinkedIn binds `li_at` to egress IP.
+- **Mobile-first (default):** Users apply via **Apply Assistant** (`/jobs/:id/apply`) on phone — CV/cover letter share, AI answers, one-tap status log. No LinkedIn server session required.
+- **`LINKEDIN_CLOUD_AUTO_APPLY_ENABLED`**: Set to `true` only for desktop beta — enables Railway Playwright auto-apply sweep, session keep-alive, and `POST /jobs/:id/apply`. **Leave `false` in production** to avoid LinkedIn account logouts.
+- **`NEXT_PUBLIC_LINKEDIN_CLOUD_AUTO_APPLY_ENABLED`**: Mirrors the flag in the web app (Settings LinkedIn session card + Auto Apply buttons).
+- **`PROXY_URL` / `PLAYWRIGHT_PROXY_URL`**: Only needed when cloud auto-apply is enabled. LinkedIn binds `li_at` to egress IP.
 - **Pinned proxy**: On cookie import (UI or API), the server stores the proxy URL **encrypted on the session row** (`metadata.playwrightProxyEncrypted`). Apply, keep-alive, and credential re-login use **pinned → env** so rotating or missing env vars do not silently change egress after cookies were created.
 - **Re-import once** after upgrading if sessions predate pinning: open **Connect → Import Cookies**, paste the same proxy as your browser export (or leave empty so the current server `PROXY_URL` is pinned).
 

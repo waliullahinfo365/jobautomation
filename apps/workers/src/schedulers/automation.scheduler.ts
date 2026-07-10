@@ -172,6 +172,9 @@ export async function scheduleJobIntakeSweep() {
  * Only runs for tenants that have an active (non-expired) LinkedIn session.
  */
 export async function scheduleAutoApplySweep() {
+  const { isLinkedInCloudAutoApplyEnabled } = await import("@jobflow/shared/constants/linkedin-automation");
+  if (!isLinkedInCloudAutoApplyEnabled()) return;
+
   const tenantIds = await activeTenantIds();
   const date = todayKey();
 
@@ -263,6 +266,9 @@ export async function scheduleAppliedStatusSweep() {
  * LinkedIn sees activity and resets its session expiry clock.
  */
 export async function scheduleLinkedInSessionKeepAlive() {
+  const { isLinkedInCloudAutoApplyEnabled } = await import("@jobflow/shared/constants/linkedin-automation");
+  if (!isLinkedInCloudAutoApplyEnabled()) return;
+
   const tenantIds = await activeTenantIds();
   for (const tenantId of tenantIds) {
     let session: Awaited<ReturnType<typeof launchBrowser>> | null = null;
