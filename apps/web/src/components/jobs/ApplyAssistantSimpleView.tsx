@@ -9,6 +9,7 @@ import { MapPinIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 import { resolveExternalJobPostingUrl } from "@/lib/utils/job-posting-url";
+import { resolveMobileJobOpenUrl } from "@/lib/utils/mobile-apply";
 import { cn } from "@/lib/utils";
 
 export interface ApplyAssistantSimpleViewProps {
@@ -62,7 +63,7 @@ export function ApplyAssistantSimpleView({
 }: ApplyAssistantSimpleViewProps) {
   const { t } = useTranslation();
   const questionRef = useRef<HTMLDivElement>(null);
-  const postingUrl = jobUrl ?? resolveExternalJobPostingUrl(job);
+  const postingUrl = resolveMobileJobOpenUrl(jobUrl ?? resolveExternalJobPostingUrl(job));
 
   const scrollToQuestion = () => {
     questionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });

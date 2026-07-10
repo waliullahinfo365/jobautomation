@@ -23,6 +23,20 @@ Use root `.env.example` as source of required variables.
 - **Pinned proxy**: On cookie import (UI or API), the server stores the proxy URL **encrypted on the session row** (`metadata.playwrightProxyEncrypted`). Apply, keep-alive, and credential re-login use **pinned → env** so rotating or missing env vars do not silently change egress after cookies were created.
 - **Re-import once** after upgrading if sessions predate pinning: open **Connect → Import Cookies**, paste the same proxy as your browser export (or leave empty so the current server `PROXY_URL` is pinned).
 
+## Web Push (mobile PWA)
+
+- **`VAPID_PUBLIC_KEY`**, **`VAPID_PRIVATE_KEY`**, **`VAPID_SUBJECT`**: Set on the **API** service (Railway). Generate with `npx web-push generate-vapid-keys`. Subject is usually `mailto:you@domain.com`.
+- Users enable push in the app (dashboard banner or Settings → Notifications). Requires HTTPS and the service worker at `/sw.js`.
+
+## Desktop Apply Agent (optional)
+
+- Runs **locally** on Mac/PC with your real IP — not cloud Playwright.
+- Settings → Integrations → **Desktop automation**: generate a 6-digit pairing code.
+- From repo root: `pnpm apply-agent pair --code 123456 --api-url https://api.newjob.guru`
+- Log in to LinkedIn once: `pnpm apply-agent login linkedin`
+- Poll and apply: `pnpm apply-agent run --interval 120000`
+- Optional Chrome extension: load `extensions/linkedin-apply-assistant/` unpacked in `chrome://extensions`.
+
 ## Gmail job intake (workers)
 
 - **`SCHEDULER_ENABLED=true`**: Required on the **workers** service for timed automation (including Gmail intake).

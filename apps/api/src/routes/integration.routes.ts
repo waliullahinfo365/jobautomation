@@ -6,6 +6,10 @@ import {
   importLinkedInCookies,
 } from "../controllers/linkedin-session.controller";
 import {
+  createPairingCodeHandler,
+  getAgentStatusHandler,
+} from "../controllers/apply-agent.controller";
+import {
   connectIntegration,
   disconnectIntegration,
   getIntegrationHealth,
@@ -66,6 +70,8 @@ integrationRoutes.post("/linkedin/session", requirePermission("integrations.conn
 integrationRoutes.post("/linkedin/session/cookies", requirePermission("integrations.connect"), importLinkedInCookies);
 integrationRoutes.get("/linkedin/session", requirePermission("integrations.read"), getLinkedInSessionStatus);
 integrationRoutes.delete("/linkedin/session", requirePermission("integrations.disconnect"), deleteLinkedInSession);
+integrationRoutes.post("/apply-agent/pairing-code", requirePermission("integrations.connect"), createPairingCodeHandler);
+integrationRoutes.get("/apply-agent/status", requirePermission("integrations.read"), getAgentStatusHandler);
 
 integrationRoutes.post("/gmail/scan-inbox", requirePermission("jobs.create"), gmailScanInbox);
 integrationRoutes.post("/gmail/reply-webhook", gmailReplyWebhook);

@@ -42,6 +42,10 @@ export interface RunApplyInput {
   additionalContext?: string;
   dryRun?: boolean;
   proxyUrl?: string;
+  /** Local session JSON (desktop agent) — skips MongoDB session load/persist */
+  storageState?: object;
+  headless?: boolean;
+  skipSessionPersist?: boolean;
 }
 
 export interface RunApplyResult {
@@ -52,6 +56,8 @@ export interface RunApplyResult {
   sessionExpired?: boolean;
   /** True when the job only has an external Apply button — must be completed manually */
   isExternalOnly?: boolean;
+  /** Refreshed browser cookies when using a local storageState (desktop agent) */
+  storageState?: object;
 }
 
 /** Download a file from a URL to a temp path and return the path */
@@ -86,8 +92,8 @@ function cleanupTemp(paths: Array<string | undefined>): void {
 export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
   const platform = input.platform ?? detectPlatform(input.jobUrl);
 
-  // Load session
-  const storageState = await loadSession({ tenantId: input.tenantId, platform });
+  const useLocalSession = Boolean(input.storageState);
+  const storageState = input.storageState ?? (await loadSession({ tenantId: input.tenantId, platform }));
   if (!storageState) {
     return {
       success: false,
@@ -111,7 +117,7 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
   const pinnedProxy = await loadPlaywrightProxyUrl({ tenantId: input.tenantId, platform });
   const proxyUrl =
     input.proxyUrl ?? pinnedProxy ?? process.env.PROXY_URL ?? process.env.PLAYWRIGHT_PROXY_URL;
-  const session = await launchBrowser({ headless: true, storageState, proxyUrl });
+  const session = await launchBrowser({ headless: input.headless ?? true, storageState, proxyUrl });
 
   try {
     let result: RunApplyResult;
@@ -181,7 +187,11 @@ export async function runApply(input: RunApplyInput): Promise<RunApplyResult> {
     // Refresh session cookies when the session still looks valid — avoids overwriting a good
     // imported session with storage from the login/checkpoint page after IP or auth failure.
     if (!result.sessionExpired) {
-      await captureAndSaveSession({ tenantId: input.tenantId, platform, context: session.context });
+      if (useLocalSession || input.skipSessionPersist) {
+        result = { ...result, storageState: await session.context.storageState() };
+      } else {
+        await captureAndSaveSession({ tenantId: input.tenantId, platform, context: session.context });
+      }
     }
 
     return result;

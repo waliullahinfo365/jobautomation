@@ -5,6 +5,7 @@ import "./globals.css";
 import { APP_NAME, APP_DESCRIPTION } from "@/lib/constants";
 import { BRAND } from "@/lib/brand";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
     ],
     apple: "/brand/logo.jpeg",
   },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -59,7 +61,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           } as CSSProperties
         }
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ServiceWorkerRegister />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

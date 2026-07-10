@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ReviewableJob, ReviewAction, ReviewStatus } from "@/types/job";
 import type { JobReviewAi } from "@/types/job";
@@ -9,6 +10,7 @@ import { SwipeCard } from "./SwipeCard";
 import { ReviewSummary } from "./ReviewSummary";
 import { cn } from "@/lib/utils";
 import { showError } from "@/lib/ui/toast";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // ── Action config ─────────────────────────────────────────────────────────────
 
@@ -82,6 +84,8 @@ interface HistoryEntry {
 }
 
 export function SwipeReviewSession({ initialJobs, total }: Props) {
+  const router = useRouter();
+  const isMobile = useIsMobile();
   const [queue, setQueue] = useState<ReviewableJob[]>(initialJobs);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -173,10 +177,13 @@ export function SwipeReviewSession({ initialJobs, total }: Props) {
 
     try {
       await reviewJob(currentJob.id, { reviewAction: action, reviewStatus });
+      if (action === "apply" && isMobile) {
+        router.push(`/jobs/${currentJob.id}/apply`);
+      }
     } catch {
       showError("Failed to save review — please try again");
     }
-  }, [currentJob, currentIndex, queue.length, stats, clearUndo]);
+  }, [currentJob, currentIndex, queue.length, stats, clearUndo, isMobile, router]);
 
   const handleUndo = useCallback(async () => {
     clearUndo();

@@ -3,6 +3,7 @@ import { SettingSectionCard } from "./SettingSectionCard";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "@/i18n/useTranslation";
+import { PushNotificationPrompt } from "@/components/shared/PushNotificationPrompt";
 
 interface NotificationsSectionProps {
   preferences: NotificationPreferences;
@@ -34,6 +35,7 @@ export function NotificationsSection({ preferences, onChange, variant = "advance
 
   return (
     <div className="space-y-4">
+      <PushNotificationPrompt />
       <SettingSectionCard title={t("settings.notifications.channels.title")}>
         <ChannelRow label={t("settings.notifications.channels.email")} checked={preferences.channels.email} onChange={(checked) => onChange({ ...preferences, channels: { ...preferences.channels, email: checked } })} />
         <ChannelRow label={t("settings.notifications.channels.dashboard")} checked={preferences.channels.dashboard} onChange={(checked) => onChange({ ...preferences, channels: { ...preferences.channels, dashboard: checked } })} />

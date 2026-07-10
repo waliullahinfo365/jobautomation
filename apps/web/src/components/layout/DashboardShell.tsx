@@ -10,6 +10,8 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { BottomNav } from "./BottomNav";
 import { JobPipelineSummaryProvider } from "@/context/JobPipelineSummaryContext";
+import { PushNotificationPrompt } from "@/components/shared/PushNotificationPrompt";
+import { PwaInstallPrompt } from "@/components/shared/PwaInstallPrompt";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -42,6 +44,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
                       : "pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-7"
                   )}
                 >
+                  <div className="mb-4 space-y-3">
+                    <PwaInstallPrompt />
+                    <PushNotificationPrompt />
+                  </div>
                   {children}
                 </div>
               </PageTransition>

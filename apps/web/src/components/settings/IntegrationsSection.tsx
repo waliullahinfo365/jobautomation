@@ -19,6 +19,7 @@ import { IntegrationCard } from "./IntegrationCard";
 import { ConnectedAccountSimpleCard } from "./ConnectedAccountSimpleCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
 import { ApplyAssistantIntegrationCard } from "./ApplyAssistantIntegrationCard";
+import { ApplyAutomationSection } from "./ApplyAutomationSection";
 import { LinkedInSessionCard } from "./LinkedInSessionCard";
 import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
 
@@ -658,6 +659,8 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
               />
             ))}
       </div>
+
+      <ApplyAutomationSection />
 
       {!simple && mergedItems.some((i) => i.slug === "gmail" && i.status === "Connected") ? (
         <GmailScanPanel />

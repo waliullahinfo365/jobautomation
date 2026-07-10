@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -9,9 +9,11 @@ import { ApplyAssistantAdvancedView } from "@/components/jobs/ApplyAssistantAdva
 import { ApplyAssistantSimpleView } from "@/components/jobs/ApplyAssistantSimpleView";
 import { useAdvancedUi } from "@/context/AuthSessionContext";
 import { useTranslation } from "@/i18n/useTranslation";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { getJob } from "@/lib/api/jobs.api";
 import {
   completeApplyAssistant,
+  fetchApplyDocumentBlob,
   generateApplyAnswer,
   generateApplyAnswersFromScreenshot,
   getApplyDocumentStatus,
@@ -23,6 +25,7 @@ import {
   type ScreenshotAnswerItem,
 } from "@/lib/api/apply-assistant.api";
 import { normalizeJobForUi } from "@/lib/utils/resource";
+import { copyTextToClipboard } from "@/lib/utils/mobile-apply";
 import { showError, showSuccess } from "@/lib/ui/toast";
 import type { Job } from "@/types/job";
 import { ApiError } from "@/lib/api/client";
@@ -48,9 +51,11 @@ function isBillingLimitError(e: unknown): boolean {
 export function ManualApplyAssistantClient() {
   const { t } = useTranslation();
   const advancedUi = useAdvancedUi();
+  const isMobile = useIsMobile();
   const params = useParams();
   const router = useRouter();
   const id = String(params?.id ?? "");
+  const coverCopiedRef = useRef(false);
   const [job, setJob] = useState<Job | null>(null);
   const [docStatus, setDocStatus] = useState<ApplyDocumentStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +92,22 @@ export function ManualApplyAssistantClient() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load job"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !docStatus || coverCopiedRef.current || !isMobile || advancedUi) return;
+    if (docStatus.missingDocuments.coverLetter) return;
+    if (docStatus.coverLetter.delivery !== "content_text") return;
+
+    coverCopiedRef.current = true;
+    void fetchApplyDocumentBlob(id, "cover_letter")
+      .then(async ({ blob }) => {
+        const text = await blob.text();
+        if (await copyTextToClipboard(text)) {
+          showSuccess(t("applyAssistant.simple.coverLetterCopied"));
+        }
+      })
+      .catch(() => void 0);
+  }, [id, docStatus, isMobile, advancedUi, t]);
 
   const handleDocument = useCallback(
     async (role: "cv" | "cover_letter") => {

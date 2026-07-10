@@ -1,0 +1,35 @@
+{
+  "name": "NewJob Guru",
+  "short_name": "NewJob Guru",
+  "description": "Automated job search — Gmail intake, tailored CVs, and mobile Apply Assistant.",
+  "start_url": "/today",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#4D63E0",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/brand/logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/newjob-guru-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ready to apply",
+      "url": "/apply-assistant",
+      "description": "Jobs with CV and cover letter ready"
+    },
+    {
+      "name": "Today",
+      "url": "/today",
+      "description": "Your job search dashboard"
+    }
+  ]
+}

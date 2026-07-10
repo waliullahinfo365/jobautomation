@@ -10,6 +10,7 @@ export * from "./AutomationModule.model";
 export * from "./AutomationLog.model";
 export * from "./Report.model";
 export * from "./Notification.model";
+export * from "./PushSubscription.model";
 export * from "./AuditLog.model";
 export * from "./AiUsageLog.model";
 export * from "./LifecycleInsight.model";

@@ -42,6 +42,19 @@ export async function createUserNotification(input: {
     metadata: input.metadata ?? {},
     readUserIds: [],
   });
+
+  try {
+    const { sendPushToUser } = await import("./push-notification.service");
+    await sendPushToUser({
+      tenantId,
+      userId: input.userId,
+      title: input.title,
+      body: input.message,
+      url: input.actionUrl,
+    });
+  } catch {
+    // Non-fatal when push is not configured
+  }
 }
 
 export async function listNotificationsForUser(input: { tenantId: string; userId: string; limit?: number }) {

@@ -23,12 +23,14 @@ import { reportRoutes } from "./report.routes";
 import { systemRoutes } from "./system.routes";
 import { todayRoutes } from "./today.routes";
 import { tenantRoutes } from "./tenant.routes";
+import { agentPublicRoutes, agentProtectedRoutes } from "./agent.routes";
 
 export const apiRoutes = Router();
 
 apiRoutes.use(healthRoutes);
 apiRoutes.use("/api", healthRoutes);
 apiRoutes.use("/auth", authPublicRoutes);
+apiRoutes.use("/agent", agentPublicRoutes);
 apiRoutes.use("/billing", billingWebhookRoutes);
 apiRoutes.use("/integrations/google", googleOAuthPublicRouter);
 apiRoutes.use(authMiddleware);
@@ -43,6 +45,7 @@ apiRoutes.use("/applications", applicationRoutes);
 apiRoutes.use("/interviews", interviewRoutes);
 apiRoutes.use("/documents", documentRoutes);
 apiRoutes.use("/notifications", notificationRoutes);
+apiRoutes.use("/agent", agentProtectedRoutes);
 apiRoutes.use("/reports", reportRoutes);
 apiRoutes.use("/automation", automationRoutes);
 apiRoutes.use("/ai", aiRoutes);
