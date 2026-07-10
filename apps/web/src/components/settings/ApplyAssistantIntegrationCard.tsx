@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
 
 /** Mobile-first: Gmail + Drive connect here; LinkedIn apply uses Apply Assistant (no server session). */
@@ -17,9 +18,12 @@ export function ApplyAssistantIntegrationCard() {
       </CardHeader>
       <CardContent className="space-y-3 text-sm text-muted-foreground">
         <p>{t("integrations.applyAssistantCard.body")}</p>
-        <Button asChild variant="default" className="min-h-[44px] w-full sm:w-auto">
-          <Link href="/apply-assistant">{t("labels.openApplyAssistant")}</Link>
-        </Button>
+        <Link
+          href="/apply-assistant"
+          className={cn(buttonVariants({ variant: "default" }), "min-h-[44px] w-full sm:w-auto")}
+        >
+          {t("labels.openApplyAssistant")}
+        </Link>
       </CardContent>
     </Card>
   );
