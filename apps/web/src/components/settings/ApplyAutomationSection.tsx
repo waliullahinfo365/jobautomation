@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 import { createAgentPairingCode, getAgentStatus, type AgentStatus } from "@/lib/api/apply-agent.api";
+import { ApiError } from "@/lib/api/client";
 import { showError, showSuccess } from "@/lib/ui/toast";
 import { copyTextToClipboard } from "@/lib/utils/mobile-apply";
 import { env } from "@/config/env";
@@ -15,6 +16,7 @@ export function ApplyAutomationSection() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingExpires, setPairingExpires] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -31,13 +33,21 @@ export function ApplyAutomationSection() {
 
   async function handleGenerateCode() {
     setLoading(true);
+    setError(null);
     try {
       const res = await createAgentPairingCode("Desktop Apply Agent");
       setPairingCode(res.code);
       setPairingExpires(res.expiresAt);
       showSuccess(t("applyAutomation.codeGenerated"));
     } catch (e) {
-      showError(e instanceof Error ? e.message : t("applyAutomation.codeFailed"));
+      const message =
+        e instanceof ApiError && e.status === 403
+          ? t("applyAutomation.permissionDenied")
+          : e instanceof Error
+            ? e.message
+            : t("applyAutomation.codeFailed");
+      setError(message);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -82,6 +92,11 @@ export function ApplyAutomationSection() {
                 </span>
               ) : null}
             </div>
+          ) : null}
+          {error ? (
+            <p className="rounded-md border border-[var(--rose-ring)] bg-[var(--rose-bg)] px-3 py-2 text-xs text-[var(--text-2)]">
+              {error}
+            </p>
           ) : null}
           <pre className="overflow-x-auto rounded bg-muted p-2 text-[11px] text-muted-foreground">
             {`pnpm --filter @jobflow/apply-agent start pair --code ${pairingCode ?? "123456"} --api-url ${env.api.url}`}

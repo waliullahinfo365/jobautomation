@@ -24,7 +24,7 @@ import {
   testTelegram,
   testIntegration,
 } from "../controllers/integration.controller";
-import { requirePermission } from "../middleware/rbac.middleware";
+import { requireAnyPermission, requirePermission } from "../middleware/rbac.middleware";
 import { validateBody, validateParams } from "../middleware/validate.middleware";
 import { replyTestBodySchema } from "../validators/application-workflow.validator";
 import {
@@ -70,7 +70,11 @@ integrationRoutes.post("/linkedin/session", requirePermission("integrations.conn
 integrationRoutes.post("/linkedin/session/cookies", requirePermission("integrations.connect"), importLinkedInCookies);
 integrationRoutes.get("/linkedin/session", requirePermission("integrations.read"), getLinkedInSessionStatus);
 integrationRoutes.delete("/linkedin/session", requirePermission("integrations.disconnect"), deleteLinkedInSession);
-integrationRoutes.post("/apply-agent/pairing-code", requirePermission("integrations.connect"), createPairingCodeHandler);
+integrationRoutes.post(
+  "/apply-agent/pairing-code",
+  requireAnyPermission(["integrations.connect", "settings.read"]),
+  createPairingCodeHandler
+);
 integrationRoutes.get("/apply-agent/status", requirePermission("integrations.read"), getAgentStatusHandler);
 
 integrationRoutes.post("/gmail/scan-inbox", requirePermission("jobs.create"), gmailScanInbox);

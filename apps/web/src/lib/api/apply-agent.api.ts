@@ -11,7 +11,7 @@ export type AgentStatus = {
 export async function createAgentPairingCode(deviceName?: string) {
   return apiFetch<{ code: string; expiresAt: string }>("/integrations/apply-agent/pairing-code", {
     method: "POST",
-    body: JSON.stringify({ deviceName }),
+    body: { deviceName },
   });
 }
 
