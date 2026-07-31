@@ -24,6 +24,7 @@ import { systemRoutes } from "./system.routes";
 import { todayRoutes } from "./today.routes";
 import { tenantRoutes } from "./tenant.routes";
 import { agentPublicRoutes, agentProtectedRoutes } from "./agent.routes";
+import { unipilePublicRoutes, unipileProtectedRoutes } from "./unipile.routes";
 
 export const apiRoutes = Router();
 
@@ -34,6 +35,7 @@ apiRoutes.use("/agent", agentPublicRoutes);
 apiRoutes.use("/agent", agentProtectedRoutes);
 apiRoutes.use("/billing", billingWebhookRoutes);
 apiRoutes.use("/integrations/google", googleOAuthPublicRouter);
+apiRoutes.use("/integrations/unipile", unipilePublicRoutes);
 apiRoutes.use(authMiddleware);
 apiRoutes.use(tenantMiddleware);
 apiRoutes.use("/auth", authProtectedRoutes);
@@ -50,6 +52,7 @@ apiRoutes.use("/reports", reportRoutes);
 apiRoutes.use("/automation", automationRoutes);
 apiRoutes.use("/ai", aiRoutes);
 apiRoutes.use("/admin", adminRoutes);
+apiRoutes.use("/integrations/unipile", unipileProtectedRoutes);
 apiRoutes.use("/integrations", integrationRoutes);
 apiRoutes.use("/integrations/google", googleOAuthProtectedRouter);
 apiRoutes.use(systemRoutes);

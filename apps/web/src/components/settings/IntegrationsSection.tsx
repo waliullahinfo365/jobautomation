@@ -20,6 +20,7 @@ import { ConnectedAccountSimpleCard } from "./ConnectedAccountSimpleCard";
 import { IntegrationConnectModal } from "./IntegrationConnectModal";
 import { ApplyAssistantIntegrationCard } from "./ApplyAssistantIntegrationCard";
 import { ApplyAutomationSection } from "./ApplyAutomationSection";
+import { UnipileEmailIntegrationCard } from "./UnipileEmailIntegrationCard";
 import { LinkedInSessionCard } from "./LinkedInSessionCard";
 import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
 
@@ -634,6 +635,7 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
       ) : null}
 
       <div className={simple ? "space-y-3" : "grid grid-cols-1 gap-4 xl:grid-cols-2"}>
+        <UnipileEmailIntegrationCard />
         {simple || !isLinkedInCloudAutoApplyEnabled() ? (
           <ApplyAssistantIntegrationCard />
         ) : (

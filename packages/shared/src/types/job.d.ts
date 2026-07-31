@@ -41,7 +41,7 @@ export interface Job {
     updatedAt: string;
 }
 export interface JobIntakeEmailPayload {
-    provider: "gmail" | "manual" | "test";
+    provider: "gmail" | "unipile" | "manual" | "test";
     providerMessageId: string;
     providerThreadId?: string;
     from: string;

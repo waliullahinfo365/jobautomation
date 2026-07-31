@@ -4,7 +4,7 @@ export type JobPriority = "Low" | "Medium" | "High" | "Urgent";
 export interface Job { id: string; tenantId: string; createdBy: string; company: string; position: string; source?: string; status: JobStatus; priority: JobPriority; location?: string; jobUrl?: string; salaryRange?: string; deadline?: string; dateFound?: string; dateApplied?: string; contactEmail?: string; description?: string; aiSummary?: string; duplicateStatus?: "Unique" | "Duplicate" | "Possible Duplicate" | "Skipped"; duplicateOfJobId?: string; folderCreated?: boolean; driveFolderId?: string; driveFolderUrl?: string; folderProvisionStatus?: "Not Started" | "Queued" | "Completed" | "Failed"; folderProvisionedAt?: string; folderProvisionError?: string; tags?: string[]; notes?: string; rawSourceData?: Record<string, unknown>; aiProcessingStatus?: "Not Started" | "Queued" | "Processing" | "Completed" | "Failed"; aiProcessingStartedAt?: string; aiProcessingCompletedAt?: string; aiProcessingError?: string; researchGenerated?: boolean; draftGenerated?: boolean; lastAiRunAt?: string; createdAt: string; updatedAt: string; }
 
 export interface JobIntakeEmailPayload {
-  provider: "gmail" | "manual" | "test";
+  provider: "gmail" | "unipile" | "manual" | "test";
   providerMessageId: string;
   providerThreadId?: string;
   from: string;

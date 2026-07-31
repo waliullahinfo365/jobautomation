@@ -48,7 +48,13 @@ Use root `.env.example` as source of required variables.
 ## Unipile email intake (next)
 
 - **`UNIPILE_DSN`**, **`UNIPILE_API_KEY`**: Unipile dashboard values.
-- **`UNIPILE_EMAIL_INTAKE_ENABLED`**: feature flag (default false until connect + webhook are live).
+- **`UNIPILE_EMAIL_INTAKE_ENABLED`**: feature flag (default true unless set to `false`).
+- **`API_PUBLIC_URL`**: must be the public API origin (e.g. Railway URL) so Unipile can reach:
+  - `POST {API_PUBLIC_URL}/integrations/unipile/notify` (account linked)
+  - `POST {API_PUBLIC_URL}/integrations/unipile/webhook` (new emails)
+- Optional: **`UNIPILE_WEBHOOK_SECRET`** — if set, webhook must send the same value in `x-unipile-webhook-secret`.
+- In Unipile dashboard, add a webhook for new emails pointing to the webhook URL above (or use **Scan now** in Settings for manual pull).
+- Settings → Integrations → **Connect email (Unipile)** starts hosted Gmail OAuth.
 
 ## Gmail job intake (workers)
 

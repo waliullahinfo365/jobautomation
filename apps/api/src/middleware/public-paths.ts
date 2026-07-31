@@ -11,6 +11,8 @@ export function isPublicApiPath(path: string): boolean {
     path === "/auth/register" ||
     path === "/auth/login" ||
     path === "/integrations/google/callback" ||
-    path === "/integrations/google/demo-callback"
+    path === "/integrations/google/demo-callback" ||
+    path === "/integrations/unipile/notify" ||
+    path === "/integrations/unipile/webhook"
   );
 }
