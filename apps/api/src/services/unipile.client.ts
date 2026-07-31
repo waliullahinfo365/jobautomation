@@ -1,20 +1,40 @@
 /**
  * Minimal Unipile REST client (v1 DSN style used by hosted auth + emails).
  */
-export function unipileConfigured(): boolean {
-  return Boolean(process.env.UNIPILE_DSN?.trim() && process.env.UNIPILE_API_KEY?.trim());
+
+function stripEnv(raw: string | undefined): string {
+  return (raw ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
 }
 
+export function unipileConfigured(): boolean {
+  return Boolean(stripEnv(process.env.UNIPILE_DSN) && stripEnv(process.env.UNIPILE_API_KEY));
+}
+
+/**
+ * Supports either:
+ * - full DSN with port: https://api59.unipile.com:12345
+ * - or base + UNIPILE_PORT (uses ?port= for environments that block custom ports)
+ */
 export function getUnipileDsn(): string {
-  const dsn = process.env.UNIPILE_DSN?.trim().replace(/\/$/, "");
+  const dsn = stripEnv(process.env.UNIPILE_DSN).replace(/\/$/, "");
   if (!dsn) throw new Error("UNIPILE_DSN is not set");
   return dsn;
 }
 
 function getUnipileApiKey(): string {
-  const key = process.env.UNIPILE_API_KEY?.trim();
+  const key = stripEnv(process.env.UNIPILE_API_KEY);
   if (!key) throw new Error("UNIPILE_API_KEY is not set");
   return key;
+}
+
+function withOptionalPortQuery(url: URL): void {
+  const portOnly = stripEnv(process.env.UNIPILE_PORT);
+  if (!portOnly) return;
+  // Docs: when custom ports are blocked, use https://apiX.unipile.com/...?port=XXXXX
+  if (!url.searchParams.has("port")) url.searchParams.set("port", portOnly);
 }
 
 export async function unipileFetch<T>(
@@ -29,14 +49,16 @@ export async function unipileFetch<T>(
       url.searchParams.set(k, String(v));
     }
   }
+  withOptionalPortQuery(url);
 
   const { query: _q, ...rest } = init ?? {};
+  const apiKey = getUnipileApiKey();
   const res = await fetch(url.toString(), {
     ...rest,
     headers: {
       accept: "application/json",
       "content-type": "application/json",
-      "X-API-KEY": getUnipileApiKey(),
+      "X-API-KEY": apiKey,
       ...(rest.headers ?? {}),
     },
   });
@@ -50,11 +72,16 @@ export async function unipileFetch<T>(
   }
 
   if (!res.ok) {
-    const msg =
+    const detail =
       typeof json === "object" && json && "message" in json
         ? String((json as { message: unknown }).message)
-        : `Unipile HTTP ${res.status}`;
-    throw new Error(msg);
+        : "";
+    if (res.status === 401) {
+      throw new Error(
+        "Unipile HTTP 401 — invalid API key or DSN mismatch. In Unipile dashboard copy Access Token + DSN again (no quotes), set UNIPILE_API_KEY and UNIPILE_DSN on Railway API, then redeploy."
+      );
+    }
+    throw new Error(detail || `Unipile HTTP ${res.status}`);
   }
 
   return json as T;
