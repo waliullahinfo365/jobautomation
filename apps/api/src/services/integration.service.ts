@@ -20,7 +20,7 @@ import { getSmtpOutboundCredentials } from "./smtp-config.service";
 import { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 import { getGoogleScopesForProvider, missingGoogleScopes } from "@jobflow/shared/constants/googleScopes";
 import { DEFAULT_AI_MODEL } from "@jobflow/shared/constants/ai";
-import { isGoogleDriveEnabled, isLegacyGmailOauthEnabled } from "@jobflow/shared/constants/legacy-integrations";
+import { isIntegrationSlugVisible } from "@jobflow/shared/constants/legacy-integrations";
 
 export { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 
@@ -86,8 +86,7 @@ const CATALOG: IntegrationCatalogEntry[] = [
   {
     provider: "Slack",
     slug: "slack",
-    purpose:
-      "Admin/team alerts for automation failures, Google reconnect warnings, queue issues, and summaries.",
+    purpose: "Admin/team notifications for automation errors, queue issues, and summaries.",
     requiredFor: ["lifecycle-monitoring"],
   },
 ];
@@ -405,12 +404,7 @@ export async function listIntegrations(input: { tenantId: string }): Promise<Int
       byProvider.set(key, row);
     }
   }
-  const visibleCatalog = CATALOG.filter((entry) => {
-    if (entry.slug === "google-drive" && !isGoogleDriveEnabled()) return false;
-    if (entry.slug === "gmail" && !isLegacyGmailOauthEnabled()) return false;
-    if (entry.slug === "linkedin" && process.env.LINKEDIN_CLOUD_AUTO_APPLY_ENABLED !== "true") return false;
-    return true;
-  });
+  const visibleCatalog = CATALOG.filter((entry) => isIntegrationSlugVisible(entry.slug));
 
   return visibleCatalog.map((entry) =>
     entry.provider === "LinkedIn"

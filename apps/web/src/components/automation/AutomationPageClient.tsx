@@ -23,6 +23,7 @@ import {
 } from "@/lib/utils/resource";
 import type { AutomationModule, AutomationStatus } from "@/types/automation";
 import { ApiStatusIndicator } from "@/components/shared/ApiStatusIndicator";
+import { isGoogleDriveEnabled } from "@/lib/feature-flags";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -88,7 +89,12 @@ export function AutomationPageClient() {
   }, [modulesWithLogs]);
 
   const filteredModules = useMemo(() => {
+    const hideDriveModules = !isGoogleDriveEnabled();
     return modulesWithLogs.filter((module) => {
+      const key = resolveAutomationBackendModuleKey(module.id);
+      if (hideDriveModules && (key === "folder-automation" || key === "cv-routing")) {
+        return false;
+      }
       const matchesTab = activeTab === "All" ? true : module.status === activeTab;
       const matchesQuery =
         !filters.query ||
@@ -246,10 +252,10 @@ export function AutomationPageClient() {
         });
         automationApi.clearApiCache();
         setLastAdminResult(JSON.stringify(result, null, 2).slice(0, 2200));
-        showSuccess(dryRun ? "Gmail backfill dry run completed." : "Gmail backfill started.");
+        showSuccess(dryRun ? "Email intake dry run completed." : "Email intake started.");
         await automationApi.refetch();
       } catch (error) {
-        showError(error instanceof Error ? error.message : "Gmail backfill failed.");
+        showError(error instanceof Error ? error.message : "Email intake failed.");
       }
     },
     [automationApi],
@@ -333,7 +339,7 @@ export function AutomationPageClient() {
             <div>
               <h2 className="text-sm font-semibold text-[var(--text-1)]">Client Test Admin Controls</h2>
               <p className="mt-1 max-w-3xl text-xs text-[var(--text-3)]">
-                Reset only operational data, preserve users/integrations/OAuth/templates, then backfill Gmail job alerts for the last 7 days.
+                Reset only operational data, preserve users/integrations/templates, then backfill email job alerts for the last 7 days.
               </p>
             </div>
             <input
@@ -352,7 +358,7 @@ export function AutomationPageClient() {
               Reset operational data
             </Button>
             <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(true)}>
-              Dry run Gmail backfill
+              Dry run email intake
             </Button>
             <Button type="button" variant="outline" size="sm" disabled={automationApi.mutations.debugCountsLoading} onClick={() => void loadDebugCounts()}>
               Show data counts
@@ -361,7 +367,7 @@ export function AutomationPageClient() {
               Backfill last 7 days
             </Button>
             <Button type="button" variant="ghost" size="sm" disabled={automationApi.mutations.backfillLoading} onClick={() => void runBackfill(false)}>
-              Run Gmail intake now
+              Run email intake now
             </Button>
           </div>
           {lastAdminResult ? (

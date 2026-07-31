@@ -98,23 +98,7 @@ export const getSystemStatus = asyncHandler(async (req: Request, res) => {
     }
   }
 
-  // Gmail
-  const gmail = byProvider.get("Gmail");
-  services.gmail = {
-    label: "Gmail",
-    status: integrationStatusToService(gmail?.status ?? "Not Connected"),
-    detail: gmail?.connectedEmail ?? (gmail?.status === "Not Connected" ? "Not connected" : undefined),
-  };
-
-  // Google Drive
-  const drive = byProvider.get("Google Drive");
-  services.googleDrive = {
-    label: "Google Drive",
-    status: integrationStatusToService(drive?.status ?? "Not Connected"),
-    detail: drive?.connectedEmail ?? (drive?.status === "Not Connected" ? "Not connected" : undefined),
-  };
-
-  // Google Calendar
+  // Google Calendar (Drive/Gmail replaced by Firebase + Unipile — omitted from status)
   const calendar = byProvider.get("Google Calendar");
   services.googleCalendar = {
     label: "Google Calendar",

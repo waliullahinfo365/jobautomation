@@ -72,8 +72,8 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
 
   const showRecent = recentItems.length > 0;
 
-  const gmailStep = onboarding.steps.find((s) => s.id === "gmail");
-  const showGmailBanner = !onboarding.loading && gmailStep && !gmailStep.complete;
+  const emailStep = onboarding.steps.find((s) => s.id === "email");
+  const showEmailBanner = !onboarding.loading && emailStep && !emailStep.complete;
 
   const showStats =
     readyToApply > 0 || followUps > 0 || replies > 0 || jobsToReview > 0;
@@ -96,13 +96,13 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
         )}
       </div>
 
-      {showGmailBanner ? (
+      {showEmailBanner ? (
         <Link
           href="/settings?section=Integrations"
           className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border border-[var(--amber-ring)] bg-[var(--amber-bg)] px-4 py-3 text-[14px] text-[var(--text-1)]"
         >
-          <span>{t("today.simple.connectGmailBanner")}</span>
-          <span className="shrink-0 font-semibold text-[var(--accent-hi)]">{t("labels.reconnect")} →</span>
+          <span>{t("today.simple.connectEmailBanner")}</span>
+          <span className="shrink-0 font-semibold text-[var(--accent-hi)]">{t("today.simple.connectEmailCta")} →</span>
         </Link>
       ) : null}
 

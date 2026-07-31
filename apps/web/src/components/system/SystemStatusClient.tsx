@@ -136,7 +136,7 @@ export function SystemStatusClient() {
   const services = payload?.services ?? {};
   const serviceKeys = [
     "api", "database", "queue", "worker",
-    "gmail", "googleDrive", "googleCalendar",
+    "googleCalendar",
     "aiProvider", "resend", "telegram", "slack",
   ];
 

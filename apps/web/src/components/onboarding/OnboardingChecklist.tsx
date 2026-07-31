@@ -7,7 +7,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { cn } from "@/lib/utils";
 
 const STEP_LABEL_KEY: Record<OnboardingStatus["steps"][number]["id"], string> = {
-  gmail: "onboarding.steps.connectGmail",
+  email: "onboarding.steps.connectEmail",
   resume: "onboarding.steps.uploadResume",
   coverTemplate: "onboarding.steps.uploadCoverTemplate",
   reviewJobs: "onboarding.steps.reviewJobs",

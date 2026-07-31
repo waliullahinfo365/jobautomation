@@ -32,7 +32,7 @@ const CONFIG_TARGETS: Record<string, string> = {
   "interview-scheduling": "/settings?tab=integrations&provider=google-calendar",
   "deadline-alert": "/settings?tab=notifications",
   "follow-up-reminder": "/settings?tab=notifications",
-  "offer-tracking": "/settings?tab=integrations&provider=gmail",
+  "offer-tracking": "/settings?tab=integrations",
 };
 
 export function AutomationHealth({ modules, jobsCount, onImportGmail, importLoading }: AutomationHealthProps) {

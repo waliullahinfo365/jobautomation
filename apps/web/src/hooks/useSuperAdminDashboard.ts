@@ -45,9 +45,7 @@ export interface SuperAdminAlert {
 const MODULE_SLOTS: Array<{ slotId: string; labelKey: string; keys: string[]; placeholderDescriptionKey: string }> = [
   { slotId: "job-intake", labelKey: "superAdmin.modules.jobIntake", keys: ["job-intake", "job-intake-engine"], placeholderDescriptionKey: "superAdmin.modules.jobIntakeDesc" },
   { slotId: "duplicate-protection", labelKey: "superAdmin.modules.duplicateProtection", keys: ["duplicate-protection", "duplicate-protection-engine"], placeholderDescriptionKey: "superAdmin.modules.duplicateProtectionDesc" },
-  { slotId: "folder-automation", labelKey: "superAdmin.modules.googleDriveFolders", keys: ["folder-automation", "folder-subfolder-automation", "google-drive-folders"], placeholderDescriptionKey: "superAdmin.modules.googleDriveFoldersDesc" },
   { slotId: "apply-assistant", labelKey: "superAdmin.modules.applyAssistant", keys: ["apply-assistant", "manual-apply", "apply-assistant-engine"], placeholderDescriptionKey: "superAdmin.modules.applyAssistantDesc" },
-  { slotId: "cv-routing", labelKey: "superAdmin.modules.cvRouting", keys: ["cv-routing", "cv-file-routing", "cv-file-routing-automation"], placeholderDescriptionKey: "superAdmin.modules.cvRoutingDesc" },
   { slotId: "reply-detection", labelKey: "superAdmin.modules.replyDetection", keys: ["email-reply-detection", "reply-detection"], placeholderDescriptionKey: "superAdmin.modules.replyDetectionDesc" },
   { slotId: "follow-up-reminder", labelKey: "superAdmin.modules.followUpReminders", keys: ["follow-up-reminder", "follow-up-reminder-engine", "follow-up-reminders"], placeholderDescriptionKey: "superAdmin.modules.followUpRemindersDesc" },
   { slotId: "ai-processing", labelKey: "superAdmin.modules.aiProcessing", keys: ["ai-processing", "ai-processing-engine"], placeholderDescriptionKey: "superAdmin.modules.aiProcessingDesc" },

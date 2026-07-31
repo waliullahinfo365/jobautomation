@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDocumentsApi } from "@/hooks/api/useDocumentsApi";
-import { useIntegrationsApi } from "@/hooks/api/useIntegrationsApi";
 import { useJobsApi } from "@/hooks/api/useJobsApi";
 import { normalizeListResponse } from "@/lib/api/normalizeResource";
 import { normalizeDocumentRecordsForUi, normalizeJobForUi } from "@/lib/utils/resource";
+import { getUnipileStatus } from "@/lib/api/unipile.api";
 import type { JobStatus } from "@/types/job";
 
 const REVIEWED_STATUSES = new Set<JobStatus>([
@@ -19,7 +19,7 @@ const REVIEWED_STATUSES = new Set<JobStatus>([
 ]);
 
 export interface OnboardingStep {
-  id: "gmail" | "resume" | "coverTemplate" | "reviewJobs";
+  id: "email" | "resume" | "coverTemplate" | "reviewJobs";
   complete: boolean;
   href: string;
 }
@@ -33,19 +33,31 @@ export interface OnboardingStatus {
 }
 
 export function useOnboardingStatus(): OnboardingStatus {
-  const integrationsApi = useIntegrationsApi({ fallbackToMock: false });
   const documentsApi = useDocumentsApi({ fallbackToMock: false });
   const jobsApi = useJobsApi({ fallbackToMock: false });
+  const [emailConnected, setEmailConnected] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(true);
 
-  const loading = integrationsApi.integrationsLoading || documentsApi.loading || jobsApi.loading;
+  useEffect(() => {
+    let cancelled = false;
+    void getUnipileStatus()
+      .then((s) => {
+        if (!cancelled) setEmailConnected(Boolean(s.connected));
+      })
+      .catch(() => {
+        if (!cancelled) setEmailConnected(false);
+      })
+      .finally(() => {
+        if (!cancelled) setEmailLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loading = emailLoading || documentsApi.loading || jobsApi.loading;
 
   return useMemo(() => {
-    const integrations = integrationsApi.integrations ?? [];
-    const gmail = integrations.find((i) => i.slug === "gmail");
-    const gmailConnected =
-      gmail?.status === "Connected" &&
-      !gmail?.errorMessage;
-
     const documents = normalizeDocumentRecordsForUi(normalizeListResponse<unknown>(documentsApi.data));
     const resumeUploaded = documents.some(
       (d) =>
@@ -67,7 +79,7 @@ export function useOnboardingStatus(): OnboardingStatus {
     );
 
     const steps: OnboardingStep[] = [
-      { id: "gmail", complete: gmailConnected, href: "/settings?section=Integrations" },
+      { id: "email", complete: emailConnected, href: "/settings?section=Integrations" },
       { id: "resume", complete: resumeUploaded, href: "/documents" },
       { id: "coverTemplate", complete: coverTemplateUploaded, href: "/documents" },
       { id: "reviewJobs", complete: jobsReviewed, href: "/jobs/review" },
@@ -82,10 +94,5 @@ export function useOnboardingStatus(): OnboardingStatus {
       isComplete: completedCount === steps.length,
       loading,
     };
-  }, [
-    integrationsApi.integrations,
-    documentsApi.data,
-    jobsApi.data,
-    loading,
-  ]);
+  }, [documentsApi.data, jobsApi.data, loading, emailConnected]);
 }

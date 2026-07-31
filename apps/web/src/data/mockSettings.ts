@@ -7,35 +7,10 @@ import type {
   StorageSettings,
   SecuritySettings,
 } from "@/types/settings";
+import { isIntegrationSlugVisible } from "@/lib/feature-flags";
 
-/** Fallback list for GET /integrations when API is unavailable (matches backend catalog). */
-export const mockIntegrationListItems: IntegrationListItem[] = [
-  {
-    provider: "Gmail",
-    slug: "gmail",
-    purpose: "Job alert intake, reply detection, and outbound messaging.",
-    requiredFor: ["job-intake", "email-reply-detection", "follow-up-reminder"],
-    status: "Connected",
-    connectedEmail: "demo.user@gmail.com",
-    accountName: "Demo Workspace",
-    lastSyncAt: new Date("2026-05-01T11:15:00Z").toISOString(),
-    syncStatus: "OK",
-    scopes: ["https://www.googleapis.com/auth/gmail.modify"],
-    metadata: { stub: true },
-  },
-  {
-    provider: "Google Drive",
-    slug: "google-drive",
-    purpose: "Job folders, CV routing, document storage, and PDF exports.",
-    requiredFor: ["folder-automation", "cv-routing", "pdf-export"],
-    status: "Needs Attention",
-    connectedEmail: "demo.user@gmail.com",
-    lastSyncAt: new Date("2026-05-01T10:58:00Z").toISOString(),
-    syncStatus: "Degraded",
-    errorMessage: "Demo: token rotation pending.",
-    scopes: ["drive.file"],
-    metadata: { stub: true },
-  },
+/** Fallback list for GET /integrations when API is unavailable (product catalog only). */
+const ALL_MOCK_INTEGRATION_ITEMS: IntegrationListItem[] = [
   {
     provider: "Google Calendar",
     slug: "google-calendar",
@@ -58,16 +33,6 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
     metadata: { botTokenConfigured: false, chatIdConfigured: false },
   },
   {
-    provider: "LinkedIn",
-    slug: "linkedin",
-    purpose:
-      "Playwright browser session for LinkedIn Easy Apply. Sessions are IP-sensitive — use PROXY_URL on workers when cookies were created on a different network.",
-    requiredFor: ["job-apply"],
-    status: "Not Connected",
-    scopes: [],
-    metadata: {},
-  },
-  {
     provider: "Claude",
     slug: "claude",
     purpose: "Anthropic Claude for research, drafts, extraction, and classification.",
@@ -77,44 +42,28 @@ export const mockIntegrationListItems: IntegrationListItem[] = [
     metadata: {},
   },
   {
-    provider: "SMTP",
-    slug: "smtp",
-    purpose:
-      "Legacy SMTP (often blocked by Railway). Prefer Resend for production; SMTP is optional when Resend is not configured.",
-    requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder"],
-    status: "Disabled",
-    scopes: [],
-    metadata: { stub: true },
-  },
-  {
     provider: "Resend",
     slug: "resend",
-    purpose:
-      "Email API delivery for reports, digests, and reminders. Recommended for Railway production.",
+    purpose: "Email API delivery for reports, digests, and reminders.",
     requiredFor: ["daily-digest", "weekly-report", "follow-up-reminder", "deadline-alert"],
     status: "Not Connected",
     scopes: [],
     metadata: { apiKeyConfigured: false, fromEmailConfigured: false },
   },
   {
-    provider: "Notion Legacy",
-    slug: "notion-legacy",
-    purpose: "One-time import from legacy Notion pipelines.",
-    requiredFor: [],
-    status: "Not Connected",
-    scopes: [],
-    metadata: {},
-  },
-  {
     provider: "Slack",
     slug: "slack",
-    purpose: "Workspace notifications (stub).",
+    purpose: "Admin/team notifications for automation errors, queue issues, and summaries.",
     requiredFor: ["lifecycle-monitoring"],
     status: "Not Connected",
     scopes: [],
     metadata: {},
   },
 ];
+
+export const mockIntegrationListItems: IntegrationListItem[] = ALL_MOCK_INTEGRATION_ITEMS.filter((i) =>
+  isIntegrationSlugVisible(i.slug)
+);
 
 export const mockIntegrationsHealth: IntegrationHealthSummary = mockIntegrationListItems.reduce(
   (acc, i) => {
@@ -148,6 +97,8 @@ export const mockResendIntegrationStatus = {
   apiKeyConfigured: false,
   fromEmailConfigured: false,
   status: "not_configured" as const,
+  message: "Resend is not configured.",
+  lastTest: undefined,
 };
 
 export const mockProfileSettings: ProfileSettings = {
@@ -211,8 +162,8 @@ export const mockNotificationPreferences: NotificationPreferences = {
 
 export const mockStorageSettings: StorageSettings = {
   database: "MongoDB (placeholder)",
-  fileStorage: "Google Drive (placeholder)",
-  pdfExportsFolder: "Drive / NewJob Guru / Exports",
+  fileStorage: "Firebase Storage",
+  pdfExportsFolder: "App / NewJob Guru / Exports",
   dataRetention: "12 months",
 };
 

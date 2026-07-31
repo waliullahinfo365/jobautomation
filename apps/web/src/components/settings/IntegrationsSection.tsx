@@ -22,7 +22,7 @@ import { ApplyAssistantIntegrationCard } from "./ApplyAssistantIntegrationCard";
 import { ApplyAutomationSection } from "./ApplyAutomationSection";
 import { UnipileEmailIntegrationCard } from "./UnipileEmailIntegrationCard";
 import { LinkedInSessionCard } from "./LinkedInSessionCard";
-import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
+import { isLinkedInCloudAutoApplyEnabled, isIntegrationSlugVisible } from "@/lib/feature-flags";
 
 function summarizeHealth(items: IntegrationListItem[]): IntegrationHealthSummary {
   const summary: IntegrationHealthSummary = {
@@ -322,7 +322,7 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
   }, [searchParams, refetch, router]);
 
   const mergedItems = useMemo(() => {
-    const base = integrations ?? [];
+    const base = (integrations ?? []).filter((i) => isIntegrationSlugVisible(i.slug));
     return base.map((i) => {
       const local = localBySlug[i.slug];
       const lt = lastTestBySlug[i.slug] ?? local?.lastTest ?? i.lastTest;
