@@ -100,7 +100,7 @@ export const createDocument = asyncHandler(async (req: Request, res) => {
   const documentId = String(row._id);
 
   try {
-    await syncDocumentToFirebase({
+    const firebaseResult = await syncDocumentToFirebase({
       tenantId,
       userId,
       documentId,
@@ -110,8 +110,21 @@ export const createDocument = asyncHandler(async (req: Request, res) => {
       mimeType,
       jobId: typeof body.jobId === "string" ? body.jobId : undefined,
     });
-  } catch {
-    // Non-fatal: text document still saved in Mongo
+    if (firebaseResult.uploaded) {
+      console.info("[firebase] document uploaded", { documentId, tenantId });
+    } else {
+      console.warn("[firebase] document not uploaded", {
+        documentId,
+        tenantId,
+        reason: firebaseResult.reason ?? "unknown",
+      });
+    }
+  } catch (error) {
+    console.error("[firebase] document upload failed", {
+      documentId,
+      tenantId,
+      message: error instanceof Error ? error.message : String(error),
+    });
   }
 
   if (workspaceProfileUpload) {
