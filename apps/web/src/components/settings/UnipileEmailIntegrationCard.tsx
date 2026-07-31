@@ -12,6 +12,7 @@ import {
   scanUnipileEmails,
   type UnipileStatus,
 } from "@/lib/api/unipile.api";
+import { ApiError } from "@/lib/api/client";
 import { showError, showSuccess } from "@/lib/ui/toast";
 
 export function UnipileEmailIntegrationCard() {
@@ -20,6 +21,7 @@ export function UnipileEmailIntegrationCard() {
   const [status, setStatus] = useState<UnipileStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -41,29 +43,41 @@ export function UnipileEmailIntegrationCard() {
       void refresh();
     } else if (flag === "failed") {
       showError(t("integrations.unipile.failedToast"));
+      setError(t("integrations.unipile.failedToast"));
     }
   }, [searchParams, refresh, t]);
 
   async function handleConnect() {
     setLoading(true);
+    setError(null);
     try {
       const res = await createUnipileConnectLink();
       if (!res.url) throw new Error(t("integrations.unipile.connectFailed"));
-      window.location.href = res.url;
+      window.location.assign(res.url);
     } catch (e) {
-      showError(e instanceof Error ? e.message : t("integrations.unipile.connectFailed"));
+      const message =
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : t("integrations.unipile.connectFailed");
+      setError(message);
+      showError(message);
       setLoading(false);
     }
   }
 
   async function handleDisconnect() {
     setLoading(true);
+    setError(null);
     try {
       await disconnectUnipile();
       showSuccess(t("integrations.unipile.disconnectedToast"));
       await refresh();
     } catch (e) {
-      showError(e instanceof Error ? e.message : t("integrations.unipile.disconnectFailed"));
+      const message = e instanceof Error ? e.message : t("integrations.unipile.disconnectFailed");
+      setError(message);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -71,6 +85,7 @@ export function UnipileEmailIntegrationCard() {
 
   async function handleScan() {
     setScanning(true);
+    setError(null);
     try {
       const res = await scanUnipileEmails({ limit: 30 });
       showSuccess(
@@ -78,7 +93,9 @@ export function UnipileEmailIntegrationCard() {
       );
       await refresh();
     } catch (e) {
-      showError(e instanceof Error ? e.message : t("integrations.unipile.scanFailed"));
+      const message = e instanceof Error ? e.message : t("integrations.unipile.scanFailed");
+      setError(message);
+      showError(message);
     } finally {
       setScanning(false);
     }
@@ -99,6 +116,12 @@ export function UnipileEmailIntegrationCard() {
         {!configured ? (
           <p className="rounded-md border border-[var(--rose-ring)] bg-[var(--rose-bg)] px-3 py-2 text-xs">
             {t("integrations.unipile.notConfigured")}
+          </p>
+        ) : null}
+
+        {error ? (
+          <p className="rounded-md border border-[var(--rose-ring)] bg-[var(--rose-bg)] px-3 py-2 text-xs text-[var(--text-2)]">
+            {error}
           </p>
         ) : null}
 

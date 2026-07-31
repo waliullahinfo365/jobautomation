@@ -19,7 +19,12 @@ export const createUnipileConnectHandler = asyncHandler(async (req: Request, res
   const userId = req.user?.id;
   if (!userId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
 
-  const result = await createUnipileEmailConnectLink({ tenantId, userId });
+  const forwardedProto = req.header("x-forwarded-proto");
+  const forwardedHost = req.header("x-forwarded-host") || req.header("host");
+  const apiPublicOrigin =
+    forwardedProto && forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined;
+
+  const result = await createUnipileEmailConnectLink({ tenantId, userId, apiPublicOrigin });
   return successResponse(res, result, "Unipile connect link created");
 });
 

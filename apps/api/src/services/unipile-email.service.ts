@@ -41,14 +41,20 @@ export function decodeUnipileConnectName(name: string): { tenantId: string; user
   return { tenantId, userId };
 }
 
-function publicApiBase(): string {
-  const base = (env.apiPublicUrl || process.env.API_URL || "").replace(/\/$/, "");
-  if (!base) throw new ApiError("API_PUBLIC_URL is required for Unipile callbacks", 500, "CONFIG_ERROR");
-  return base;
+function publicApiBase(reqOrigin?: string): string {
+  const fromEnv = (env.apiPublicUrl || process.env.API_URL || "").replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  const fromReq = (reqOrigin ?? "").replace(/\/$/, "");
+  if (fromReq) return fromReq;
+  throw new ApiError(
+    "API_PUBLIC_URL is required for Unipile callbacks. Set it on Railway to your API URL (e.g. https://jobautomation-production.up.railway.app).",
+    500,
+    "CONFIG_ERROR"
+  );
 }
 
 function webAppBase(): string {
-  return (env.appUrl || "http://localhost:3000").replace(/\/$/, "");
+  return (env.appUrl || process.env.WEB_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
 /** Heuristic: likely a job-alert email worth intake. */
@@ -103,26 +109,39 @@ export function mapUnipileEmailToIntakePayload(email: UnipileEmail): JobIntakeEm
 export async function createUnipileEmailConnectLink(input: {
   tenantId: string;
   userId: string;
+  /** Optional public API origin override from the incoming request */
+  apiPublicOrigin?: string;
 }): Promise<{ url: string; expiresInMinutes: number }> {
   if (!unipileConfigured()) {
-    throw new ApiError("Unipile is not configured on the server", 503, "UNIPILE_NOT_CONFIGURED");
+    throw new ApiError(
+      "Unipile is not configured on the server. Set UNIPILE_DSN and UNIPILE_API_KEY on Railway.",
+      503,
+      "UNIPILE_NOT_CONFIGURED"
+    );
   }
   const tenantId = assertTenantId(input.tenantId);
-  const apiBase = publicApiBase();
+  const apiBase = publicApiBase(input.apiPublicOrigin);
   const webBase = webAppBase();
   const expiresInMinutes = 30;
 
-  const res = await createUnipileHostedAuthLink({
-    name: encodeUnipileConnectName(tenantId, input.userId),
-    notifyUrl: `${apiBase}/integrations/unipile/notify`,
-    successRedirectUrl: `${webBase}/settings?section=Integrations&unipile=connected`,
-    failureRedirectUrl: `${webBase}/settings?section=Integrations&unipile=failed`,
-    providers: ["GOOGLE"],
-    expiresInMinutes,
-  });
+  try {
+    const res = await createUnipileHostedAuthLink({
+      name: encodeUnipileConnectName(tenantId, input.userId),
+      notifyUrl: `${apiBase}/integrations/unipile/notify`,
+      successRedirectUrl: `${webBase}/settings?section=Integrations&unipile=connected`,
+      failureRedirectUrl: `${webBase}/settings?section=Integrations&unipile=failed`,
+      providers: ["GOOGLE"],
+      expiresInMinutes,
+    });
 
-  if (!res.url) throw new ApiError("Unipile did not return a connect URL", 502, "UNIPILE_ERROR");
-  return { url: res.url, expiresInMinutes };
+    if (!res.url) throw new ApiError("Unipile did not return a connect URL", 502, "UNIPILE_ERROR");
+    return { url: res.url, expiresInMinutes };
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[unipile] create connect link failed", { message, apiBase });
+    throw new ApiError(`Unipile connect failed: ${message}`, 502, "UNIPILE_ERROR");
+  }
 }
 
 export async function upsertUnipileEmailConnection(input: {
