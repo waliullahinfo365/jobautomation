@@ -16,6 +16,8 @@ export type UploadPayload = {
   jobId?: string;
   contentText?: string;
   notes?: string;
+  fileBase64?: string;
+  mimeType?: string;
 };
 
 type Props = {
@@ -83,12 +85,30 @@ export function UploadDocumentModal({ open, onClose, onSubmit, loading, variant 
       showError(t("documents.upload.noExtractableText"));
       return;
     }
+
+    let fileBase64: string | undefined;
+    let mimeType: string | undefined;
+    if (file) {
+      try {
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!);
+        fileBase64 = btoa(binary);
+        mimeType = file.type || "application/octet-stream";
+      } catch {
+        fileBase64 = undefined;
+      }
+    }
+
     await onSubmit({
       fileName,
       type,
       jobId: jobId.trim() || undefined,
       contentText: merged,
       notes: notes.trim() || undefined,
+      fileBase64,
+      mimeType,
     });
     setFile(null);
     setType("CV");

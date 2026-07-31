@@ -5,7 +5,7 @@ export type ApplyCompleteStatus = "Applied" | "In Progress" | "Rejected" | "Inte
 
 export type CoverLetterSource = "generated" | "template" | "legacy_template" | null;
 
-export type ApplyDocumentDelivery = "drive" | "content_text";
+export type ApplyDocumentDelivery = "firebase" | "drive" | "content_text";
 
 export type ApplyDocumentStatus = {
   cv: {
@@ -14,6 +14,7 @@ export type ApplyDocumentStatus = {
     fileName?: string;
     delivery?: ApplyDocumentDelivery;
     googleDriveFileId?: string;
+    firebaseStoragePath?: string;
   };
   coverLetter: {
     available: boolean;
@@ -21,6 +22,7 @@ export type ApplyDocumentStatus = {
     fileName?: string;
     delivery?: ApplyDocumentDelivery;
     googleDriveFileId?: string;
+    firebaseStoragePath?: string;
     source?: CoverLetterSource;
     generatedCoverLetterDocumentId?: string | null;
   };

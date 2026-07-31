@@ -12,6 +12,7 @@ import { exportDocumentPdf } from "../services/pdf-export.service";
 import { enqueueAutomationModule } from "../services/automation-queue.service";
 import { sanitizeDocumentForApi } from "../utils/document-response";
 import { processUploadedProfileDocument } from "@jobflow/workers/processors/document-upload";
+import { syncDocumentToFirebase } from "../services/document-firebase-sync.service";
 
 function profileTypeFromBody(body: Record<string, unknown>) {
   const explicit = String(body.profileDocumentType ?? "");
@@ -89,13 +90,36 @@ export const createDocument = asyncHandler(async (req: Request, res) => {
       profileDocumentType,
     };
   }
+  const fileBase64 = typeof body.fileBase64 === "string" ? body.fileBase64 : undefined;
+  const mimeType = typeof body.mimeType === "string" ? body.mimeType : undefined;
+  delete body.fileBase64;
+  delete body.mimeType;
+
   const row = await createTenantScopedRecord(DocumentModel, tenantId, req.user?.id ?? "system", body as never);
+  const userId = req.user?.id ?? "system";
+  const documentId = String(row._id);
+
+  try {
+    await syncDocumentToFirebase({
+      tenantId,
+      userId,
+      documentId,
+      fileName: String(body.fileName ?? "document"),
+      contentText,
+      fileBase64,
+      mimeType,
+      jobId: typeof body.jobId === "string" ? body.jobId : undefined,
+    });
+  } catch {
+    // Non-fatal: text document still saved in Mongo
+  }
+
   if (workspaceProfileUpload) {
     try {
       await processUploadedProfileDocument({
         tenantId,
-        userId: req.user?.id ?? "system",
-        documentId: String(row._id),
+        userId,
+        documentId,
         profileDocumentType,
       });
     } catch (error) {
@@ -108,11 +132,13 @@ export const createDocument = asyncHandler(async (req: Request, res) => {
         generationStatus: "Failed",
       });
     }
-    const refreshed = await findTenantScopedById(DocumentModel, tenantId, String(row._id));
+    const refreshed = await findTenantScopedById(DocumentModel, tenantId, documentId);
     const plain = refreshed && typeof refreshed.toObject === "function" ? refreshed.toObject() : refreshed ?? row;
     return successResponse(res, sanitizeDocumentForApi(plain as Record<string, unknown>), "Created", 201);
   }
-  return successResponse(res, row, "Created", 201);
+  const refreshed = await findTenantScopedById(DocumentModel, tenantId, documentId);
+  const plain = refreshed && typeof refreshed.toObject === "function" ? refreshed.toObject() : refreshed ?? row;
+  return successResponse(res, sanitizeDocumentForApi(plain as Record<string, unknown>), "Created", 201);
 });
 export const getDocumentById = asyncHandler(async (req: Request, res) => {
   const tenantId = assertTenantId(req.tenantId);

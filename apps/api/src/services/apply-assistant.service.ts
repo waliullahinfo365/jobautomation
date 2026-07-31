@@ -6,6 +6,7 @@ import {
   loadWorkspaceProfileForPrompt,
 } from "./workspace-profile.service";
 import { exportDriveFile } from "./google-drive-export.service";
+import { downloadFirebaseObject, firebaseStorageEnabled } from "./firebase-storage.service";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
 
@@ -14,13 +15,14 @@ const workspaceJobFilter = {
 };
 
 export type CoverLetterSource = "generated" | "template" | "legacy_template" | null;
-export type ApplyDocumentDelivery = "drive" | "content_text";
+export type ApplyDocumentDelivery = "firebase" | "drive" | "content_text";
 
 type ResolvedApplyDoc = {
   documentId: string;
   fileName: string;
   delivery: ApplyDocumentDelivery;
   googleDriveFileId?: string;
+  firebaseStoragePath?: string;
   contentText?: string;
 };
 
@@ -34,10 +36,19 @@ function contentTextFromDoc(doc: Record<string, unknown>): string {
   return String(doc.contentText ?? "").trim();
 }
 
+function firebasePathFromDoc(doc: Record<string, unknown>): string {
+  if (String(doc.storageProvider ?? "") !== "Firebase") return "";
+  return String(doc.storagePath ?? "").trim();
+}
+
 function toResolvedDoc(row: Record<string, unknown>, defaultName: string): ResolvedApplyDoc | null {
   const documentId = String(row._id ?? "");
   if (!documentId) return null;
   const fileName = String(row.fileName ?? defaultName);
+  const firebaseStoragePath = firebasePathFromDoc(row);
+  if (firebaseStoragePath && firebaseStorageEnabled()) {
+    return { documentId, fileName, delivery: "firebase", firebaseStoragePath, contentText: contentTextFromDoc(row) || undefined };
+  }
   const googleDriveFileId = driveFileIdFromDoc(row);
   if (googleDriveFileId) {
     return { documentId, fileName, delivery: "drive", googleDriveFileId };
@@ -73,17 +84,19 @@ async function findWorkspaceProfileDoc(
     if (doc) candidates.push(doc);
   }
 
+  let firebasePick: ResolvedApplyDoc | null = null;
   let drivePick: ResolvedApplyDoc | null = null;
   let textPick: ResolvedApplyDoc | null = null;
   for (const raw of candidates) {
     const row = raw as Record<string, unknown>;
     const resolved = toResolvedDoc(row, defaultName);
     if (!resolved) continue;
+    if (resolved.delivery === "firebase" && !firebasePick) firebasePick = resolved;
     if (resolved.delivery === "drive" && !drivePick) drivePick = resolved;
     if (resolved.delivery === "content_text" && !textPick) textPick = resolved;
-    if (drivePick && textPick) break;
+    if (firebasePick && drivePick && textPick) break;
   }
-  return drivePick ?? textPick;
+  return firebasePick ?? drivePick ?? textPick;
 }
 
 async function resolveActiveCvDocument(tenantId: string, userId: string): Promise<ResolvedApplyDoc | null> {
@@ -117,6 +130,7 @@ async function resolveCoverLetterDocument(
     jobId,
     type: "Cover Letter",
     $or: [
+      { storageProvider: "Firebase", storagePath: { $exists: true, $nin: [null, ""] } },
       { googleDriveFileId: { $exists: true, $nin: [null, ""] } },
       { driveFileId: { $exists: true, $nin: [null, ""] } },
       { contentText: { $exists: true, $nin: [null, ""] } },
@@ -201,6 +215,7 @@ export async function getApplyDocumentStatus(input: {
           fileName: cv.fileName,
           delivery: cv.delivery,
           googleDriveFileId: cv.googleDriveFileId,
+          firebaseStoragePath: cv.firebaseStoragePath,
         }
       : { available: false },
     coverLetter: coverLetter
@@ -210,6 +225,7 @@ export async function getApplyDocumentStatus(input: {
           fileName: coverLetter.fileName,
           delivery: coverLetter.delivery,
           googleDriveFileId: coverLetter.googleDriveFileId,
+          firebaseStoragePath: coverLetter.firebaseStoragePath,
           source: coverLetter.source,
         }
       : {
@@ -226,7 +242,9 @@ export async function getApplyDocumentStatus(input: {
 
 function streamFileName(baseName: string, delivery: ApplyDocumentDelivery): string {
   const stem = baseName.replace(/\.[^.]+$/, "") || baseName;
-  return delivery === "content_text" ? `${stem}.txt` : baseName.endsWith(".pdf") ? baseName : `${stem}.pdf`;
+  if (delivery === "content_text") return `${stem}.txt`;
+  if (delivery === "firebase") return baseName;
+  return baseName.endsWith(".pdf") ? baseName : `${stem}.pdf`;
 }
 
 export async function streamApplyDocument(input: {
@@ -240,6 +258,25 @@ export async function streamApplyDocument(input: {
     input.role === "cover_letter"
       ? ((await resolveCoverLetterDocument(input.tenantId, input.userId, input.jobId))?.source ?? null)
       : null;
+
+  if (doc.delivery === "firebase" && doc.firebaseStoragePath) {
+    try {
+      const downloaded = await downloadFirebaseObject(doc.firebaseStoragePath);
+      return {
+        buffer: downloaded.buffer,
+        contentType: downloaded.contentType,
+        fileName: streamFileName(doc.fileName, "firebase"),
+        sizeBytes: downloaded.buffer.length,
+        exportBranch: "firebase" as const,
+        sourceMimeType: downloaded.contentType,
+        documentId: doc.documentId,
+        coverLetterSource,
+        delivery: "firebase" as const,
+      };
+    } catch {
+      // Fall through to text / Drive if Firebase read fails
+    }
+  }
 
   if (doc.delivery === "drive" && doc.googleDriveFileId) {
     const exported = await exportDriveFile({

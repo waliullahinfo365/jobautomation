@@ -458,6 +458,8 @@ export function DocumentsPageClient() {
         jobId: jobIdClean,
         contentText: payload.contentText,
         notes: payload.notes,
+        fileBase64: payload.fileBase64,
+        mimeType: payload.mimeType,
         profileDocumentType,
         sourceFileName: payload.fileName,
         metadata: !jobIdClean ? { workspaceLibrary: true, profileDocumentType } : undefined,

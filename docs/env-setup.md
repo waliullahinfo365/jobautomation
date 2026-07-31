@@ -37,6 +37,19 @@ Use root `.env.example` as source of required variables.
 - Poll and apply: `pnpm apply-agent run --interval 120000`
 - Optional Chrome extension: load `extensions/linkedin-apply-assistant/` unpacked in `chrome://extensions`.
 
+## Firebase Storage (document binaries)
+
+- **`FIREBASE_PROJECT_ID`**, **`FIREBASE_STORAGE_BUCKET`**, **`FIREBASE_CLIENT_EMAIL`**, **`FIREBASE_PRIVATE_KEY`**: set on **API** (Railway).
+- Private key: keep `\n` as literal `\n` in Railway env (code normalizes them).
+- Storage rules should deny public access (`allow read, write: if false`) — only Admin SDK access.
+- Users never create Firebase accounts; files appear only inside the app.
+- Local alternative: `FIREBASE_SERVICE_ACCOUNT_PATH` pointing at a service-account JSON file under `.secrets/` (gitignored).
+
+## Unipile email intake (next)
+
+- **`UNIPILE_DSN`**, **`UNIPILE_API_KEY`**: Unipile dashboard values.
+- **`UNIPILE_EMAIL_INTAKE_ENABLED`**: feature flag (default false until connect + webhook are live).
+
 ## Gmail job intake (workers)
 
 - **`SCHEDULER_ENABLED=true`**: Required on the **workers** service for timed automation (including Gmail intake).
