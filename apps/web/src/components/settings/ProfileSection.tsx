@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useTheme } from "next-themes";
 import type { Locale } from "@/i18n/translations";
+import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
 
 interface ProfileSectionProps {
   profile: ProfileSettings;
@@ -103,7 +104,7 @@ export function ProfileSection({ profile, onChange, onAvatarUpdated, variant = "
         ) : null}
       </div>
     </SettingSectionCard>
-    {!simple ? <AutoApplyProfileCard /> : null}
+    {!simple && isLinkedInCloudAutoApplyEnabled() ? <AutoApplyProfileCard /> : null}
     </div>
   );
 }

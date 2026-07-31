@@ -401,10 +401,18 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
 
   const modalItem = modalSlug ? mergedItems.find((i) => i.slug === modalSlug) : undefined;
 
+  /** Simple UI: Unipile + Apply Assistant only. Legacy Gmail/Drive OAuth stays in Advanced. */
   const visibleItems = useMemo(() => {
     if (!simple) return mergedItems;
-    return mergedItems.filter((i) => i.slug === "gmail" || i.slug === "google-drive");
+    return [];
   }, [mergedItems, simple]);
+
+  const showCloudLinkedIn = isLinkedInCloudAutoApplyEnabled();
+  const showLegacyGmailScan =
+    !simple &&
+    process.env.NEXT_PUBLIC_LEGACY_GMAIL_SCAN_ENABLED === "true" &&
+    mergedItems.some((i) => i.slug === "gmail" && i.status === "Connected");
+  const showDesktopApplyAgent = !simple && showCloudLinkedIn;
 
   async function handleConnectSubmit(body: Record<string, unknown>) {
     if (!modalSlug) return;
@@ -636,11 +644,8 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
 
       <div className={simple ? "space-y-3" : "grid grid-cols-1 gap-4 xl:grid-cols-2"}>
         <UnipileEmailIntegrationCard />
-        {simple || !isLinkedInCloudAutoApplyEnabled() ? (
-          <ApplyAssistantIntegrationCard />
-        ) : (
-          <LinkedInSessionCard variant="advanced" />
-        )}
+        <ApplyAssistantIntegrationCard />
+        {showCloudLinkedIn ? <LinkedInSessionCard variant={simple ? "simple" : "advanced"} /> : null}
         {simple
           ? visibleItems.map((item) => (
               <ConnectedAccountSimpleCard
@@ -662,11 +667,9 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
             ))}
       </div>
 
-      <ApplyAutomationSection />
+      {showDesktopApplyAgent ? <ApplyAutomationSection /> : null}
 
-      {!simple && mergedItems.some((i) => i.slug === "gmail" && i.status === "Connected") ? (
-        <GmailScanPanel />
-      ) : null}
+      {showLegacyGmailScan ? <GmailScanPanel /> : null}
 
       <IntegrationConnectModal
         open={modalSlug !== null}

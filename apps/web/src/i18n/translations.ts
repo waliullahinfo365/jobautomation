@@ -1083,7 +1083,7 @@ export const messages: Record<
       simpleTitle: "Einstellungen",
       simpleDescription: "Profil, verbundene Konten, Benachrichtigungen und Tarif.",
       connectedAccountsTitle: "Verbundene Konten",
-      connectedAccountsSubtitle: "Gmail und Google Drive für Jobs, Dokumente und Erinnerungen.",
+      connectedAccountsSubtitle: "E-Mail für Job-Alerts verbinden, dann vom Handy mit dem Bewerbungs-Assistenten bewerben.",
       appearanceTitle: "Design",
       connectedAccounts: {
         connect: "Verbinden",
@@ -1309,8 +1309,8 @@ export const messages: Record<
     integrations: {
       applyAssistantCard: {
         title: "Bewerbung auf dem Handy",
-        description: "Gmail und Google Drive einmal verbinden — wir bereiten CV und Anschreiben vor.",
-        body: "Für LinkedIn und andere Jobseiten nutzen Sie den Bewerbungs-Assistenten: Dokumente teilen, KI-Antworten kopieren und Bewerbung in wenigen Tippen dokumentieren. Keine LinkedIn-Serververbindung nötig.",
+        description: "Job-Link öffnen, CV/Anschreiben teilen und als Beworben markieren — kein LinkedIn in der Cloud.",
+        body: "Dokumente in der App hochladen (sicher gespeichert). Mit dem Bewerbungs-Assistenten Dateien teilen, KI-Antworten kopieren und Status in wenigen Tippen loggen.",
       },
       unipile: {
         title: "E-Mail verbinden (Unipile)",
@@ -4223,7 +4223,7 @@ export const messages: Record<
       simpleTitle: "Settings",
       simpleDescription: "Profile, connected accounts, notifications, and billing.",
       connectedAccountsTitle: "Connected Accounts",
-      connectedAccountsSubtitle: "Gmail and Google Drive for jobs, documents, and reminders.",
+      connectedAccountsSubtitle: "Connect email for job alerts, then apply from your phone with Apply Assistant.",
       appearanceTitle: "Appearance",
       connectedAccounts: {
         connect: "Connect",
@@ -4446,8 +4446,8 @@ export const messages: Record<
     integrations: {
       applyAssistantCard: {
         title: "Apply on your phone",
-        description: "Connect Gmail and Google Drive once — we prepare your CV and cover letter per job.",
-        body: "For LinkedIn and other job sites, use Apply Assistant: share documents, copy AI answers, and log your application in a few taps. No LinkedIn server connection required.",
+        description: "Open the job link, share your CV/cover letter, and mark Applied — no LinkedIn cloud login.",
+        body: "Upload documents in the app (stored securely). Use Apply Assistant to share files, copy AI answers, and log status in a few taps.",
       },
       unipile: {
         title: "Connect email (Unipile)",
