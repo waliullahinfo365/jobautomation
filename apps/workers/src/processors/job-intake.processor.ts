@@ -428,12 +428,22 @@ export async function processJobIntakeProcessor(payload: JobIntakeProcessorPaylo
       metadata: { gmailMessageId: normalized.providerMessageId, source: data.source || "gmail" },
     });
 
-    const downstreamModules = [
+    const downstreamModules: Array<{
+      name: "duplicate-protection" | "folder-automation" | "research-document" | "ai-processing";
+      payload: Record<string, unknown>;
+      delayMs: number;
+    }> = [
       { name: "duplicate-protection", payload: { jobId: String(created._id) }, delayMs: 0 },
-      { name: "folder-automation", payload: { jobId: String(created._id) }, delayMs: 1_000 },
       { name: "research-document", payload: { jobId: String(created._id), mode: "research" }, delayMs: 2_000 },
       { name: "ai-processing", payload: { jobId: String(created._id), mode: "draft" }, delayMs: 3_000 },
-    ] as const;
+    ];
+    if (process.env.GOOGLE_DRIVE_ENABLED === "true") {
+      downstreamModules.splice(1, 0, {
+        name: "folder-automation",
+        payload: { jobId: String(created._id) },
+        delayMs: 1_000,
+      });
+    }
     if (payload.enqueueDownstream !== false) {
       for (const moduleConfig of downstreamModules) {
         await enqueueAutomationJob({

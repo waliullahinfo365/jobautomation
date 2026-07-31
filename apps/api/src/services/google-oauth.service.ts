@@ -10,6 +10,7 @@ import { encryptSecret } from "../utils/encryption";
 import { createOAuthState, verifyOAuthState } from "../utils/oauth-state";
 import { ApiError } from "../utils/errors";
 import { isGoogleOAuthSlug, providerFromSlug, slugForProvider } from "../utils/provider-slug";
+import { isGoogleDriveEnabled, isLegacyGmailOauthEnabled } from "@jobflow/shared/constants/legacy-integrations";
 
 export type StubGoogleTokens = {
   access_token: string;
@@ -108,6 +109,20 @@ export async function getGoogleAuthorizationUrl(input: {
   const tenantId = assertTenantId(input.tenantId);
   if (!isGoogleOAuthSlug(input.providerSlug)) {
     throw new ApiError("Invalid Google integration provider", 422, "INVALID_PROVIDER");
+  }
+  if (input.providerSlug === "google-drive" && !isGoogleDriveEnabled()) {
+    throw new ApiError(
+      "Google Drive is disabled. Documents are stored with Firebase Storage.",
+      410,
+      "GOOGLE_DRIVE_DISABLED"
+    );
+  }
+  if (input.providerSlug === "gmail" && !isLegacyGmailOauthEnabled()) {
+    throw new ApiError(
+      "Direct Gmail OAuth is disabled. Connect email via Unipile in Settings.",
+      410,
+      "LEGACY_GMAIL_DISABLED"
+    );
   }
   const provider = providerFromSlug(input.providerSlug);
   if (!provider) throw new ApiError("Unknown provider", 422, "UNKNOWN_PROVIDER");

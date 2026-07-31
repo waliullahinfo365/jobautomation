@@ -196,7 +196,7 @@ export function ApplyAssistantAdvancedView({
             {t("applyAssistant.openJobLink")}
           </a>
         ) : null}
-        <p className="text-xs text-[var(--text-3)]">{t("applyAssistant.driveHint")}</p>
+        <p className="text-xs text-[var(--text-3)]">{t("applyAssistant.storageHint")}</p>
         {usesContentTextExport ? (
           <p className="text-xs text-[var(--amber)]">{t("applyAssistant.contentTextHint")}</p>
         ) : null}

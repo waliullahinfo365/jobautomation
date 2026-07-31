@@ -36,22 +36,30 @@ export function JobOverviewCard({ job }: JobOverviewCardProps) {
         <OverviewItem label={t("jobs.dateFound")} value={formatDate(job.dateFound)} />
         <OverviewItem label={t("jobs.dateApplied")} value={job.dateApplied ? formatDate(job.dateApplied) : "—"} />
         <OverviewItem label={t("jobs.contactEmail")} value={job.contactEmail ?? "—"} />
-        <OverviewItem
-          label={t("jobs.openDriveJobFolder")}
-          value={job.driveFolderLink ? <ExternalLink href={job.driveFolderLink} /> : "—"}
-        />
-        <OverviewItem
-          label={t("jobs.openResearchFolder")}
-          value={job.researchFolderLink ? <ExternalLink href={job.researchFolderLink} /> : "—"}
-        />
-        <OverviewItem
-          label={t("jobs.openCoverLetterFolder")}
-          value={job.coverLetterFolderLink ? <ExternalLink href={job.coverLetterFolderLink} /> : "—"}
-        />
-        <OverviewItem
-          label={t("jobs.openAiDraftGoogleDoc")}
-          value={job.aiDraftDocUrl ? <ExternalLink href={job.aiDraftDocUrl} /> : "—"}
-        />
+        {job.driveFolderLink ? (
+          <OverviewItem
+            label={t("jobs.openDriveJobFolder")}
+            value={<ExternalLink href={job.driveFolderLink} />}
+          />
+        ) : null}
+        {job.researchFolderLink ? (
+          <OverviewItem
+            label={t("jobs.openResearchFolder")}
+            value={<ExternalLink href={job.researchFolderLink} />}
+          />
+        ) : null}
+        {job.coverLetterFolderLink ? (
+          <OverviewItem
+            label={t("jobs.openCoverLetterFolder")}
+            value={<ExternalLink href={job.coverLetterFolderLink} />}
+          />
+        ) : null}
+        {job.aiDraftDocUrl ? (
+          <OverviewItem
+            label={t("jobs.openAiDraftGoogleDoc")}
+            value={<ExternalLink href={job.aiDraftDocUrl} />}
+          />
+        ) : null}
       </div>
     </SectionCard>
   );

@@ -401,7 +401,7 @@ export function IntegrationsSection({ variant = "advanced" }: { variant?: "simpl
 
   const modalItem = modalSlug ? mergedItems.find((i) => i.slug === modalSlug) : undefined;
 
-  /** Simple UI: Unipile + Apply Assistant only. Legacy Gmail/Drive OAuth stays in Advanced. */
+  /** Unipile + Apply Assistant primary. Drive/Gmail OAuth filtered server-side (legacy flags). */
   const visibleItems = useMemo(() => {
     if (!simple) return mergedItems;
     return [];

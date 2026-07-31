@@ -4,6 +4,7 @@ import { processFolderAutomationJob } from "@jobflow/workers/processors/folder-a
 import type { FolderProvisionResult } from "@jobflow/shared/types/job";
 import { assertTenantId, findTenantScopedById } from "./baseTenant.service";
 import { ApiError } from "../utils/errors";
+import { isGoogleDriveEnabled } from "@jobflow/shared/constants/legacy-integrations";
 
 type ProvisionInput = {
   tenantId: string;
@@ -15,6 +16,15 @@ type ProvisionInput = {
 export async function provisionJobFolders(input: ProvisionInput): Promise<FolderProvisionResult> {
   const tenantId = assertTenantId(input.tenantId);
   const operationId = input.operationId ?? randomUUID();
+
+  if (!isGoogleDriveEnabled()) {
+    throw new ApiError(
+      "Google Drive folders are disabled. Documents are stored with Firebase Storage.",
+      410,
+      "GOOGLE_DRIVE_DISABLED"
+    );
+  }
+
   const job = await findTenantScopedById(JobModel, tenantId, input.jobId);
   if (!job) throw new ApiError("Job not found", 404, "NOT_FOUND");
 

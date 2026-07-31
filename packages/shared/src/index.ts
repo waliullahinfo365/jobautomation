@@ -3,6 +3,7 @@ export * from "./constants/statuses";
 export * from "./constants/pipeline";
 export * from "./constants/application-documentation";
 export * from "./constants/googleScopes";
+export * from "./constants/legacy-integrations";
 export * from "./constants/ai";
 export * from "./types/ai";
 export * from "./constants/plans";

@@ -20,13 +20,13 @@ interface AutomationHealthProps {
 }
 
 const CONFIG_TARGETS: Record<string, string> = {
-  "job-intake": "/settings?tab=integrations&provider=gmail",
-  "email-reply-detection": "/settings?tab=integrations&provider=gmail",
-  "folder-automation": "/settings?tab=integrations&provider=google-drive",
+  "job-intake": "/settings?tab=integrations",
+  "email-reply-detection": "/settings?tab=integrations",
+  "folder-automation": "/documents",
   "cv-routing": "/documents",
   "research-document": "/settings?tab=integrations&provider=claude",
   "ai-processing": "/settings?tab=integrations&provider=claude",
-  "pdf-export": "/settings?tab=integrations&provider=google-drive",
+  "pdf-export": "/documents",
   "daily-digest": "/settings?tab=notifications",
   "weekly-report": "/settings?tab=notifications",
   "interview-scheduling": "/settings?tab=integrations&provider=google-calendar",

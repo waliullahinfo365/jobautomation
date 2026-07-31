@@ -27,6 +27,7 @@ import { PDFExportsSection } from "./PDFExportsSection";
 import { FolderAutomationSection } from "./FolderAutomationSection";
 import { UploadDocumentModal, type UploadPayload } from "./UploadDocumentModal";
 import { useTranslation } from "@/i18n/useTranslation";
+import { isGoogleDriveEnabled } from "@/lib/feature-flags";
 
 export interface DocumentsAdvancedViewProps {
   tab: DocumentTab;
@@ -207,7 +208,7 @@ export function DocumentsAdvancedView({
       {tab === "Cover Letters" ? <CoverLettersSection records={coverRows} /> : null}
       {tab === "Research Docs" ? <ResearchDocsSection records={researchRows} /> : null}
       {tab === "PDF Exports" ? <PDFExportsSection records={pdfRows} onExportAgain={onPdfExportAgain} /> : null}
-      {tab === "Folder Automation" ? (
+      {tab === "Folder Automation" && isGoogleDriveEnabled() ? (
         <FolderAutomationSection
           activity={folderActivity}
           settings={folderSettings}

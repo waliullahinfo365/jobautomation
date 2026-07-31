@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
 import type { DocumentTab } from "@/types/document";
 import { ScrollableTabBar, ScrollableTabButton } from "@/components/shared/ScrollableTabBar";
+import { isGoogleDriveEnabled } from "@/lib/feature-flags";
 
 const tabKeys: { key: DocumentTab; i18n: string }[] = [
   { key: "All Documents", i18n: "documents.tabs.allDocuments" },
@@ -16,9 +17,12 @@ const tabKeys: { key: DocumentTab; i18n: string }[] = [
 
 export function DocumentTabs({ value, onChange }: { value: DocumentTab; onChange: (tab: DocumentTab) => void }) {
   const { t } = useTranslation();
+  const tabs = isGoogleDriveEnabled()
+    ? tabKeys
+    : tabKeys.filter((tab) => tab.key !== "Folder Automation");
   return (
     <ScrollableTabBar>
-      {tabKeys.map(({ key, i18n }) => (
+      {tabs.map(({ key, i18n }) => (
         <ScrollableTabButton
           key={key}
           onPress={() => onChange(key)}

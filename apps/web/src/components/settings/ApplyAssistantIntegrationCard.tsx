@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/i18n/useTranslation";
 
-/** Mobile-first: Gmail + Drive connect here; LinkedIn apply uses Apply Assistant (no server session). */
+/** Mobile-first apply: open job link, share Firebase-stored docs, mark Applied. */
 export function ApplyAssistantIntegrationCard() {
   const { t } = useTranslation();
 

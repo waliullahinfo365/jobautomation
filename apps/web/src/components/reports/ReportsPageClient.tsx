@@ -761,7 +761,7 @@ export function ReportsPageClient() {
                 rel="noopener noreferrer"
                 className={cn(buttonVariants({ variant: "outline" }))}
               >
-                {t("reports.modal.openInGoogleDrive")}
+                {t("reports.modal.openDocument")}
               </a>
             ) : null}
             {selectedReport?.pdfUrl && isPublicFileUrl(selectedReport.pdfUrl, API_URL) ? (

@@ -12,6 +12,7 @@ import { useTranslation } from "@/i18n/useTranslation";
 import type { DocumentRecord } from "@/types/document";
 import { updateDocument, getDocument } from "@/lib/api/documents.api";
 import { showError, showSuccess } from "@/lib/ui/toast";
+import { isGoogleDriveEnabled } from "@/lib/feature-flags";
 
 export function AllDocumentsTable({
   records,
@@ -131,7 +132,7 @@ export function AllDocumentsTable({
                     >
                       {t("documents.actions.exportPdf")}
                     </Button>
-                    {record.type === "CV" ? (
+                    {record.type === "CV" && isGoogleDriveEnabled() ? (
                       <Button size="sm" variant="outline" type="button" onClick={() => void onRouteCv?.(record)}>
                         {t("documents.actions.routeCv")}
                       </Button>
@@ -142,7 +143,7 @@ export function AllDocumentsTable({
                       </Button>
                     ) : null}
                     <Button size="sm" variant="ghost" type="button" onClick={() => void onOpenFolder?.(record)}>
-                      {t("documents.actions.openFolder")}
+                      {t("documents.actions.open")}
                     </Button>
                   </div>
                 </TableCell>

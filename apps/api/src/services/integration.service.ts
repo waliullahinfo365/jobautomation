@@ -20,6 +20,7 @@ import { getSmtpOutboundCredentials } from "./smtp-config.service";
 import { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 import { getGoogleScopesForProvider, missingGoogleScopes } from "@jobflow/shared/constants/googleScopes";
 import { DEFAULT_AI_MODEL } from "@jobflow/shared/constants/ai";
+import { isGoogleDriveEnabled, isLegacyGmailOauthEnabled } from "@jobflow/shared/constants/legacy-integrations";
 
 export { providerFromSlug, slugForProvider } from "../utils/provider-slug";
 
@@ -404,7 +405,14 @@ export async function listIntegrations(input: { tenantId: string }): Promise<Int
       byProvider.set(key, row);
     }
   }
-  return CATALOG.map((entry) =>
+  const visibleCatalog = CATALOG.filter((entry) => {
+    if (entry.slug === "google-drive" && !isGoogleDriveEnabled()) return false;
+    if (entry.slug === "gmail" && !isLegacyGmailOauthEnabled()) return false;
+    if (entry.slug === "linkedin" && process.env.LINKEDIN_CLOUD_AUTO_APPLY_ENABLED !== "true") return false;
+    return true;
+  });
+
+  return visibleCatalog.map((entry) =>
     entry.provider === "LinkedIn"
       ? rowToItem(entry, linkedinPreferred ?? null)
       : rowToItem(entry, byProvider.get(entry.provider) ?? null)

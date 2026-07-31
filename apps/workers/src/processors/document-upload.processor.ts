@@ -1,5 +1,6 @@
 import { AutomationLogModel, DocumentModel } from "@jobflow/database/models";
 import { GOOGLE_DRIVE_DOCS_WORKER_SCOPES } from "@jobflow/shared/constants/googleScopes";
+import { isGoogleDriveEnabled } from "@jobflow/shared/constants/legacy-integrations";
 import { createGoogleDoc, ensureWorkspaceFolderStructure, findOrCreateFolder } from "../lib/google-drive";
 import { loadGoogleAccessToken } from "../lib/google-auth";
 
@@ -15,6 +16,70 @@ export type DocumentUploadProcessorPayload = {
 
 function driveLink(id: string) {
   return `https://docs.google.com/document/d/${id}/edit`;
+}
+
+function isFirebaseBacked(doc: { storageProvider?: string | null; storagePath?: string | null }) {
+  const provider = String(doc.storageProvider ?? "").toLowerCase();
+  if (provider === "firebase") return true;
+  const path = String(doc.storagePath ?? "");
+  return path.startsWith("tenants/");
+}
+
+async function activateProfileDocumentLocally(input: {
+  tenantId: string;
+  doc: { _id: unknown; metadata?: unknown };
+  contentText: string;
+  profileDocumentType: ProfileDocumentType;
+  operationId: string;
+  storageLocation: string;
+  message: string;
+  status: "Success" | "Warning";
+}) {
+  if (input.contentText && input.profileDocumentType !== "supporting_document") {
+    await DocumentModel.updateMany(
+      {
+        tenantId: input.tenantId,
+        profileDocumentType: input.profileDocumentType,
+        _id: { $ne: input.doc._id },
+      },
+      { isActiveProfileDocument: false }
+    );
+    await DocumentModel.findByIdAndUpdate(input.doc._id, {
+      status: "Ready",
+      generationStatus: "Generated",
+      extractionStatus: "Provided",
+      extractionError: undefined,
+      isActiveProfileDocument: true,
+      storageLocation: input.storageLocation,
+      storagePath: input.storageLocation,
+      metadata: {
+        ...((input.doc.metadata as Record<string, unknown> | undefined) ?? {}),
+        workspaceLibrary: true,
+        profileDocumentType: input.profileDocumentType,
+        operationId: input.operationId,
+      },
+    });
+  }
+
+  await AutomationLogModel.create({
+    tenantId: input.tenantId,
+    createdBy: "system",
+    moduleKey: "document-upload",
+    moduleName: "document-upload",
+    status: input.status,
+    message: input.message,
+    operationId: input.operationId,
+    relatedRecordType: "Document",
+    relatedRecordId: String(input.doc._id),
+    metadata: { profileDocumentType: input.profileDocumentType },
+  });
+
+  return {
+    suppressWorkerCompletionLog: true as const,
+    moduleKey: "document-upload",
+    status: input.status === "Success" ? ("completed" as const) : ("warning" as const),
+    operationId: input.operationId,
+  };
 }
 
 export async function processUploadedProfileDocument(payload: DocumentUploadProcessorPayload) {
@@ -49,36 +114,29 @@ export async function processUploadedProfileDocument(payload: DocumentUploadProc
     return { suppressWorkerCompletionLog: true as const, moduleKey: "document-upload", status: "warning", operationId };
   }
 
-  const auth = await loadGoogleAccessToken({
-    tenantId: payload.tenantId,
-    provider: "Google Drive",
-    requiredScopes: [...GOOGLE_DRIVE_DOCS_WORKER_SCOPES],
-  });
-
-  if (!auth.connected) {
-    await AutomationLogModel.create({
-      tenantId: payload.tenantId,
-      createdBy: "system",
-      moduleKey: "document-upload",
-      moduleName: "document-upload",
-      status: "Warning",
-      message: `Profile document saved locally; Drive upload skipped: ${auth.reason ?? "Drive not connected"}`,
-      operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: String(doc._id),
-      metadata: { profileDocumentType: payload.profileDocumentType, reason: auth.reason },
-    });
-    if (contentText && payload.profileDocumentType === "cv_resume") {
+  // Firebase is the primary document store — never overwrite Firebase metadata with Drive.
+  if (isFirebaseBacked(doc) || !isGoogleDriveEnabled()) {
+    if (contentText && payload.profileDocumentType !== "supporting_document") {
       await DocumentModel.updateMany(
-        { tenantId: payload.tenantId, profileDocumentType: "cv_resume", _id: { $ne: doc._id } },
+        {
+          tenantId: payload.tenantId,
+          profileDocumentType: payload.profileDocumentType,
+          _id: { $ne: doc._id },
+        },
         { isActiveProfileDocument: false }
       );
       await DocumentModel.findByIdAndUpdate(doc._id, {
         status: "Ready",
+        generationStatus: "Generated",
         extractionStatus: "Provided",
+        extractionError: undefined,
         isActiveProfileDocument: true,
-        storageLocation: "In-app (Google Drive not connected)",
-        storagePath: "In-app (Google Drive not connected)",
+        ...(isFirebaseBacked(doc)
+          ? {}
+          : {
+              storageLocation: "In-app storage",
+              storagePath: "In-app storage",
+            }),
         metadata: {
           ...((doc.metadata as Record<string, unknown> | undefined) ?? {}),
           workspaceLibrary: true,
@@ -87,7 +145,47 @@ export async function processUploadedProfileDocument(payload: DocumentUploadProc
         },
       });
     }
-    return { suppressWorkerCompletionLog: true as const, moduleKey: "document-upload", status: "warning", operationId };
+
+    await AutomationLogModel.create({
+      tenantId: payload.tenantId,
+      createdBy: "system",
+      moduleKey: "document-upload",
+      moduleName: "document-upload",
+      status: "Success",
+      message: isFirebaseBacked(doc)
+        ? "Active profile document stored in Firebase Storage."
+        : "Active profile document stored in-app (Google Drive disabled).",
+      operationId,
+      relatedRecordType: "Document",
+      relatedRecordId: String(doc._id),
+      metadata: { profileDocumentType: payload.profileDocumentType },
+    });
+
+    return {
+      suppressWorkerCompletionLog: true as const,
+      moduleKey: "document-upload",
+      status: "completed" as const,
+      operationId,
+    };
+  }
+
+  const auth = await loadGoogleAccessToken({
+    tenantId: payload.tenantId,
+    provider: "Google Drive",
+    requiredScopes: [...GOOGLE_DRIVE_DOCS_WORKER_SCOPES],
+  });
+
+  if (!auth.connected) {
+    return activateProfileDocumentLocally({
+      tenantId: payload.tenantId,
+      doc,
+      contentText,
+      profileDocumentType: payload.profileDocumentType,
+      operationId,
+      storageLocation: "In-app storage",
+      message: `Profile document saved locally; Drive upload skipped: ${auth.reason ?? "Drive not connected"}`,
+      status: "Warning",
+    });
   }
 
   try {
@@ -178,48 +276,15 @@ export async function processUploadedProfileDocument(payload: DocumentUploadProc
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Google Drive sync failed";
-    await AutomationLogModel.create({
+    return activateProfileDocumentLocally({
       tenantId: payload.tenantId,
-      createdBy: "system",
-      moduleKey: "document-upload",
-      moduleName: "document-upload",
-      status: "Warning",
-      message: `Profile document saved in app; Google Drive upload failed: ${message}`,
+      doc,
+      contentText,
+      profileDocumentType: payload.profileDocumentType,
       operationId,
-      relatedRecordType: "Document",
-      relatedRecordId: String(doc._id),
-      metadata: { profileDocumentType: payload.profileDocumentType, reason: message },
+      storageLocation: "In-app storage",
+      message: `Profile document saved in app; Google Drive upload failed: ${message}`,
+      status: "Warning",
     });
-
-    /** Keep text in DB so Quick Review / tailoring still work without Drive. */
-    if (contentText && payload.profileDocumentType === "cv_resume") {
-      await DocumentModel.updateMany(
-        {
-          tenantId: payload.tenantId,
-          profileDocumentType: "cv_resume",
-          _id: { $ne: doc._id },
-        },
-        { isActiveProfileDocument: false }
-      );
-      await DocumentModel.findByIdAndUpdate(doc._id, {
-        status: "Ready",
-        generationStatus: "Failed",
-        extractionStatus: "Provided",
-        extractionError: undefined,
-        isActiveProfileDocument: true,
-        storageLocation: "In-app (Drive sync failed)",
-        storagePath: "In-app (Drive sync failed)",
-        metadata: {
-          ...((doc.metadata as Record<string, unknown> | undefined) ?? {}),
-          workspaceLibrary: true,
-          profileDocumentType: payload.profileDocumentType,
-          driveSyncFailed: true,
-          driveSyncError: message,
-          operationId,
-        },
-      });
-    }
-
-    return { suppressWorkerCompletionLog: true as const, moduleKey: "document-upload", status: "warning", operationId };
   }
 }

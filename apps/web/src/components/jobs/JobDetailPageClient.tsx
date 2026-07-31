@@ -21,7 +21,7 @@ import { shouldUseMockFallback } from "@/lib/api/mockFallback";
 import { normalizeJobForUi } from "@/lib/utils/resource";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError, showInfo } from "@/lib/ui/toast";
-import { isLinkedInCloudAutoApplyEnabled } from "@/lib/feature-flags";
+import { isLinkedInCloudAutoApplyEnabled, isGoogleDriveEnabled } from "@/lib/feature-flags";
 import { resolvePipelineStage } from "@/lib/jobs/pipeline-stage";
 import { mockJobs } from "@/data/mockJobs";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -276,14 +276,16 @@ export function JobDetailPageClient({ id }: JobDetailPageClientProps) {
         onClick={handleRunAiProcessing}
         className="hidden md:inline-flex"
       />
-      <ActionButton
-        label={t("jobDetail.provisionFolders")}
-        loading={actionLoading === "folders"}
-        disabled={actionDisabled}
-        onClick={handleProvisionFolders}
-        variant="outline"
-        className="hidden lg:inline-flex"
-      />
+      {isGoogleDriveEnabled() ? (
+        <ActionButton
+          label={t("jobDetail.provisionFolders")}
+          loading={actionLoading === "folders"}
+          disabled={actionDisabled}
+          onClick={handleProvisionFolders}
+          variant="outline"
+          className="hidden lg:inline-flex"
+        />
+      ) : null}
       <Link href={`/jobs/${id}/apply`} className={showStickyBar ? "hidden md:inline-flex" : "inline-flex"}>
         <Button type="button" variant="default" className="min-h-[44px] bg-emerald-600 text-white hover:bg-emerald-700">
           {t("applyAssistant.applyCta")}
