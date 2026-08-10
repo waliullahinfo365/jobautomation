@@ -57,10 +57,10 @@ function isNonJobByContent(job: {
 }
 
 export async function cleanupNonJobIntakeRecords(input: { tenantId: string; dryRun: boolean }) {
-  // Only look at Gmail-sourced jobs not already archived/rejected
+  // Gmail (legacy) and Unipile intake jobs not already archived/rejected
   const intakeJobs = await JobModel.find({
     tenantId: input.tenantId,
-    intakeSource: "gmail",
+    intakeSource: { $in: ["gmail", "unipile"] },
     extractedFromEmail: true,
     status: { $nin: ["Archived", "Rejected"] },
   }).select("_id company position status intakeSource providerMessageId jobIntakeClassification extractionConfidence raw description jobUrl tags");
@@ -94,7 +94,7 @@ export async function cleanupNonJobIntakeRecords(input: { tenantId: string; dryR
     const subject = String(raw?.subject ?? `${(job as any).position} at ${(job as any).company}`);
     const from = String(raw?.from ?? "unknown@example.com");
     const payload: JobIntakeEmailPayload = {
-      provider: "gmail",
+      provider: String((job as any).intakeSource ?? "gmail") === "unipile" ? "unipile" : "gmail",
       providerMessageId: String((job as any).providerMessageId ?? ""),
       providerThreadId: "",
       from,

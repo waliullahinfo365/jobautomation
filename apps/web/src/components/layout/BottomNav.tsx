@@ -26,7 +26,7 @@ export function BottomNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label={t("nav.mobileBottom")}
     >
-      <div className="flex h-[var(--mobile-nav-height)] items-stretch px-1">
+      <div className="flex h-[var(--mobile-nav-height)] items-stretch px-0.5">
         {navItems.map((item) => {
           const isActive = isNavItemActive(pathname, item);
           const Icon = item.icon;
@@ -40,12 +40,12 @@ export function BottomNav() {
                 isActive ? "text-[var(--accent-hi)]" : "text-[var(--text-4)]"
               )}
             >
-              <Icon size={22} />
-              <span className="w-full truncate px-0.5 text-[9px] font-medium leading-tight min-[400px]:text-[10px]">
+              <Icon size={20} />
+              <span className="w-full truncate px-0.5 text-[10px] font-medium leading-tight tracking-tight min-[380px]:text-[11px]">
                 {t(labelKey)}
               </span>
               {isActive ? (
-                <span className="absolute bottom-1 left-1/2 h-[2px] w-6 -translate-x-1/2 rounded-full bg-[var(--accent-hi)] min-[400px]:w-8" />
+                <span className="absolute bottom-1 left-1/2 h-[2px] w-5 -translate-x-1/2 rounded-full bg-[var(--accent-hi)] min-[380px]:w-6" />
               ) : null}
             </Link>
           );

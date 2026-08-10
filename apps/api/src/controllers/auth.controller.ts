@@ -55,7 +55,19 @@ export const updatePreferencesHandler = asyncHandler(async (req: Request, res: R
   const userId = req.user?.id;
   const tenantId = req.user?.tenantId;
   if (!userId || !tenantId) throw new ApiError("Unauthorized", 401, "UNAUTHORIZED");
-  const allowed = ["phone", "location", "linkedinUrl", "websiteUrl", "yearsExperience", "currentTitle", "desiredSalary", "noticePeriod", "rightToWork", "requiresSponsorship"];
+  const allowed = [
+    "phone",
+    "location",
+    "linkedinUrl",
+    "websiteUrl",
+    "yearsExperience",
+    "currentTitle",
+    "desiredSalary",
+    "noticePeriod",
+    "rightToWork",
+    "requiresSponsorship",
+    "notifications",
+  ];
   const patch: Record<string, unknown> = {};
   for (const key of allowed) {
     if (key in req.body) patch[`preferences.${key}`] = req.body[key];

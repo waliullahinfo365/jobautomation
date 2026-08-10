@@ -113,13 +113,14 @@ export function IntegrationConnectModal({
 
   if (providerSlug === "linkedin") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
         <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-        <div className="relative z-50 w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+        <div className="relative z-50 w-full max-w-lg rounded-t-2xl border bg-background p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-lg sm:rounded-lg sm:p-6">
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-subtle)] sm:hidden" aria-hidden />
           <h2 className="text-lg font-semibold">{t("integrations.modal.linkedinTitle")}</h2>
           <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{t("integrations.modal.linkedinBody")}</p>
           <div className="mt-6 flex justify-end">
-            <Button type="button" variant="default" onClick={onClose}>
+            <Button type="button" variant="default" className="min-h-[44px] w-full sm:w-auto" onClick={onClose}>
               {t("common.close")}
             </Button>
           </div>
@@ -196,9 +197,11 @@ export function IntegrationConnectModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-50 w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+      <div className="relative z-50 flex max-h-[min(92dvh,100%)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border bg-background shadow-lg sm:rounded-lg">
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[var(--border-subtle)] sm:hidden" aria-hidden />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6">
         <h2 className="text-lg font-semibold">{t("integrations.modal.title")}</h2>
         <p className="mt-1 text-sm text-muted-foreground capitalize">{providerSlug.replace(/-/g, " ")}</p>
 
@@ -407,15 +410,16 @@ export function IntegrationConnectModal({
             </>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading || googleConnectLoading}>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" className="min-h-[44px] w-full sm:w-auto" onClick={onClose} disabled={loading || googleConnectLoading}>
               {t("integrations.modal.cancel")}
             </Button>
-            <Button type="submit" disabled={loading || googleConnectLoading}>
+            <Button type="submit" className="min-h-[44px] w-full sm:w-auto" disabled={loading || googleConnectLoading}>
               {primaryLabel}
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

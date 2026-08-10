@@ -165,3 +165,55 @@ export async function getUnipileEmail(input: {
 export async function getUnipileAccount(accountId: string): Promise<Record<string, unknown>> {
   return unipileFetch(`/api/v1/accounts/${encodeURIComponent(accountId)}`, { method: "GET" });
 }
+
+export type UnipileWebhookRow = {
+  id?: string;
+  request_url?: string;
+  source?: string;
+  enabled?: boolean;
+  name?: string;
+};
+
+/** List registered Unipile webhooks (v1). */
+export async function listUnipileWebhooks(): Promise<UnipileWebhookRow[]> {
+  const res = await unipileFetch<{ items?: UnipileWebhookRow[]; data?: UnipileWebhookRow[] } | UnipileWebhookRow[]>(
+    "/api/v1/webhooks",
+    { method: "GET" }
+  );
+  if (Array.isArray(res)) return res;
+  return res.items ?? res.data ?? [];
+}
+
+/**
+ * Register a global email webhook once for this DSN (mail_received).
+ * Idempotent: skips if request_url already registered.
+ */
+export async function ensureUnipileEmailWebhook(input: {
+  requestUrl: string;
+  secret?: string;
+}): Promise<{ created: boolean; skipped: boolean }> {
+  const requestUrl = input.requestUrl.replace(/\/$/, "");
+  const existing = await listUnipileWebhooks();
+  const already = existing.some((w) => String(w.request_url ?? "").replace(/\/$/, "") === requestUrl);
+  if (already) return { created: false, skipped: true };
+
+  const headers: Array<{ key: string; value: string }> = [];
+  if (input.secret) {
+    headers.push({ key: "X-Unipile-Webhook-Secret", value: input.secret });
+  }
+
+  await unipileFetch("/api/v1/webhooks", {
+    method: "POST",
+    body: JSON.stringify({
+      request_url: requestUrl,
+      source: "email",
+      events: ["mail_received"],
+      format: "json",
+      enabled: true,
+      name: "newjobguru-email-intake",
+      ...(headers.length ? { headers } : {}),
+    }),
+  });
+
+  return { created: true, skipped: false };
+}

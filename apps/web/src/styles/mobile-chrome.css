@@ -3,28 +3,31 @@
  * Use on <md> only; desktop ignores these via md: overrides in components.
  */
 :root {
-  --mobile-nav-height: 72px;
+  --mobile-nav-height: 64px;
   --mobile-topbar-height: 52px;
-  --mobile-scroll-buffer: 2.5rem;
-  --mobile-page-bottom-extra: 2rem;
-  --mobile-chrome-bottom: calc(
-    var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + var(--mobile-scroll-buffer)
-  );
+  --mobile-scroll-buffer: 1rem;
+  --mobile-page-bottom-extra: 0.75rem;
+  /* Nav + home indicator only — sticky CTAs sit flush above the bar */
+  --mobile-nav-offset: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  --mobile-chrome-bottom: var(--mobile-nav-offset);
   --mobile-chrome-top: calc(var(--mobile-topbar-height) + env(safe-area-inset-top, 0px));
   --mobile-sticky-bar-height: 72px;
-  --mobile-page-pad: 1.25rem;
+  --mobile-page-pad: 1rem;
 }
 
 @media (min-width: 768px) {
   :root {
     --mobile-chrome-bottom: 0px;
+    --mobile-nav-offset: 0px;
     --mobile-chrome-top: 0px;
   }
 }
 
+/* Shell padding clears bottom nav (pages without a sticky CTA) */
 .pb-mobile-shell {
   padding-bottom: calc(
-    var(--mobile-page-pad) + var(--mobile-chrome-bottom) + var(--mobile-page-bottom-extra)
+    var(--mobile-page-pad) + var(--mobile-nav-offset) + var(--mobile-scroll-buffer) +
+      var(--mobile-page-bottom-extra)
   );
 }
 
@@ -34,8 +37,13 @@
   }
 }
 
+/**
+ * Extra bottom space for sticky CTA pages.
+ * Shell already clears the nav — only add room for the sticky bar itself
+ * (avoids a huge empty scroll tail from double-counting chrome).
+ */
 .pb-mobile-sticky {
-  padding-bottom: calc(var(--mobile-page-pad) + var(--mobile-chrome-bottom) + var(--mobile-sticky-bar-height));
+  padding-bottom: calc(var(--mobile-sticky-bar-height) + 0.75rem);
 }
 
 @media (min-width: 768px) {
@@ -45,7 +53,7 @@
 }
 
 .mobile-sticky-above-nav {
-  bottom: var(--mobile-chrome-bottom);
+  bottom: var(--mobile-nav-offset);
 }
 
 @media (min-width: 768px) {

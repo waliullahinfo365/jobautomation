@@ -6,6 +6,7 @@ import type { User, UserStatus } from "@jobflow/shared/types/user";
 import { resolveProductRole } from "@jobflow/shared/constants/product-roles";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import { isResendConfigured, sendResendEmail } from "@jobflow/integrations/email/resend.service";
 import { env } from "../config/env";
 import { GOOGLE_CLIENT_ID, GOOGLE_OAUTH_ENABLED } from "../config/google-oauth";
 import { signAccessToken } from "../utils/jwt";
@@ -15,40 +16,67 @@ import { parseAvatarDataUrl } from "../utils/avatar";
 import { logAuthEvent } from "./audit-log.service";
 import { ensureSuperAdminUser, isSuperAdminEmail, resolveSuperAdminRole } from "./super-admin.service";
 
-// ─── Password reset token store (in-memory, single process) ─────────────────
-// For multi-instance deployments, replace with a DB-backed token model.
-const passwordResetTokens = new Map<string, { email: string; expiresAt: number }>();
+function hashResetToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 export async function requestPasswordReset(email: string): Promise<void> {
   const normalised = email.trim().toLowerCase();
   // Always respond the same way — don't leak whether email exists
-  const exists = await UserModel.exists({ email: normalised });
-  if (!exists) return;
+  const userDoc = await UserModel.findOne({ email: normalised }).lean();
+  if (!userDoc) return;
 
   const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
-  passwordResetTokens.set(token, { email: normalised, expiresAt });
+  const tokenHash = hashResetToken(token);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-  const frontendUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  await UserModel.updateOne(
+    { _id: (userDoc as { _id: unknown })._id },
+    { $set: { passwordResetTokenHash: tokenHash, passwordResetExpiresAt: expiresAt } }
+  );
+
+  const frontendUrl = (process.env.FRONTEND_URL ?? process.env.APP_URL ?? "http://localhost:3000").replace(
+    /\/$/,
+    ""
+  );
   const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
-  // Log link for environments without an email service configured
-  // Replace this block with your email provider (Resend, SendGrid, etc.)
-  console.info(`[auth] Password reset link for ${normalised}: ${resetUrl}`);
+  if (isResendConfigured()) {
+    const result = await sendResendEmail({
+      to: normalised,
+      subject: "Reset your NewJob Guru password",
+      text: `Reset your password using this link (expires in 1 hour):\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
+      html: `<p>Reset your password using this link (expires in 1 hour):</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can ignore this email.</p>`,
+    });
+    if (!result.success) {
+      console.error("[auth] Password reset email failed", { error: result.error, message: result.message });
+    }
+  } else {
+    // Dev / misconfigured prod: still log so ops can recover accounts
+    console.info(`[auth] Password reset link for ${normalised}: ${resetUrl}`);
+    console.warn("[auth] RESEND_API_KEY / RESEND_FROM_EMAIL not set — reset email was not sent");
+  }
 }
 
 export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
-  const entry = passwordResetTokens.get(token);
-  if (!entry || entry.expiresAt < Date.now()) {
+  const tokenHash = hashResetToken(token);
+  const userDoc = await UserModel.findOne({
+    passwordResetTokenHash: tokenHash,
+    passwordResetExpiresAt: { $gt: new Date() },
+  }).lean();
+
+  if (!userDoc) {
     throw new ApiError("Reset token is invalid or expired", 400, "INVALID_RESET_TOKEN");
   }
-  passwordResetTokens.delete(token);
-
-  const userDoc = await UserModel.findOne({ email: entry.email }).lean();
-  if (!userDoc) throw new ApiError("User not found", 404, "NOT_FOUND");
 
   const passwordHash = await hashPassword(newPassword);
-  await UserModel.updateOne({ _id: (userDoc as Record<string, unknown>)._id }, { $set: { passwordHash } });
+  await UserModel.updateOne(
+    { _id: (userDoc as { _id: unknown })._id },
+    {
+      $set: { passwordHash },
+      $unset: { passwordResetTokenHash: 1, passwordResetExpiresAt: 1 },
+    }
+  );
 }
 
 // ─── Google login OAuth state ────────────────────────────────────────────────

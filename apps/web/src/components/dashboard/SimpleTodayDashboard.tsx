@@ -45,10 +45,12 @@ function SummaryCard({
   return (
     <Link
       href={href}
-      className="flex min-h-[88px] flex-col justify-between rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 transition-colors hover:border-[var(--accent-ring)] hover:bg-[var(--surface-2)]"
+      className="flex min-h-[76px] flex-col justify-between rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-3.5 transition-colors hover:border-[var(--accent-ring)] hover:bg-[var(--surface-2)] sm:min-h-[88px] sm:p-4"
     >
-      <span className="text-[12px] font-medium text-[var(--text-3)]">{label}</span>
-      <span className="text-[28px] font-bold leading-none tracking-[-0.03em] text-[var(--text-1)]">{count}</span>
+      <span className="text-[11px] font-medium leading-snug text-[var(--text-3)] sm:text-[12px]">{label}</span>
+      <span className="mt-2 text-[24px] font-bold leading-none tracking-[-0.03em] text-[var(--text-1)] sm:text-[28px]">
+        {count}
+      </span>
     </Link>
   );
 }
@@ -109,7 +111,7 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
       <OnboardingChecklist status={onboarding} />
 
       {showStats ? (
-        <section className="grid grid-cols-3 gap-2.5 sm:gap-3">
+        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
           <SummaryCard label={t("today.simple.readyToApply")} count={readyToApply} href="/apply-assistant" />
           <SummaryCard label={t("today.simple.followUps")} count={followUps} href="/jobs?status=Applied" />
           <SummaryCard label={t("today.simple.replies")} count={replies} href="/jobs?status=Interview" />

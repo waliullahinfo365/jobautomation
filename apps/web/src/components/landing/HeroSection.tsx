@@ -92,7 +92,7 @@ export function HeroSection() {
           className="text-base sm:text-lg lg:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
           style={{ color: "rgba(255,255,255,0.55)" }}
         >
-          Track applications, generate AI cover letters, automate follow-ups, and manage your entire job pipeline — all in one place.
+          Import job alerts from Gmail, generate AI cover letters, apply from your phone with Apply Assistant, and track your whole pipeline in one place.
         </motion.p>
 
         {/* CTAs */}

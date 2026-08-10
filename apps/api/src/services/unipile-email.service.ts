@@ -6,6 +6,7 @@ import { assertTenantId } from "./baseTenant.service";
 import { processJobIntakeEmail } from "./job-intake.service";
 import {
   createUnipileHostedAuthLink,
+  ensureUnipileEmailWebhook,
   getUnipileAccount,
   getUnipileEmail,
   listUnipileEmails,
@@ -58,6 +59,34 @@ function publicApiBase(reqOrigin?: string): string {
 
 function webAppBase(): string {
   return (env.appUrl || process.env.WEB_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+}
+
+let webhookEnsurePromise: Promise<void> | null = null;
+
+/** Best-effort: register Unipile mail_received webhook once per process. */
+export async function ensureUnipileWebhookRegistered(apiPublicOrigin?: string): Promise<void> {
+  if (!unipileConfigured()) return;
+  if (webhookEnsurePromise) return webhookEnsurePromise;
+
+  webhookEnsurePromise = (async () => {
+    try {
+      const apiBase = publicApiBase(apiPublicOrigin);
+      if (!apiBase || /localhost|127\.0\.0\.1/.test(apiBase)) {
+        console.info("[unipile] skip webhook register — API_PUBLIC_URL not a public host");
+        return;
+      }
+      const requestUrl = `${apiBase}/integrations/unipile/webhook`;
+      const secret = process.env.UNIPILE_WEBHOOK_SECRET?.trim() || undefined;
+      const result = await ensureUnipileEmailWebhook({ requestUrl, secret });
+      console.info("[unipile] webhook ensure", { requestUrl, ...result });
+    } catch (err) {
+      webhookEnsurePromise = null;
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[unipile] webhook ensure failed", { message });
+    }
+  })();
+
+  return webhookEnsurePromise;
 }
 
 /** Heuristic: likely a job-alert email worth intake. */
@@ -189,6 +218,9 @@ export async function upsertUnipileEmailConnection(input: {
     },
     { upsert: true, new: true }
   );
+
+  // Register global email webhook so new mail can push into intake (Scan now remains fallback)
+  void ensureUnipileWebhookRegistered();
 }
 
 export async function getUnipileEmailStatus(tenantId: string) {
@@ -257,6 +289,8 @@ export async function scanUnipileEmailsForTenant(input: {
 
   const connected = await loadConnectedAccount(input.tenantId);
   if (!connected) throw new ApiError("Connect Unipile email first", 422, "INTEGRATION_NOT_CONNECTED");
+
+  void ensureUnipileWebhookRegistered();
 
   const listed = await listUnipileEmails({ accountId: connected.accountId, limit: input.limit ?? 25 });
   const items = listed.items ?? listed.data ?? (Array.isArray(listed) ? (listed as UnipileEmail[]) : []);

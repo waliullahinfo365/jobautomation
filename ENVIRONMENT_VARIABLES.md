@@ -26,7 +26,28 @@ At least one of `ANTHROPIC_API_KEY` / `CLAUDE_API_KEY` is required for AI module
 | `GOOGLE_CLIENT_SECRET` | OAuth 2.0 client secret |
 | `GOOGLE_REDIRECT_URI` | OAuth redirect URI (e.g. `https://yourapp.com/api/integrations/google/callback`) |
 
-Required for Gmail, Google Drive, and Google Calendar integrations.
+Required for Google Calendar (optional). Direct Gmail OAuth and Google Drive are not used for beta customers — use Unipile for Gmail job alerts and Firebase Storage for documents.
+
+## Unipile (Gmail job-alert intake) — Required for beta email
+
+| Variable | Description |
+|----------|-------------|
+| `UNIPILE_DSN` | Unipile API DSN (e.g. `https://apiXX.unipile.com:XXXXX`) |
+| `UNIPILE_API_KEY` | Unipile Access Token |
+| `UNIPILE_EMAIL_INTAKE_ENABLED` | Set `false` to pause intake (`true` by default) |
+| `UNIPILE_WEBHOOK_SECRET` | Optional shared secret sent as `X-Unipile-Webhook-Secret` |
+| `UNIPILE_PORT` | Optional port query param when custom ports are blocked |
+
+Also set `API_PUBLIC_URL` and `APP_URL` so hosted auth callbacks and webhook registration use public HTTPS URLs.
+
+## Firebase Storage (documents) — Required for beta CVs
+
+| Variable | Description |
+|----------|-------------|
+| `FIREBASE_PROJECT_ID` | Firebase project ID |
+| `FIREBASE_CLIENT_EMAIL` | Service account client email |
+| `FIREBASE_PRIVATE_KEY` | Service account private key (escape newlines as `\\n`) |
+| `FIREBASE_STORAGE_BUCKET` | Storage bucket name |
 
 ## Email (Resend)
 
@@ -35,7 +56,7 @@ Required for Gmail, Google Drive, and Google Calendar integrations.
 | `RESEND_API_KEY` | Resend API key |
 | `RESEND_FROM_EMAIL` | Sender address (e.g. `noreply@yourdomain.com`) |
 
-Both required to enable email delivery. App runs without them (email features disabled).
+Both required to enable email delivery (password reset, follow-up reminders, reports). App runs without them (those emails are skipped; password reset links are logged server-side only).
 
 ## Notifications
 

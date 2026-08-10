@@ -36,7 +36,8 @@ function UndoToast({ message, onUndo }: { message: string; onUndo: () => void })
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-[var(--text-1)] px-5 py-2.5 shadow-lg"
+      className="fixed left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full bg-[var(--text-1)] px-5 py-2.5 shadow-lg"
+      style={{ bottom: "calc(var(--mobile-nav-offset, 5rem) + 0.75rem)" }}
     >
       <span className="text-sm text-[var(--bg-1)] whitespace-nowrap">{message}</span>
       <button

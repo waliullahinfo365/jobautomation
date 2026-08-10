@@ -16,7 +16,7 @@ export function Select({ className, options, ...props }: SelectProps) {
     <div className="relative">
       <select
         className={cn(
-          "h-[34px] min-h-[34px] w-full appearance-none rounded-[var(--r-sm,8px)] border border-input bg-background px-3 pr-9 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-ring",
+          "h-11 min-h-[44px] w-full appearance-none rounded-[var(--r-sm,8px)] border border-input bg-background px-3 pr-9 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring md:h-[34px] md:min-h-[34px] md:text-[13px]",
           className
         )}
         {...props}

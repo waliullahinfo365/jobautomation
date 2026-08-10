@@ -54,7 +54,7 @@ export function JobInboxPage() {
         title={t("jobs.inbox.title")}
         description={t("jobs.inbox.subtitle")}
         actions={
-          <Button type="button" className="min-h-[40px] rounded-xl" onClick={() => setIsAddJobOpen(true)}>
+          <Button type="button" className="min-h-[44px] w-full rounded-xl sm:w-auto" onClick={() => setIsAddJobOpen(true)}>
             {t("jobs.addJob")}
           </Button>
         }
@@ -80,7 +80,7 @@ export function JobInboxPage() {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "flex min-w-[5rem] flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[12px] font-medium transition-colors sm:text-[13px]",
+                "flex min-h-[44px] min-w-[5rem] flex-1 items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[12px] font-medium transition-colors sm:text-[13px]",
                 activeTab === tab
                   ? "bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm"
                   : "text-[var(--text-3)] hover:text-[var(--text-2)]"

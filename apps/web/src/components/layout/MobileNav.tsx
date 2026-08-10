@@ -102,7 +102,7 @@ export function MobileNav() {
       <header className="jf-mobile-topbar flex min-h-[52px] items-center justify-between gap-1.5 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] px-2.5 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md sm:gap-2 sm:px-4 md:hidden">
         <Link href="/today" className="flex min-w-0 flex-1 items-center gap-2">
           <Image src={BRAND.iconPath} alt={BRAND.name} width={26} height={26} priority className="shrink-0" />
-          <span className="max-w-[7rem] truncate text-sm font-semibold text-[var(--text-1)] sm:max-w-none">{BRAND.name}</span>
+          <span className="truncate text-sm font-semibold text-[var(--text-1)] sm:max-w-none">{BRAND.name}</span>
         </Link>
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <button
@@ -172,17 +172,17 @@ export function MobileNav() {
                   </div>
                 </div>
 
-                {customerNav ? (
-                  <div className="mt-3">
-                    <Link
-                      href="/settings?section=Profile"
-                      onClick={() => setOpen(false)}
-                      className="flex min-h-[44px] w-full items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
-                    >
-                      {t("common.settings")}
-                    </Link>
-                  </div>
-                ) : (
+              {customerNav ? (
+                <div className="mt-3">
+                  <Link
+                    href="/settings?section=Profile"
+                    onClick={() => setOpen(false)}
+                    className="flex min-h-[44px] w-full items-center justify-center rounded-md border border-[var(--border-default)] px-3 text-sm font-medium text-[var(--text-2)] hover:bg-[var(--surface-3)]"
+                  >
+                    {t("common.settings")}
+                  </Link>
+                </div>
+              ) : (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Link
                       href="/profile"
@@ -219,7 +219,7 @@ export function MobileNav() {
                 </div>
               </div>
 
-              {!customerNav && drawerNav.length > 0 ? (
+              {drawerNav.length > 0 ? (
                 <ul className="flex flex-col gap-1">
                   {drawerNav.map((item) => {
                     const isActive = isNavItemActive(pathname, item);
@@ -230,13 +230,13 @@ export function MobileNav() {
                           href={item.href}
                           onClick={() => setOpen(false)}
                           className={cn(
-                            "flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium",
+                            "flex min-h-[48px] items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium",
                             isActive
                               ? "bg-[var(--accent-bg)] text-[var(--text-1)]"
                               : "text-[var(--text-2)] hover:bg-[var(--surface-3)]"
                           )}
                         >
-                          <Icon size={16} />
+                          <Icon size={18} />
                           {t(item.labelKey)}
                         </Link>
                       </li>

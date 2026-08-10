@@ -106,7 +106,7 @@ const TESTIMONIALS = [
     stars: 5,
   },
   {
-    quote: "The Gmail integration is magical. It automatically finds job opportunities in my inbox and adds them to my pipeline. I save at least 3 hours every single week.",
+    quote: "Connecting Gmail pulled my job alerts straight into the pipeline. Apply Assistant on my phone made applying way faster — I save hours every week.",
     name: "Priya Nair",
     title: "Product Manager",
     location: "London, UK",

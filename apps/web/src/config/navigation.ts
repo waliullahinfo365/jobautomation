@@ -46,7 +46,7 @@ export const CUSTOMER_NAV_ITEMS: readonly AppNavItem[] = [
   { href: "/settings", labelKey: "nav.settings", shortLabelKey: "nav.settingsShort", icon: SettingsIcon },
 ];
 
-/** Mobile bottom bar — Today, Inbox, Apply, Docs only. */
+/** Mobile bottom bar — Today, Inbox, Apply, Docs, Settings. */
 export const CUSTOMER_BOTTOM_NAV_ITEMS: readonly AppNavItem[] = [
   { href: "/today", labelKey: "nav.today", shortLabelKey: "nav.todayShort", icon: DashboardIcon },
   { href: "/jobs", labelKey: "nav.inbox", shortLabelKey: "nav.inboxShort", icon: JobsIcon },
@@ -58,6 +58,7 @@ export const CUSTOMER_BOTTOM_NAV_ITEMS: readonly AppNavItem[] = [
     activePrefixes: ["/apply-assistant"],
   },
   { href: "/documents", labelKey: "nav.docs", shortLabelKey: "nav.docsShort", icon: DocumentsIcon },
+  { href: "/settings", labelKey: "nav.settings", shortLabelKey: "nav.settingsShort", icon: SettingsIcon },
 ];
 
 /** Full operator navigation for super admins. */
@@ -99,7 +100,21 @@ export function getBottomNavItems(productRole: ProductRole): readonly AppNavItem
 }
 
 export function getMobileDrawerNavItems(productRole: ProductRole): readonly AppNavItem[] {
-  if (shouldUseCustomerNav(productRole)) return [];
+  if (shouldUseCustomerNav(productRole)) {
+    return [
+      { href: "/today", labelKey: "nav.today", shortLabelKey: "nav.todayShort", icon: DashboardIcon },
+      { href: "/jobs", labelKey: "nav.jobInbox", shortLabelKey: "nav.inboxShort", icon: JobsIcon },
+      {
+        href: "/apply-assistant",
+        labelKey: "nav.apply",
+        shortLabelKey: "nav.applyShort",
+        icon: AutomationIcon,
+        activePrefixes: ["/apply-assistant"],
+      },
+      { href: "/documents", labelKey: "nav.documents", shortLabelKey: "nav.docsShort", icon: DocumentsIcon },
+      { href: "/settings", labelKey: "nav.settings", shortLabelKey: "nav.settingsShort", icon: SettingsIcon },
+    ];
+  }
   return SUPER_ADMIN_NAV_ITEMS_ORDERED;
 }
 

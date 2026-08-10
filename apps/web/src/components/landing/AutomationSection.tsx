@@ -4,12 +4,12 @@ import { motion } from "framer-motion";
 import { Mail, Brain, Upload, FileText, Calendar, Bell, ArrowRight, Zap } from "lucide-react";
 
 const NODES = [
-  { icon: Mail, label: "Gmail Inbox", sublabel: "Email detected", iconColor: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.22)", glow: "rgba(239,68,68,0.25)", dot: "#f87171" },
+  { icon: Mail, label: "Job Alerts", sublabel: "Email imported", iconColor: "#f87171", bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.22)", glow: "rgba(239,68,68,0.25)", dot: "#f87171" },
   { icon: Brain, label: "AI Analysis", sublabel: "Job scored & ranked", iconColor: "#60a5fa", bg: "rgba(59,130,246,0.12)", border: "rgba(59,130,246,0.22)", glow: "rgba(59,130,246,0.25)", dot: "#60a5fa" },
-  { icon: Upload, label: "CV Routing", sublabel: "Best CV selected", iconColor: "#4ade80", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.22)", glow: "rgba(34,197,94,0.25)", dot: "#4ade80" },
+  { icon: Upload, label: "Documents", sublabel: "CV ready to share", iconColor: "#4ade80", bg: "rgba(34,197,94,0.12)", border: "rgba(34,197,94,0.22)", glow: "rgba(34,197,94,0.25)", dot: "#4ade80" },
   { icon: FileText, label: "Cover Letter", sublabel: "AI personalized", iconColor: "#a78bfa", bg: "rgba(139,92,246,0.12)", border: "rgba(139,92,246,0.22)", glow: "rgba(139,92,246,0.25)", dot: "#a78bfa" },
-  { icon: Calendar, label: "Calendar Sync", sublabel: "Interview scheduled", iconColor: "#22d3ee", bg: "rgba(6,182,212,0.12)", border: "rgba(6,182,212,0.22)", glow: "rgba(6,182,212,0.25)", dot: "#22d3ee" },
-  { icon: Bell, label: "Follow-up", sublabel: "Auto-sent on time", iconColor: "#fbbf24", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.22)", glow: "rgba(245,158,11,0.25)", dot: "#fbbf24" },
+  { icon: Calendar, label: "Interviews", sublabel: "Tracked in pipeline", iconColor: "#22d3ee", bg: "rgba(6,182,212,0.12)", border: "rgba(6,182,212,0.22)", glow: "rgba(6,182,212,0.25)", dot: "#22d3ee" },
+  { icon: Bell, label: "Follow-up", sublabel: "Reminders on time", iconColor: "#fbbf24", bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.22)", glow: "rgba(245,158,11,0.25)", dot: "#fbbf24" },
 ];
 
 const STATS = [
@@ -35,7 +35,7 @@ export function AutomationSection() {
             </span>
           </h2>
           <p className="text-base sm:text-lg max-w-2xl mx-auto" style={{ color: "var(--lp-t3)" }}>
-            The moment a job email lands in your Gmail, our AI engine kicks in. Every step — from analysis to follow-up — is automated.
+            When a job alert lands in your connected Gmail, AI extracts the role into your pipeline. Apply Assistant helps you apply on your phone — you stay in control.
           </p>
         </motion.div>
 
@@ -123,7 +123,7 @@ export function AutomationSection() {
           </div>
           <div style={{ borderTop: "none" }}>
             {[
-              { time: "2 min ago", event: "Gmail scan complete", detail: "4 new job opportunities detected and imported", icon: "📬", color: "#4ade80" },
+              { time: "2 min ago", event: "Email scan complete", detail: "4 new job opportunities detected and imported", icon: "📬", color: "#4ade80" },
               { time: "8 min ago", event: "Cover letter generated", detail: "AI personalized letter for Stripe Senior Engineer role (94% match)", icon: "✍️", color: "#60a5fa" },
               { time: "15 min ago", event: "CV routed", detail: "Full-stack CV v3 selected and attached for Vercel application", icon: "📄", color: "#a78bfa" },
               { time: "1 hr ago", event: "Follow-up sent", detail: "Auto follow-up dispatched to Google recruiter (7 days post-apply)", icon: "📤", color: "#fbbf24" },

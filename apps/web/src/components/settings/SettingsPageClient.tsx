@@ -28,11 +28,28 @@ import { showError, showSuccess } from "@/lib/ui/toast";
 import { useTranslation } from "@/i18n/useTranslation";
 import { resolveSettingsSection, settingsSectionHref } from "@/lib/settings-routing";
 import { me } from "@/lib/api/auth.api";
+import { getUserPreferences, updateUserPreferences } from "@/lib/api/user-preferences.api";
+import type { NotificationPreferences } from "@/types/settings";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   return (parts[0] ?? "U").slice(0, 2).toUpperCase();
+}
+
+function mergeNotificationPrefs(
+  base: NotificationPreferences,
+  saved?: NotificationPreferences | null
+): NotificationPreferences {
+  if (!saved || typeof saved !== "object") return base;
+  return {
+    channels: {
+      email: saved.channels?.email ?? base.channels.email,
+      dashboard: saved.channels?.dashboard ?? base.channels.dashboard,
+      slack: saved.channels?.slack ?? base.channels.slack,
+    },
+    events: { ...base.events, ...(saved.events ?? {}) },
+  };
 }
 
 const ADVANCED_SECTIONS: SettingsSection[] = [
@@ -61,6 +78,8 @@ export function SettingsPageClient() {
   const [profile, setProfile] = useState(mockProfileSettings);
   const [rules, setRules] = useState(mockAutomationRules);
   const [notifications, setNotifications] = useState(mockNotificationPreferences);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
   const billing = useBillingApi({ fallbackToMock: false });
   const uiVariant = advancedUi ? "advanced" : "simple";
   const checkoutHandled = useRef(false);
@@ -89,6 +108,34 @@ export function SettingsPageClient() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void getUserPreferences()
+      .then((prefs) => {
+        if (!mounted) return;
+        setNotifications((prev) => mergeNotificationPrefs(prev, prefs.notifications ?? null));
+        setNotificationsLoaded(true);
+      })
+      .catch(() => {
+        if (mounted) setNotificationsLoaded(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const saveNotifications = async () => {
+    setSavingNotifications(true);
+    try {
+      await updateUserPreferences({ notifications });
+      showSuccess(t("settings.notifications.saveSuccess"));
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Failed to save notification preferences");
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
@@ -123,7 +170,14 @@ export function SettingsPageClient() {
       ) : null}
       {activeSection === "Automation Rules" ? <AutomationRulesSection rules={rules} onChange={setRules} /> : null}
       {activeSection === "Notifications" ? (
-        <NotificationsSection preferences={notifications} onChange={setNotifications} variant={uiVariant} />
+        <div className="space-y-4">
+          <NotificationsSection preferences={notifications} onChange={setNotifications} variant={uiVariant} />
+          <div className="flex justify-end">
+            <Button onClick={() => void saveNotifications()} disabled={savingNotifications || !notificationsLoaded}>
+              {savingNotifications ? "Saving…" : t("settings.saveChanges")}
+            </Button>
+          </div>
+        </div>
       ) : null}
       {activeSection === "Data & Storage" ? <DataStorageSection /> : null}
       {activeSection === "Security" ? <SecuritySection /> : null}
@@ -182,7 +236,7 @@ export function SettingsPageClient() {
     return (
       <SimplePageShell className="space-y-4 lg:max-w-none lg:space-y-6">
         <SimplePageHeader title={t("settings.simpleTitle")} description={t("settings.simpleDescription")} />
-        <div className="relative z-40 bg-[var(--bg-0)] pb-3 pt-1 lg:hidden">
+        <div className="lg:hidden">
           <SettingsMobileTabs sections={sections} activeSection={activeSection} />
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
@@ -202,10 +256,24 @@ export function SettingsPageClient() {
         eyebrow={t("settings.eyebrow")}
         title={t("settings.title")}
         description={t("settings.description")}
-        actions={<Button className="hidden sm:inline-flex">{t("settings.saveChanges")}</Button>}
+        actions={
+          activeSection === "Notifications" ? (
+            <Button
+              className="hidden sm:inline-flex"
+              onClick={() => void saveNotifications()}
+              disabled={savingNotifications || !notificationsLoaded}
+            >
+              {savingNotifications ? "Saving…" : t("settings.saveChanges")}
+            </Button>
+          ) : (
+            <Button className="hidden sm:inline-flex" disabled>
+              {t("settings.saveChanges")}
+            </Button>
+          )
+        }
       />
 
-      <div className="relative z-40 bg-[var(--bg-0)] pb-3 pt-1 lg:hidden">
+      <div className="lg:hidden">
         <SettingsMobileTabs sections={sections} activeSection={activeSection} />
       </div>
 

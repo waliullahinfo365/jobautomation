@@ -5,14 +5,38 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, HelpCircle } from "lucide-react";
 
 const FAQS = [
-  { q: "How does Gmail integration work?", a: "Connect your Gmail account via OAuth — no passwords stored, just a secure read/write permission. NewJob Guru monitors your inbox in real time. When our AI detects a job-related email (a job posting, recruiter message, interview invite, or application confirmation), it automatically imports it into your pipeline. You can configure filtering rules to only track specific senders, keywords, or job boards." },
-  { q: "Is my data secure and private?", a: "Absolutely. All data is encrypted in transit (TLS 1.3) and at rest (AES-256). We follow GDPR and CCPA compliance standards. We never sell your data to third parties, and we never read your email content beyond detecting job-related signals. Your CV, cover letters, and application data are stored in isolated, tenant-scoped storage. You can export or delete all your data at any time." },
-  { q: "Can I use my own CV and documents?", a: "Yes — you can upload multiple CV versions (e.g., a general CV, a technical CV, a senior management CV) and NewJob Guru will automatically route the most relevant one to each application based on the job requirements. You can also upload cover letter templates, portfolio links, certifications, and references. Everything connects to Google Drive so your documents stay in sync." },
-  { q: "Does AI really generate cover letters automatically?", a: "Yes. Our AI cover letter engine is powered by advanced language models (Claude by Anthropic) and generates highly personalized, natural-sounding letters — not generic templates. It reads the job description, your CV, and your previous successful applications to tailor every letter. You can set a tone (formal, friendly, technical) and the AI adapts. You always review before sending — or enable fully automatic mode if you prefer." },
-  { q: "Can I track interviews and schedule them automatically?", a: "Yes. NewJob Guru integrates with Google Calendar to automatically create interview events when scheduling emails are detected. You'll get AI-generated prep notes for each interview including likely questions, company research, and suggested talking points based on your CV and the job description. Reminder notifications are sent 24 hours and 1 hour before each interview." },
-  { q: "Does it support multiple languages?", a: "Yes. NewJob Guru supports 15+ languages for cover letter generation, email templates, and the application interface. Currently supported languages include English, German, French, Spanish, Portuguese, Dutch, Italian, Swedish, Danish, Norwegian, Polish, Japanese, Chinese (Simplified), Korean, and Arabic. Multi-language applications are first-class citizens — apply to international roles without friction." },
-  { q: "What job boards and platforms does it integrate with?", a: "NewJob Guru works primarily through Gmail monitoring, which means it captures applications from any job board or recruiter that sends you an email — LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, Workday, and hundreds more. On mobile, Apply Assistant prepares your CV, cover letter, and AI answers so you can apply on LinkedIn or any employer site in a few taps." },
-  { q: "Can I cancel or downgrade at any time?", a: "Absolutely. There are no lock-in contracts. You can cancel, downgrade, or upgrade your plan at any time from your account settings. If you cancel a paid plan, you retain access until the end of your billing period. Your data is yours — export everything at any time, and we'll retain it for 30 days after cancellation in case you change your mind." },
+  {
+    q: "How does email integration work?",
+    a: "Connect Gmail through Unipile’s secure hosted login — NewJob Guru never stores your Google password. Job-alert emails are imported into your Job Inbox so you can review roles and apply with Apply Assistant. Use Scan now anytime; realtime updates work once the Unipile webhook is registered.",
+  },
+  {
+    q: "Does it auto-apply to LinkedIn for me?",
+    a: "Beta focuses on assisted mobile apply: open the job link, share your CV/cover letter, use AI answers, and mark Applied in a few taps. Cloud LinkedIn auto-apply is not part of the beta path.",
+  },
+  {
+    q: "Can I use my own CV and documents?",
+    a: "Yes — upload your CV and cover letter templates in Documents. Files are stored securely (Firebase Storage) and available in Apply Assistant when an employer form asks for attachments.",
+  },
+  {
+    q: "Does AI generate cover letters?",
+    a: "Yes. AI generates personalized cover letters from the job description and your profile. You review before you apply — nothing is sent without you.",
+  },
+  {
+    q: "What job boards does it work with?",
+    a: "Any board that sends job alerts to your connected Gmail — Stepstone, Indeed, LinkedIn alerts, Arbeitsagentur, and more. Apply Assistant works on LinkedIn and employer career sites on your phone.",
+  },
+  {
+    q: "Is my data private?",
+    a: "Yes. Documents and account data are stored for your workspace only. We don’t sell your data. You can disconnect email anytime in Settings.",
+  },
+  {
+    q: "What is included in beta?",
+    a: "Email job intake (Unipile), AI extraction, document upload, mobile Apply Assistant, application tracking, and billing if configured. Optional Google Calendar and team notifications may be available in Advanced settings.",
+  },
+  {
+    q: "Can I cancel anytime?",
+    a: "Yes. There are no lock-in contracts. Cancel or change plans from Settings. Your data remains yours — export when you need it.",
+  },
 ];
 
 export function FAQSection() {
@@ -21,7 +45,6 @@ export function FAQSection() {
   return (
     <section id="faq" className="py-24" style={{ borderTop: "1px solid var(--lp-section-sep)" }}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 mb-5">
             <HelpCircle size={12} className="text-blue-500" />
@@ -35,7 +58,6 @@ export function FAQSection() {
           </p>
         </motion.div>
 
-        {/* Accordion */}
         <div className="space-y-3">
           {FAQS.map(({ q, a }, i) => (
             <motion.div

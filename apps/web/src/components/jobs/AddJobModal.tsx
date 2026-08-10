@@ -140,14 +140,16 @@ export function AddJobModal({ open, onClose, onSubmit, loading }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px]" onClick={() => !loading && onClose()} aria-hidden />
       <div
-        className="relative z-50 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[var(--r-lg)] border border-[var(--border-default)] bg-[var(--surface-2)] p-6 shadow-xl"
+        className="relative z-50 flex max-h-[min(92dvh,100%)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-2)] shadow-xl sm:rounded-[var(--r-lg)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-job-title"
       >
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-[var(--border-subtle)] sm:hidden" aria-hidden />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:p-6">
         <h2 id="add-job-title" className="text-lg font-semibold tracking-tight text-[var(--text-1)]">
           {t("jobs.addModal.title")}
         </h2>
@@ -209,22 +211,23 @@ export function AddJobModal({ open, onClose, onSubmit, loading }: Props) {
           <div className="space-y-2">
             <label className="text-xs font-medium text-[var(--text-3)]">{t("jobDetail.description")}</label>
             <textarea
-              className="flex min-h-[100px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex min-h-[100px] w-full rounded-[var(--r-sm,8px)] border border-input bg-background px-3 py-2 text-base text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("form.placeholder.notes")}
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" className="min-h-[44px] w-full sm:w-auto" onClick={onClose} disabled={loading}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" className="min-h-[44px] w-full sm:w-auto" disabled={loading}>
               {loading ? t("jobs.addModal.creating") : t("jobs.addModal.create")}
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

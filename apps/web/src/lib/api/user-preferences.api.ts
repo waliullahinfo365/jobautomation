@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import type { NotificationPreferences } from "@/types/settings";
 
 export interface UserPreferences {
   phone?: string;
@@ -11,6 +12,7 @@ export interface UserPreferences {
   noticePeriod?: string;
   rightToWork?: boolean;
   requiresSponsorship?: boolean;
+  notifications?: NotificationPreferences;
   securitySettings?: {
     twoFactorAuth?: boolean;
     loginAlerts?: boolean;

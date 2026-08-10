@@ -142,7 +142,7 @@ export function DocumentsSimpleView({
     documents.length === 0;
 
   return (
-    <SimplePageShell className="pb-mobile-sticky">
+    <SimplePageShell className={tab === "myDocs" || showEmptyWallet ? "pb-mobile-sticky" : undefined}>
       <SimplePageHeader
         title={t("documents.simple.title")}
         description={t("documents.simple.subtitle")}
@@ -155,7 +155,7 @@ export function DocumentsSimpleView({
             type="button"
             onClick={() => setTab(item.id)}
             className={cn(
-              "flex min-w-[5.5rem] flex-1 items-center justify-center rounded-xl px-2 py-2.5 text-[12px] font-medium transition-colors sm:text-[13px]",
+              "flex min-h-[44px] min-w-[5.5rem] flex-1 items-center justify-center rounded-xl px-2 py-2.5 text-[12px] font-medium transition-colors sm:text-[13px]",
               tab === item.id
                 ? "bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm"
                 : "text-[var(--text-3)] hover:text-[var(--text-2)]"
@@ -252,6 +252,7 @@ export function DocumentsSimpleView({
         </div>
       ) : null}
 
+      {tab === "myDocs" || showEmptyWallet ? (
       <div
         className={cn(
           "fixed inset-x-0 z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:hidden",
@@ -267,6 +268,7 @@ export function DocumentsSimpleView({
           {t("labels.uploadDocument")}
         </Button>
       </div>
+      ) : null}
 
       {uploadMenuOpen ? (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 md:items-center md:p-4">
