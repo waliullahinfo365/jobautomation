@@ -419,7 +419,9 @@ const INVALID_POSITION_PATTERNS = [
   /\bkeeping you (updated|informed) (on|about) your job search\b/i,
   /^(hallo|hi|hey|liebe[r]?|guten)\b/i,
   /^schau dir\b/i,
-  /neuesten treffer/i,
+  /neuest?en treffer/i,
+  /gespeicherten stellensuche/i,
+  /noch an dem job interessiert/i,
 ];
 
 const INVALID_COMPANY_OR_POSITION_MARKETING = [
@@ -766,7 +768,7 @@ const JOB_CARD_HEADER_SKIP = [
   // Stepstone / DE digest greetings and marketing teasers (must not become title/company)
   /^(hallo|hi|hey|liebe[r]?|guten (tag|morgen|abend))\b/i,
   /^schau dir\b/i,
-  /^neuesten treffer/i,
+  /neuest?en treffer/i,
   /^hier ist ein job\b/i,
   /nicht viele bewerber/i,
   /warum nicht einer der ersten/i,
@@ -778,7 +780,10 @@ const JOB_CARD_HEADER_SKIP = [
   /^apply now\b/i,
   /^view job\b/i,
   /^siehe stelle\b/i,
-  /^[\-–—_=·•\s.]{3,}$/,
+  /^guten tag\b/i,
+  /gespeicherten stellensuche/i,
+  /noch an dem job interessiert/i,
+  /^[\-–—_=·•\s.]{1,}$/,
 ];
 
 const JOB_TITLE_SIGNAL =
