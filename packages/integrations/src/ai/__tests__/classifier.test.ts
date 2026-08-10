@@ -332,3 +332,46 @@ describe("validateExtractedJobFields — agency update", () => {
     expect(result.valid).toBe(false);
   });
 });
+
+describe("Stepstone digest preamble — must not become fake jobs", () => {
+  const preambleBody = [
+    "Hallo,",
+    "Schau dir deine neuesten Treffer an!",
+    "Beliebter Job",
+    "dieser Job hat nicht viele Bewerber - warum nicht einer der Ersten sein? Nicht warten, heute bewerben!",
+    "Senior Product Manager (m/w/d)",
+    "Acme GmbH",
+    "Berlin, Deutschland",
+    "Jetzt bewerben",
+    "https://www.stepstone.de/stellenangebote--123456",
+  ].join("\n");
+
+  const payload = makePayload({
+    from: "jobalert@stepstone.de",
+    subject: "Dein Job-Alarm: neue Treffer",
+    bodyText: preambleBody,
+  });
+
+  it("still classifies Stepstone alert as a job", () => {
+    expect(isRealJobOpportunity(payload).isJob).toBe(true);
+  });
+
+  it("rejects greeting and CTA marketing as company/position", () => {
+    expect(validateExtractedJobFields("Hallo,", "Schau dir deine neuesten Treffer an!").valid).toBe(false);
+    expect(
+      validateExtractedJobFields(
+        "dieser Job hat nicht viele Bewerber - warum nicht einer der Ersten sein? Nicht warten, heute bewerben!",
+        "Hallo,"
+      ).valid
+    ).toBe(false);
+    expect(validateExtractedJobFields("------------------", "Hallo,").valid).toBe(false);
+  });
+
+  it("extracts the real job card after preamble", async () => {
+    const { extractJobFromEmail } = await import("../ai.service");
+    const extracted = await extractJobFromEmail(payload);
+    expect(extracted.position).toMatch(/Senior Product Manager/i);
+    expect(extracted.company).toMatch(/Acme GmbH/i);
+    expect(validateExtractedJobFields(extracted.company, extracted.position).valid).toBe(true);
+  });
+});

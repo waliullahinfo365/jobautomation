@@ -407,7 +407,7 @@ const INVALID_COMPANY_PATTERNS = [
 ];
 
 const FAKE_POSITION_EXACT =
-  /^(jobs?\s+alerts?|job\s+alert|new job opportunit(y|ies)( for you)?|our recommendation|popular job|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you|free ebook.*|payment (failure|failed).*|updated?\s+.{0,20}privacy (notice|policy)|.*capital news|content roundup.*|.*ends? in \d+ days.*|#\w.*)$/i;
+  /^(jobs?\s+alerts?|job\s+alert|new job opportunit(y|ies)( for you)?|our recommendation|popular job|beliebter job|passende stelle|empfohlene stelle|jobs? for you|jobs? matching|looking for candidates|join over \d+|opportunity for you|free ebook.*|payment (failure|failed).*|updated?\s+.{0,20}privacy (notice|policy)|.*capital news|content roundup.*|.*ends? in \d+ days.*|#\w.*|hallo,?|hi,?|hey,?|schau dir.*|neuesten treffer.*)$/i;
 const INVALID_POSITION_PATTERNS = [
   /\bupdate on your job search\b/i,
   /\byour job search (in|for|update)\b/i,
@@ -417,6 +417,19 @@ const INVALID_POSITION_PATTERNS = [
   /\bany (news|update) (on|about) your (job search|application)\b/i,
   /\bwe('ve| have) (an )?update (for you|about your job search)\b/i,
   /\bkeeping you (updated|informed) (on|about) your job search\b/i,
+  /^(hallo|hi|hey|liebe[r]?|guten)\b/i,
+  /^schau dir\b/i,
+  /neuesten treffer/i,
+];
+
+const INVALID_COMPANY_OR_POSITION_MARKETING = [
+  /nicht viele bewerber/i,
+  /warum nicht einer der ersten/i,
+  /heute bewerben/i,
+  /gute option sein k[oö]nnte/i,
+  /nicht warten/i,
+  /^[\-–—_=·•\s.]{3,}$/,
+  /^hier ist ein job\b/i,
 ];
 
 /** Reject platform names, agency updates, and other non-job titles before creating a Job record. */
@@ -446,6 +459,26 @@ export function validateExtractedJobFields(
     if (pattern.test(p)) {
       return { valid: false, reason: `Position "${p}" looks like a job-search update, not a job posting` };
     }
+  }
+
+  for (const pattern of INVALID_COMPANY_OR_POSITION_MARKETING) {
+    if (pattern.test(c)) {
+      return { valid: false, reason: `Company "${c}" looks like email marketing text` };
+    }
+    if (pattern.test(p)) {
+      return { valid: false, reason: `Position "${p}" looks like email marketing text` };
+    }
+  }
+
+  // Greeting / teaser lines as company (production Stepstone bug)
+  if (/^(hallo|hi|hey|schau dir|beliebter job|passende stelle)\b/i.test(c)) {
+    return { valid: false, reason: `Company "${c}" looks like email preamble` };
+  }
+  if ((c.includes("?") || c.includes("!")) && c.length > 45) {
+    return { valid: false, reason: `Company "${c}" looks like marketing copy` };
+  }
+  if ((p.includes("?") || p.includes("!")) && p.length > 45) {
+    return { valid: false, reason: `Position "${p}" looks like marketing copy` };
   }
 
   return { valid: true };
@@ -643,8 +676,12 @@ export function classifyEmailType(payload: JobIntakeEmailPayload): JobIntakeClas
  * Parses the first job card from a LinkedIn job alert plain-text body.
  * LinkedIn job alert bodies have repeated blocks like:
  *   Job Title\nCompany Name\nLocation\n\nView job\n\n
+ * Only runs when LinkedIn's "View job" CTA is present — otherwise Stepstone/Indeed
+ * digests would be mis-parsed as LinkedIn cards (e.g. "Hallo," as the title).
  */
 function parseLinkedInJobCard(body: string): { position: string; company: string; location?: string } | null {
+  if (!/\bview job\b/i.test(body)) return null;
+
   // Split on "View job" boundaries to get individual cards
   const cardBlocks = body.split(/\bview job\b/i);
   const firstCard = cardBlocks[0];
@@ -657,18 +694,42 @@ function parseLinkedInJobCard(body: string): { position: string; company: string
     .filter((l) => l.length > 0 && l.length < 120);
 
   // Skip boilerplate header lines from the email itself
-  const SKIP_PATTERNS = [/^your job alert/i, /^job alert/i, /^linkedin/i, /^hi\s/i, /^\d+\s+new\s+job/i, /^here are/i, /^based on/i, /^new jobs/i, /^jobs for/i, /^matching jobs/i];
-  const contentLines = lines.filter((l) => !SKIP_PATTERNS.some((p) => p.test(l)));
+  const SKIP_PATTERNS = [
+    /^your job alert/i,
+    /^job alert/i,
+    /^linkedin/i,
+    /^hi\s/i,
+    /^hallo\b/i,
+    /^\d+\s+new\s+job/i,
+    /^here are/i,
+    /^based on/i,
+    /^new jobs/i,
+    /^jobs for/i,
+    /^matching jobs/i,
+  ];
+  const contentLines = lines.filter((l) => !SKIP_PATTERNS.some((p) => p.test(l)) && !isJobCardJunkLine(l));
 
   if (contentLines.length < 2) return null;
 
-  const position = contentLines[0];
-  const company = contentLines[1];
-  const location = contentLines[2] && !/^(apply|easy apply|see all|unsubscribe)/i.test(contentLines[2]) ? contentLines[2] : undefined;
+  let titleIdx = contentLines.findIndex((l) => JOB_TITLE_SIGNAL.test(l));
+  if (titleIdx < 0) titleIdx = 0;
+  if (titleIdx >= contentLines.length - 1) return null;
+
+  const position = contentLines[titleIdx];
+  const company = contentLines[titleIdx + 1];
+  const location =
+    contentLines[titleIdx + 2] && !/^(apply|easy apply|see all|unsubscribe)/i.test(contentLines[titleIdx + 2])
+      ? contentLines[titleIdx + 2]
+      : undefined;
 
   // Sanity check: position should look like a job title, not an article headline
-  const looksLikeArticle = /\b(why|how|what|are|is|the|an|a)\b.{20,}/i.test(position) && !/\b(manager|engineer|developer|analyst|director|specialist|coordinator|designer|architect|consultant|lead|head of|vp|vice president|recruiter)\b/i.test(position);
+  const looksLikeArticle =
+    /\b(why|how|what|are|is|the|an|a)\b.{20,}/i.test(position) &&
+    !/\b(manager|engineer|developer|analyst|director|specialist|coordinator|designer|architect|consultant|lead|head of|vp|vice president|recruiter)\b/i.test(
+      position
+    );
   if (looksLikeArticle) return null;
+  if (validateExtractedJobFields(company, position).valid === false) return null;
 
   return { position, company, location };
 }
@@ -702,7 +763,38 @@ const JOB_CARD_HEADER_SKIP = [
   /^indeed/i,
   /^glassdoor/i,
   /^monster/i,
+  // Stepstone / DE digest greetings and marketing teasers (must not become title/company)
+  /^(hallo|hi|hey|liebe[r]?|guten (tag|morgen|abend))\b/i,
+  /^schau dir\b/i,
+  /^neuesten treffer/i,
+  /^hier ist ein job\b/i,
+  /nicht viele bewerber/i,
+  /warum nicht einer der ersten/i,
+  /heute bewerben/i,
+  /gute option sein k[oö]nnte/i,
+  /nicht warten/i,
+  /^jetzt bewerben\b/i,
+  /^easily apply\b/i,
+  /^apply now\b/i,
+  /^view job\b/i,
+  /^siehe stelle\b/i,
+  /^[\-–—_=·•\s.]{3,}$/,
 ];
+
+const JOB_TITLE_SIGNAL =
+  /\((?:m\/w\/d|w\/m\/d|m\/f\/d|f\/m\/d|all genders|divers)\)|\b(engineer|developer|manager|analyst|consultant|specialist|assistant|director|lead|architect|designer|accountant|nurse|teacher|sales|marketing|hr\b|recrui|kaufmann|kauffrau|sachbearbeiter|entwickler|ingenieur)\b/i;
+
+function isJobCardJunkLine(line: string): boolean {
+  const t = line.trim();
+  if (!t || t.length > 140) return true;
+  if (JOB_CARD_HEADER_SKIP.some((p) => p.test(t))) return true;
+  if (/^https?:\/\//i.test(t)) return true;
+  if (/^(€|\$|gehalt|salary|remote|hybrid)\b/i.test(t)) return true;
+  // Long marketing sentences with punctuation are not titles/companies
+  if ((t.includes("?") || t.includes("!")) && t.length > 40) return true;
+  if (/,.*,/.test(t) && t.length > 60) return true;
+  return false;
+}
 
 /** Parse the first job card from Stepstone, Indeed, Xing, and similar digest alerts. */
 function parseJobBoardJobCard(body: string): { position: string; company: string; location?: string } | null {
@@ -713,7 +805,10 @@ function parseJobBoardJobCard(body: string): { position: string; company: string
   for (const pattern of JOB_CARD_SPLIT_PATTERNS) {
     const parts = body.split(pattern);
     if (parts.length > 1) {
-      firstBlock = parts[0] ?? body;
+      // Prefer the block AFTER the first CTA when preamble is before "Jetzt bewerben"
+      // For Stepstone, structure is often: preamble + title + company + CTA + next title...
+      // Using parts[0] kept the preamble; scan whole body for a title-like line instead.
+      firstBlock = body;
       break;
     }
   }
@@ -721,31 +816,42 @@ function parseJobBoardJobCard(body: string): { position: string; company: string
   const lines = firstBlock
     .split(/\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && l.length < 120);
-  const contentLines = lines.filter((l) => !JOB_CARD_HEADER_SKIP.some((p) => p.test(l)));
+    .filter((l) => l.length > 0 && l.length < 140);
 
+  const contentLines = lines.filter((l) => !isJobCardJunkLine(l));
   if (contentLines.length < 2) return null;
 
-  let position = contentLines[0];
-  let company = contentLines[1];
-  let location: string | undefined;
-
-  if (/^(beliebter job|passende stelle|recommended|popular job|top job)/i.test(position) && contentLines.length >= 3) {
-    position = contentLines[1];
-    company = contentLines[2];
-    location = contentLines[3];
+  // Prefer a real DE/EN job title signal (e.g. "Software Engineer (m/w/d)")
+  let titleIdx = contentLines.findIndex((l) => JOB_TITLE_SIGNAL.test(l));
+  if (titleIdx < 0) {
+    // Fallback: first short line that does not look like a sentence
+    titleIdx = contentLines.findIndex((l) => l.length <= 80 && !/[.!?].+\s/.test(l));
   }
+  if (titleIdx < 0 || titleIdx >= contentLines.length - 1) return null;
+
+  const position = contentLines[titleIdx];
+  const company = contentLines[titleIdx + 1];
+  let location: string | undefined = contentLines[titleIdx + 2];
 
   const dashMatch = company.match(/^(.+?)\s*[-–—]\s*(.+)$/);
   if (dashMatch && dashMatch[1].length < 60 && dashMatch[2].length < 80) {
-    company = dashMatch[1].trim();
-    location = dashMatch[2].trim();
-  } else if (contentLines[2] && !/^(€|\$|apply|bewerb|http|salary|gehalt)/i.test(contentLines[2])) {
-    location = contentLines[2];
+    return {
+      position,
+      company: dashMatch[1].trim(),
+      location: dashMatch[2].trim(),
+    };
+  }
+
+  if (location && /^(€|\$|apply|bewerb|http|salary|gehalt|jetzt)/i.test(location)) {
+    location = undefined;
+  }
+  if (location && isJobCardJunkLine(location)) {
+    location = undefined;
   }
 
   if (!position || !company) return null;
   if (/^(stepstone|xing|indeed|glassdoor|monster|linkedin)$/i.test(company)) return null;
+  if (isJobCardJunkLine(position) || isJobCardJunkLine(company)) return null;
 
   return { position, company, location };
 }

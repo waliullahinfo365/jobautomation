@@ -92,16 +92,52 @@ export async function processJobIntakeEmail(input: ProcessInput): Promise<JobInt
     const aiCfg = await resolveAiProviderForTenant({ tenantId });
     const extractionWrapped = await runAiExtraction({ payload: input.payload, config: aiCfg });
     const extraction = extractionWrapped.data;
-    if (!extraction.company || !extraction.position) {
-      throw new Error("Extraction missing required fields: company/position");
+    const company = (extraction.company ?? "").trim();
+    const position = (extraction.position ?? "").trim();
+    if (!company || !position) {
+      logs.push("job-intake:rejected-missing-fields");
+      return {
+        operationId,
+        tenantId,
+        status: "skipped",
+        duplicateCheck: {
+          status: "Skipped",
+          duplicateScore: 0,
+          reasons: ["Extraction missing required fields: company/position"],
+        },
+        logs,
+      };
     }
 
-    // Reject if extracted values look like platform names or marketing copy (not real job data)
-    const company = extraction.company.trim();
-    const position = extraction.position.trim();
     const fieldValidation = validateExtractedJobFields(company, position);
     if (!fieldValidation.valid) {
-      throw new Error(fieldValidation.reason);
+      logs.push(`job-intake:rejected-bad-extraction:${fieldValidation.reason}`);
+      await createAutomationLog({
+        tenantId,
+        moduleKey: "job-intake",
+        moduleName: "Job Intake",
+        status: "Warning",
+        message: `Skipped email — could not extract a real job: ${fieldValidation.reason}`,
+        idempotencyKey,
+        operationId,
+        correlationId: input.correlationId,
+        metadata: {
+          from: input.payload.from,
+          subject: input.payload.subject,
+          reason: fieldValidation.reason,
+        },
+      });
+      return {
+        operationId,
+        tenantId,
+        status: "skipped",
+        duplicateCheck: {
+          status: "Skipped",
+          duplicateScore: 0,
+          reasons: [fieldValidation.reason],
+        },
+        logs,
+      };
     }
 
     const fingerprintHash = createJobFingerprint({
