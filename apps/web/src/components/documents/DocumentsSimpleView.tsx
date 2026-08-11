@@ -29,6 +29,8 @@ function isPortfolioDoc(
   activeTemplateId?: string
 ): boolean {
   if (doc.id === activeCvId || doc.id === activeTemplateId) return false;
+  // Internal Drive provisioning stubs — not user documents
+  if (doc.type === "Job Folder" || /^Drive folder\b/i.test(doc.fileName)) return false;
   if (doc.type === "Cover Letter" || doc.type === "Research Document" || doc.type === "PDF Export") {
     return false;
   }
@@ -59,15 +61,15 @@ function Section({
   highlightFirst?: boolean;
 }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-2.5">
       <div>
-        <h2 className="text-[15px] font-semibold text-[var(--text-1)]">{title}</h2>
-        {description ? <p className="mt-0.5 text-[13px] text-[var(--text-3)]">{description}</p> : null}
+        <h2 className="text-[14px] font-semibold text-[var(--text-1)] sm:text-[15px]">{title}</h2>
+        {description ? <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-3)] sm:text-[13px]">{description}</p> : null}
       </div>
       {records.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--surface-2)] px-4 py-6 text-center">
-          <p className="text-[14px] font-medium text-[var(--text-2)]">{emptyTitle}</p>
-          <p className="mt-1 text-[13px] text-[var(--text-4)]">{emptyDescription}</p>
+        <div className="rounded-2xl border border-dashed border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-4 text-center sm:px-4 sm:py-5">
+          <p className="text-[13px] font-medium text-[var(--text-2)] sm:text-[14px]">{emptyTitle}</p>
+          <p className="mt-1 text-[12px] text-[var(--text-4)] sm:text-[13px]">{emptyDescription}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -141,16 +143,18 @@ export function DocumentsSimpleView({
     portfolioDocs.length === 0 &&
     documents.length === 0;
 
+  const openUploadMenu = () => setUploadMenuOpen(true);
+
   return (
-    <SimplePageShell className={tab === "myDocs" || showEmptyWallet ? "pb-mobile-sticky md:pb-4" : undefined}>
+    <SimplePageShell className="space-y-4 md:space-y-5">
       <SimplePageHeader
         title={t("documents.simple.title")}
         description={t("documents.simple.subtitle")}
         actions={
           <Button
             type="button"
-            className="hidden min-h-[44px] rounded-xl md:inline-flex"
-            onClick={() => setUploadMenuOpen(true)}
+            className="min-h-[44px] w-full rounded-xl sm:w-auto"
+            onClick={openUploadMenu}
           >
             {t("labels.uploadDocument")}
           </Button>
@@ -164,13 +168,13 @@ export function DocumentsSimpleView({
             type="button"
             onClick={() => setTab(item.id)}
             className={cn(
-              "flex min-h-[44px] min-w-[5.5rem] flex-1 items-center justify-center rounded-xl px-2 py-2.5 text-[12px] font-medium transition-colors sm:text-[13px]",
+              "flex min-h-[40px] min-w-0 flex-1 items-center justify-center rounded-xl px-2 py-2 text-[12px] font-medium transition-colors sm:min-h-[44px] sm:text-[13px]",
               tab === item.id
                 ? "bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm"
                 : "text-[var(--text-3)] hover:text-[var(--text-2)]"
             )}
           >
-            {item.label}
+            <span className="truncate">{item.label}</span>
           </button>
         ))}
       </div>
@@ -185,7 +189,7 @@ export function DocumentsSimpleView({
       ) : null}
 
       {tab === "myDocs" && !showEmptyWallet ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <Section
             title={t("documents.simple.activeResume")}
             emptyTitle={t("documents.simple.noActiveResume")}
@@ -217,7 +221,7 @@ export function DocumentsSimpleView({
       ) : null}
 
       {tab === "generated" ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
           <Section
             title={t("documents.simple.generatedCoverLetters")}
             description={t("documents.simple.generatedCoverLettersDesc")}
@@ -240,48 +244,43 @@ export function DocumentsSimpleView({
       ) : null}
 
       {tab === "uploads" ? (
-        <div className="space-y-3">
-          <p className="text-[14px] text-[var(--text-3)]">{t("documents.simple.uploadsIntro")}</p>
+        <div className="space-y-2.5">
+          <p className="text-[13px] leading-relaxed text-[var(--text-3)] sm:text-[14px]">
+            {t("documents.simple.uploadsIntro")}
+          </p>
           {uploadOptions.map((option) => (
             <button
               key={option.type}
               type="button"
               onClick={() => onUpload(option.type)}
-              className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 text-left transition-colors hover:bg-[var(--surface-2)]"
+              className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)] sm:min-h-[64px] sm:px-4 sm:py-3"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-bg)] text-[var(--accent-hi)]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-bg)] text-[var(--accent-hi)] sm:h-10 sm:w-10">
                 <DocumentsIcon size={18} />
               </span>
-              <span>
-                <span className="block text-[15px] font-semibold text-[var(--text-1)]">{option.label}</span>
-                <span className="mt-0.5 block text-[13px] text-[var(--text-3)]">{option.description}</span>
+              <span className="min-w-0">
+                <span className="block text-[14px] font-semibold text-[var(--text-1)] sm:text-[15px]">{option.label}</span>
+                <span className="mt-0.5 block text-[12px] leading-snug text-[var(--text-3)] sm:text-[13px]">
+                  {option.description}
+                </span>
               </span>
             </button>
           ))}
         </div>
       ) : null}
 
-      {tab === "myDocs" || showEmptyWallet ? (
-      <div
-        className={cn(
-          "fixed inset-x-0 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:hidden",
-          "mobile-sticky-above-nav"
-        )}
-      >
-        <Button
-          type="button"
-          size="lg"
-          className="min-h-[52px] w-full rounded-2xl text-[16px] font-semibold"
-          onClick={() => setUploadMenuOpen(true)}
-        >
-          {t("labels.uploadDocument")}
-        </Button>
-      </div>
-      ) : null}
-
       {uploadMenuOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 md:items-center md:p-4">
-          <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl md:rounded-2xl">
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/45 md:items-center md:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("documents.simple.uploadDocument")}
+          onClick={() => setUploadMenuOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl md:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-subtle)] md:hidden" aria-hidden />
             <h3 className="text-base font-semibold text-[var(--text-1)]">{t("documents.simple.uploadDocument")}</h3>
             <div className="mt-3 space-y-2">
@@ -293,9 +292,10 @@ export function DocumentsSimpleView({
                     setUploadMenuOpen(false);
                     onUpload(option.type);
                   }}
-                  className="flex min-h-[52px] w-full items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] px-4 text-left text-[15px] font-medium text-[var(--text-1)]"
+                  className="flex min-h-[52px] w-full flex-col items-start justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] px-4 py-2.5 text-left"
                 >
-                  {option.label}
+                  <span className="text-[15px] font-medium text-[var(--text-1)]">{option.label}</span>
+                  <span className="mt-0.5 text-[12px] text-[var(--text-3)]">{option.description}</span>
                 </button>
               ))}
             </div>

@@ -471,7 +471,16 @@ export function normalizeInterviewsForUi(raw: unknown[]): Interview[] {
   return raw.map(normalizeInterviewForUi);
 }
 
-function mapBackendDocTypeToUi(t: string): DocumentType {
+function mapBackendDocTypeToUi(t: string, fileName = "", meta: Record<string, unknown> = {}): DocumentType {
+  const pendingDrive =
+    String(meta.status ?? "").includes("pending-drive") ||
+    String(meta.source ?? "").includes("folder-automation") ||
+    /^Drive folder\b/i.test(fileName);
+
+  if (pendingDrive || t === "Job Folder") {
+    return "Job Folder";
+  }
+
   switch (t) {
     case "cv_resume":
     case "CV":
@@ -490,10 +499,17 @@ function mapBackendDocTypeToUi(t: string): DocumentType {
     case "pdf_export":
       return "PDF Export";
     case "Other":
-      return "Email Template";
+      return "Supporting Document";
     default:
-      return "Email Template";
+      return "Supporting Document";
   }
+}
+
+/** Pull "Company - Position" out of legacy Drive folder stub names. */
+function parseDriveFolderLabel(fileName: string): { company: string; position: string } | null {
+  const m = fileName.match(/^Drive folder\s*\([^)]*\)\s*:\s*(.+?)\s+-\s+(.+)$/i);
+  if (!m) return null;
+  return { company: m[1].trim(), position: m[2].trim() };
 }
 
 function mapBackendDocStatusToUi(s: string): DocumentStatus {
@@ -537,12 +553,14 @@ export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
   const d = (raw ?? {}) as Record<string, unknown>;
   const meta = (d.metadata && typeof d.metadata === "object" ? d.metadata : {}) as Record<string, unknown>;
   const id = String(d.id ?? d._id ?? "");
-  const company = String(d.company ?? meta.company ?? "");
-  const position = String(d.position ?? meta.position ?? "");
+  const fileName = String(d.fileName ?? "Untitled");
+  const parsedFolder = parseDriveFolderLabel(fileName);
+  const company = String(d.company ?? meta.company ?? parsedFolder?.company ?? "");
+  const position = String(d.position ?? meta.position ?? parsedFolder?.position ?? "");
   const storagePath = String(d.storagePath ?? meta.storagePath ?? "");
   const jobId = d.jobId ? String(d.jobId) : undefined;
   const rawType = String(d.type ?? "Other");
-  const type = mapBackendDocTypeToUi(rawType);
+  const type = mapBackendDocTypeToUi(rawType, fileName, meta);
   const rawStatus = String(d.status ?? "Draft");
   const status = mapBackendDocStatusToUi(rawStatus);
   const lastUpdatedRaw = d.lastUpdated ?? d.updatedAt;
@@ -578,7 +596,7 @@ export function normalizeDocumentRecordForUi(raw: unknown): DocumentRecord {
     ...(d as unknown as DocumentRecord),
     id,
     _id: id,
-    fileName: String(d.fileName ?? "Untitled"),
+    fileName,
     type,
     relatedJob:
       String(d.relatedJob ?? meta.relatedJob ?? (company || position ? `${company} / ${position}` : "—")),
