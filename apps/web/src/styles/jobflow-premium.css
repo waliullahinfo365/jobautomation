@@ -184,8 +184,16 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: var(--side-w) 1fr;
+  /* minmax keeps the main column flexible; never let content collapse into the sidebar track */
+  grid-template-columns: var(--side-w) minmax(0, 1fr);
   min-height: 100vh;
+}
+
+/* Main pane must always occupy the content track (not the sidebar track if aside is display:none) */
+.jf-shell > .jf-main {
+  grid-column: 2;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .jf-sidebar {
@@ -197,6 +205,8 @@
   background: var(--surface-1);
   border-right: 1px solid var(--border-subtle);
   padding: 14px 12px;
+  grid-column: 1;
+  min-width: 0;
 }
 
 .jf-brand-mark {
@@ -991,7 +1001,15 @@
 /* Phones / small tablets: full-width main column, stack hero & panels */
 @media (max-width: 767px) {
   .jf-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jf-shell > .jf-main {
+    grid-column: 1;
+  }
+
+  .jf-sidebar {
+    display: none !important;
   }
 
   .jf-hero {

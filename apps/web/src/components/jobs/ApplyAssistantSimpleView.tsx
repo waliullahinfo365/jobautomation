@@ -70,7 +70,7 @@ export function ApplyAssistantSimpleView({
   };
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-lg space-y-5 pb-mobile-sticky sm:max-w-xl md:max-w-3xl lg:max-w-5xl">
+    <div className="mx-auto min-w-0 w-full max-w-lg space-y-5 pb-mobile-sticky sm:max-w-xl md:mx-0 md:max-w-none">
       <header className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-2)] p-5">
         <p className="text-[13px] font-medium text-[var(--text-3)]">{t("applyAssistant.simple.selectedJob")}</p>
         <h1 className="mt-1 text-[22px] font-bold leading-tight tracking-[-0.02em] text-[var(--text-1)]">

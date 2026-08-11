@@ -33,7 +33,7 @@ export function JobDetailSimpleView({
   const postingUrl = resolveExternalJobPostingUrl(job);
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-lg space-y-5 pb-mobile-sticky sm:max-w-xl md:max-w-3xl md:pb-8 lg:max-w-5xl">
+    <div className="mx-auto min-w-0 w-full max-w-lg space-y-5 pb-mobile-sticky sm:max-w-xl md:mx-0 md:max-w-none md:pb-8">
       <JobDetailSimpleHeader job={job} />
 
       <JobDocumentsReadiness job={job} />

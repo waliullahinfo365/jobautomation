@@ -114,7 +114,7 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
       <OnboardingChecklist status={onboarding} />
 
       {showStats ? (
-        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:gap-4">
           <SummaryCard label={t("today.simple.readyToApply")} count={readyToApply} href="/apply-assistant" />
           <SummaryCard label={t("today.simple.followUps")} count={followUps} href="/jobs?status=Applied" />
           <SummaryCard label={t("today.simple.replies")} count={replies} href="/jobs?status=Interview" />
@@ -122,10 +122,10 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
       ) : null}
 
       {!showStats ? (
-        <p className="text-center text-[14px] leading-relaxed text-[var(--text-3)]">{t("today.simple.noActivityYet")}</p>
+        <p className="text-center text-[14px] leading-relaxed text-[var(--text-3)] md:text-left">{t("today.simple.noActivityYet")}</p>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2 md:max-w-2xl">
         <Link
           href="/jobs/review"
           className={cn(
@@ -144,7 +144,7 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
       </section>
 
       {showRecent ? (
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4">
+        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4 md:max-w-3xl">
           <h2 className="mb-3 text-[13px] font-semibold text-[var(--text-2)]">{t("today.simple.recentTitle")}</h2>
           <ul className="space-y-2">
             {recentItems.map((item) => (

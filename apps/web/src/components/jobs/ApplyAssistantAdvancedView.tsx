@@ -385,7 +385,7 @@ export function ApplyAssistantAdvancedView({
           "mobile-sticky-above-nav"
         )}
       >
-        <div className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-5xl">
+        <div className="mx-auto w-full max-w-lg md:mx-0 md:max-w-none">
           <Button
             type="button"
             size="lg"

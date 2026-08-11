@@ -70,7 +70,7 @@ export function Sidebar() {
   }, [automationApi.list, t]);
 
   return (
-    <aside className="jf-sidebar hidden md:flex">
+    <aside className="jf-sidebar">
       <div className="mb-3 border-b border-[var(--border-subtle)] pb-3.5">
         <div className="flex items-center gap-2.5 px-2 py-1.5">
           <div className="flex-none">

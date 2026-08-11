@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Page width shell.
- * Mobile stays readable; tablet/desktop expand into the dashboard main column
- * instead of staying phone-narrow next to the sidebar.
+ * Mobile: comfortable reading width.
+ * Desktop/tablet: fill the dashboard main column (do not leave a phone strip).
  */
 export function SimplePageShell({
   children,
@@ -16,8 +16,9 @@ export function SimplePageShell({
   return (
     <div
       className={cn(
-        "mx-auto min-w-0 w-full max-w-lg space-y-5 pb-4",
-        "sm:max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl",
+        "mx-auto min-w-0 w-full space-y-5 pb-4",
+        "max-w-lg sm:max-w-xl",
+        "md:mx-0 md:max-w-none",
         className
       )}
     >
