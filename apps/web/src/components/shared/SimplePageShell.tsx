@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Page width shell.
+ * Page width shell for simple customer flows.
  * Mobile: comfortable reading width.
- * Desktop/tablet: fill the dashboard main column (do not leave a phone strip).
+ * Desktop: left-aligned within the main column (not a floating centered island).
  */
 export function SimplePageShell({
   children,
@@ -16,9 +16,9 @@ export function SimplePageShell({
   return (
     <div
       className={cn(
-        "mx-auto min-w-0 w-full space-y-5 pb-4",
+        "min-w-0 w-full space-y-5 pb-4",
         "max-w-lg sm:max-w-xl",
-        "md:mx-0 md:max-w-none",
+        "md:max-w-3xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl",
         className
       )}
     >

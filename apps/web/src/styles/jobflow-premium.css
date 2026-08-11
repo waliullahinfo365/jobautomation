@@ -189,6 +189,18 @@
   min-height: 100vh;
 }
 
+@media (min-width: 1600px) {
+  .dashboard-bg {
+    --side-w: 280px;
+  }
+}
+
+@media (min-width: 2200px) {
+  .dashboard-bg {
+    --side-w: 300px;
+  }
+}
+
 /* Main pane must always occupy the content track (not the sidebar track if aside is display:none) */
 .jf-shell > .jf-main {
   grid-column: 2;
@@ -395,6 +407,12 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+@media (min-width: 1600px) {
+  .jf-topbar {
+    padding: 0 40px;
+  }
+}
+
 /* Dark topbar: keep translucent bar (do not change --bg-1 token used elsewhere) */
 .dashboard-bg.dark .jf-topbar,
 .dashboard-bg[data-theme="dark"] .jf-topbar {
@@ -509,6 +527,12 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+}
+
+@media (min-width: 1440px) {
+  .jf-kpi-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }
 
 .jf-kpi-head {

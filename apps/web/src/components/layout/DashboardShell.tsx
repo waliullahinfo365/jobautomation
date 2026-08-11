@@ -38,7 +38,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               <PageTransition>
                 <div
                   className={cn(
-                    "mx-auto w-full min-w-0 max-w-[1480px] px-3.5 py-3.5 sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-8",
+                    "w-full min-w-0 px-3.5 py-3.5 sm:px-5 sm:py-6 md:px-6 md:py-7 lg:px-8 xl:px-10 2xl:px-12",
                     hasMobileBottomNav
                       ? "pb-mobile-shell"
                       : "pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-7"

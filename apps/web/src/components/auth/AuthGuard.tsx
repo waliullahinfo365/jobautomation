@@ -58,7 +58,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (sessionError) {
     return (
-      <div className="mx-auto w-full max-w-[1480px] p-6">
+      <div className="w-full min-w-0 p-6 md:px-8 xl:px-10">
         <ErrorState
           title={t("loading.session")}
           description={sessionError}
@@ -71,7 +71,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return (
-      <div className="mx-auto w-full max-w-[1480px] p-6">
+      <div className="w-full min-w-0 p-6 md:px-8 xl:px-10">
         <LoadingState title={t("loading.session")} description={t("loading.sessionDesc")} />
       </div>
     );
