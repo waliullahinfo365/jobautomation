@@ -6,7 +6,6 @@ import { SETTINGS_SECTION_I18N_KEY } from "@/i18n/settings-sections";
 import { useTranslation } from "@/i18n/useTranslation";
 import { settingsSectionHref } from "@/lib/settings-routing";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface SettingsNavigationProps {
   sections: SettingsSection[];
@@ -29,9 +28,9 @@ export function SettingsNavigation({ sections, activeSection }: SettingsNavigati
       scroll={false}
       replace
       className={cn(
-        "block w-full rounded-md px-3 py-3 text-left text-sm transition-colors min-h-[44px]",
+        "block w-full rounded-xl px-3.5 py-3 text-left text-[13.5px] font-medium transition-colors min-h-[44px]",
         activeSection === section
-          ? "bg-[var(--accent-bg)] text-[var(--accent-hi)]"
+          ? "bg-[var(--accent-bg)] text-[var(--accent-hi)] shadow-sm"
           : "text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-1)]"
       )}
     >
@@ -40,22 +39,21 @@ export function SettingsNavigation({ sections, activeSection }: SettingsNavigati
   );
 
   return (
-    <Card className="md:block">
-      <CardContent className="p-3">
-        <nav className="space-y-1">
-          {primary.map(renderLink)}
-          {advanced.length > 0 && (
-            <>
-              <div className="pb-1 pt-3">
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-4)]">
-                  Advanced
-                </p>
-              </div>
-              {advanced.map(renderLink)}
-            </>
-          )}
-        </nav>
-      </CardContent>
-    </Card>
+    <nav
+      aria-label={t("settings.simpleTitle")}
+      className="rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-2.5 shadow-sm"
+    >
+      <div className="space-y-1">
+        {primary.map(renderLink)}
+        {advanced.length > 0 ? (
+          <>
+            <div className="px-3 pb-1 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-4)]">Advanced</p>
+            </div>
+            {advanced.map(renderLink)}
+          </>
+        ) : null}
+      </div>
+    </nav>
   );
 }

@@ -8,12 +8,12 @@ interface SettingSectionCardProps {
 
 export function SettingSectionCard({ title, description, children }: SettingSectionCardProps) {
   return (
-    <Card>
-      <CardHeader className="space-y-1 p-4 sm:p-6">
+    <Card className="overflow-hidden">
+      <CardHeader className="space-y-1 border-b border-[var(--border-subtle)] p-4 sm:p-5 lg:p-6">
         <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
+        {description ? <CardDescription className="max-w-3xl">{description}</CardDescription> : null}
       </CardHeader>
-      <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">{children}</CardContent>
+      <CardContent className="p-4 sm:p-5 lg:p-6">{children}</CardContent>
     </Card>
   );
 }

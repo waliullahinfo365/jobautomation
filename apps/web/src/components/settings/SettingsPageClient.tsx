@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SimplePageHeader } from "@/components/shared/SimplePageHeader";
-import { SimplePageShell } from "@/components/shared/SimplePageShell";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SettingsIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -234,25 +233,29 @@ export function SettingsPageClient() {
 
   if (!advancedUi) {
     return (
-      <SimplePageShell className="space-y-4 md:space-y-6">
-        <SimplePageHeader title={t("settings.simpleTitle")} description={t("settings.simpleDescription")} />
+      <div className="mx-auto w-full max-w-[1680px] space-y-5 md:space-y-7">
+        <SimplePageHeader
+          title={t("settings.simpleTitle")}
+          description={t("settings.simpleDescription")}
+          className="md:pb-1"
+        />
         <div className="md:hidden">
           <SettingsMobileTabs sections={sections} activeSection={activeSection} />
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[240px_minmax(0,1fr)] md:gap-7 xl:grid-cols-[280px_minmax(0,1fr)] xl:gap-8">
           <aside className="hidden md:block">
             <div className="sticky top-20">
               <SettingsNavigation sections={sections} activeSection={activeSection} />
             </div>
           </aside>
-          <div className="min-w-0 max-w-5xl">{content}</div>
+          <div className="min-w-0">{content}</div>
         </div>
-      </SimplePageShell>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4 lg:space-y-6">
+    <div className="mx-auto w-full max-w-[1680px] space-y-5 lg:space-y-7">
       <PageHeader
         icon={SettingsIcon}
         eyebrow={t("settings.eyebrow")}
@@ -279,13 +282,13 @@ export function SettingsPageClient() {
         <SettingsMobileTabs sections={sections} activeSection={activeSection} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[240px_minmax(0,1fr)] md:gap-7 xl:grid-cols-[280px_minmax(0,1fr)] xl:gap-8">
         <aside className="hidden md:block">
           <div className="sticky top-20">
             <SettingsNavigation sections={sections} activeSection={activeSection} />
           </div>
         </aside>
-        <div className="min-w-0 max-w-6xl">{content}</div>
+        <div className="min-w-0">{content}</div>
       </div>
     </div>
   );

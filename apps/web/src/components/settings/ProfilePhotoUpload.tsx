@@ -17,6 +17,8 @@ interface ProfilePhotoUploadProps {
   avatarInitials: string;
   onUpdated: (avatarUrl?: string) => void;
   className?: string;
+  /** Compact embed inside a parent identity card */
+  embedded?: boolean;
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -34,6 +36,7 @@ export function ProfilePhotoUpload({
   avatarInitials,
   onUpdated,
   className,
+  embedded = false,
 }: ProfilePhotoUploadProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,18 +97,44 @@ export function ProfilePhotoUpload({
     }
   }
 
-  return (
-    <div className={cn("rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4", className)}>
-      <p className="text-xs font-medium text-[var(--text-3)]">{t("profile.photoTitle")}</p>
-      <p className="mt-1 text-xs leading-relaxed text-[var(--text-4)]">{t("profile.photoDescription")}</p>
+  const initials =
+    avatarInitials?.trim() ||
+    name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("") ||
+    "U";
 
-      <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-        <Avatar className="h-20 w-20 border border-[var(--border-default)]">
+  return (
+    <div
+      className={cn(
+        !embedded && "rounded-2xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4",
+        className
+      )}
+    >
+      {!embedded ? (
+        <>
+          <p className="text-xs font-medium text-[var(--text-3)]">{t("profile.photoTitle")}</p>
+          <p className="mt-1 text-xs leading-relaxed text-[var(--text-4)]">{t("profile.photoDescription")}</p>
+        </>
+      ) : null}
+
+      <div className={cn("flex flex-col items-start gap-4 sm:flex-row sm:items-center", !embedded && "mt-4")}>
+        <Avatar className="h-24 w-24 border border-[var(--border-default)] lg:h-28 lg:w-28">
           {displayUrl ? <AvatarImage src={displayUrl} alt={name} /> : null}
-          <AvatarFallback className="text-lg">{avatarInitials}</AvatarFallback>
+          <AvatarFallback className="text-xl font-semibold">{initials}</AvatarFallback>
         </Avatar>
 
         <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto">
+          {embedded ? (
+            <>
+              <p className="text-[13px] font-semibold text-[var(--text-1)]">{t("profile.photoTitle")}</p>
+              <p className="max-w-sm text-[12px] leading-relaxed text-[var(--text-4)]">{t("profile.photoHint")}</p>
+            </>
+          ) : null}
           <input
             ref={inputRef}
             type="file"
@@ -116,7 +145,7 @@ export function ProfilePhotoUpload({
           <Button
             type="button"
             variant="outline"
-            className="w-full touch-manipulation sm:w-auto"
+            className="min-h-[44px] w-full touch-manipulation sm:w-auto"
             disabled={uploading || removing}
             onClick={() => inputRef.current?.click()}
           >
@@ -126,7 +155,7 @@ export function ProfilePhotoUpload({
             <Button
               type="button"
               variant="ghost"
-              className="w-full touch-manipulation sm:w-auto"
+              className="min-h-[40px] w-full touch-manipulation sm:w-auto"
               disabled={uploading || removing}
               onClick={() => void handleRemove()}
             >
@@ -136,7 +165,9 @@ export function ProfilePhotoUpload({
         </div>
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-4)]">{t("profile.photoHint")}</p>
+      {!embedded ? (
+        <p className="mt-3 text-[11px] leading-relaxed text-[var(--text-4)]">{t("profile.photoHint")}</p>
+      ) : null}
     </div>
   );
 }
