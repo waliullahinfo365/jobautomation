@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { PipelineIcon } from "@/components/icons";
 import { useTranslation } from "@/i18n/useTranslation";
+import { useMatchMedia } from "@/hooks/useIsMobile";
 
 interface PipelineDataPoint {
   status: string;
@@ -38,30 +39,27 @@ const STAGE_KEY_MAP: Record<string, string> = {
 };
 
 function useNarrowChart() {
-  const query = "(max-width: 767px)";
-  return useSyncExternalStore(
-    (onChange) => {
-      const mq = window.matchMedia(query);
-      mq.addEventListener("change", onChange);
-      return () => mq.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(query).matches,
-    () => false
-  );
+  return useMatchMedia("(max-width: 767px)");
 }
 
 export function ApplicationPipelineChart({ data, loading, error, isUsingFallback }: ApplicationPipelineChartProps) {
   const { t } = useTranslation();
   const narrow = useNarrowChart();
-  const total = data.reduce((acc, item) => acc + item.count, 0);
-  const maxCount = Math.max(...data.map((d) => d.count), 1);
-  const applied = data.find((d) => d.status === "Applied")?.count ?? 0;
-  const interview = data.find((d) => d.status === "Interview")?.count ?? 0;
+  const [mounted, setMounted] = useState(false);
+  const rows = Array.isArray(data) ? data : [];
+  const total = rows.reduce((acc, item) => acc + (Number(item.count) || 0), 0);
+  const maxCount = Math.max(...rows.map((d) => Number(d.count) || 0), 1);
+  const applied = rows.find((d) => d.status === "Applied")?.count ?? 0;
+  const interview = rows.find((d) => d.status === "Interview")?.count ?? 0;
   const conversionPct = applied > 0 ? Math.round((interview / applied) * 100) : interview > 0 ? 100 : 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (process.env.NODE_ENV !== "production") {
     // eslint-disable-next-line no-console
-    console.log("[Dashboard Pipeline]", { data, total, loading, error: error?.message, isUsingFallback });
+    console.log("[Dashboard Pipeline]", { data: rows, total, loading, error: error?.message, isUsingFallback });
   }
 
   const chartHeight = narrow ? 248 : 300;
@@ -141,13 +139,14 @@ export function ApplicationPipelineChart({ data, loading, error, isUsingFallback
         </div>
       )}
 
-      {/* Chart */}
+      {/* Chart — wait for client mount so ResponsiveContainer has a real width (avoids mobile Safari crash) */}
       <div
         className="w-full touch-pan-x"
         style={{ minHeight: narrow ? 220 : 280, display: loading || error ? "none" : undefined }}
       >
-        <ResponsiveContainer width="100%" height={chartHeight}>
-          <BarChart data={data} margin={chartMargins}>
+        {mounted ? (
+        <ResponsiveContainer width="100%" height={chartHeight} minWidth={0} debounce={50}>
+          <BarChart data={rows} margin={chartMargins}>
             <defs>
               <linearGradient id="jfPipeIndigo" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#7C8FFF" />
@@ -209,7 +208,7 @@ export function ApplicationPipelineChart({ data, loading, error, isUsingFallback
               maxBarSize={narrow ? 22 : 34}
               animationDuration={700}
             >
-              {data.map((entry) => {
+              {rows.map((entry) => {
                 const isOffer = entry.status === "Offer";
                 const opacity = isOffer
                   ? 0.95
@@ -225,6 +224,9 @@ export function ApplicationPipelineChart({ data, loading, error, isUsingFallback
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        ) : (
+          <div style={{ height: chartHeight }} aria-hidden />
+        )}
       </div>
 
       <div className="jf-pipe-foot">

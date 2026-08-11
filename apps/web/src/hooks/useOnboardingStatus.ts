@@ -58,41 +58,57 @@ export function useOnboardingStatus(): OnboardingStatus {
   const loading = emailLoading || documentsApi.loading || jobsApi.loading;
 
   return useMemo(() => {
-    const documents = normalizeDocumentRecordsForUi(normalizeListResponse<unknown>(documentsApi.data));
-    const resumeUploaded = documents.some(
-      (d) =>
-        (d.profileDocumentType === "cv_resume" && d.isActiveProfileDocument) ||
-        d.type === "CV"
-    );
-    const coverTemplateUploaded = documents.some(
-      (d) =>
-        (d.profileDocumentType === "cover_letter_template" && d.isActiveProfileDocument) ||
-        d.type === "Cover Letter Template"
-    );
+    try {
+      const documents = normalizeDocumentRecordsForUi(normalizeListResponse<unknown>(documentsApi.data));
+      const resumeUploaded = documents.some(
+        (d) =>
+          (d.profileDocumentType === "cv_resume" && d.isActiveProfileDocument) ||
+          d.type === "CV"
+      );
+      const coverTemplateUploaded = documents.some(
+        (d) =>
+          (d.profileDocumentType === "cover_letter_template" && d.isActiveProfileDocument) ||
+          d.type === "Cover Letter Template"
+      );
 
-    const jobs = normalizeListResponse<unknown>(jobsApi.data).map(normalizeJobForUi);
-    const jobsReviewed = jobs.some(
-      (job) =>
-        (job.reviewStatus && job.reviewStatus !== "new") ||
-        Boolean(job.reviewedAt) ||
-        REVIEWED_STATUSES.has(job.status)
-    );
+      const jobs = normalizeListResponse<unknown>(jobsApi.data).map(normalizeJobForUi);
+      const jobsReviewed = jobs.some(
+        (job) =>
+          (job.reviewStatus && job.reviewStatus !== "new") ||
+          Boolean(job.reviewedAt) ||
+          REVIEWED_STATUSES.has(job.status)
+      );
 
-    const steps: OnboardingStep[] = [
-      { id: "email", complete: emailConnected, href: "/settings?section=Integrations" },
-      { id: "resume", complete: resumeUploaded, href: "/documents" },
-      { id: "coverTemplate", complete: coverTemplateUploaded, href: "/documents" },
-      { id: "reviewJobs", complete: jobsReviewed, href: "/jobs/review" },
-    ];
+      const steps: OnboardingStep[] = [
+        { id: "email", complete: emailConnected, href: "/settings?section=Integrations" },
+        { id: "resume", complete: resumeUploaded, href: "/documents" },
+        { id: "coverTemplate", complete: coverTemplateUploaded, href: "/documents" },
+        { id: "reviewJobs", complete: jobsReviewed, href: "/jobs/review" },
+      ];
 
-    const completedCount = steps.filter((s) => s.complete).length;
+      const completedCount = steps.filter((s) => s.complete).length;
 
-    return {
-      steps,
-      completedCount,
-      totalSteps: steps.length,
-      isComplete: completedCount === steps.length,
-      loading,
-    };
+      return {
+        steps,
+        completedCount,
+        totalSteps: steps.length,
+        isComplete: completedCount === steps.length,
+        loading,
+      };
+    } catch (err) {
+      console.error("[onboarding]", err);
+      return {
+        steps: [
+          { id: "email" as const, complete: emailConnected, href: "/settings?section=Integrations" },
+          { id: "resume" as const, complete: false, href: "/documents" },
+          { id: "coverTemplate" as const, complete: false, href: "/documents" },
+          { id: "reviewJobs" as const, complete: false, href: "/jobs/review" },
+        ],
+        completedCount: emailConnected ? 1 : 0,
+        totalSteps: 4,
+        isComplete: false,
+        loading: false,
+      };
+    }
   }, [documentsApi.data, jobsApi.data, loading, emailConnected]);
 }

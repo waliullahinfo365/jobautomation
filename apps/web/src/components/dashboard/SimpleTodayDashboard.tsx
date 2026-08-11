@@ -21,16 +21,19 @@ function getGreeting(t: (key: string) => string): string {
 function countFromAction(actions: TodayAction[] | undefined, type: string): number {
   const action = actions?.find((a) => a.type === type);
   if (!action) return 0;
-  const match = action.title.match(/(\d+)/);
+  const title = typeof action.title === "string" ? action.title : "";
+  const match = title.match(/(\d+)/);
   return match ? Number(match[1]) : 0;
 }
 
 function pipelineCount(today: TodaySummary | null, stage: string): number {
   if (!today) return 0;
-  const fromStages = today.pipelineStages.find((p) => p.status === stage)?.count;
+  const stages = Array.isArray(today.pipelineStages) ? today.pipelineStages : [];
+  const fromStages = stages.find((p) => p.status === stage)?.count;
   if (typeof fromStages === "number") return fromStages;
-  const key = stage.toLowerCase() as keyof typeof today.pipeline;
-  return Number(today.pipeline[key] ?? 0);
+  const pipeline = today.pipeline && typeof today.pipeline === "object" ? today.pipeline : {};
+  const key = stage.toLowerCase() as keyof typeof pipeline;
+  return Number(pipeline[key] ?? 0);
 }
 
 function SummaryCard({
@@ -65,11 +68,11 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
   const replies = countFromAction(today?.actions, "interviews") || pipelineCount(today, "Interview");
 
   const recentItems = useMemo(() => {
-    const actions = today?.actions ?? [];
+    const actions = Array.isArray(today?.actions) ? today!.actions : [];
     return actions
-      .filter((a) => ["review_jobs", "ready_to_apply", "follow_up"].includes(a.type))
+      .filter((a) => a && ["review_jobs", "ready_to_apply", "follow_up"].includes(a.type) && typeof a.href === "string")
       .slice(0, 3)
-      .map((a) => ({ id: a.type, title: a.title, href: a.href }));
+      .map((a) => ({ id: a.type, title: a.title || a.type, href: a.href }));
   }, [today?.actions]);
 
   const showRecent = recentItems.length > 0;

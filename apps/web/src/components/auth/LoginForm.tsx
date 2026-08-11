@@ -87,12 +87,14 @@ export function LoginForm() {
     if (getAuthToken()) {
       void me()
         .then((session) => router.replace(getPostLoginPath(session.user)))
-        .catch(() => router.replace("/today"));
+        .catch(() => {
+          setRedirecting(false);
+        });
       return;
     }
 
     setRedirecting(false);
-  }, [router, searchParams]);
+  }, [router, searchParams, t]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
