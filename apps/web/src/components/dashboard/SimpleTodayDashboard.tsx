@@ -85,82 +85,88 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
 
   return (
     <SimplePageShell className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-[15px] font-medium text-[var(--text-3)]">{getGreeting(t)}</p>
-        {jobsToReview > 0 ? (
-          <h1 className="text-[28px] font-bold leading-[1.15] tracking-[-0.03em] text-[var(--text-1)] sm:text-[32px]">
-            {t("today.simple.headlineReview").replace("{{count}}", String(jobsToReview))}
-          </h1>
-        ) : (
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:items-start xl:gap-8">
+        <div className="min-w-0 space-y-6">
           <div className="space-y-2">
-            <h1 className="text-[26px] font-bold leading-[1.2] tracking-[-0.03em] text-[var(--text-1)] sm:text-[30px]">
-              {t("today.simple.emptyHeadline")}
-            </h1>
-            <p className="text-[15px] leading-relaxed text-[var(--text-3)]">{t("today.simple.emptyBody")}</p>
+            <p className="text-[15px] font-medium text-[var(--text-3)]">{getGreeting(t)}</p>
+            {jobsToReview > 0 ? (
+              <h1 className="text-[28px] font-bold leading-[1.15] tracking-[-0.03em] text-[var(--text-1)] sm:text-[32px] lg:text-[36px]">
+                {t("today.simple.headlineReview").replace("{{count}}", String(jobsToReview))}
+              </h1>
+            ) : (
+              <div className="space-y-2">
+                <h1 className="text-[26px] font-bold leading-[1.2] tracking-[-0.03em] text-[var(--text-1)] sm:text-[30px]">
+                  {t("today.simple.emptyHeadline")}
+                </h1>
+                <p className="max-w-2xl text-[15px] leading-relaxed text-[var(--text-3)]">{t("today.simple.emptyBody")}</p>
+              </div>
+            )}
           </div>
-        )}
+
+          {showEmailBanner ? (
+            <Link
+              href="/settings?section=Integrations"
+              className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border border-[var(--amber-ring)] bg-[var(--amber-bg)] px-4 py-3 text-[14px] text-[var(--text-1)]"
+            >
+              <span>{t("today.simple.connectEmailBanner")}</span>
+              <span className="shrink-0 font-semibold text-[var(--accent-hi)]">{t("today.simple.connectEmailCta")} →</span>
+            </Link>
+          ) : null}
+
+          {showStats ? (
+            <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:gap-4">
+              <SummaryCard label={t("today.simple.readyToApply")} count={readyToApply} href="/apply-assistant" />
+              <SummaryCard label={t("today.simple.followUps")} count={followUps} href="/jobs?status=Applied" />
+              <SummaryCard label={t("today.simple.replies")} count={replies} href="/jobs?status=Interview" />
+            </section>
+          ) : null}
+
+          {!showStats ? (
+            <p className="text-[14px] leading-relaxed text-[var(--text-3)]">{t("today.simple.noActivityYet")}</p>
+          ) : null}
+
+          <section className="grid gap-3 sm:grid-cols-2">
+            <Link
+              href="/jobs/review"
+              className={cn(
+                "flex min-h-[52px] w-full items-center justify-center rounded-2xl px-5 text-[16px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(99,124,255,0.55)]",
+                "bg-gradient-to-b from-[#7B8EFF] to-[#4D63E0] hover:from-[#8A9BFF] hover:to-[#5A72E8]"
+              )}
+            >
+              {t("labels.reviewJobs")}
+            </Link>
+            <Link
+              href="/apply-assistant"
+              className="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 text-[15px] font-semibold text-[var(--text-1)] transition-colors hover:bg-[var(--surface-2)] sm:min-h-[52px]"
+            >
+              {t("labels.openApplyAssistant")}
+            </Link>
+          </section>
+
+          {showRecent ? (
+            <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4">
+              <h2 className="mb-3 text-[13px] font-semibold text-[var(--text-2)]">{t("today.simple.recentTitle")}</h2>
+              <ul className="space-y-2">
+                {recentItems.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl px-2 py-2 text-[14px] text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
+                    >
+                      <span className="min-w-0 truncate">{item.title}</span>
+                      <span className="shrink-0 text-[var(--accent-hi)]">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </div>
+
+        <div className="min-w-0 lg:sticky lg:top-20">
+          <OnboardingChecklist status={onboarding} />
+        </div>
       </div>
-
-      {showEmailBanner ? (
-        <Link
-          href="/settings?section=Integrations"
-          className="flex min-h-[52px] items-center justify-between gap-3 rounded-2xl border border-[var(--amber-ring)] bg-[var(--amber-bg)] px-4 py-3 text-[14px] text-[var(--text-1)]"
-        >
-          <span>{t("today.simple.connectEmailBanner")}</span>
-          <span className="shrink-0 font-semibold text-[var(--accent-hi)]">{t("today.simple.connectEmailCta")} →</span>
-        </Link>
-      ) : null}
-
-      <OnboardingChecklist status={onboarding} />
-
-      {showStats ? (
-        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:gap-4">
-          <SummaryCard label={t("today.simple.readyToApply")} count={readyToApply} href="/apply-assistant" />
-          <SummaryCard label={t("today.simple.followUps")} count={followUps} href="/jobs?status=Applied" />
-          <SummaryCard label={t("today.simple.replies")} count={replies} href="/jobs?status=Interview" />
-        </section>
-      ) : null}
-
-      {!showStats ? (
-        <p className="text-center text-[14px] leading-relaxed text-[var(--text-3)] md:text-left">{t("today.simple.noActivityYet")}</p>
-      ) : null}
-
-      <section className="grid gap-3 sm:grid-cols-2 md:max-w-2xl">
-        <Link
-          href="/jobs/review"
-          className={cn(
-            "flex min-h-[52px] w-full items-center justify-center rounded-2xl px-5 text-[16px] font-semibold text-white shadow-[0_8px_24px_-8px_rgba(99,124,255,0.55)]",
-            "bg-gradient-to-b from-[#7B8EFF] to-[#4D63E0] hover:from-[#8A9BFF] hover:to-[#5A72E8]"
-          )}
-        >
-          {t("labels.reviewJobs")}
-        </Link>
-        <Link
-          href="/apply-assistant"
-          className="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 text-[15px] font-semibold text-[var(--text-1)] transition-colors hover:bg-[var(--surface-2)] sm:min-h-[52px]"
-        >
-          {t("labels.openApplyAssistant")}
-        </Link>
-      </section>
-
-      {showRecent ? (
-        <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4 md:max-w-3xl">
-          <h2 className="mb-3 text-[13px] font-semibold text-[var(--text-2)]">{t("today.simple.recentTitle")}</h2>
-          <ul className="space-y-2">
-            {recentItems.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  className="flex min-h-[44px] items-center justify-between gap-3 rounded-xl px-2 py-2 text-[14px] text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)]"
-                >
-                  <span className="min-w-0 truncate">{item.title}</span>
-                  <span className="shrink-0 text-[var(--accent-hi)]">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </SimplePageShell>
   );
 }

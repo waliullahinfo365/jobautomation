@@ -40,7 +40,7 @@ export function SettingsNavigation({ sections, activeSection }: SettingsNavigati
   );
 
   return (
-    <Card className="hidden lg:block">
+    <Card className="md:block">
       <CardContent className="p-3">
         <nav className="space-y-1">
           {primary.map(renderLink)}

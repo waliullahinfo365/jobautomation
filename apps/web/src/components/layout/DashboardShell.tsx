@@ -44,9 +44,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
                       : "pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-7"
                   )}
                 >
-                  <div className="mb-4 w-full max-w-xl space-y-3 md:max-w-none md:space-y-3">
-                    <PwaInstallPrompt />
-                    <PushNotificationPrompt />
+                  <div className="mb-4 w-full space-y-3 md:mb-5">
+                    <div className="grid gap-3 md:grid-cols-2 xl:max-w-4xl">
+                      <PwaInstallPrompt />
+                      <PushNotificationPrompt />
+                    </div>
                   </div>
                   {children}
                 </div>

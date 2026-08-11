@@ -27,10 +27,12 @@ export function PwaInstallPrompt() {
   if (!visible || !deferred) return null;
 
   return (
-    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4 space-y-3">
-      <p className="text-sm font-medium">{t("pwa.installTitle")}</p>
-      <p className="text-xs text-muted-foreground">{t("pwa.installDescription")}</p>
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium text-[var(--text-1)]">{t("pwa.installTitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("pwa.installDescription")}</p>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
         <Button
           size="sm"
           onClick={() => {
