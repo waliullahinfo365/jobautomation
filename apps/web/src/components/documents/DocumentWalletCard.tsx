@@ -67,14 +67,14 @@ export function DocumentWalletCard({
           <button
             type="button"
             onClick={() => onOpen(record)}
-            className="min-h-[40px] flex-1 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-[13px] font-semibold text-[var(--text-1)] transition-colors hover:bg-[var(--surface-3)]"
+            className="min-h-[44px] flex-1 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] px-3 text-[13px] font-semibold text-[var(--text-1)] transition-colors hover:bg-[var(--surface-3)]"
           >
             {t("documents.simple.open")}
           </button>
           <button
             type="button"
             onClick={() => onReplace(record)}
-            className="min-h-[40px] flex-1 rounded-xl bg-[var(--accent-bg)] px-3 text-[13px] font-semibold text-[var(--accent-hi)] transition-colors hover:bg-[var(--accent-ring)]"
+            className="min-h-[44px] flex-1 rounded-xl bg-[var(--accent-bg)] px-3 text-[13px] font-semibold text-[var(--accent-hi)] transition-colors hover:bg-[var(--accent-ring)]"
           >
             {t("documents.simple.replace")}
           </button>

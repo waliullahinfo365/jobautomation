@@ -137,7 +137,7 @@ export function MobileNav() {
       </header>
 
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div className="fixed inset-0 z-[60] md:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
           <nav
             className="absolute right-0 top-0 flex h-full w-[min(420px,85vw)] max-w-full flex-col border-l border-[var(--border-default)] bg-[var(--surface-1)] shadow-2xl"

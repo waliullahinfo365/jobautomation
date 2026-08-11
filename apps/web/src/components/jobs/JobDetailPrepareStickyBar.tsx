@@ -10,7 +10,7 @@ export function JobDetailPrepareStickyBar({ jobId }: { jobId: string }) {
   return (
     <div
       className={cn(
-        "fixed inset-x-0 z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:hidden",
+        "fixed inset-x-0 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:hidden",
         "mobile-sticky-above-nav"
       )}
     >

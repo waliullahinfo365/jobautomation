@@ -142,10 +142,19 @@ export function DocumentsSimpleView({
     documents.length === 0;
 
   return (
-    <SimplePageShell className={tab === "myDocs" || showEmptyWallet ? "pb-mobile-sticky" : undefined}>
+    <SimplePageShell className={tab === "myDocs" || showEmptyWallet ? "pb-mobile-sticky md:pb-4" : undefined}>
       <SimplePageHeader
         title={t("documents.simple.title")}
         description={t("documents.simple.subtitle")}
+        actions={
+          <Button
+            type="button"
+            className="hidden min-h-[44px] rounded-xl md:inline-flex"
+            onClick={() => setUploadMenuOpen(true)}
+          >
+            {t("labels.uploadDocument")}
+          </Button>
+        }
       />
 
       <div className="flex gap-1 overflow-x-auto rounded-2xl border border-[var(--border-default)] bg-[var(--surface-2)] p-1 [-webkit-overflow-scrolling:touch]">
@@ -255,7 +264,7 @@ export function DocumentsSimpleView({
       {tab === "myDocs" || showEmptyWallet ? (
       <div
         className={cn(
-          "fixed inset-x-0 z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:hidden",
+          "fixed inset-x-0 border-t border-[var(--border-default)] bg-[var(--surface-1)]/95 p-3 backdrop-blur-md md:hidden",
           "mobile-sticky-above-nav"
         )}
       >
@@ -272,7 +281,7 @@ export function DocumentsSimpleView({
 
       {uploadMenuOpen ? (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 md:items-center md:p-4">
-          <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-xl md:rounded-2xl">
+          <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl md:rounded-2xl">
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-subtle)] md:hidden" aria-hidden />
             <h3 className="text-base font-semibold text-[var(--text-1)]">{t("documents.simple.uploadDocument")}</h3>
             <div className="mt-3 space-y-2">

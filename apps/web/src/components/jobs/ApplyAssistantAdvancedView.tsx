@@ -381,11 +381,11 @@ export function ApplyAssistantAdvancedView({
 
       <div
         className={cn(
-          "fixed inset-x-0 z-50 border-t border-[var(--border-default)] bg-[var(--surface-1)] p-3",
-          "mobile-sticky-above-nav md:left-[var(--sidebar-width,0px)]"
+          "fixed inset-x-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] p-3",
+          "mobile-sticky-above-nav"
         )}
       >
-        <div className="mx-auto max-w-lg">
+        <div className="mx-auto w-full max-w-lg md:max-w-3xl lg:max-w-5xl">
           <Button
             type="button"
             size="lg"
@@ -399,7 +399,7 @@ export function ApplyAssistantAdvancedView({
 
       {sheetOpen ? (
         <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 md:items-center md:p-4">
-          <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-xl md:rounded-2xl">
+          <div className="w-full max-w-md rounded-t-2xl border border-[var(--border-default)] bg-[var(--surface-1)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl md:rounded-2xl">
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[var(--border-subtle)] md:hidden" aria-hidden />
             <h3 className="text-base font-semibold text-[var(--text-1)]">{t("applyAssistant.completeTitle")}</h3>
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">

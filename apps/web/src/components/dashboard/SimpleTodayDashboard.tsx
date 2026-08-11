@@ -125,7 +125,7 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
         <p className="text-center text-[14px] leading-relaxed text-[var(--text-3)]">{t("today.simple.noActivityYet")}</p>
       ) : null}
 
-      <section className="space-y-3">
+      <section className="grid gap-3 sm:grid-cols-2">
         <Link
           href="/jobs/review"
           className={cn(
@@ -137,7 +137,7 @@ export function SimpleTodayDashboard({ today }: Pick<TodayDashboardProps, "today
         </Link>
         <Link
           href="/apply-assistant"
-          className="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 text-[15px] font-semibold text-[var(--text-1)] transition-colors hover:bg-[var(--surface-2)]"
+          className="flex min-h-[48px] w-full items-center justify-center rounded-2xl border border-[var(--border-default)] bg-[var(--surface-1)] px-5 text-[15px] font-semibold text-[var(--text-1)] transition-colors hover:bg-[var(--surface-2)] sm:min-h-[52px]"
         >
           {t("labels.openApplyAssistant")}
         </Link>

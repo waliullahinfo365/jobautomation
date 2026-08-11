@@ -54,7 +54,7 @@ export function ApplyAssistantPageClient() {
           compact
         />
       ) : (
-        <ul className="space-y-2">
+        <ul className="grid gap-2 md:grid-cols-2">
           {readyJobs.map((job: Job) => (
             <li key={job.id}>
               <Link

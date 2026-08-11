@@ -104,7 +104,7 @@ export function JobInboxPage() {
 
       <JobInboxFilters filters={filters} onChange={setFilters} onClear={() => setFilters(initialJobFilters)} />
 
-      <div className="grid min-w-0 gap-3">
+      <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filteredJobs.map((job, index) => (
           <JobCard
             key={job.id ? job.id : `job-inbox-${index}`}
@@ -114,7 +114,8 @@ export function JobInboxPage() {
           />
         ))}
         {filteredJobs.length === 0 ? (
-          hasActiveFilters && tabFilteredJobs.length > 0 ? (
+          <div className="md:col-span-2 xl:col-span-3">
+          {hasActiveFilters && tabFilteredJobs.length > 0 ? (
             <p className="py-10 text-center text-[14px] leading-relaxed text-[var(--text-3)]">
               {t("jobs.inbox.emptyFiltered")}
             </p>
@@ -125,7 +126,8 @@ export function JobInboxPage() {
               cta={{ label: t("jobs.inbox.connectGmail"), href: "/settings?section=Integrations" }}
               compact
             />
-          )
+          )}
+          </div>
         ) : null}
       </div>
     </SimplePageShell>

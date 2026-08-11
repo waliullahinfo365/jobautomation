@@ -4,14 +4,16 @@
  */
 :root {
   --mobile-nav-height: 64px;
-  --mobile-topbar-height: 52px;
+  /* Matches MobileNav: safe-area + py + 44px touch targets */
+  --mobile-topbar-height: 60px;
   --mobile-scroll-buffer: 1rem;
   --mobile-page-bottom-extra: 0.75rem;
   /* Nav + home indicator only — sticky CTAs sit flush above the bar */
   --mobile-nav-offset: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   --mobile-chrome-bottom: var(--mobile-nav-offset);
   --mobile-chrome-top: calc(var(--mobile-topbar-height) + env(safe-area-inset-top, 0px));
-  --mobile-sticky-bar-height: 72px;
+  /* p-3 + min-h-[52px] sticky CTA */
+  --mobile-sticky-bar-height: 80px;
   --mobile-page-pad: 1rem;
 }
 
@@ -43,7 +45,7 @@
  * (avoids a huge empty scroll tail from double-counting chrome).
  */
 .pb-mobile-sticky {
-  padding-bottom: calc(var(--mobile-sticky-bar-height) + 0.75rem);
+  padding-bottom: calc(var(--mobile-sticky-bar-height) + 1rem);
 }
 
 @media (min-width: 768px) {
@@ -54,11 +56,15 @@
 
 .mobile-sticky-above-nav {
   bottom: var(--mobile-nav-offset);
+  /* Below drawers/menus (z-60+), above bottom nav (z-40) */
+  z-index: 45;
 }
 
 @media (min-width: 768px) {
   .mobile-sticky-above-nav {
     bottom: 0;
+    /* Align with sidebar token used by .jf-shell */
+    left: var(--side-w, 244px);
   }
 }
 

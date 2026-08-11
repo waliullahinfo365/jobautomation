@@ -234,16 +234,16 @@ export function SettingsPageClient() {
 
   if (!advancedUi) {
     return (
-      <SimplePageShell className="space-y-4 lg:max-w-none lg:space-y-6">
+      <SimplePageShell className="space-y-4 md:max-w-none md:space-y-6">
         <SimplePageHeader title={t("settings.simpleTitle")} description={t("settings.simpleDescription")} />
-        <div className="lg:hidden">
+        <div className="md:hidden">
           <SettingsMobileTabs sections={sections} activeSection={activeSection} />
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
-          <div className="hidden lg:block">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px,1fr] md:gap-6 lg:grid-cols-[280px,1fr]">
+          <div className="hidden md:block">
             <SettingsNavigation sections={sections} activeSection={activeSection} />
           </div>
-          <div>{content}</div>
+          <div className="min-w-0">{content}</div>
         </div>
       </SimplePageShell>
     );
@@ -273,15 +273,15 @@ export function SettingsPageClient() {
         }
       />
 
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <SettingsMobileTabs sections={sections} activeSection={activeSection} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px,1fr] lg:gap-6">
-        <div className="hidden lg:block">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px,1fr] md:gap-6 lg:grid-cols-[280px,1fr]">
+        <div className="hidden md:block">
           <SettingsNavigation sections={sections} activeSection={activeSection} />
         </div>
-        <div>{content}</div>
+        <div className="min-w-0">{content}</div>
       </div>
     </div>
   );
